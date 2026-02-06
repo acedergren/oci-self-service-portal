@@ -29,6 +29,11 @@ jobs:
           node-version: 18
           cache: 'pnpm'
 
+      - name: Configure npm for GitHub Packages
+        run: |
+          echo "@acedergren:registry=https://npm.pkg.github.com" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -56,6 +61,11 @@ jobs:
           node-version: 18
           cache: 'pnpm'
 
+      - name: Configure npm for GitHub Packages
+        run: |
+          echo "@acedergren:registry=https://npm.pkg.github.com" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -79,6 +89,11 @@ jobs:
         with:
           node-version: 18
           cache: 'pnpm'
+
+      - name: Configure npm for GitHub Packages
+        run: |
+          echo "@acedergren:registry=https://npm.pkg.github.com" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -115,6 +130,11 @@ jobs:
         with:
           node-version: 18
           cache: 'pnpm'
+
+      - name: Configure npm for GitHub Packages
+        run: |
+          echo "@acedergren:registry=https://npm.pkg.github.com" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
