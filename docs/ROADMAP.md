@@ -230,7 +230,15 @@
 - [ ] 9.15 CI/CD updates (separate test/build/deploy jobs for frontend and api)
 - [ ] 9.16 Feature flag for phased rollout (proxy SvelteKit → Fastify per-route)
 
-**Key dependencies**: `fastify@5`, `@fastify/swagger`, `@fastify/cors`, `@fastify/cookie`, `@fastify/rate-limit`, `fastify-type-provider-zod`
+### Security Hardening
+
+- [ ] 9.17 SECURITY (HIGH): TLS termination with Nginx reverse proxy (add nginx service to docker-compose, TLS 1.2+, Let's Encrypt/OCI Certificates, HSTS headers)
+- [ ] 9.18 SECURITY (HIGH): Configure secure cookie flags in Fastify (httpOnly, secure, sameSite in @fastify/cookie registration)
+- [ ] 9.19 SECURITY (MEDIUM): Encrypt webhook signing secrets at rest (AES-256-GCM, WEBHOOK_ENCRYPTION_KEY env var, IV storage)
+- [ ] 9.20 SECURITY (HIGH): Add Helmet.js (@fastify/helmet with CSP nonce, 15+ security headers)
+- [ ] 9.21 SECURITY (MEDIUM): Document certificate management and renewal (infrastructure/docker/phase9/CERTIFICATES.md, certbot setup, auto-renewal cron, monitoring)
+
+**Key dependencies**: `fastify@5`, `@fastify/swagger`, `@fastify/cors`, `@fastify/cookie`, `@fastify/rate-limit`, `@fastify/helmet`, `fastify-type-provider-zod`
 
 **Verify**: All API routes respond identically from Fastify. OpenAPI docs at `/api/docs`. AI chat streaming works. Auth cookies shared between frontend/api. Docker Compose runs both services. CI green for both apps.
 
