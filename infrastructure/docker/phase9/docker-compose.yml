@@ -1,0 +1,151 @@
+# =============================================================================
+# OCI Self-Service Portal - Multi-Service Docker Compose
+# =============================================================================
+# Phase 9: Fastify backend + SvelteKit frontend as separate services
+#
+# Usage:
+#   cp .env.example .env  # then fill in values
+#   docker compose up -d
+#   docker compose logs -f
+#
+# Build context is the monorepo root (..) because packages/shared
+# is a sibling directory resolved during the build.
+# =============================================================================
+
+version: '3.9'
+
+services:
+  # ---------------------------------------------------------------------------
+  # Fastify Backend API
+  # ---------------------------------------------------------------------------
+  api:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/phase9/Dockerfile.api
+    container_name: portal-api
+    restart: unless-stopped
+
+    ports:
+      - '3001:3001'
+
+    env_file:
+      - .env
+
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - HOST=0.0.0.0
+      - LOG_LEVEL=info
+
+      # Oracle Database (via environment or .env)
+      # - DATABASE_URL=...
+      # - ORACLE_USER=ADMIN
+      # - ORACLE_DSN=langflowdb_high
+      # - ORACLE_WALLET_LOCATION=/wallets/langflow
+
+      # OCI Configuration
+      - OCI_REGION=${OCI_REGION:-eu-frankfurt-1}
+      - OCI_AUTH_METHOD=config_file
+
+      # Auth (must be set in .env)
+      # - BETTER_AUTH_SECRET=...
+
+    volumes:
+      # Persistent application data
+      - api_data:/app/data
+
+      # OCI CLI configuration (read-only)
+      - ~/.oci:/home/portal/.oci:ro
+
+      # Oracle wallet for database connectivity (read-only)
+      - ${WALLET_PATH:-/data/wallets}:/wallets:ro
+
+    networks:
+      - portal-network
+
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+          cpus: '1.0'
+        reservations:
+          memory: 512m
+          cpus: '0.5'
+
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3001/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # ---------------------------------------------------------------------------
+  # SvelteKit Frontend
+  # ---------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ../..
+      dockerfile: infrastructure/docker/phase9/Dockerfile.frontend
+    container_name: portal-frontend
+    restart: unless-stopped
+
+    ports:
+      - '3000:3000'
+
+    env_file:
+      - .env
+
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOST=0.0.0.0
+
+      # API connection (internal Docker network)
+      - API_URL=http://api:3001
+
+      # Public API URL (for browser-side requests)
+      - PUBLIC_API_URL=${PUBLIC_API_URL:-http://localhost:3001}
+
+    volumes:
+      # Build cache (optional, for faster rebuilds)
+      - frontend_data:/app/data
+
+    networks:
+      - portal-network
+
+    depends_on:
+      api:
+        condition: service_healthy
+
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: '0.5'
+        reservations:
+          memory: 256m
+          cpus: '0.25'
+
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:3000/api/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  portal-network:
+    driver: bridge
+    name: portal-network
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  api_data:
+    name: portal-api-data
+  frontend_data:
+    name: portal-frontend-data

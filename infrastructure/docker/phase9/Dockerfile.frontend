@@ -1,0 +1,103 @@
+# =============================================================================
+# OCI Self-Service Portal - SvelteKit Frontend Dockerfile
+# =============================================================================
+# Multi-stage build for the SvelteKit frontend with adapter-node.
+#
+# Build context: monorepo root (/Users/acedergr/Projects/oci-self-service-portal)
+#   docker build -f infrastructure/docker/phase9/Dockerfile.frontend -t portal-frontend .
+#
+# Run:
+#   docker run -p 3000:3000 \
+#     -e API_URL=http://api:3001 \
+#     -e PUBLIC_API_URL=http://localhost:3001 \
+#     portal-frontend
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Stage 1: deps — install pnpm and production dependencies
+# ---------------------------------------------------------------------------
+FROM node:22-alpine AS deps
+
+RUN corepack enable
+
+# Native build tools for any native dependencies
+RUN apk add --no-cache python3 make g++
+
+WORKDIR /app
+
+# Copy workspace config first for layer caching
+COPY pnpm-lock.yaml package.json pnpm-workspace.yaml ./
+
+# Copy package.json files for workspace packages
+COPY packages/shared/package.json ./packages/shared/
+COPY apps/frontend/package.json ./apps/frontend/
+
+# Install dependencies for frontend service
+RUN pnpm install --frozen-lockfile \
+    --filter @portal/frontend... \
+    --filter @portal/shared
+
+# ---------------------------------------------------------------------------
+# Stage 2: builder — build SvelteKit application
+# ---------------------------------------------------------------------------
+FROM deps AS builder
+
+WORKDIR /app
+
+# Copy shared package source
+COPY packages/shared/ ./packages/shared/
+
+# Build shared package first (dependency of frontend)
+RUN pnpm --filter @portal/shared build
+
+# Copy frontend source
+COPY apps/frontend/ ./apps/frontend/
+
+# Build the SvelteKit app
+# adapter-node outputs to apps/frontend/build/
+RUN pnpm --filter @portal/frontend build
+
+# ---------------------------------------------------------------------------
+# Stage 3: runner — production runtime
+# ---------------------------------------------------------------------------
+FROM node:22-alpine AS runner
+
+LABEL maintainer="Alexander Cedergren <alexander.cedergren@oracle.com>"
+LABEL description="OCI Self-Service Portal - SvelteKit Frontend"
+
+# Install curl for health checks
+RUN apk add --no-cache curl
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOST=0.0.0.0
+
+# Create non-root user
+RUN addgroup -g 1001 nodejs && \
+    adduser -u 1001 -G nodejs -D portal
+
+# Create data directory for any client-side caching
+RUN mkdir -p /app/data && \
+    chown -R portal:nodejs /app/data
+
+# Copy built SvelteKit app
+COPY --from=builder --chown=portal:nodejs /app/apps/frontend/build ./build
+COPY --from=builder --chown=portal:nodejs /app/apps/frontend/package.json ./
+
+# Copy node_modules (production dependencies only)
+COPY --from=builder --chown=portal:nodejs /app/node_modules ./node_modules
+
+# Copy built shared package (if frontend imports shared types)
+COPY --from=builder --chown=portal:nodejs /app/packages/shared/dist ./packages/shared/dist
+COPY --from=builder --chown=portal:nodejs /app/packages/shared/package.json ./packages/shared/
+
+USER portal
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD curl -f http://localhost:3000/api/health || exit 1
+
+ENTRYPOINT ["node", "build"]
