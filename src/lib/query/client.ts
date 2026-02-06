@@ -10,12 +10,12 @@ import type { QueryClientConfig } from '@tanstack/svelte-query';
  * - refetchOnWindowFocus - disabled for better UX in chat apps
  */
 export const defaultQueryClientOptions = {
-  queries: {
-    staleTime: 1000 * 60 * 5, // 5 minutes - data considered fresh
-    gcTime: 1000 * 60 * 60, // 1 hour - keep in cache (v5: renamed from cacheTime)
-    retry: 1, // Single retry on failure
-    refetchOnWindowFocus: false, // Don't refetch when user returns to tab
-  },
+	queries: {
+		staleTime: 1000 * 60 * 5, // 5 minutes - data considered fresh
+		gcTime: 1000 * 60 * 60, // 1 hour - keep in cache (v5: renamed from cacheTime)
+		retry: 1, // Single retry on failure
+		refetchOnWindowFocus: false // Don't refetch when user returns to tab
+	}
 } as const satisfies NonNullable<QueryClientConfig['defaultOptions']>;
 
 /**
@@ -36,23 +36,23 @@ export const defaultQueryClientOptions = {
  * ```
  */
 export function createQueryClient(config?: QueryClientConfig): QueryClient {
-  if (!config?.defaultOptions) {
-    return new QueryClient({
-      defaultOptions: defaultQueryClientOptions,
-      ...config,
-    });
-  }
+	if (!config?.defaultOptions) {
+		return new QueryClient({
+			defaultOptions: defaultQueryClientOptions,
+			...config
+		});
+	}
 
-  // Merge default options with provided options
-  return new QueryClient({
-    ...config,
-    defaultOptions: {
-      ...defaultQueryClientOptions,
-      ...config.defaultOptions,
-      queries: {
-        ...defaultQueryClientOptions.queries,
-        ...config.defaultOptions.queries,
-      },
-    },
-  });
+	// Merge default options with provided options
+	return new QueryClient({
+		...config,
+		defaultOptions: {
+			...defaultQueryClientOptions,
+			...config.defaultOptions,
+			queries: {
+				...defaultQueryClientOptions.queries,
+				...config.defaultOptions.queries
+			}
+		}
+	});
 }

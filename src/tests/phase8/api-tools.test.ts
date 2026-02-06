@@ -14,7 +14,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
 	getAllToolDefinitions,
 	getToolDefinition,
-	getToolsByCategory,
+	getToolsByCategory
 } from '$lib/tools/registry.js';
 import type { ToolDefinition } from '$lib/tools/types.js';
 
@@ -68,9 +68,9 @@ describe('REST API for Tools (Phase 8.1)', () => {
 					name: t.name,
 					description: t.description,
 					category: t.category,
-					approvalLevel: t.approvalLevel,
+					approvalLevel: t.approvalLevel
 				})),
-				total: tools.length,
+				total: tools.length
 			};
 
 			expect(apiResponse.total).toBe(tools.length);
@@ -108,9 +108,11 @@ describe('REST API for Tools (Phase 8.1)', () => {
 			const expectedSuccessResponse = {
 				success: true,
 				tool: 'listInstances',
-				data: { /* result */ },
+				data: {
+					/* result */
+				},
 				duration: 1234,
-				approvalLevel: 'auto',
+				approvalLevel: 'auto'
 			};
 
 			expect(expectedSuccessResponse).toHaveProperty('success', true);
@@ -121,7 +123,7 @@ describe('REST API for Tools (Phase 8.1)', () => {
 				success: false,
 				tool: 'terminateInstance',
 				error: 'Operation was cancelled by user',
-				rejected: true,
+				rejected: true
 			};
 
 			expect(expectedErrorResponse).toHaveProperty('success', false);

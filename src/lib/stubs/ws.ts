@@ -6,9 +6,9 @@
  */
 
 export default class WebSocket {
-  constructor() {
-    throw new Error('WebSocket is not available in Cloudflare Workers environment');
-  }
+	constructor() {
+		throw new Error('WebSocket is not available in Cloudflare Workers environment');
+	}
 }
 
 export { WebSocket };

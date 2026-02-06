@@ -20,7 +20,7 @@ vi.mock('$lib/server/oracle/connection.js', () => ({
 			execute: mockExecute,
 			commit: vi.fn().mockResolvedValue(undefined),
 			rollback: vi.fn().mockResolvedValue(undefined),
-			close: vi.fn().mockResolvedValue(undefined),
+			close: vi.fn().mockResolvedValue(undefined)
 		};
 		return fn(mockConn);
 	}),
@@ -28,15 +28,18 @@ vi.mock('$lib/server/oracle/connection.js', () => ({
 		connectionsOpen: 3,
 		connectionsInUse: 1,
 		poolMin: 2,
-		poolMax: 10,
+		poolMax: 10
 	}),
-	isPoolInitialized: vi.fn().mockReturnValue(true),
+	isPoolInitialized: vi.fn().mockReturnValue(true)
 }));
 
 vi.mock('$lib/server/logger.js', () => ({
 	createLogger: () => ({
-		info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(),
-	}),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+		debug: vi.fn()
+	})
 }));
 
 let healthModule: Record<string, unknown> | null = null;
@@ -57,7 +60,7 @@ describe('Deep Health Checks (Phase 6.8)', () => {
 			if (moduleError) {
 				expect.fail(
 					`health module not yet available: ${moduleError}. ` +
-					'Implement $lib/server/health.ts per Phase 6.8.'
+						'Implement $lib/server/health.ts per Phase 6.8.'
 				);
 			}
 			expect(healthModule).not.toBeNull();
@@ -117,10 +120,13 @@ describe('Deep Health Checks (Phase 6.8)', () => {
 		it('includes connection pool stats', async () => {
 			if (!healthModule) return;
 			const runHealthChecks = healthModule.runHealthChecks as () => Promise<{
-				checks: Record<string, {
-					status: string;
-					details?: { connectionsOpen: number; connectionsInUse: number };
-				}>;
+				checks: Record<
+					string,
+					{
+						status: string;
+						details?: { connectionsOpen: number; connectionsInUse: number };
+					}
+				>;
 			}>;
 
 			mockExecute.mockResolvedValueOnce({ rows: [{ RESULT: 1 }] });

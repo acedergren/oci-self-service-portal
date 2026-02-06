@@ -1,0 +1,226 @@
+{
+	"metadata": {
+		"provider": "multi",
+		"category": "genai",
+		"lastUpdated": "2026-02-01",
+		"source": "static",
+		"version": "1.0.0",
+		"currency": "USD",
+		"notes": "GenAI model pricing for OCI and Azure OpenAI"
+	},
+	"models": {
+		"oci": [
+			{
+				"id": "oci-llama-3.3-70b",
+				"name": "meta.llama-3.3-70b-instruct",
+				"displayName": "Llama 3.3 70B Instruct",
+				"provider": "Meta",
+				"type": "chat",
+				"specs": {
+					"contextWindow": 128000,
+					"maxOutputTokens": 4096,
+					"supportsStreaming": true,
+					"supportsTools": true
+				},
+				"pricing": {
+					"inputPer1MTokens": 0.12,
+					"outputPer1MTokens": 0.4
+				}
+			},
+			{
+				"id": "oci-llama-3.1-405b",
+				"name": "meta.llama-3.1-405b-instruct",
+				"displayName": "Llama 3.1 405B Instruct",
+				"provider": "Meta",
+				"type": "chat",
+				"specs": {
+					"contextWindow": 128000,
+					"maxOutputTokens": 4096,
+					"supportsStreaming": true,
+					"supportsTools": true
+				},
+				"pricing": {
+					"inputPer1MTokens": 1.0,
+					"outputPer1MTokens": 3.0
+				}
+			},
+			{
+				"id": "oci-cohere-command-r-plus",
+				"name": "cohere.command-r-plus",
+				"displayName": "Cohere Command R+",
+				"provider": "Cohere",
+				"type": "chat",
+				"specs": {
+					"contextWindow": 128000,
+					"maxOutputTokens": 4096,
+					"supportsStreaming": true,
+					"supportsTools": true
+				},
+				"pricing": {
+					"inputPer1MTokens": 3.0,
+					"outputPer1MTokens": 15.0
+				}
+			},
+			{
+				"id": "oci-cohere-command-r",
+				"name": "cohere.command-r",
+				"displayName": "Cohere Command R",
+				"provider": "Cohere",
+				"type": "chat",
+				"specs": {
+					"contextWindow": 128000,
+					"maxOutputTokens": 4096,
+					"supportsStreaming": true,
+					"supportsTools": true
+				},
+				"pricing": {
+					"inputPer1MTokens": 0.5,
+					"outputPer1MTokens": 1.5
+				}
+			},
+			{
+				"id": "oci-cohere-embed-english",
+				"name": "cohere.embed-english-v3.0",
+				"displayName": "Cohere Embed English v3",
+				"provider": "Cohere",
+				"type": "embedding",
+				"specs": {
+					"dimensions": 1024,
+					"maxTokens": 512
+				},
+				"pricing": {
+					"per1MTokens": 0.1
+				}
+			},
+			{
+				"id": "oci-cohere-embed-multilingual",
+				"name": "cohere.embed-multilingual-v3.0",
+				"displayName": "Cohere Embed Multilingual v3",
+				"provider": "Cohere",
+				"type": "embedding",
+				"specs": {
+					"dimensions": 1024,
+					"maxTokens": 512
+				},
+				"pricing": {
+					"per1MTokens": 0.1
+				}
+			}
+		],
+		"azure": [
+			{
+				"id": "azure-gpt-4o",
+				"name": "gpt-4o",
+				"displayName": "GPT-4o",
+				"provider": "OpenAI",
+				"type": "chat",
+				"specs": {
+					"contextWindow": 128000,
+					"maxOutputTokens": 16384,
+					"supportsStreaming": true,
+					"supportsTools": true,
+					"supportsVision": true
+				},
+				"pricing": {
+					"inputPer1MTokens": 2.5,
+					"outputPer1MTokens": 10.0
+				}
+			},
+			{
+				"id": "azure-gpt-4o-mini",
+				"name": "gpt-4o-mini",
+				"displayName": "GPT-4o Mini",
+				"provider": "OpenAI",
+				"type": "chat",
+				"specs": {
+					"contextWindow": 128000,
+					"maxOutputTokens": 16384,
+					"supportsStreaming": true,
+					"supportsTools": true,
+					"supportsVision": true
+				},
+				"pricing": {
+					"inputPer1MTokens": 0.15,
+					"outputPer1MTokens": 0.6
+				}
+			},
+			{
+				"id": "azure-gpt-4-turbo",
+				"name": "gpt-4-turbo",
+				"displayName": "GPT-4 Turbo",
+				"provider": "OpenAI",
+				"type": "chat",
+				"specs": {
+					"contextWindow": 128000,
+					"maxOutputTokens": 4096,
+					"supportsStreaming": true,
+					"supportsTools": true,
+					"supportsVision": true
+				},
+				"pricing": {
+					"inputPer1MTokens": 10.0,
+					"outputPer1MTokens": 30.0
+				}
+			},
+			{
+				"id": "azure-gpt-35-turbo",
+				"name": "gpt-35-turbo",
+				"displayName": "GPT-3.5 Turbo",
+				"provider": "OpenAI",
+				"type": "chat",
+				"specs": {
+					"contextWindow": 16385,
+					"maxOutputTokens": 4096,
+					"supportsStreaming": true,
+					"supportsTools": true
+				},
+				"pricing": {
+					"inputPer1MTokens": 0.5,
+					"outputPer1MTokens": 1.5
+				}
+			},
+			{
+				"id": "azure-text-embedding-3-small",
+				"name": "text-embedding-3-small",
+				"displayName": "Text Embedding 3 Small",
+				"provider": "OpenAI",
+				"type": "embedding",
+				"specs": {
+					"dimensions": 1536,
+					"maxTokens": 8191
+				},
+				"pricing": {
+					"per1MTokens": 0.02
+				}
+			},
+			{
+				"id": "azure-text-embedding-3-large",
+				"name": "text-embedding-3-large",
+				"displayName": "Text Embedding 3 Large",
+				"provider": "OpenAI",
+				"type": "embedding",
+				"specs": {
+					"dimensions": 3072,
+					"maxTokens": 8191
+				},
+				"pricing": {
+					"per1MTokens": 0.13
+				}
+			},
+			{
+				"id": "azure-text-embedding-ada-002",
+				"name": "text-embedding-ada-002",
+				"displayName": "Text Embedding Ada 002",
+				"provider": "OpenAI",
+				"type": "embedding",
+				"specs": {
+					"dimensions": 1536,
+					"maxTokens": 8191
+				},
+				"pricing": {
+					"per1MTokens": 0.1
+				}
+			}
+		]
+	}
+}

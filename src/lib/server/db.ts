@@ -5,11 +5,11 @@ let repository: StateRepository | null = null;
 
 /** @deprecated Use Oracle repositories from '$lib/server/oracle' instead */
 export function getRepository(): StateRepository {
-  if (!repository) {
-    const db = getConnection();
-    repository = new StateRepository(db);
-  }
-  return repository;
+	if (!repository) {
+		const db = getConnection();
+		repository = new StateRepository(db);
+	}
+	return repository;
 }
 
 // Re-export Oracle DB utilities for convenience

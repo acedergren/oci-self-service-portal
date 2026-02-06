@@ -1,9 +1,5 @@
 import { withConnection } from '../connection.js';
-import {
-	ToolExecutionSchema,
-	type ToolExecution,
-	type InsertToolExecution
-} from '../types.js';
+import { ToolExecutionSchema, type ToolExecution, type InsertToolExecution } from '../types.js';
 
 /** Oracle row shape for tool_executions (OUT_FORMAT_OBJECT, uppercase keys). */
 interface ToolExecutionRow {

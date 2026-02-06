@@ -1,5 +1,10 @@
 import { withConnection } from '../connection.js';
-import { OrganizationSchema, OrgMemberSchema, type Organization, type OrgMember } from '../types.js';
+import {
+	OrganizationSchema,
+	OrgMemberSchema,
+	type Organization,
+	type OrgMember
+} from '../types.js';
 
 // ============================================================================
 // Oracle row shapes (OUT_FORMAT_OBJECT, uppercase keys)
@@ -106,10 +111,10 @@ export const orgRepository = {
 
 	async removeMember(orgId: string, userId: string): Promise<void> {
 		await withConnection(async (conn) => {
-			await conn.execute(
-				'DELETE FROM org_members WHERE user_id = :userId AND org_id = :orgId',
-				{ userId, orgId }
-			);
+			await conn.execute('DELETE FROM org_members WHERE user_id = :userId AND org_id = :orgId', {
+				userId,
+				orgId
+			});
 		});
 	},
 

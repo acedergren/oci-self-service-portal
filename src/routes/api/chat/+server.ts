@@ -4,23 +4,39 @@ import { env } from '$env/dynamic/private';
 import { createAISDKTools } from '$lib/tools/index.js';
 import { createLogger } from '$lib/server/logger.js';
 import { requirePermission } from '$lib/server/auth/rbac.js';
+import { chatRequests } from '$lib/server/metrics.js';
+import { generateEmbedding } from '$lib/server/embeddings.js';
+import { embeddingRepository } from '$lib/server/oracle/repositories/embedding-repository.js';
 import type { RequestHandler } from './$types';
 
 const log = createLogger('chat');
 
 export const config = {
-  maxDuration: 60,
+	maxDuration: 60
 };
 
 const DEFAULT_MODEL = 'google.gemini-2.5-flash';
 const DEFAULT_REGION = 'eu-frankfurt-1';
 
-function getSystemPrompt(compartmentId: string | undefined): string {
-  const compartmentInfo = compartmentId
-    ? `\n\nDEFAULT COMPARTMENT: When a tool requires a compartmentId and the user doesn't specify one, use this default: ${compartmentId}`
-    : `\n\nNOTE: No default compartment is configured. You should first call listCompartments to find available compartments and ask the user which one to use.`;
+/** Allowlist of models that may be requested via the API. */
+export const _MODEL_ALLOWLIST = [
+	'google.gemini-2.5-flash',
+	'google.gemini-2.5-pro',
+	'google.gemini-2.0-flash',
+	'cohere.command-r-plus',
+	'cohere.command-r',
+	'cohere.command-a',
+	'meta.llama-3.3-70b',
+	'meta.llama-3.1-405b',
+	'meta.llama-3.1-70b'
+];
 
-  return `You are **CloudAdvisor**, an expert Oracle Cloud Infrastructure (OCI) assistant and multi-cloud advisor embedded in a self-service portal.
+function getSystemPrompt(compartmentId: string | undefined): string {
+	const compartmentInfo = compartmentId
+		? `\n\nDEFAULT COMPARTMENT: When a tool requires a compartmentId and the user doesn't specify one, use this default: ${compartmentId}`
+		: `\n\nNOTE: No default compartment is configured. You should first call listCompartments to find available compartments and ask the user which one to use.`;
+
+	return `You are **CloudAdvisor**, an expert Oracle Cloud Infrastructure (OCI) assistant and multi-cloud advisor embedded in a self-service portal.
 
 ## PERSONA & TONE
 - Professional, proactive, and cost-conscious. Security-first mindset.
@@ -207,62 +223,92 @@ stopInstance, terminateInstance, deleteVcn, deleteBucket, terminateAutonomousDat
 }
 
 export const POST: RequestHandler = async (event) => {
-  requirePermission(event, 'tools:execute');
+	requirePermission(event, 'tools:execute');
 
-  const body = await event.request.json();
-  const messages: UIMessage[] = body.messages ?? [];
+	const body = await event.request.json();
+	const messages: UIMessage[] = body.messages ?? [];
 
-  // Accept model from request body, fall back to default
-  const model = body.model || DEFAULT_MODEL;
-  const region = env.OCI_REGION || process.env.OCI_REGION || DEFAULT_REGION;
+	// Accept model from request body, fall back to default. Validate against allowlist.
+	const requestedModel = body.model || DEFAULT_MODEL;
+	const model = _MODEL_ALLOWLIST.includes(requestedModel) ? requestedModel : DEFAULT_MODEL;
+	const region = env.OCI_REGION || process.env.OCI_REGION || DEFAULT_REGION;
 
-  // Get compartment ID from environment
-  const compartmentId = env.OCI_COMPARTMENT_ID || process.env.OCI_COMPARTMENT_ID;
+	// Get compartment ID from environment
+	const compartmentId = env.OCI_COMPARTMENT_ID || process.env.OCI_COMPARTMENT_ID;
 
-  // Determine auth method - default to config_file for local dev, api_key for serverless
-  const authMethod = env.OCI_AUTH_METHOD || process.env.OCI_AUTH_METHOD || 'config_file';
+	// Determine auth method - default to config_file for local dev, api_key for serverless
+	const authMethod = env.OCI_AUTH_METHOD || process.env.OCI_AUTH_METHOD || 'config_file';
 
-  // Create OCI client with environment-based auth
-  const oci = createOCI({
-    compartmentId,
-    region,
-    auth: authMethod as 'config_file' | 'api_key' | 'instance_principal' | 'resource_principal',
-  });
+	// Create OCI client with environment-based auth
+	const oci = createOCI({
+		compartmentId,
+		region,
+		auth: authMethod as 'config_file' | 'api_key' | 'instance_principal' | 'resource_principal'
+	});
 
-  // Convert messages for the model
-  const modelMessages = await convertToModelMessages(messages);
+	// Convert messages for the model
+	const modelMessages = await convertToModelMessages(messages);
 
-  // Create tools (OCI tools only - MCP disabled for stateless deployment)
-  const tools = createAISDKTools();
+	// Create tools (OCI tools only - MCP disabled for stateless deployment)
+	const tools = createAISDKTools();
 
-  // Add system prompt with compartment context
-  const messagesWithSystem = [
-    { role: 'system' as const, content: getSystemPrompt(compartmentId) },
-    ...modelMessages,
-  ];
+	// Add system prompt with compartment context
+	const messagesWithSystem = [
+		{ role: 'system' as const, content: getSystemPrompt(compartmentId) },
+		...modelMessages
+	];
 
-  // Build provider options for reasoning if model supports it
-  const modelSupportsReasoning = supportsReasoning(model);
-  const providerOptions = modelSupportsReasoning
-    ? {
-        oci: {
-          // Gemini uses reasoningEffort, Cohere uses thinking
-          reasoningEffort: model.startsWith('google.') ? 'high' : undefined,
-          thinking: model.startsWith('cohere.') ? true : undefined,
-        },
-      }
-    : undefined;
+	// Build provider options for reasoning if model supports it
+	const modelSupportsReasoning = supportsReasoning(model);
+	const providerOptions = modelSupportsReasoning
+		? {
+				oci: {
+					// Gemini uses reasoningEffort, Cohere uses thinking
+					reasoningEffort: model.startsWith('google.') ? 'high' : undefined,
+					thinking: model.startsWith('cohere.') ? true : undefined
+				}
+			}
+		: undefined;
 
-  log.info({ model, region, messageCount: messages.length }, 'chat request');
+	log.info({ model, region, messageCount: messages.length }, 'chat request');
+	chatRequests.inc({ model, status: 'started' });
 
-  // Stream the response with tools
-  const result = streamText({
-    model: oci.languageModel(model),
-    messages: messagesWithSystem,
-    tools,
-    providerOptions,
-    stopWhen: stepCountIs(5), // AI SDK 6.0: use stopWhen instead of maxSteps
-  });
+	// Stream the response with tools
+	const result = streamText({
+		model: oci.languageModel(model),
+		messages: messagesWithSystem,
+		tools,
+		providerOptions,
+		stopWhen: stepCountIs(5) // AI SDK 6.0: use stopWhen instead of maxSteps
+	});
 
-  return result.toUIMessageStreamResponse();
+	// Fire-and-forget: embed the latest user message for vector search
+	const lastUserMessage = messages.findLast((m: UIMessage) => m.role === 'user');
+	const lastUserText = lastUserMessage?.parts
+		?.filter((p: { type: string }) => p.type === 'text')
+		.map((p: { type: string; text?: string }) => p.text ?? '')
+		.join(' ')
+		.trim();
+	if (lastUserText) {
+		const sessionId = body.sessionId as string | undefined;
+		const orgId = (event.locals.session as Record<string, unknown> | undefined)
+			?.activeOrganizationId as string | undefined;
+		if (sessionId && orgId) {
+			generateEmbedding(lastUserText)
+				.then((embedding) => {
+					if (embedding) {
+						return embeddingRepository.insert({
+							refType: 'user_message',
+							refId: sessionId,
+							orgId,
+							content: lastUserText,
+							embedding
+						});
+					}
+				})
+				.catch((err) => log.warn({ err }, 'fire-and-forget embedding failed'));
+		}
+	}
+
+	return result.toUIMessageStreamResponse();
 };

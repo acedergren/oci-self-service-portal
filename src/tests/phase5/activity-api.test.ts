@@ -33,21 +33,24 @@ const mockConn = {
 	execute: mockExecute,
 	commit: vi.fn().mockResolvedValue(undefined),
 	rollback: vi.fn().mockResolvedValue(undefined),
-	close: vi.fn().mockResolvedValue(undefined),
+	close: vi.fn().mockResolvedValue(undefined)
 };
 
 vi.mock('$lib/server/oracle/connection.js', () => ({
-	withConnection: vi.fn(async (fn: (conn: unknown) => Promise<unknown>) => fn(mockConn)),
+	withConnection: vi.fn(async (fn: (conn: unknown) => Promise<unknown>) => fn(mockConn))
 }));
 
 vi.mock('$lib/server/logger.js', () => ({
 	createLogger: () => ({
-		info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(),
-	}),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+		debug: vi.fn()
+	})
 }));
 
 vi.mock('$lib/server/auth/rbac.js', () => ({
-	requirePermission: vi.fn(),
+	requirePermission: vi.fn()
 }));
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -73,7 +76,7 @@ function makeRequestEvent(options: {
 		user: { id: 'test-user-123' },
 		permissions: ['activity:read'],
 		dbAvailable: true,
-		...options.locals,
+		...options.locals
 	};
 
 	return { url, locals };
@@ -91,7 +94,8 @@ let moduleError: string | null = null;
 beforeEach(async () => {
 	vi.clearAllMocks();
 	try {
-		serverModule = (await import('../../routes/api/activity/+server.js')) as unknown as ActivityHandler;
+		serverModule =
+			(await import('../../routes/api/activity/+server.js')) as unknown as ActivityHandler;
 	} catch (err) {
 		moduleError = (err as Error).message;
 	}
@@ -105,7 +109,7 @@ describe('Activity API (Phase 5.3)', () => {
 			if (moduleError) {
 				expect.fail(
 					`Activity endpoint not yet available: ${moduleError}. ` +
-					'Implement src/routes/api/activity/+server.ts per Phase 5.3.'
+						'Implement src/routes/api/activity/+server.ts per Phase 5.3.'
 				);
 			}
 			expect(serverModule).not.toBeNull();
@@ -116,7 +120,7 @@ describe('Activity API (Phase 5.3)', () => {
 		it('returns empty items for unauthenticated user (graceful degradation)', async () => {
 			if (!serverModule) return;
 			const event = makeRequestEvent({
-				locals: { user: undefined as unknown as Locals['user'] },
+				locals: { user: undefined as unknown as Locals['user'] }
 			});
 
 			const response = await serverModule.GET(event);
@@ -140,9 +144,9 @@ describe('Activity API (Phase 5.3)', () => {
 						TOOL_NAME: 'listInstances',
 						ACTION: 'executed',
 						SUCCESS: 1,
-						CREATED_AT: new Date('2026-02-06T10:00:00Z'),
-					},
-				],
+						CREATED_AT: new Date('2026-02-06T10:00:00Z')
+					}
+				]
 			});
 
 			const event = makeRequestEvent({});
@@ -163,7 +167,7 @@ describe('Activity API (Phase 5.3)', () => {
 			mockExecute.mockResolvedValueOnce({ rows: [] });
 
 			const event = makeRequestEvent({
-				searchParams: { offset: '20', limit: '10' },
+				searchParams: { offset: '20', limit: '10' }
 			});
 			const response = await serverModule.GET(event);
 			expect(response.status).toBe(200);
@@ -183,7 +187,7 @@ describe('Activity API (Phase 5.3)', () => {
 			mockExecute.mockResolvedValueOnce({ rows: [] });
 
 			const event = makeRequestEvent({
-				searchParams: { limit: '500' },
+				searchParams: { limit: '500' }
 			});
 			const response = await serverModule.GET(event);
 			expect(response.status).toBe(200);
@@ -198,7 +202,7 @@ describe('Activity API (Phase 5.3)', () => {
 			if (!serverModule) return;
 
 			const event = makeRequestEvent({
-				locals: { dbAvailable: false },
+				locals: { dbAvailable: false }
 			});
 			const response = await serverModule.GET(event);
 			expect(response.status).toBe(200);
@@ -219,9 +223,9 @@ describe('Activity API (Phase 5.3)', () => {
 						TOOL_NAME: 'listInstances',
 						ACTION: 'executed',
 						SUCCESS: 1,
-						CREATED_AT: new Date('2026-02-06T10:00:00Z'),
-					},
-				],
+						CREATED_AT: new Date('2026-02-06T10:00:00Z')
+					}
+				]
 			});
 
 			const event = makeRequestEvent({});
@@ -245,9 +249,9 @@ describe('Activity API (Phase 5.3)', () => {
 						TOOL_NAME: 'listInstances',
 						ACTION: 'executed',
 						SUCCESS: 1,
-						CREATED_AT: new Date('2026-02-06T10:00:00Z'),
-					},
-				],
+						CREATED_AT: new Date('2026-02-06T10:00:00Z')
+					}
+				]
 			});
 
 			const event = makeRequestEvent({});

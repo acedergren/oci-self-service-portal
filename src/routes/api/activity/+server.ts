@@ -35,7 +35,7 @@ function rowToActivityItem(row: ActivityRow): ActivityItem {
 		type: row.TOOL_CATEGORY,
 		action: `${row.TOOL_NAME} (${row.ACTION})`,
 		time: row.CREATED_AT.toISOString(),
-		status,
+		status
 	};
 }
 
@@ -48,7 +48,10 @@ export const GET: RequestHandler = async (event) => {
 		return json({ items: [], total: 0, message: 'Database not available' });
 	}
 
-	const limit = Math.min(Math.max(parseInt(url.searchParams.get('limit') ?? '20', 10) || 20, 1), 100);
+	const limit = Math.min(
+		Math.max(parseInt(url.searchParams.get('limit') ?? '20', 10) || 20, 1),
+		100
+	);
 	const offset = Math.max(parseInt(url.searchParams.get('offset') ?? '0', 10) || 0, 0);
 	const userId = locals.user?.id;
 

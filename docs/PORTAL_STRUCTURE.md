@@ -3,6 +3,7 @@
 ## Current Architecture
 
 ### Routes
+
 - `/self-service` → `src/routes/self-service/+page.svelte` (Portal homepage)
 - `/` → `src/routes/+page.svelte` (Main chat application - full-page dark theme)
 - `/api/chat` → `src/routes/api/chat/+server.ts` (Chat API endpoint)
@@ -32,9 +33,11 @@ src/lib/components/
 ```
 
 ### Self-Service Portal Page Structure
+
 **File:** `src/routes/self-service/+page.svelte` (42.9 KB)
 
 **Key Components:**
+
 1. Service Categories Display (hardcoded 6 categories: Compute, Database, Networking, Storage, Identity, Monitoring)
 2. Quick Actions Panel (4 quick action buttons)
 3. Search Box (inline, currently non-functional)
@@ -43,6 +46,7 @@ src/lib/components/
 6. Conversation History Sidebar
 
 **Data Flow:**
+
 ```
 User Input (Search/Quick Actions)
     ↓
@@ -58,6 +62,7 @@ Stream Response Back
 ### API Endpoints
 
 #### `/api/chat` (POST)
+
 - **Input:** `{ messages: UIMessage[], model?: string }`
 - **Output:** Streaming text response with tool execution
 - **Features:**
@@ -67,6 +72,7 @@ Stream Response Back
   - Streaming support
 
 **System Prompt Includes:**
+
 - Available tool categories (compute, networking, storage, database, identity, observability)
 - Default compartment guidance
 - Instructions for tool result summarization
@@ -74,12 +80,14 @@ Stream Response Back
 ### Data & State Management
 
 **Current State Variables:**
+
 - `selectedModel` - Current LLM model selection
 - `searchFocused` - Search input focus state
 - `showCommandPalette` - Command palette visibility
 - `searchInput` - Search query text
 
 **Missing:**
+
 - Centralized UI state store (e.g., `aiDialogOpen`, `loading` states)
 - Persistent conversation state across components
 - Error state management
@@ -87,12 +95,14 @@ Stream Response Back
 ### Component Usage Issues
 
 **ToolPanel Component:**
+
 - Located in `src/lib/components/ui/ToolPanel.svelte`
 - Currently used but doesn't show loading states
 - No feedback on button clicks
 - Disabled state not implemented
 
 **ModelPicker Component:**
+
 - Located in `src/lib/components/ui/ModelPicker.svelte`
 - Currently unused in portal
 - Could be repurposed for AI dialog theme consistency
@@ -100,11 +110,13 @@ Stream Response Back
 ### Navigation & Routing
 
 **Portal Navigation Issues:**
+
 1. Services Tab → Does nothing (broken)
 2. AI Chat Tab → Navigates to `/` (full-page dark theme app)
 3. Home Tab → Stays on `/self-service`
 
 **Problems:**
+
 - Navigation inconsistency (tabs behave differently)
 - AI Chat navigation breaks portal context (separate full-page app)
 - No tab state persistence
@@ -113,17 +125,20 @@ Stream Response Back
 ### Theme System
 
 **Current Implementation:**
+
 - Light theme in `/self-service` (white background, teal accents)
 - Dark theme in `/` (gray-900 background, light text)
 - Theme defined in `src/lib/theme.ts`
 - No theme switcher component
 
 **Issue:**
+
 - Clicking "AI Chat" tab navigates to dark theme, breaking UX cohesion
 
 ### Search Functionality Analysis
 
 **Current Implementation (Non-Functional):**
+
 - Input field in portal
 - Form submission handler exists
 - Query sent to `/api/chat`
@@ -173,4 +188,5 @@ src/lib/components/ui/ModelPicker.svelte
 - ✅ All components tested
 
 ## Next Phase
+
 Ready to implement Task 2: Debug & Fix Main Search Box

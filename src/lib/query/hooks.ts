@@ -1,13 +1,13 @@
 import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 import {
-  modelsQueryOptions,
-  sessionsQueryOptions,
-  sessionDetailQueryOptions,
-  sessionUsageQueryOptions,
-  createSession,
-  deleteSession,
-  queryKeys,
-  type OciSession,
+	modelsQueryOptions,
+	sessionsQueryOptions,
+	sessionDetailQueryOptions,
+	sessionUsageQueryOptions,
+	createSession,
+	deleteSession,
+	queryKeys,
+	type OciSession
 } from '$lib/query';
 
 /**
@@ -30,28 +30,28 @@ import {
  * ```
  */
 export function useModels() {
-  return createQuery(() => modelsQueryOptions());
+	return createQuery(() => modelsQueryOptions());
 }
 
 /**
  * Query hook for fetching all sessions
  */
 export function useSessions() {
-  return createQuery(() => sessionsQueryOptions());
+	return createQuery(() => sessionsQueryOptions());
 }
 
 /**
  * Query hook for fetching a specific session's detail
  */
 export function useSessionDetail(sessionId: string) {
-  return createQuery(() => sessionDetailQueryOptions(sessionId));
+	return createQuery(() => sessionDetailQueryOptions(sessionId));
 }
 
 /**
  * Query hook for fetching session usage (tokens/cost)
  */
 export function useSessionUsage(sessionId: string) {
-  return createQuery(() => sessionUsageQueryOptions(sessionId));
+	return createQuery(() => sessionUsageQueryOptions(sessionId));
 }
 
 /**
@@ -60,14 +60,14 @@ export function useSessionUsage(sessionId: string) {
  * Automatically invalidates the sessions list after creation
  */
 export function useCreateSession() {
-  const queryClient = useQueryClient();
+	const queryClient = useQueryClient();
 
-  return createMutation(() => ({
-    mutationFn: () => createSession(),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all() });
-    },
-  }));
+	return createMutation(() => ({
+		mutationFn: () => createSession(),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all() });
+		}
+	}));
 }
 
 /**
@@ -76,25 +76,25 @@ export function useCreateSession() {
  * Automatically invalidates the sessions list after deletion
  */
 export function useDeleteSession() {
-  const queryClient = useQueryClient();
+	const queryClient = useQueryClient();
 
-  return createMutation(() => ({
-    mutationFn: (id: string) => deleteSession(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all() });
-    },
-  }));
+	return createMutation(() => ({
+		mutationFn: (id: string) => deleteSession(id),
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all() });
+		}
+	}));
 }
 
 /**
  * Helper to invalidate session usage after a chat message
  */
 export function useInvalidateSessionUsage() {
-  const queryClient = useQueryClient();
+	const queryClient = useQueryClient();
 
-  return (sessionId: string) => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.sessions.usage(sessionId) });
-    // Also invalidate the session detail to get updated title
-    queryClient.invalidateQueries({ queryKey: queryKeys.sessions.detail(sessionId) });
-  };
+	return (sessionId: string) => {
+		queryClient.invalidateQueries({ queryKey: queryKeys.sessions.usage(sessionId) });
+		// Also invalidate the session detail to get updated title
+		queryClient.invalidateQueries({ queryKey: queryKeys.sessions.detail(sessionId) });
+	};
 }

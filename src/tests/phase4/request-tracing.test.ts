@@ -30,7 +30,7 @@ describe('Request Tracing (Phase 4.3)', () => {
 			if (moduleError) {
 				expect.fail(
 					`tracing module not yet available: ${moduleError}. ` +
-					'Implement $lib/server/tracing.ts per Phase 4.3.'
+						'Implement $lib/server/tracing.ts per Phase 4.3.'
 				);
 			}
 			expect(tracingModule).not.toBeNull();
@@ -81,7 +81,7 @@ describe('Request Tracing (Phase 4.3)', () => {
 		it('response should include X-Request-Id header', () => {
 			// Verifying the expected response contract
 			const response = new Response('ok', {
-				headers: { 'X-Request-Id': 'req-123-abc' },
+				headers: { 'X-Request-Id': 'req-123-abc' }
 			});
 			expect(response.headers.get('X-Request-Id')).toBe('req-123-abc');
 		});

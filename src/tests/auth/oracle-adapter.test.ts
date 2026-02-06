@@ -7,10 +7,10 @@ vi.mock('$lib/server/oracle/connection.js', () => ({
 			execute: vi.fn().mockResolvedValue({ rows: [] }),
 			commit: vi.fn().mockResolvedValue(undefined),
 			rollback: vi.fn().mockResolvedValue(undefined),
-			close: vi.fn().mockResolvedValue(undefined),
+			close: vi.fn().mockResolvedValue(undefined)
 		};
 		return fn(mockConn);
-	}),
+	})
 }));
 
 // Mock logger
@@ -19,8 +19,8 @@ vi.mock('$lib/server/logger.js', () => ({
 		info: vi.fn(),
 		warn: vi.fn(),
 		error: vi.fn(),
-		debug: vi.fn(),
-	}),
+		debug: vi.fn()
+	})
 }));
 
 /**
@@ -55,7 +55,7 @@ describe('Oracle Adapter Utilities', () => {
 				// Expected to fail until the module is implemented
 				expect.fail(
 					`oracle-adapter module not yet available: ${moduleError}. ` +
-					'This is expected in TDD phase -- the backend engineer will create it.'
+						'This is expected in TDD phase -- the backend engineer will create it.'
 				);
 			}
 			expect(adapterModule).not.toBeNull();
@@ -116,7 +116,7 @@ describe('Oracle Adapter Utilities', () => {
 			const row = {
 				user_id: '123',
 				display_name: 'Alice',
-				created_at: new Date('2026-01-01'),
+				created_at: new Date('2026-01-01')
 			};
 			const result = transformRow(row);
 			expect(result).toHaveProperty('userId', '123');
@@ -158,7 +158,7 @@ describe('Oracle Adapter Utilities', () => {
 			) => { sql: string; binds: Record<string, unknown> };
 
 			const result = buildWhereClause([
-				{ field: 'status', operator: 'in', value: ['active', 'suspended'] },
+				{ field: 'status', operator: 'in', value: ['active', 'suspended'] }
 			]);
 			expect(result.sql).toMatch(/IN/i);
 		});
@@ -170,7 +170,7 @@ describe('Oracle Adapter Utilities', () => {
 			) => { sql: string; binds: Record<string, unknown> };
 
 			const result = buildWhereClause([
-				{ field: 'email', operator: 'contains', value: 'example.com' },
+				{ field: 'email', operator: 'contains', value: 'example.com' }
 			]);
 			expect(result.sql).toMatch(/LIKE/i);
 		});
@@ -183,7 +183,7 @@ describe('Oracle Adapter Utilities', () => {
 
 			const result = buildWhereClause([
 				{ field: 'status', value: 'active' },
-				{ field: 'email', value: 'test@example.com' },
+				{ field: 'email', value: 'test@example.com' }
 			]);
 			expect(result.sql).toMatch(/AND/i);
 		});
@@ -196,7 +196,7 @@ describe('Oracle Adapter Utilities', () => {
 
 			const result = buildWhereClause([
 				{ field: 'status', value: 'active' },
-				{ field: 'status', value: 'suspended', connector: 'OR' },
+				{ field: 'status', value: 'suspended', connector: 'OR' }
 			]);
 			expect(result.sql).toMatch(/OR/i);
 		});

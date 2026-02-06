@@ -31,7 +31,7 @@ const TOP_LEVEL_COMPONENTS = [
 	'ServiceCategoryGrid',
 	'WorkflowGallery',
 	'BottomInfoSection',
-	'ChatOverlay',
+	'ChatOverlay'
 ];
 
 // ── Child / internal components ───────────────────────────────────────────
@@ -42,7 +42,7 @@ const CHILD_COMPONENTS = [
 	'WorkflowCard',
 	'RecentActivityPanel',
 	'ResourceLinksPanel',
-	'HelpPanel',
+	'HelpPanel'
 ];
 
 // ── Chat sub-components (already created) ─────────────────────────────────
@@ -52,7 +52,7 @@ const CHAT_COMPONENTS = [
 	'ChatMessage',
 	'ChatMessageList',
 	'ToolCallCard',
-	'TypingIndicator',
+	'TypingIndicator'
 ];
 
 // ── Tests ──────────────────────────────────────────────────────────────────
@@ -107,10 +107,7 @@ describe('Component Extraction (Phase 5.1)', () => {
 		for (const name of CHAT_COMPONENTS) {
 			it(`${name}.svelte file exists`, () => {
 				const filePath = resolve(PORTAL_DIR, `${name}.svelte`);
-				expect(
-					existsSync(filePath),
-					`Expected ${name}.svelte at ${filePath}.`
-				).toBe(true);
+				expect(existsSync(filePath), `Expected ${name}.svelte at ${filePath}.`).toBe(true);
 			});
 		}
 	});
@@ -121,10 +118,7 @@ describe('Component Extraction (Phase 5.1)', () => {
 			const barrelSource = readFileSync(resolve(PORTAL_DIR, 'index.ts'), 'utf-8');
 
 			for (const name of TOP_LEVEL_COMPONENTS) {
-				expect(
-					barrelSource,
-					`Barrel should re-export ${name}`
-				).toContain(`${name}`);
+				expect(barrelSource, `Barrel should re-export ${name}`).toContain(`${name}`);
 			}
 		});
 
@@ -133,10 +127,7 @@ describe('Component Extraction (Phase 5.1)', () => {
 			const barrelSource = readFileSync(resolve(PORTAL_DIR, 'index.ts'), 'utf-8');
 
 			for (const name of CHILD_COMPONENTS) {
-				expect(
-					barrelSource,
-					`Barrel should re-export ${name}`
-				).toContain(`${name}`);
+				expect(barrelSource, `Barrel should re-export ${name}`).toContain(`${name}`);
 			}
 		});
 
@@ -145,10 +136,7 @@ describe('Component Extraction (Phase 5.1)', () => {
 			const barrelSource = readFileSync(resolve(PORTAL_DIR, 'index.ts'), 'utf-8');
 
 			for (const name of CHAT_COMPONENTS) {
-				expect(
-					barrelSource,
-					`Barrel should re-export ${name}`
-				).toContain(`${name}`);
+				expect(barrelSource, `Barrel should re-export ${name}`).toContain(`${name}`);
 			}
 		});
 

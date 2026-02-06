@@ -1,11 +1,14 @@
 # Self-Service Portal: MVP to Product Roadmap
 
-> **Status**: Phase 5 complete, repo split next, then Phase 6
+> **Status**: Phase 8 in progress (API Integration Layer + Oracle 26AI Intelligence)
+> **Standalone Repo**: [oci-self-service-portal](https://github.com/acedergren/oci-self-service-portal)
 > **Last Updated**: 2026-02-06
+> **Tests**: 614 passing (44 test files)
 
 ---
 
 ## Phase 1: Build Foundation & Deployment Pipeline
+
 **Goal**: Deployable Docker container on OCI Compute with CI/CD and code quality tooling.
 
 - [x] 1.0 Create ROADMAP.md
@@ -21,6 +24,7 @@
 ---
 
 ## Phase 2: Oracle ADB 26AI Database Layer
+
 **Goal**: Replace SQLite + in-memory state with Oracle ADB 26AI.
 
 - [x] 2.1 Add oracledb driver (thin mode) — `oracledb@6.10.0`
@@ -42,6 +46,7 @@
 ---
 
 ## Phase 3: Authentication (OCI IAM SSO/OIDC)
+
 **Goal**: Protect all routes with OCI IAM Identity Domains. RBAC for tool access.
 
 - [x] 3.1 Install Better Auth — `better-auth@1.4.18`
@@ -66,6 +71,7 @@
 ---
 
 ## Phase 4: Code Consolidation & Cleanup
+
 **Goal**: Eliminate duplication, move rate limiting to DB, add request tracing.
 
 - [x] 4.1 Remove duplicate executors from execute/+server.ts
@@ -80,6 +86,7 @@
 ---
 
 ## Phase 5: Frontend Component Decomposition + shadcn-svelte
+
 **Goal**: Break 2043-line self-service page into focused components. Introduce shadcn-svelte.
 
 - [x] 5.1 Install shadcn-svelte (bits-ui@2.15.5, tailwind-variants, svelte-sonner)
@@ -96,85 +103,167 @@
 ---
 
 ## Phase 6: Observability Stack (Pino + Sentry + Prometheus)
+
 **Goal**: Production-grade logging, error tracking, performance monitoring.
 
-- [ ] 6.1 Enhanced Pino logging (structured transports)
-- [ ] 6.2 Pino child logger pattern (per-module)
-- [ ] 6.3 Sentry SDK integration (@sentry/sveltekit)
-- [ ] 6.4 Sentry performance monitoring
-- [ ] 6.5 Prometheus metrics collector
-- [ ] 6.6 Metrics endpoint (/api/metrics)
-- [ ] 6.7 Grafana dashboard
-- [ ] 6.8 Health endpoint deep checks
-- [ ] 6.9 Structured error types (PortalError hierarchy)
+- [x] 6.1 Enhanced Pino logging (structured transports, pino-pretty dev, JSON prod)
+- [x] 6.2 Pino child logger pattern (createLogger per-module, custom error/request serializers)
+- [x] 6.3 Sentry SDK integration (graceful degradation wrapper, dynamic import)
+- [x] 6.4 Sentry performance monitoring (wrapWithSpan, captureError with PortalError extras)
+- [x] 6.5 Prometheus metrics collector (Counter/Gauge/Histogram, 9 predefined portal\_\* metrics)
+- [x] 6.6 Metrics endpoint (/api/metrics — Prometheus text format)
+- [x] 6.7 Grafana dashboard (15+ panels, 710-line JSON)
+- [x] 6.8 Health endpoint deep checks (runHealthChecks: database, pool, oci_cli, sentry, metrics)
+- [x] 6.9 Structured error types (PortalError → 6 subclasses, toJSON/toSentryExtras/toResponseBody, helpers)
 
-**Verify**: Structured JSON logs. Sentry captures errors. `/api/metrics` returns Prometheus format. Grafana dashboard imports.
+**Verified**: 104 Phase 6 tests passing. 366 total tests (4 future-phase TDD stubs expected). Build succeeds. svelte-check clean (3 future-phase module stubs expected). HTTP metrics wired into hooks.server.ts. Graceful shutdown closes Sentry + Oracle pool.
 
 ---
 
 ## Phase 7: Visual Workflow Designer
-**Goal**: Canvas-based visual editor for multi-step OCI workflows with Mastra engine + Svelte Flow.
 
-- [ ] 7.1 Install Svelte Flow (@xyflow/svelte)
-- [ ] 7.2 Workflow data model (WorkflowDefinition, WorkflowNode, WorkflowEdge)
-- [ ] 7.3 Migration 004: Workflows table
-- [ ] 7.4 Workflow repository (CRUD + runs + steps)
-- [ ] 7.5 Node palette component
-- [ ] 7.6 Canvas component (Svelte Flow)
-- [ ] 7.7 Properties panel (dynamic forms from Zod)
-- [ ] 7.8 Mastra workflow engine integration
-- [ ] 7.9 Workflow API routes
-- [ ] 7.10 Designer page (list view)
-- [ ] 7.11 Designer editor page (full-screen canvas)
-- [ ] 7.12 Workflow templates (convert existing 7 templates)
-- [ ] 7.13 Execution timeline view
-- [ ] 7.14 Workflow sharing & marketplace
+**Goal**: Canvas-based visual editor for multi-step OCI workflows with custom executor + Svelte Flow.
 
-**Verify**: Create workflow visually, run it, watch execution. Save/reload persists. Share as template.
+- [x] 7.1 Install Svelte Flow (@xyflow/svelte@1.5) — Svelte 5 native rewrite
+- [x] 7.2 Workflow data model (20 Zod schemas, 8 node types) — `src/lib/workflows/types.ts`
+- [x] 7.3 Migration 005: Workflows tables (definitions, runs, steps)
+- [x] 7.4 Workflow repository (CRUD + runs + steps) — `src/lib/server/workflows/repository.ts`
+- [x] 7.5 Node palette component — `src/lib/components/workflows/NodePalette.svelte`
+- [x] 7.6 Canvas component (Svelte Flow, $state.raw) — `src/lib/components/workflows/WorkflowCanvas.svelte`
+- [x] 7.7 Properties panel (dynamic forms) — `src/lib/components/workflows/NodeProperties.svelte`
+- [x] 7.8 Custom WorkflowExecutor (Kahn's topological sort, DFS cycle detection, safe expressions)
+- [x] 7.9 Workflow API routes (/api/workflows CRUD + /[id]/run + /runs/[runId]/approve)
+- [x] 7.10 Designer page (list view) — `src/routes/workflows/+page.svelte`
+- [x] 7.11 Designer editor page (canvas + toolbar + palette + properties) — `src/routes/workflows/[id]/+page.svelte`
+- [x] 7.12 Designer create page — `src/routes/workflows/create/+page.svelte`
+- [x] 7.13 Execution timeline — `src/lib/components/workflows/ExecutionTimeline.svelte`
+- [x] 7.14 RBAC: 3 new workflow permissions (read, write, execute)
+
+**Security hardening** (post-Phase 7):
+
+- [x] I-1: Column injection prevention (validateColumnName regex + validateTableName allowlist)
+- [x] I-2: CSP nonce (crypto.randomUUID per request, transformPageChunk injection)
+- [x] M-2: DB-backed approvals (recordApproval/consumeApproval async with Oracle)
+- [x] M-3 through M-6: ESCAPE clause, workflow IDOR, rate limit cleanup
+
+**CodeRabbit review fixes**:
+
+- [x] C-1: Atomic DELETE in approval consumption
+- [x] H-1: LIKE wildcard escaping in oracle-adapter
+- [x] H-2: Recursive subgraph skip in workflow executor
+- [x] H-3: CSP nonce regex anchoring
+- [x] M-3: ESCAPE clause on all LIKE queries
+- [x] M-4: Workflow IDOR prevention (userId scoping)
+
+**Verified**: 107 Phase 7 tests, 506 total. Build succeeds. svelte-check clean.
 
 ---
 
-## Phase 8: API Integration Layer & MCP Server
-**Goal**: Expose tools and workflows as REST API + MCP server.
+## Phase 8: API Integration Layer + Oracle 26AI Intelligence
 
-- [ ] 8.1 REST API for tools (/api/v1/tools)
-- [ ] 8.2 API key authentication
-- [ ] 8.3 Workflow execution API
-- [ ] 8.4 MCP Server (Model Context Protocol)
-- [ ] 8.5 Webhook callbacks
-- [ ] 8.6 OpenAPI spec generation
-- [ ] 8.7 SDK client package
+**Goal**: REST API for external integrations, API key auth, Oracle 26AI features (vector search, blockchain audit, property graphs), webhook subscriptions, and MCP server for AI agent tool discovery. ~125 new tests, 3 new migrations.
 
-**Verify**: External API call executes tool. MCP client discovers portal tools. OpenAPI spec renders.
+### Wave 1 — Foundation
+
+- [x] 8.1 API key authentication (portal\_ prefix, SHA-256, dual auth in hooks.server.ts) — `src/lib/server/auth/api-keys.ts`
+- [x] 8.2 REST API v1 for tools (GET list, GET detail, POST execute with confirmation) — `src/routes/api/v1/tools/`
+- [x] 8.3 OpenAPI spec generation (auto-generated from tool Zod schemas) — `src/routes/api/v1/openapi.json/`
+- [x] 8.4 Dual auth guard (requireApiAuth: session OR API key) — `src/lib/server/api/require-auth.ts`
+- [x] 8.5 Phase 8 type definitions (403-line shared types + Zod schemas) — `src/lib/server/api/types.ts`
+
+### Wave 2 — Oracle 26AI Intelligence
+
+- [x] 8.6 Vector search activation (OCI GenAI embed-english-v3, embedding pipeline) — `src/lib/server/embeddings.ts`
+- [x] 8.7 Semantic search endpoint (cosine similarity, graceful degradation) — `src/routes/api/v1/search/`
+- [x] 8.8 Blockchain audit table (SHA-256 row chaining, dual-write, verification API) — `src/routes/api/v1/audit/verify/`
+- [x] 8.9 Property graph analytics (SQL/PGQ, user-activity/tool-affinity/org-impact) — `src/routes/api/v1/graph/`
+
+### Wave 3 — External Integration
+
+- [x] 8.10 Webhook subscriptions (HMAC-SHA256 signed, SSRF prevention, circuit breaker) — `src/routes/api/v1/webhooks/`
+- [x] 8.11 Workflow execution REST API v1 (list, trigger, status with steps) — `src/routes/api/v1/workflows/`
+- [ ] 8.12 MCP server for portal tools (in progress) — `src/lib/server/mcp/portal-server.ts`
+
+### Migrations
+
+- [x] Migration 006: API keys + webhook subscriptions tables
+- [x] Migration 007: Oracle Text index, blockchain audit table (SHA2_256)
+- [x] Migration 008: SQL/PGQ property graph (5 vertex, 4 edge tables)
+
+### Security Fixes (Applied During Phase 8)
+
+- [x] H-8: Fire-and-forget race condition in api-keys.ts (separate withConnection)
+- [x] M-13: Search endpoint orgId resolution (dead code path)
+- [x] M-14: Danger permission bypass in v1 tool execute (check before confirmation)
+- [x] M-17: Webhook/workflow/graph/audit auth inconsistency (all v1 routes use requireApiAuth + resolveOrgId)
+
+### OCI IDCS Integration
+
+- [x] Enhanced Better Auth config for OCI IDCS (urn:opc:idm:**myscopes** scope, IDCS claim mapping)
+- [x] IDCS group-to-role auto-provisioning (mapIdcsGroupsToRole, MERGE INTO upsert)
+- [x] .env.example with IDCS configuration guidance
+
+**Verified**: 614 tests passing (44 test files). All v1 endpoints use dual auth (session + API key). Build succeeds.
 
 ---
 
-## Phase 9: ITSM Completeness & MCP Integrations
+## Phase 9: Fastify Backend Migration
+
+**Goal**: Extract API routes from SvelteKit into a dedicated Fastify backend for independent scaling, OpenAPI docs, and cleaner separation of concerns.
+
+**Architecture**: `apps/frontend/` (SvelteKit UI-only) + `apps/api/` (Fastify backend) + `packages/shared/` (business logic)
+
+- [ ] 9.1 Monorepo restructure (`apps/frontend`, `apps/api`, `packages/shared`)
+- [ ] 9.2 Extract shared business logic package (tools, oracle, auth, pricing, terraform)
+- [ ] 9.3 Fastify app factory with plugin architecture (`@fastify/cors`, `@fastify/cookie`, `@fastify/rate-limit`)
+- [ ] 9.4 Oracle DB Fastify plugin (connection pool lifecycle, `request.db` decorator)
+- [ ] 9.5 Better Auth Fastify integration (`fastify-better-auth` or manual middleware)
+- [ ] 9.6 RBAC + session validation as Fastify preHandler hooks
+- [ ] 9.7 Migrate health endpoint (`GET /api/health` with DB + OCI CLI checks)
+- [ ] 9.8 Migrate sessions API (`GET/POST/DELETE /api/sessions`)
+- [ ] 9.9 Migrate activity API (`GET /api/activity`)
+- [ ] 9.10 Migrate tools API (`POST /api/tools/execute`, `POST /api/tools/approve`)
+- [ ] 9.11 Migrate AI chat streaming (`POST /api/chat` — AI SDK `streamText().toUIMessageStream()`)
+- [ ] 9.12 OpenAPI spec generation (`@fastify/swagger` + `@fastify/swagger-ui`, auto from Zod schemas)
+- [ ] 9.13 Update SvelteKit frontend (remove `+server.ts` routes, point fetches to Fastify via env var)
+- [ ] 9.14 Docker multi-service deployment (frontend + api containers, shared network)
+- [ ] 9.15 CI/CD updates (separate test/build/deploy jobs for frontend and api)
+- [ ] 9.16 Feature flag for phased rollout (proxy SvelteKit → Fastify per-route)
+
+**Key dependencies**: `fastify@5`, `@fastify/swagger`, `@fastify/cors`, `@fastify/cookie`, `@fastify/rate-limit`, `fastify-type-provider-zod`
+
+**Verify**: All API routes respond identically from Fastify. OpenAPI docs at `/api/docs`. AI chat streaming works. Auth cookies shared between frontend/api. Docker Compose runs both services. CI green for both apps.
+
+---
+
+## Phase 10: ITSM Completeness & MCP Integrations
+
 **Goal**: Complete ITSM platform with incident/change management and external system integrations.
 
-- [ ] 9.1 MCP client integration (PagerDuty, Jira, Slack, GitHub)
-- [ ] 9.2 Incident management tools
-- [ ] 9.3 Change management workflow
-- [ ] 9.4 Knowledge base (vector RAG with ADB 26AI)
-- [ ] 9.5 Asset inventory enrichment
-- [ ] 9.6 SLA tracking
-- [ ] 9.7 Slack notifications
-- [ ] 9.8 ITSM dashboard
+- [ ] 10.1 MCP client integration (PagerDuty, Jira, Slack, GitHub)
+- [ ] 10.2 Incident management tools
+- [ ] 10.3 Change management workflow
+- [ ] 10.4 Knowledge base (vector RAG with ADB 26AI)
+- [ ] 10.5 Asset inventory enrichment
+- [ ] 10.6 SLA tracking
+- [ ] 10.7 Slack notifications
+- [ ] 10.8 ITSM dashboard
 
 **Verify**: Create incident via chat -> PagerDuty. Submit change request -> Jira. Search KB -> semantic results.
 
 ---
 
-## Phase 10: Production Deployment & Go-Live
+## Phase 11: Production Deployment & Go-Live
+
 **Goal**: Live on portal.solutionsedge.io with CD pipeline and operational readiness.
 
-- [ ] 10.1 Cloudflare Tunnel route
-- [ ] 10.2 OCI IAM OIDC app configuration
-- [ ] 10.3 Deploy script (bastion + Docker)
-- [ ] 10.4 Graceful shutdown (Oracle pool, Sentry, Pino flush)
-- [ ] 10.5 GitHub Actions CD
-- [ ] 10.6 OCI Vault runtime secrets
-- [ ] 10.7 E2E smoke tests
-- [ ] 10.8 Operational runbook
+- [ ] 11.1 Cloudflare Tunnel route
+- [ ] 11.2 OCI IAM OIDC app configuration
+- [ ] 11.3 Deploy script (bastion + Docker)
+- [ ] 11.4 Graceful shutdown (Oracle pool, Sentry, Pino flush)
+- [ ] 11.5 GitHub Actions CD
+- [ ] 11.6 OCI Vault runtime secrets
+- [ ] 11.7 E2E smoke tests
+- [ ] 11.8 Operational runbook
 
 **Verify**: `portal.solutionsedge.io/api/health` returns ok. Login flow works. CD deploys on merge.

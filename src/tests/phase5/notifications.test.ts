@@ -28,11 +28,11 @@ const mockToast = {
 	success: vi.fn(),
 	error: vi.fn(),
 	warning: vi.fn(),
-	info: vi.fn(),
+	info: vi.fn()
 };
 
 vi.mock('svelte-sonner', () => ({
-	toast: mockToast,
+	toast: mockToast
 }));
 
 let notificationsModule: Record<string, unknown> | null = null;
@@ -53,7 +53,7 @@ describe('Notification Utilities (Phase 5.5)', () => {
 			if (moduleError) {
 				expect.fail(
 					`Notifications module not yet available: ${moduleError}. ` +
-					'Implement $lib/utils/notifications.ts per Phase 5.5.'
+						'Implement $lib/utils/notifications.ts per Phase 5.5.'
 				);
 			}
 			expect(notificationsModule).not.toBeNull();
@@ -106,7 +106,8 @@ describe('Notification Utilities (Phase 5.5)', () => {
 		it('notifyToolSuccess calls toast.success with tool name', () => {
 			if (!notificationsModule) return;
 			const notifyToolSuccess = notificationsModule.notifyToolSuccess as (
-				toolName: string, message?: string
+				toolName: string,
+				message?: string
 			) => void;
 
 			notifyToolSuccess('listInstances', 'Found 3 instances');
@@ -119,7 +120,8 @@ describe('Notification Utilities (Phase 5.5)', () => {
 		it('notifyToolError calls toast.error with tool name', () => {
 			if (!notificationsModule) return;
 			const notifyToolError = notificationsModule.notifyToolError as (
-				toolName: string, error?: string
+				toolName: string,
+				error?: string
 			) => void;
 
 			notifyToolError('createInstance', 'Quota exceeded');
@@ -131,9 +133,7 @@ describe('Notification Utilities (Phase 5.5)', () => {
 
 		it('notifyRateLimit calls toast.warning', () => {
 			if (!notificationsModule) return;
-			const notifyRateLimit = notificationsModule.notifyRateLimit as (
-				retryAfter?: number
-			) => void;
+			const notifyRateLimit = notificationsModule.notifyRateLimit as (retryAfter?: number) => void;
 
 			notifyRateLimit(30);
 			expect(mockToast.warning).toHaveBeenCalledWith(
@@ -145,7 +145,8 @@ describe('Notification Utilities (Phase 5.5)', () => {
 		it('notifyInfo calls toast.info', () => {
 			if (!notificationsModule) return;
 			const notifyInfo = notificationsModule.notifyInfo as (
-				message: string, description?: string
+				message: string,
+				description?: string
 			) => void;
 
 			notifyInfo('Session restored', 'Loaded previous chat');

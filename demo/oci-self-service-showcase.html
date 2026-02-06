@@ -1,0 +1,1491 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>OCI AI Self-Service Portal - Customer Demo</title>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				box-sizing: border-box;
+			}
+
+			:root {
+				--teal: #0d9488;
+				--teal-dark: #0f766e;
+				--teal-light: #14b8a6;
+				--navy: #1e293b;
+				--navy-light: #334155;
+				--slate: #64748b;
+				--gray: #94a3b8;
+				--light: #f1f5f9;
+				--white: #ffffff;
+				--bg: #0f172a;
+				--success: #10b981;
+				--warning: #f59e0b;
+				--error: #ef4444;
+			}
+
+			body {
+				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+				background: var(--bg);
+				color: var(--light);
+				min-height: 100vh;
+			}
+
+			.header {
+				background: linear-gradient(135deg, var(--navy) 0%, var(--bg) 100%);
+				border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+				padding: 1rem 2rem;
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				position: sticky;
+				top: 0;
+				z-index: 100;
+			}
+
+			.logo {
+				display: flex;
+				align-items: center;
+				gap: 0.75rem;
+			}
+			.logo-icon {
+				width: 40px;
+				height: 40px;
+				background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+				border-radius: 10px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+			}
+			.logo-icon svg {
+				width: 24px;
+				height: 24px;
+			}
+			.logo-text {
+				font-size: 1.25rem;
+				font-weight: 700;
+				color: var(--white);
+			}
+			.logo-subtitle {
+				font-size: 0.75rem;
+				color: var(--teal-light);
+				text-transform: uppercase;
+				letter-spacing: 0.1em;
+			}
+
+			.nav-tabs {
+				display: flex;
+				gap: 0.5rem;
+			}
+			.nav-tab {
+				padding: 0.625rem 1.25rem;
+				background: transparent;
+				border: 1px solid transparent;
+				color: var(--gray);
+				font-size: 0.875rem;
+				font-weight: 500;
+				border-radius: 8px;
+				cursor: pointer;
+				transition: all 0.2s ease;
+			}
+			.nav-tab:hover {
+				color: var(--white);
+				background: rgba(255, 255, 255, 0.05);
+			}
+			.nav-tab.active {
+				color: var(--teal-light);
+				background: rgba(13, 148, 136, 0.15);
+				border-color: rgba(13, 148, 136, 0.3);
+			}
+
+			.live-badge {
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+				padding: 0.5rem 1rem;
+				background: rgba(16, 185, 129, 0.15);
+				border: 1px solid rgba(16, 185, 129, 0.3);
+				border-radius: 100px;
+				color: var(--success);
+				font-size: 0.8125rem;
+				font-weight: 500;
+			}
+			.live-dot {
+				width: 8px;
+				height: 8px;
+				background: var(--success);
+				border-radius: 50%;
+				animation: pulse 2s infinite;
+			}
+			@keyframes pulse {
+				0%,
+				100% {
+					opacity: 1;
+					transform: scale(1);
+				}
+				50% {
+					opacity: 0.5;
+					transform: scale(1.2);
+				}
+			}
+
+			.main {
+				max-width: 1400px;
+				margin: 0 auto;
+				padding: 2rem;
+			}
+
+			.section {
+				display: none;
+				animation: fadeIn 0.3s ease;
+			}
+			.section.active {
+				display: block;
+			}
+			@keyframes fadeIn {
+				from {
+					opacity: 0;
+					transform: translateY(10px);
+				}
+				to {
+					opacity: 1;
+					transform: translateY(0);
+				}
+			}
+
+			.hero {
+				text-align: center;
+				padding: 3rem 0;
+			}
+			.hero-badge {
+				display: inline-flex;
+				align-items: center;
+				gap: 0.5rem;
+				padding: 0.5rem 1rem;
+				background: rgba(13, 148, 136, 0.15);
+				border: 1px solid rgba(13, 148, 136, 0.3);
+				border-radius: 100px;
+				color: var(--teal-light);
+				font-size: 0.8125rem;
+				font-weight: 500;
+				margin-bottom: 1.5rem;
+			}
+			.hero h1 {
+				font-size: 3rem;
+				font-weight: 800;
+				color: var(--white);
+				margin-bottom: 1rem;
+				line-height: 1.1;
+			}
+			.hero h1 span {
+				color: var(--teal-light);
+			}
+			.hero p {
+				font-size: 1.25rem;
+				color: var(--gray);
+				max-width: 700px;
+				margin: 0 auto 2rem;
+				line-height: 1.6;
+			}
+			.hero-cta {
+				display: flex;
+				gap: 1rem;
+				justify-content: center;
+			}
+
+			.btn {
+				padding: 0.875rem 1.75rem;
+				border-radius: 10px;
+				font-size: 0.9375rem;
+				font-weight: 600;
+				cursor: pointer;
+				transition: all 0.2s ease;
+				border: none;
+				display: inline-flex;
+				align-items: center;
+				gap: 0.5rem;
+				text-decoration: none;
+			}
+			.btn-primary {
+				background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+				color: white;
+			}
+			.btn-primary:hover {
+				transform: translateY(-2px);
+				box-shadow: 0 8px 20px rgba(13, 148, 136, 0.4);
+			}
+			.btn-secondary {
+				background: rgba(255, 255, 255, 0.1);
+				color: var(--white);
+				border: 1px solid rgba(255, 255, 255, 0.2);
+			}
+			.btn-secondary:hover {
+				background: rgba(255, 255, 255, 0.15);
+			}
+
+			.comparison {
+				display: grid;
+				grid-template-columns: 1fr auto 1fr;
+				gap: 2rem;
+				margin: 3rem 0;
+				align-items: center;
+			}
+			.comparison-card {
+				background: var(--navy);
+				border-radius: 16px;
+				padding: 2rem;
+				border: 1px solid rgba(255, 255, 255, 0.1);
+			}
+			.comparison-card.old {
+				opacity: 0.7;
+			}
+			.comparison-card.new {
+				border-color: var(--teal);
+				box-shadow: 0 0 40px rgba(13, 148, 136, 0.2);
+			}
+			.comparison-header {
+				display: flex;
+				align-items: center;
+				gap: 1rem;
+				margin-bottom: 1.5rem;
+			}
+			.comparison-icon {
+				width: 48px;
+				height: 48px;
+				border-radius: 12px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 1.5rem;
+			}
+			.comparison-card.old .comparison-icon {
+				background: rgba(239, 68, 68, 0.15);
+			}
+			.comparison-card.new .comparison-icon {
+				background: rgba(13, 148, 136, 0.15);
+			}
+			.comparison-title {
+				font-size: 1.25rem;
+				font-weight: 600;
+				color: var(--white);
+			}
+			.comparison-subtitle {
+				font-size: 0.875rem;
+				color: var(--slate);
+			}
+			.comparison-list {
+				list-style: none;
+			}
+			.comparison-list li {
+				display: flex;
+				align-items: center;
+				gap: 0.75rem;
+				padding: 0.75rem 0;
+				border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+				font-size: 0.9375rem;
+				color: var(--gray);
+			}
+			.comparison-list li:last-child {
+				border-bottom: none;
+			}
+			.comparison-list .icon {
+				width: 20px;
+				height: 20px;
+				border-radius: 50%;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 0.75rem;
+				flex-shrink: 0;
+			}
+			.comparison-card.old .icon {
+				background: rgba(239, 68, 68, 0.2);
+				color: var(--error);
+			}
+			.comparison-card.new .icon {
+				background: rgba(16, 185, 129, 0.2);
+				color: var(--success);
+			}
+			.comparison-arrow {
+				font-size: 3rem;
+				color: var(--teal);
+			}
+
+			.stats-grid {
+				display: grid;
+				grid-template-columns: repeat(4, 1fr);
+				gap: 1.5rem;
+				margin: 3rem 0;
+			}
+			.stat-card {
+				background: var(--navy);
+				border-radius: 12px;
+				padding: 1.5rem;
+				text-align: center;
+				border: 1px solid rgba(255, 255, 255, 0.1);
+			}
+			.stat-value {
+				font-size: 2.5rem;
+				font-weight: 800;
+				color: var(--teal-light);
+				margin-bottom: 0.5rem;
+			}
+			.stat-label {
+				font-size: 0.875rem;
+				color: var(--gray);
+			}
+
+			.architecture-diagram {
+				background: var(--navy);
+				border-radius: 16px;
+				padding: 2rem;
+				border: 1px solid rgba(255, 255, 255, 0.1);
+				margin: 2rem 0;
+			}
+			.arch-title {
+				font-size: 1.5rem;
+				font-weight: 700;
+				color: var(--white);
+				margin-bottom: 2rem;
+				text-align: center;
+			}
+			.arch-layers {
+				display: flex;
+				flex-direction: column;
+				gap: 1rem;
+			}
+			.arch-layer {
+				display: flex;
+				align-items: center;
+				gap: 1rem;
+			}
+			.arch-label {
+				width: 120px;
+				font-size: 0.75rem;
+				text-transform: uppercase;
+				letter-spacing: 0.1em;
+				color: var(--slate);
+				text-align: right;
+				flex-shrink: 0;
+			}
+			.arch-boxes {
+				display: flex;
+				gap: 0.75rem;
+				flex: 1;
+				flex-wrap: wrap;
+			}
+			.arch-box {
+				padding: 1rem 1.5rem;
+				border-radius: 10px;
+				font-size: 0.875rem;
+				font-weight: 500;
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+				cursor: pointer;
+				transition: all 0.2s ease;
+				border: 1px solid transparent;
+			}
+			.arch-box:hover {
+				transform: translateY(-2px);
+			}
+			.arch-box.frontend {
+				background: rgba(99, 102, 241, 0.15);
+				color: #818cf8;
+				border-color: rgba(99, 102, 241, 0.3);
+			}
+			.arch-box.sdk {
+				background: rgba(13, 148, 136, 0.15);
+				color: var(--teal-light);
+				border-color: rgba(13, 148, 136, 0.3);
+			}
+			.arch-box.provider {
+				background: rgba(249, 115, 22, 0.15);
+				color: #fb923c;
+				border-color: rgba(249, 115, 22, 0.3);
+			}
+			.arch-box.oci {
+				background: rgba(239, 68, 68, 0.15);
+				color: #f87171;
+				border-color: rgba(239, 68, 68, 0.3);
+			}
+			.arch-box.tools {
+				background: rgba(234, 179, 8, 0.15);
+				color: #facc15;
+				border-color: rgba(234, 179, 8, 0.3);
+			}
+			.arch-connector {
+				width: 2px;
+				height: 30px;
+				background: linear-gradient(to bottom, var(--teal), transparent);
+				margin-left: 180px;
+			}
+
+			.component-detail {
+				background: var(--navy-light);
+				border-radius: 12px;
+				padding: 1.5rem;
+				margin-top: 1.5rem;
+				display: none;
+			}
+			.component-detail.active {
+				display: block;
+			}
+			.component-detail h4 {
+				color: var(--white);
+				margin-bottom: 0.75rem;
+			}
+			.component-detail p {
+				color: var(--gray);
+				font-size: 0.9375rem;
+				line-height: 1.6;
+				margin-bottom: 1rem;
+			}
+			.component-detail code {
+				display: block;
+				background: var(--bg);
+				padding: 1rem;
+				border-radius: 8px;
+				font-family: monospace;
+				font-size: 0.8125rem;
+				color: var(--teal-light);
+				overflow-x: auto;
+			}
+
+			.workflows-grid {
+				display: grid;
+				grid-template-columns: repeat(2, 1fr);
+				gap: 1.5rem;
+				margin: 2rem 0;
+			}
+			.workflow-card {
+				background: var(--navy);
+				border-radius: 16px;
+				padding: 1.5rem;
+				border: 1px solid rgba(255, 255, 255, 0.1);
+				cursor: pointer;
+				transition: all 0.2s ease;
+			}
+			.workflow-card:hover {
+				border-color: var(--teal);
+				transform: translateY(-4px);
+				box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+			}
+			.workflow-card.active {
+				border-color: var(--teal);
+				box-shadow: 0 0 30px rgba(13, 148, 136, 0.2);
+			}
+			.workflow-header {
+				display: flex;
+				align-items: center;
+				gap: 1rem;
+				margin-bottom: 1rem;
+			}
+			.workflow-icon {
+				width: 48px;
+				height: 48px;
+				border-radius: 12px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				flex-shrink: 0;
+			}
+			.workflow-icon svg {
+				width: 24px;
+				height: 24px;
+			}
+			.workflow-icon.compute {
+				background: rgba(13, 148, 136, 0.15);
+				color: var(--teal-light);
+			}
+			.workflow-icon.pricing {
+				background: rgba(234, 179, 8, 0.15);
+				color: #facc15;
+			}
+			.workflow-icon.database {
+				background: rgba(99, 102, 241, 0.15);
+				color: #818cf8;
+			}
+			.workflow-icon.networking {
+				background: rgba(16, 185, 129, 0.15);
+				color: var(--success);
+			}
+			.workflow-title {
+				font-size: 1.125rem;
+				font-weight: 600;
+				color: var(--white);
+			}
+			.workflow-desc {
+				font-size: 0.875rem;
+				color: var(--gray);
+				margin-bottom: 1rem;
+			}
+			.workflow-meta {
+				display: flex;
+				gap: 1rem;
+				font-size: 0.8125rem;
+				color: var(--slate);
+			}
+
+			.workflow-demo {
+				background: var(--navy);
+				border-radius: 16px;
+				padding: 2rem;
+				border: 1px solid rgba(255, 255, 255, 0.1);
+				margin-top: 2rem;
+			}
+			.demo-header {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				margin-bottom: 1.5rem;
+			}
+			.demo-title {
+				font-size: 1.25rem;
+				font-weight: 600;
+				color: var(--white);
+			}
+			.demo-status {
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+				padding: 0.375rem 0.75rem;
+				background: rgba(16, 185, 129, 0.15);
+				border-radius: 100px;
+				color: var(--success);
+				font-size: 0.8125rem;
+			}
+			.steps-list {
+				display: flex;
+				flex-direction: column;
+				gap: 0.75rem;
+			}
+			.step {
+				display: flex;
+				align-items: center;
+				gap: 1rem;
+				padding: 1rem;
+				background: rgba(255, 255, 255, 0.03);
+				border-radius: 10px;
+				transition: all 0.3s ease;
+			}
+			.step.completed {
+				background: rgba(16, 185, 129, 0.1);
+			}
+			.step.active {
+				background: rgba(13, 148, 136, 0.15);
+				border: 1px solid rgba(13, 148, 136, 0.3);
+			}
+			.step-number {
+				width: 32px;
+				height: 32px;
+				border-radius: 50%;
+				background: var(--navy-light);
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 0.875rem;
+				font-weight: 600;
+				color: var(--gray);
+				flex-shrink: 0;
+			}
+			.step.completed .step-number {
+				background: var(--success);
+				color: white;
+			}
+			.step.active .step-number {
+				background: var(--teal);
+				color: white;
+				animation: pulse 1.5s infinite;
+			}
+			.step-content {
+				flex: 1;
+			}
+			.step-title {
+				font-size: 0.9375rem;
+				font-weight: 500;
+				color: var(--white);
+				margin-bottom: 0.25rem;
+			}
+			.step-desc {
+				font-size: 0.8125rem;
+				color: var(--slate);
+			}
+			.step-tool {
+				padding: 0.25rem 0.5rem;
+				background: var(--navy);
+				border-radius: 4px;
+				font-family: monospace;
+				font-size: 0.75rem;
+				color: var(--teal-light);
+			}
+			.demo-controls {
+				display: flex;
+				gap: 1rem;
+				margin-top: 1.5rem;
+			}
+
+			.transparency-demo {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 2rem;
+				margin: 2rem 0;
+			}
+			.transparency-card {
+				background: var(--navy);
+				border-radius: 16px;
+				overflow: hidden;
+				border: 1px solid rgba(255, 255, 255, 0.1);
+			}
+			.transparency-header {
+				padding: 1rem 1.5rem;
+				background: rgba(255, 255, 255, 0.05);
+				border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+			}
+			.transparency-title {
+				font-size: 0.875rem;
+				font-weight: 600;
+				color: var(--white);
+			}
+			.transparency-content {
+				padding: 1.5rem;
+			}
+			.chat-message {
+				display: flex;
+				gap: 0.75rem;
+				margin-bottom: 1rem;
+			}
+			.chat-avatar {
+				width: 32px;
+				height: 32px;
+				border-radius: 50%;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 0.875rem;
+				flex-shrink: 0;
+			}
+			.chat-avatar.user {
+				background: var(--navy-light);
+				color: var(--gray);
+			}
+			.chat-avatar.ai {
+				background: linear-gradient(135deg, var(--teal), var(--teal-dark));
+				color: white;
+			}
+			.chat-bubble {
+				padding: 0.75rem 1rem;
+				border-radius: 12px;
+				font-size: 0.9375rem;
+			}
+			.chat-message.user .chat-bubble {
+				background: var(--navy-light);
+				color: var(--light);
+			}
+			.chat-message.ai .chat-bubble {
+				background: transparent;
+				color: var(--light);
+			}
+			.tool-card-demo {
+				background: rgba(255, 255, 255, 0.05);
+				border-radius: 8px;
+				padding: 0.75rem 1rem;
+				margin: 0.75rem 0;
+				border-left: 3px solid var(--warning);
+			}
+			.tool-card-demo.hidden {
+				display: none;
+			}
+			.tool-card-header {
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+			}
+			.tool-name {
+				font-family: monospace;
+				font-size: 0.8125rem;
+				color: var(--white);
+			}
+			.tool-status {
+				display: flex;
+				align-items: center;
+				gap: 0.375rem;
+				font-size: 0.75rem;
+				color: var(--warning);
+			}
+			.tool-status-dot {
+				width: 8px;
+				height: 8px;
+				background: var(--warning);
+				border-radius: 50%;
+				animation: blink 1s infinite;
+			}
+			@keyframes blink {
+				0%,
+				100% {
+					opacity: 1;
+				}
+				50% {
+					opacity: 0.3;
+				}
+			}
+
+			.demo-links {
+				display: grid;
+				grid-template-columns: repeat(2, 1fr);
+				gap: 1.5rem;
+				margin: 2rem 0;
+			}
+			.demo-link-card {
+				background: var(--navy);
+				border-radius: 16px;
+				padding: 2rem;
+				border: 1px solid rgba(255, 255, 255, 0.1);
+				text-decoration: none;
+				transition: all 0.2s ease;
+				display: block;
+			}
+			.demo-link-card:hover {
+				border-color: var(--teal);
+				transform: translateY(-4px);
+				box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+			}
+			.demo-link-icon {
+				width: 56px;
+				height: 56px;
+				border-radius: 14px;
+				background: rgba(13, 148, 136, 0.15);
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 1.5rem;
+				margin-bottom: 1rem;
+			}
+			.demo-link-title {
+				font-size: 1.25rem;
+				font-weight: 600;
+				color: var(--white);
+				margin-bottom: 0.5rem;
+			}
+			.demo-link-desc {
+				font-size: 0.9375rem;
+				color: var(--gray);
+				margin-bottom: 1rem;
+			}
+			.demo-link-url {
+				font-size: 0.8125rem;
+				color: var(--teal-light);
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+			}
+
+			.section-header {
+				text-align: center;
+				margin-bottom: 2rem;
+			}
+			.section-header h2 {
+				font-size: 2rem;
+				font-weight: 700;
+				color: var(--white);
+				margin-bottom: 0.5rem;
+			}
+			.section-header p {
+				color: var(--gray);
+				font-size: 1.125rem;
+			}
+
+			@media (max-width: 1024px) {
+				.comparison {
+					grid-template-columns: 1fr;
+				}
+				.comparison-arrow {
+					transform: rotate(90deg);
+					text-align: center;
+				}
+				.stats-grid {
+					grid-template-columns: repeat(2, 1fr);
+				}
+				.workflows-grid {
+					grid-template-columns: 1fr;
+				}
+				.transparency-demo {
+					grid-template-columns: 1fr;
+				}
+				.demo-links {
+					grid-template-columns: 1fr;
+				}
+			}
+			@media (max-width: 768px) {
+				.nav-tabs {
+					display: none;
+				}
+				.hero h1 {
+					font-size: 2rem;
+				}
+				.stats-grid {
+					grid-template-columns: 1fr;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<header class="header">
+			<div class="logo">
+				<div class="logo-icon">
+					<svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+						<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+					</svg>
+				</div>
+				<div>
+					<div class="logo-text">OCI Self-Service Portal</div>
+					<div class="logo-subtitle">Customer Demo</div>
+				</div>
+			</div>
+
+			<nav class="nav-tabs">
+				<button class="nav-tab active" data-section="overview">Overview</button>
+				<button class="nav-tab" data-section="architecture">Architecture</button>
+				<button class="nav-tab" data-section="workflows">Workflows</button>
+				<button class="nav-tab" data-section="transparency">Tool Calling</button>
+				<button class="nav-tab" data-section="demo">Live Demo</button>
+			</nav>
+
+			<div class="live-badge">
+				<span class="live-dot"></span>
+				Production Ready
+			</div>
+		</header>
+
+		<main class="main">
+			<!-- Overview Section -->
+			<section id="overview" class="section active">
+				<div class="hero">
+					<div class="hero-badge">🚀 AI-Powered Cloud Operations</div>
+					<h1>Replace ServiceNow with<br /><span>Intelligent Self-Service</span></h1>
+					<p>
+						Transform your cloud operations with natural language. Provision resources, analyze
+						costs, and manage infrastructure through conversational AI powered by Oracle Cloud.
+					</p>
+					<div class="hero-cta">
+						<button class="btn btn-primary" onclick="switchSection('demo')">▶ Try Live Demo</button>
+						<button class="btn btn-secondary" onclick="switchSection('architecture')">
+							View Architecture
+						</button>
+					</div>
+				</div>
+
+				<div class="comparison">
+					<div class="comparison-card old">
+						<div class="comparison-header">
+							<div class="comparison-icon">📋</div>
+							<div>
+								<div class="comparison-title">Traditional ServiceNow</div>
+								<div class="comparison-subtitle">Manual ticket-based workflow</div>
+							</div>
+						</div>
+						<ul class="comparison-list">
+							<li><span class="icon">✕</span> Fill out complex forms</li>
+							<li><span class="icon">✕</span> Wait for approval queues</li>
+							<li><span class="icon">✕</span> Limited self-service options</li>
+							<li><span class="icon">✕</span> Days to provision resources</li>
+							<li><span class="icon">✕</span> Manual cost analysis</li>
+						</ul>
+					</div>
+
+					<div class="comparison-arrow">→</div>
+
+					<div class="comparison-card new">
+						<div class="comparison-header">
+							<div class="comparison-icon">✨</div>
+							<div>
+								<div class="comparison-title">AI Self-Service Portal</div>
+								<div class="comparison-subtitle">Conversational cloud operations</div>
+							</div>
+						</div>
+						<ul class="comparison-list">
+							<li><span class="icon">✓</span> Natural language requests</li>
+							<li><span class="icon">✓</span> Instant AI-guided execution</li>
+							<li><span class="icon">✓</span> Full self-service capability</li>
+							<li><span class="icon">✓</span> Minutes to provision</li>
+							<li><span class="icon">✓</span> Real-time cost comparison</li>
+						</ul>
+					</div>
+				</div>
+
+				<div class="stats-grid">
+					<div class="stat-card">
+						<div class="stat-value">90%</div>
+						<div class="stat-label">Faster Provisioning</div>
+					</div>
+					<div class="stat-card">
+						<div class="stat-value">24/7</div>
+						<div class="stat-label">Self-Service Access</div>
+					</div>
+					<div class="stat-card">
+						<div class="stat-value">40%</div>
+						<div class="stat-label">Cost Savings</div>
+					</div>
+					<div class="stat-card">
+						<div class="stat-value">0</div>
+						<div class="stat-label">Manual Tickets</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- Architecture Section -->
+			<section id="architecture" class="section">
+				<div class="section-header">
+					<h2>System Architecture</h2>
+					<p>Built on modern, scalable technologies</p>
+				</div>
+
+				<div class="architecture-diagram">
+					<div class="arch-title">OCI AI Self-Service Portal Stack</div>
+					<div class="arch-layers">
+						<div class="arch-layer">
+							<div class="arch-label">Frontend</div>
+							<div class="arch-boxes">
+								<div class="arch-box frontend" onclick="showComponent('sveltekit')">
+									⚡ SvelteKit
+								</div>
+								<div class="arch-box frontend" onclick="showComponent('components')">
+									🧩 UI Components
+								</div>
+								<div class="arch-box frontend" onclick="showComponent('chat')">
+									💬 AI Chat Interface
+								</div>
+							</div>
+						</div>
+						<div class="arch-connector"></div>
+						<div class="arch-layer">
+							<div class="arch-label">AI Layer</div>
+							<div class="arch-boxes">
+								<div class="arch-box sdk" onclick="showComponent('aisdk')">🤖 AI SDK 6.0</div>
+								<div class="arch-box sdk" onclick="showComponent('streaming')">🌊 Streaming</div>
+								<div class="arch-box sdk" onclick="showComponent('toolcalling')">
+									🔧 Tool Calling
+								</div>
+							</div>
+						</div>
+						<div class="arch-connector"></div>
+						<div class="arch-layer">
+							<div class="arch-label">Provider</div>
+							<div class="arch-boxes">
+								<div class="arch-box provider" onclick="showComponent('provider')">
+									🔌 OCI GenAI Provider
+								</div>
+								<div class="arch-box provider" onclick="showComponent('models')">
+									🧠 Llama 3.3 / Gemini
+								</div>
+							</div>
+						</div>
+						<div class="arch-connector"></div>
+						<div class="arch-layer">
+							<div class="arch-label">Tools</div>
+							<div class="arch-boxes">
+								<div class="arch-box tools" onclick="showComponent('compute')">🖥️ Compute</div>
+								<div class="arch-box tools" onclick="showComponent('networking')">🌐 Network</div>
+								<div class="arch-box tools" onclick="showComponent('database')">🗄️ Database</div>
+								<div class="arch-box tools" onclick="showComponent('pricing')">💰 Pricing</div>
+							</div>
+						</div>
+						<div class="arch-connector"></div>
+						<div class="arch-layer">
+							<div class="arch-label">Backend</div>
+							<div class="arch-boxes">
+								<div class="arch-box oci" onclick="showComponent('genai')">☁️ OCI GenAI</div>
+								<div class="arch-box oci" onclick="showComponent('ociapi')">🔑 OCI APIs</div>
+								<div class="arch-box oci" onclick="showComponent('vault')">🔒 OCI Vault</div>
+							</div>
+						</div>
+					</div>
+					<div id="component-detail" class="component-detail"></div>
+				</div>
+			</section>
+
+			<!-- Workflows Section -->
+			<section id="workflows" class="section">
+				<div class="section-header">
+					<h2>Guided Workflows</h2>
+					<p>AI-assisted multi-step operations for common cloud tasks</p>
+				</div>
+
+				<div class="workflows-grid">
+					<div
+						class="workflow-card"
+						data-workflow="webserver"
+						onclick="selectWorkflow('webserver')"
+					>
+						<div class="workflow-header">
+							<div class="workflow-icon compute">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="1.5"
+										d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"
+									/>
+								</svg>
+							</div>
+							<span class="workflow-title">Provision Web Server</span>
+						</div>
+						<p class="workflow-desc">
+							Deploy a compute instance with networking for hosting web applications
+						</p>
+						<div class="workflow-meta"><span>8 steps</span><span>~5 min</span></div>
+					</div>
+					<div class="workflow-card active" data-workflow="cost" onclick="selectWorkflow('cost')">
+						<div class="workflow-header">
+							<div class="workflow-icon pricing">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="1.5"
+										d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+									/>
+								</svg>
+							</div>
+							<span class="workflow-title">Cloud Cost Analysis</span>
+						</div>
+						<p class="workflow-desc">Compare OCI vs Azure pricing for your workload requirements</p>
+						<div class="workflow-meta"><span>5 steps</span><span>~2 min</span></div>
+					</div>
+					<div class="workflow-card" data-workflow="database" onclick="selectWorkflow('database')">
+						<div class="workflow-header">
+							<div class="workflow-icon database">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="1.5"
+										d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"
+									/>
+								</svg>
+							</div>
+							<span class="workflow-title">Setup Autonomous Database</span>
+						</div>
+						<p class="workflow-desc">Provision an Oracle Autonomous Database with vector search</p>
+						<div class="workflow-meta"><span>7 steps</span><span>~8 min</span></div>
+					</div>
+					<div class="workflow-card" data-workflow="network" onclick="selectWorkflow('network')">
+						<div class="workflow-header">
+							<div class="workflow-icon networking">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="1.5"
+										d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9"
+									/>
+								</svg>
+							</div>
+							<span class="workflow-title">Setup Private Network</span>
+						</div>
+						<p class="workflow-desc">Create a secure VCN with public and private subnets</p>
+						<div class="workflow-meta"><span>7 steps</span><span>~4 min</span></div>
+					</div>
+				</div>
+
+				<div class="workflow-demo" id="workflow-demo">
+					<div class="demo-header">
+						<span class="demo-title" id="demo-workflow-title">Cloud Cost Analysis</span>
+						<span class="demo-status"><span class="live-dot"></span>Running</span>
+					</div>
+					<div class="steps-list" id="steps-list"></div>
+					<div class="demo-controls">
+						<button class="btn btn-primary" onclick="runWorkflowDemo()">▶ Run Demo</button>
+						<button class="btn btn-secondary" onclick="resetWorkflowDemo()">Reset</button>
+					</div>
+				</div>
+			</section>
+
+			<!-- Transparency Section -->
+			<section id="transparency" class="section">
+				<div class="section-header">
+					<h2>Tool Calling Transparency</h2>
+					<p>Users see results, not implementation details</p>
+				</div>
+
+				<div class="transparency-demo">
+					<div class="transparency-card">
+						<div class="transparency-header">
+							<span class="transparency-title">❌ Without Transparency</span>
+						</div>
+						<div class="transparency-content">
+							<div class="chat-message user">
+								<div class="chat-avatar user">👤</div>
+								<div class="chat-bubble">List my VCNs and show me the subnets</div>
+							</div>
+							<div class="chat-message ai">
+								<div class="chat-avatar ai">✓</div>
+								<div class="chat-bubble">
+									<div class="tool-card-demo">
+										<div class="tool-card-header">
+											<span class="tool-name">listVcns</span
+											><span class="tool-status"
+												><span class="tool-status-dot"></span>Executing...</span
+											>
+										</div>
+									</div>
+									<div class="tool-card-demo">
+										<div class="tool-card-header">
+											<span class="tool-name">listSubnets</span
+											><span class="tool-status"
+												><span class="tool-status-dot"></span>Executing...</span
+											>
+										</div>
+									</div>
+									<p style="margin-top: 1rem; color: var(--gray)">
+										The VCNs in your compartment are...
+									</p>
+								</div>
+							</div>
+						</div>
+					</div>
+
+					<div class="transparency-card">
+						<div class="transparency-header">
+							<span class="transparency-title">✅ With Transparency</span>
+						</div>
+						<div class="transparency-content">
+							<div class="chat-message user">
+								<div class="chat-avatar user">👤</div>
+								<div class="chat-bubble">List my VCNs and show me the subnets</div>
+							</div>
+							<div class="chat-message ai">
+								<div class="chat-avatar ai">✓</div>
+								<div class="chat-bubble">
+									<p><strong>The VCNs in your compartment are:</strong></p>
+									<p style="margin-top: 0.5rem">• solutionsedge-infra-vcn</p>
+									<p style="margin-top: 1rem"><strong>The subnets in each VCN are:</strong></p>
+									<p style="margin-top: 0.5rem">
+										• app-private-subnet<br />• management-bastion-subnet<br />• gha-dmz-subnet<br />•
+										charlstn-subnet
+									</p>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</section>
+
+			<!-- Live Demo Section -->
+			<section id="demo" class="section">
+				<div class="section-header">
+					<h2>Try It Live</h2>
+					<p>Experience the AI-powered self-service portal</p>
+				</div>
+
+				<div class="demo-links">
+					<div
+						class="demo-link-card"
+						onclick="window.open('//localhost:5173/self-service', '_blank')"
+					>
+						<div class="demo-link-icon">🚀</div>
+						<div class="demo-link-title">Self-Service Portal</div>
+						<p class="demo-link-desc">
+							Full-featured AI portal with guided workflows, natural language search
+						</p>
+						<span class="demo-link-url">→ localhost:5173/self-service</span>
+					</div>
+					<div class="demo-link-card" onclick="window.open('//localhost:5173', '_blank')">
+						<div class="demo-link-icon">💬</div>
+						<div class="demo-link-title">AI Chat Interface</div>
+						<p class="demo-link-desc">Direct conversational interface for cloud operations</p>
+						<span class="demo-link-url">→ localhost:5173</span>
+					</div>
+					<a href="https://flow.solutionsedge.io" target="_blank" class="demo-link-card">
+						<div class="demo-link-icon">🔄</div>
+						<div class="demo-link-title">Langflow Studio</div>
+						<p class="demo-link-desc">Visual workflow builder with OCI GenAI integration</p>
+						<span class="demo-link-url">→ flow.solutionsedge.io</span>
+					</a>
+					<a
+						href="https://github.com/acedergren/oci-genai-examples"
+						target="_blank"
+						class="demo-link-card"
+					>
+						<div class="demo-link-icon">📦</div>
+						<div class="demo-link-title">Source Code</div>
+						<p class="demo-link-desc">Full source code on GitHub</p>
+						<span class="demo-link-url">→ github.com/acedergren/oci-genai-examples</span>
+					</a>
+				</div>
+
+				<div class="stats-grid">
+					<div class="stat-card">
+						<div class="stat-value">4</div>
+						<div class="stat-label">Guided Workflows</div>
+					</div>
+					<div class="stat-card">
+						<div class="stat-value">12+</div>
+						<div class="stat-label">OCI Tools</div>
+					</div>
+					<div class="stat-card">
+						<div class="stat-value">3</div>
+						<div class="stat-label">AI Models</div>
+					</div>
+					<div class="stat-card">
+						<div class="stat-value">∞</div>
+						<div class="stat-label">Possibilities</div>
+					</div>
+				</div>
+			</section>
+		</main>
+
+		<script>
+			function switchSection(sectionId) {
+				document.querySelectorAll('.section').forEach(function (s) {
+					s.classList.remove('active');
+				});
+				document.querySelectorAll('.nav-tab').forEach(function (t) {
+					t.classList.remove('active');
+				});
+				document.getElementById(sectionId).classList.add('active');
+				var tab = document.querySelector('[data-section="' + sectionId + '"]');
+				if (tab) tab.classList.add('active');
+			}
+
+			document.querySelectorAll('.nav-tab').forEach(function (tab) {
+				tab.addEventListener('click', function () {
+					switchSection(tab.dataset.section);
+				});
+			});
+
+			var componentInfo = {
+				sveltekit: {
+					title: '⚡ SvelteKit Frontend',
+					desc: 'Modern reactive framework with SSR and TypeScript support.',
+					code: 'npm create svelte@latest'
+				},
+				aisdk: {
+					title: '🤖 AI SDK 6.0',
+					desc: 'Unified interfaces for chat, streaming, and tool calling.',
+					code: 'import { streamText } from "ai"'
+				},
+				provider: {
+					title: '🔌 OCI GenAI Provider',
+					desc: 'Custom AI SDK provider for Oracle Cloud GenAI Service.',
+					code: 'createOCI({ region: "eu-frankfurt-1" })'
+				},
+				toolcalling: {
+					title: '🔧 Tool Calling',
+					desc: 'AI executes tools to query resources and perform actions.',
+					code: 'tools: { listInstances, createVcn }'
+				},
+				compute: {
+					title: '🖥️ Compute Tools',
+					desc: 'Manage OCI compute instances.',
+					code: 'listInstances, launchInstance, listShapes'
+				},
+				pricing: {
+					title: '💰 Pricing Tools',
+					desc: 'Compare OCI vs Azure costs.',
+					code: 'compareCloudCosts({ vcpus: 4, memory: 16 })'
+				}
+			};
+
+			function showComponent(id) {
+				var info = componentInfo[id];
+				if (!info) return;
+				var detail = document.getElementById('component-detail');
+				var h4 = document.createElement('h4');
+				h4.textContent = info.title;
+				var p = document.createElement('p');
+				p.textContent = info.desc;
+				var code = document.createElement('code');
+				code.textContent = info.code;
+				detail.textContent = '';
+				detail.appendChild(h4);
+				detail.appendChild(p);
+				detail.appendChild(code);
+				detail.classList.add('active');
+			}
+
+			var workflows = {
+				cost: {
+					title: 'Cloud Cost Analysis',
+					steps: [
+						{ title: 'Gather Workload Requirements', desc: 'Collect vCPUs, memory, storage needs' },
+						{
+							title: 'Fetch OCI Pricing',
+							desc: 'Get Oracle Cloud compute costs',
+							tool: 'getOCIPricing'
+						},
+						{
+							title: 'Fetch Azure Pricing',
+							desc: 'Get Microsoft Azure VM costs',
+							tool: 'getAzurePricing'
+						},
+						{
+							title: 'Compare & Analyze',
+							desc: 'Side-by-side cost comparison',
+							tool: 'compareCloudCosts'
+						},
+						{ title: 'Generate Recommendation', desc: 'AI-powered cost optimization' }
+					]
+				},
+				webserver: {
+					title: 'Provision Web Server',
+					steps: [
+						{ title: 'Gather Requirements', desc: 'Collect specs: vCPUs, memory, OS' },
+						{
+							title: 'List Compartments',
+							desc: 'Find deployment targets',
+							tool: 'listCompartments'
+						},
+						{
+							title: 'Check Availability Domains',
+							desc: 'List ADs for placement',
+							tool: 'listAvailabilityDomains'
+						},
+						{
+							title: 'List Available Shapes',
+							desc: 'Show matching compute shapes',
+							tool: 'listShapes'
+						},
+						{ title: 'List OS Images', desc: 'Find compatible images', tool: 'listImages' },
+						{
+							title: 'Check Network Infrastructure',
+							desc: 'Analyze VCNs and subnets',
+							tool: 'listVcns'
+						},
+						{
+							title: 'Generate Terraform Code',
+							desc: 'Create IaC for deployment',
+							tool: 'generateTerraform'
+						},
+						{ title: 'Review & Deploy', desc: 'Optionally provision via OCI CLI' }
+					]
+				},
+				database: {
+					title: 'Setup Autonomous Database',
+					steps: [
+						{ title: 'Gather Requirements', desc: 'Workload type, size, features' },
+						{
+							title: 'List Compartments',
+							desc: 'Find deployment targets',
+							tool: 'listCompartments'
+						},
+						{
+							title: 'Check DB Versions',
+							desc: 'Available database versions',
+							tool: 'listDbVersions'
+						},
+						{ title: 'Configure Workload', desc: 'ATP/ADW settings' },
+						{ title: 'Setup Networking', desc: 'Private endpoint config', tool: 'listVcns' },
+						{ title: 'Generate Terraform', desc: 'Create IaC', tool: 'generateTerraform' },
+						{ title: 'Review & Deploy', desc: 'Provision database' }
+					]
+				},
+				network: {
+					title: 'Setup Private Network',
+					steps: [
+						{ title: 'Gather Requirements', desc: 'CIDR, subnet layout' },
+						{
+							title: 'List Compartments',
+							desc: 'Find deployment targets',
+							tool: 'listCompartments'
+						},
+						{ title: 'Design VCN', desc: 'Plan network architecture' },
+						{ title: 'Configure Subnets', desc: 'Public and private subnets' },
+						{ title: 'Setup Gateways', desc: 'Internet and NAT gateways' },
+						{ title: 'Configure Security', desc: 'Security lists and NSGs' },
+						{ title: 'Generate Terraform', desc: 'Create IaC', tool: 'generateTerraform' }
+					]
+				}
+			};
+
+			var currentWorkflow = 'cost';
+			var demoStep = -1;
+			var demoInterval = null;
+
+			function selectWorkflow(id) {
+				currentWorkflow = id;
+				document.querySelectorAll('.workflow-card').forEach(function (c) {
+					c.classList.remove('active');
+				});
+				document.querySelector('[data-workflow="' + id + '"]').classList.add('active');
+				renderWorkflowSteps();
+				resetWorkflowDemo();
+			}
+
+			function renderWorkflowSteps() {
+				var workflow = workflows[currentWorkflow];
+				document.getElementById('demo-workflow-title').textContent = workflow.title;
+				var list = document.getElementById('steps-list');
+				list.textContent = '';
+				workflow.steps.forEach(function (step, i) {
+					var div = document.createElement('div');
+					div.className = 'step';
+					div.dataset.step = i;
+
+					var num = document.createElement('div');
+					num.className = 'step-number';
+					num.textContent = i + 1;
+
+					var content = document.createElement('div');
+					content.className = 'step-content';
+
+					var title = document.createElement('div');
+					title.className = 'step-title';
+					title.textContent = step.title;
+
+					var desc = document.createElement('div');
+					desc.className = 'step-desc';
+					desc.textContent = step.desc;
+
+					content.appendChild(title);
+					content.appendChild(desc);
+					div.appendChild(num);
+					div.appendChild(content);
+
+					if (step.tool) {
+						var tool = document.createElement('span');
+						tool.className = 'step-tool';
+						tool.textContent = step.tool;
+						div.appendChild(tool);
+					}
+
+					list.appendChild(div);
+				});
+			}
+
+			function runWorkflowDemo() {
+				if (demoInterval) clearInterval(demoInterval);
+				demoStep = -1;
+				demoInterval = setInterval(function () {
+					demoStep++;
+					var steps = document.querySelectorAll('.step');
+					if (demoStep >= steps.length) {
+						clearInterval(demoInterval);
+						return;
+					}
+					steps.forEach(function (s, i) {
+						s.classList.remove('active', 'completed');
+						if (i < demoStep) s.classList.add('completed');
+						if (i === demoStep) s.classList.add('active');
+					});
+				}, 1200);
+			}
+
+			function resetWorkflowDemo() {
+				if (demoInterval) clearInterval(demoInterval);
+				demoStep = -1;
+				document.querySelectorAll('.step').forEach(function (s) {
+					s.classList.remove('active', 'completed');
+				});
+			}
+
+			renderWorkflowSteps();
+		</script>
+	</body>
+</html>

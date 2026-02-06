@@ -1,0 +1,268 @@
+{
+	"metadata": {
+		"provider": "azure",
+		"category": "compute",
+		"lastUpdated": "2026-02-01",
+		"source": "static",
+		"version": "1.0.0",
+		"currency": "USD",
+		"notes": "Prices are for West Europe region."
+	},
+	"instances": [
+		{
+			"id": "azure-d2s-v5",
+			"name": "Standard_D2s_v5",
+			"displayName": "D2s v5 (General Purpose)",
+			"description": "2 vCPUs, 8 GB RAM - General purpose",
+			"architecture": "x86",
+			"series": "Dsv5",
+			"specs": {
+				"vcpus": 2,
+				"memoryGB": 8,
+				"tempStorageGB": 0
+			},
+			"pricing": {
+				"payAsYouGo": 0.096,
+				"reserved1Year": 0.061,
+				"reserved3Year": 0.039,
+				"spot": 0.019
+			}
+		},
+		{
+			"id": "azure-d4s-v5",
+			"name": "Standard_D4s_v5",
+			"displayName": "D4s v5 (General Purpose)",
+			"description": "4 vCPUs, 16 GB RAM - General purpose",
+			"architecture": "x86",
+			"series": "Dsv5",
+			"specs": {
+				"vcpus": 4,
+				"memoryGB": 16,
+				"tempStorageGB": 0
+			},
+			"pricing": {
+				"payAsYouGo": 0.192,
+				"reserved1Year": 0.122,
+				"reserved3Year": 0.078,
+				"spot": 0.038
+			}
+		},
+		{
+			"id": "azure-d8s-v5",
+			"name": "Standard_D8s_v5",
+			"displayName": "D8s v5 (General Purpose)",
+			"description": "8 vCPUs, 32 GB RAM - General purpose",
+			"architecture": "x86",
+			"series": "Dsv5",
+			"specs": {
+				"vcpus": 8,
+				"memoryGB": 32,
+				"tempStorageGB": 0
+			},
+			"pricing": {
+				"payAsYouGo": 0.384,
+				"reserved1Year": 0.244,
+				"reserved3Year": 0.156,
+				"spot": 0.077
+			}
+		},
+		{
+			"id": "azure-d16s-v5",
+			"name": "Standard_D16s_v5",
+			"displayName": "D16s v5 (General Purpose)",
+			"description": "16 vCPUs, 64 GB RAM - General purpose",
+			"architecture": "x86",
+			"series": "Dsv5",
+			"specs": {
+				"vcpus": 16,
+				"memoryGB": 64,
+				"tempStorageGB": 0
+			},
+			"pricing": {
+				"payAsYouGo": 0.768,
+				"reserved1Year": 0.488,
+				"reserved3Year": 0.312,
+				"spot": 0.154
+			}
+		},
+		{
+			"id": "azure-d2ps-v5",
+			"name": "Standard_D2ps_v5",
+			"displayName": "D2ps v5 (ARM)",
+			"description": "2 vCPUs, 8 GB RAM - ARM-based Ampere Altra",
+			"architecture": "arm",
+			"series": "Dpsv5",
+			"specs": {
+				"vcpus": 2,
+				"memoryGB": 8,
+				"tempStorageGB": 0
+			},
+			"pricing": {
+				"payAsYouGo": 0.077,
+				"reserved1Year": 0.049,
+				"reserved3Year": 0.031,
+				"spot": 0.015
+			}
+		},
+		{
+			"id": "azure-d4ps-v5",
+			"name": "Standard_D4ps_v5",
+			"displayName": "D4ps v5 (ARM)",
+			"description": "4 vCPUs, 16 GB RAM - ARM-based Ampere Altra",
+			"architecture": "arm",
+			"series": "Dpsv5",
+			"specs": {
+				"vcpus": 4,
+				"memoryGB": 16,
+				"tempStorageGB": 0
+			},
+			"pricing": {
+				"payAsYouGo": 0.154,
+				"reserved1Year": 0.098,
+				"reserved3Year": 0.062,
+				"spot": 0.031
+			}
+		},
+		{
+			"id": "azure-b2s",
+			"name": "Standard_B2s",
+			"displayName": "B2s (Burstable)",
+			"description": "2 vCPUs, 4 GB RAM - Burstable for dev/test",
+			"architecture": "x86",
+			"series": "Bs",
+			"burstable": true,
+			"specs": {
+				"vcpus": 2,
+				"memoryGB": 4,
+				"tempStorageGB": 8
+			},
+			"pricing": {
+				"payAsYouGo": 0.042,
+				"reserved1Year": 0.026,
+				"reserved3Year": 0.017,
+				"spot": 0.008
+			}
+		},
+		{
+			"id": "azure-b4ms",
+			"name": "Standard_B4ms",
+			"displayName": "B4ms (Burstable)",
+			"description": "4 vCPUs, 16 GB RAM - Burstable for variable workloads",
+			"architecture": "x86",
+			"series": "Bs",
+			"burstable": true,
+			"specs": {
+				"vcpus": 4,
+				"memoryGB": 16,
+				"tempStorageGB": 32
+			},
+			"pricing": {
+				"payAsYouGo": 0.166,
+				"reserved1Year": 0.105,
+				"reserved3Year": 0.067,
+				"spot": 0.033
+			}
+		},
+		{
+			"id": "azure-e4s-v5",
+			"name": "Standard_E4s_v5",
+			"displayName": "E4s v5 (Memory Optimized)",
+			"description": "4 vCPUs, 32 GB RAM - Memory optimized",
+			"architecture": "x86",
+			"series": "Esv5",
+			"specs": {
+				"vcpus": 4,
+				"memoryGB": 32,
+				"tempStorageGB": 0
+			},
+			"pricing": {
+				"payAsYouGo": 0.252,
+				"reserved1Year": 0.16,
+				"reserved3Year": 0.102,
+				"spot": 0.05
+			}
+		},
+		{
+			"id": "azure-e8s-v5",
+			"name": "Standard_E8s_v5",
+			"displayName": "E8s v5 (Memory Optimized)",
+			"description": "8 vCPUs, 64 GB RAM - Memory optimized",
+			"architecture": "x86",
+			"series": "Esv5",
+			"specs": {
+				"vcpus": 8,
+				"memoryGB": 64,
+				"tempStorageGB": 0
+			},
+			"pricing": {
+				"payAsYouGo": 0.504,
+				"reserved1Year": 0.32,
+				"reserved3Year": 0.205,
+				"spot": 0.101
+			}
+		},
+		{
+			"id": "azure-nc4as-t4-v3",
+			"name": "Standard_NC4as_T4_v3",
+			"displayName": "NC4as T4 v3 (GPU)",
+			"description": "4 vCPUs, 28 GB RAM, 1x NVIDIA T4 GPU",
+			"architecture": "gpu",
+			"series": "NCasv3_T4",
+			"specs": {
+				"vcpus": 4,
+				"memoryGB": 28,
+				"gpuCount": 1,
+				"gpuType": "NVIDIA T4",
+				"gpuMemoryGB": 16
+			},
+			"pricing": {
+				"payAsYouGo": 0.526,
+				"reserved1Year": 0.334,
+				"reserved3Year": 0.213,
+				"spot": 0.105
+			}
+		},
+		{
+			"id": "azure-nc24ads-a100-v4",
+			"name": "Standard_NC24ads_A100_v4",
+			"displayName": "NC24ads A100 v4 (GPU)",
+			"description": "24 vCPUs, 220 GB RAM, 1x NVIDIA A100 80GB",
+			"architecture": "gpu",
+			"series": "NCadsv4_A100",
+			"specs": {
+				"vcpus": 24,
+				"memoryGB": 220,
+				"gpuCount": 1,
+				"gpuType": "NVIDIA A100",
+				"gpuMemoryGB": 80
+			},
+			"pricing": {
+				"payAsYouGo": 3.67,
+				"reserved1Year": 2.33,
+				"reserved3Year": 1.49,
+				"spot": 0.73
+			}
+		},
+		{
+			"id": "azure-nd96amsr-a100-v4",
+			"name": "Standard_ND96amsr_A100_v4",
+			"displayName": "ND96amsr A100 v4 (8 GPUs)",
+			"description": "96 vCPUs, 1900 GB RAM, 8x NVIDIA A100 80GB",
+			"architecture": "gpu",
+			"series": "NDamsrv4_A100",
+			"specs": {
+				"vcpus": 96,
+				"memoryGB": 1900,
+				"gpuCount": 8,
+				"gpuType": "NVIDIA A100",
+				"gpuMemoryGB": 640
+			},
+			"pricing": {
+				"payAsYouGo": 27.2,
+				"reserved1Year": 17.28,
+				"reserved3Year": 11.04,
+				"spot": 5.44
+			}
+		}
+	]
+}

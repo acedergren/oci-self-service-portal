@@ -1,5 +1,5 @@
 <script lang="ts">
-	import "../app.css";
+	import '../app.css';
 	import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
 	import { Toaster } from 'svelte-sonner';
 	import UserMenu from '$lib/components/UserMenu.svelte';
@@ -12,9 +12,9 @@
 				staleTime: 1000 * 60 * 5, // 5 minutes
 				gcTime: 1000 * 60 * 60, // 1 hour (v5: renamed from cacheTime)
 				retry: 1,
-				refetchOnWindowFocus: false,
-			},
-		},
+				refetchOnWindowFocus: false
+			}
+		}
 	});
 
 	let { data, children } = $props();
@@ -24,7 +24,12 @@
 	{#if data.user}
 		<header class="app-header">
 			<div class="header-left">
-				<a href="/" class="app-title">OCI Self-Service Portal</a> <!-- eslint-disable-line svelte/no-navigation-without-resolve -->
+				<a href="/" class="app-title">OCI Self-Service Portal</a>
+				<!-- eslint-disable-line svelte/no-navigation-without-resolve -->
+				<nav class="header-nav">
+					<a href="/workflows" class="nav-link">Workflows</a>
+					<!-- eslint-disable-line svelte/no-navigation-without-resolve -->
+				</nav>
 			</div>
 			<div class="header-right">
 				<UserMenu user={data.user} />
@@ -37,7 +42,8 @@
 	position="bottom-right"
 	richColors
 	toastOptions={{
-		style: 'font-family: inherit; background: var(--bg-elevated); color: var(--fg-primary); border: 1px solid var(--border-default);',
+		style:
+			'font-family: inherit; background: var(--bg-elevated); color: var(--fg-primary); border: 1px solid var(--border-default);'
 	}}
 />
 
@@ -56,6 +62,24 @@
 	.header-left {
 		display: flex;
 		align-items: center;
+		gap: 1.5rem;
+	}
+
+	.header-nav {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+	}
+
+	.nav-link {
+		font-size: var(--text-sm);
+		color: var(--fg-secondary);
+		text-decoration: none;
+		transition: color var(--transition-fast);
+	}
+
+	.nav-link:hover {
+		color: var(--accent-primary);
 	}
 
 	.app-title {

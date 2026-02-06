@@ -5,9 +5,9 @@ import type { PageServerLoad } from './$types';
  * Conversation history is maintained client-side only.
  */
 export const load: PageServerLoad = async () => {
-  return {
-    sessions: [],
-    currentSessionId: null,
-    initialMessages: [],
-  };
+	return {
+		sessions: [],
+		currentSessionId: null,
+		initialMessages: []
+	};
 };

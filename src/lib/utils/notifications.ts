@@ -8,14 +8,14 @@ import { toast } from 'svelte-sonner';
 /** Tool execution completed successfully. */
 export function notifyToolSuccess(toolName: string, message?: string) {
 	toast.success(message ?? `${toolName} completed`, {
-		description: toolName,
+		description: toolName
 	});
 }
 
 /** Tool execution failed. */
 export function notifyToolError(toolName: string, error?: string) {
 	toast.error(`${toolName} failed`, {
-		description: error ?? 'An unexpected error occurred',
+		description: error ?? 'An unexpected error occurred'
 	});
 }
 
@@ -24,21 +24,21 @@ export function notifyRateLimit(retryAfter?: number) {
 	toast.warning('Rate limit exceeded', {
 		description: retryAfter
 			? `Please wait ${retryAfter}s before retrying`
-			: 'Please wait before retrying',
+			: 'Please wait before retrying'
 	});
 }
 
 /** Authentication error or session expired. */
 export function notifyAuthError(message?: string) {
 	toast.error(message ?? 'Authentication required', {
-		description: 'Please sign in to continue',
+		description: 'Please sign in to continue'
 	});
 }
 
 /** Session saved/created. */
 export function notifySessionSaved(title?: string) {
 	toast.success('Session saved', {
-		description: title ?? 'Your chat session has been saved',
+		description: title ?? 'Your chat session has been saved'
 	});
 }
 

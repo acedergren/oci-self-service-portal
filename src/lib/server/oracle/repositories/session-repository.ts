@@ -149,10 +149,7 @@ export const sessionRepository = {
 				binds.config = JSON.stringify(input.config);
 			}
 
-			await conn.execute(
-				`UPDATE chat_sessions SET ${sets.join(', ')} WHERE id = :id`,
-				binds
-			);
+			await conn.execute(`UPDATE chat_sessions SET ${sets.join(', ')} WHERE id = :id`, binds);
 
 			return this.getById(id);
 		});
@@ -190,7 +187,7 @@ function rowToEnrichedSession(row: EnrichedSessionRow): EnrichedSession {
 	return {
 		...session,
 		messageCount: row.MESSAGE_COUNT ?? 0,
-		lastMessage: row.LAST_MESSAGE ?? null,
+		lastMessage: row.LAST_MESSAGE ?? null
 	};
 }
 

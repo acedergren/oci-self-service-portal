@@ -30,7 +30,7 @@ describe('shadcn-svelte Setup (Phase 5.0)', () => {
 			if (cnModuleError) {
 				expect.fail(
 					`cn utility not yet available: ${cnModuleError}. ` +
-					'Implement $lib/utils/cn.ts with tailwind-merge + clsx.'
+						'Implement $lib/utils/cn.ts with tailwind-merge + clsx.'
 				);
 			}
 			expect(cnModule).not.toBeNull();
@@ -138,7 +138,7 @@ describe('shadcn-svelte Setup (Phase 5.0)', () => {
 			} catch (err) {
 				expect.fail(
 					`tailwind-merge not available: ${(err as Error).message}. ` +
-					'Install with: pnpm add tailwind-merge'
+						'Install with: pnpm add tailwind-merge'
 				);
 			}
 		});
@@ -151,8 +151,7 @@ describe('shadcn-svelte Setup (Phase 5.0)', () => {
 				expect(mod).toBeDefined();
 			} catch (err) {
 				expect.fail(
-					`clsx not available: ${(err as Error).message}. ` +
-					'Install with: pnpm add clsx'
+					`clsx not available: ${(err as Error).message}. ` + 'Install with: pnpm add clsx'
 				);
 			}
 		});

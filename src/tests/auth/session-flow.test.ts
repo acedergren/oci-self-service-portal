@@ -7,12 +7,12 @@ vi.mock('$lib/server/oracle/connection.js', () => ({
 			execute: vi.fn().mockResolvedValue({ rows: [] }),
 			commit: vi.fn().mockResolvedValue(undefined),
 			rollback: vi.fn().mockResolvedValue(undefined),
-			close: vi.fn().mockResolvedValue(undefined),
+			close: vi.fn().mockResolvedValue(undefined)
 		};
 		return fn(mockConn);
 	}),
 	initPool: vi.fn().mockResolvedValue(undefined),
-	isPoolInitialized: vi.fn().mockReturnValue(true),
+	isPoolInitialized: vi.fn().mockReturnValue(true)
 }));
 
 // Mock logger
@@ -21,8 +21,8 @@ vi.mock('$lib/server/logger.js', () => ({
 		info: vi.fn(),
 		warn: vi.fn(),
 		error: vi.fn(),
-		debug: vi.fn(),
-	}),
+		debug: vi.fn()
+	})
 }));
 
 // Create a shared mock function we can control from tests
@@ -32,10 +32,10 @@ const mockGetSession = vi.fn();
 vi.mock('$lib/server/auth/config.js', () => ({
 	auth: {
 		api: {
-			getSession: mockGetSession,
+			getSession: mockGetSession
 		},
-		handler: vi.fn(),
-	},
+		handler: vi.fn()
+	}
 }));
 
 describe('Auth Session Flow', () => {
@@ -69,9 +69,7 @@ describe('Auth Session Flow', () => {
 				// These paths should be in the auth guard's bypass list.
 				// Verify the path matching logic that hooks.server.ts should use.
 				const isPublic =
-					path === '/api/health' ||
-					path.startsWith('/api/auth') ||
-					path === '/login';
+					path === '/api/health' || path.startsWith('/api/auth') || path === '/login';
 				expect(isPublic).toBe(true);
 			});
 		}
@@ -80,9 +78,7 @@ describe('Auth Session Flow', () => {
 			const protectedPaths = ['/api/chat', '/api/tools/execute', '/self-service', '/'];
 			for (const path of protectedPaths) {
 				const isPublic =
-					path === '/api/health' ||
-					path.startsWith('/api/auth') ||
-					path === '/login';
+					path === '/api/health' || path.startsWith('/api/auth') || path === '/login';
 				expect(isPublic).toBe(false);
 			}
 		});
@@ -92,23 +88,23 @@ describe('Auth Session Flow', () => {
 		const mockUser = {
 			id: 'user-123',
 			email: 'alice@example.com',
-			name: 'Alice',
+			name: 'Alice'
 		};
 
 		const mockSession = {
 			session: {
 				id: 'session-abc',
 				userId: 'user-123',
-				expiresAt: new Date(Date.now() + 86400000), // 24h from now
+				expiresAt: new Date(Date.now() + 86400000) // 24h from now
 			},
-			user: mockUser,
+			user: mockUser
 		};
 
 		it('authenticated request resolves user from session', async () => {
 			mockGetSession.mockResolvedValue(mockSession);
 
 			const result = await mockGetSession({
-				headers: new Headers({ cookie: 'session=valid-token' }),
+				headers: new Headers({ cookie: 'session=valid-token' })
 			});
 
 			expect(result).not.toBeNull();
@@ -120,7 +116,7 @@ describe('Auth Session Flow', () => {
 			mockGetSession.mockResolvedValue(null);
 
 			const result = await mockGetSession({
-				headers: new Headers({ cookie: 'session=expired-token' }),
+				headers: new Headers({ cookie: 'session=expired-token' })
 			});
 
 			expect(result).toBeNull();
@@ -142,9 +138,9 @@ describe('Auth Session Flow', () => {
 				session: {
 					id: 'sess-1',
 					userId: 'user-1',
-					expiresAt: new Date(Date.now() + 86400000),
+					expiresAt: new Date(Date.now() + 86400000)
 				},
-				user: { id: 'user-1', email: 'admin@example.com', name: 'Admin' },
+				user: { id: 'user-1', email: 'admin@example.com', name: 'Admin' }
 			};
 
 			mockGetSession.mockResolvedValue(mockSessionWithRole);

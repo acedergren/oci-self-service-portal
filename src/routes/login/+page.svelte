@@ -4,7 +4,7 @@
 	function signInWithOCI() {
 		authClient.signIn.oauth2({
 			providerId: 'oci-iam',
-			callbackURL: '/',
+			callbackURL: '/'
 		});
 	}
 </script>
@@ -22,9 +22,7 @@
 			Sign in with OCI IAM
 		</button>
 
-		<p class="login-footer">
-			Manage your Oracle Cloud resources with natural language.
-		</p>
+		<p class="login-footer">Manage your Oracle Cloud resources with natural language.</p>
 	</div>
 </div>
 

@@ -44,39 +44,39 @@ export type ServiceIconId = 'server' | 'database' | 'network' | 'storage' | 'shi
 
 /** A single action within a service category */
 export interface ServiceAction {
-  label: string;
-  prompt: string;
+	label: string;
+	prompt: string;
 }
 
 /** A service category for the portal grid */
 export interface ServiceCategory {
-  id: string;
-  title: string;
-  description: string;
-  icon: ServiceIconId;
-  color: ServiceColor;
-  actions: ServiceAction[];
+	id: string;
+	title: string;
+	description: string;
+	icon: ServiceIconId;
+	color: ServiceColor;
+	actions: ServiceAction[];
 }
 
 /** A quick action pill (hero section) */
 export interface QuickAction {
-  label: string;
-  prompt: string;
+	label: string;
+	prompt: string;
 }
 
 /** A recent activity item */
 export interface ActivityItem {
-  id: string;
-  type: string;
-  action: string;
-  time: string;
-  status: 'completed' | 'pending' | 'failed';
+	id: string;
+	type: string;
+	action: string;
+	time: string;
+	status: 'completed' | 'pending' | 'failed';
 }
 
 /** An external resource link */
 export interface ResourceLink {
-  label: string;
-  href: string;
+	label: string;
+	href: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -85,14 +85,14 @@ export interface ResourceLink {
 // ---------------------------------------------------------------------------
 
 export interface PortalHeaderProps {
-  /** Currently selected model ID */
-  selectedModel: string;
-  /** Available models from the API */
-  availableModels: Array<{ id: string; name: string; description: string }>;
-  /** Notification count badge */
-  notificationCount?: number;
-  /** Callback when model is changed */
-  onModelChange?: (modelId: string) => void;
+	/** Currently selected model ID */
+	selectedModel: string;
+	/** Available models from the API */
+	availableModels: Array<{ id: string; name: string; description: string }>;
+	/** Notification count badge */
+	notificationCount?: number;
+	/** Callback when model is changed */
+	onModelChange?: (modelId: string) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -102,16 +102,16 @@ export interface PortalHeaderProps {
 // ---------------------------------------------------------------------------
 
 export interface HeroSectionProps {
-  /** User's display name for greeting */
-  userName?: string;
-  /** Quick action definitions */
-  quickActions: QuickAction[];
-  /** Whether a loading action is in progress (prompt string or null) */
-  loadingAction: string | null;
-  /** Callback when a search query is submitted */
-  onSearch: (query: string) => void;
-  /** Callback when a quick action is clicked */
-  onQuickAction: (prompt: string) => void;
+	/** User's display name for greeting */
+	userName?: string;
+	/** Quick action definitions */
+	quickActions: QuickAction[];
+	/** Whether a loading action is in progress (prompt string or null) */
+	loadingAction: string | null;
+	/** Callback when a search query is submitted */
+	onSearch: (query: string) => void;
+	/** Callback when a quick action is clicked */
+	onQuickAction: (prompt: string) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -120,9 +120,9 @@ export interface HeroSectionProps {
 // ---------------------------------------------------------------------------
 
 export interface QuickActionBarProps {
-  actions: QuickAction[];
-  loadingAction: string | null;
-  onAction: (prompt: string) => void;
+	actions: QuickAction[];
+	loadingAction: string | null;
+	onAction: (prompt: string) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -132,8 +132,8 @@ export interface QuickActionBarProps {
 // ---------------------------------------------------------------------------
 
 export interface ServiceCategoryGridProps {
-  categories: ServiceCategory[];
-  onAction: (action: ServiceAction) => void;
+	categories: ServiceCategory[];
+	onAction: (action: ServiceAction) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -142,8 +142,8 @@ export interface ServiceCategoryGridProps {
 // ---------------------------------------------------------------------------
 
 export interface ServiceCategoryCardProps {
-  category: ServiceCategory;
-  onAction: (action: ServiceAction) => void;
+	category: ServiceCategory;
+	onAction: (action: ServiceAction) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -153,8 +153,8 @@ export interface ServiceCategoryCardProps {
 // ---------------------------------------------------------------------------
 
 export interface WorkflowGalleryProps {
-  workflows: WorkflowTemplate[];
-  onStart: (template: WorkflowTemplate) => void;
+	workflows: WorkflowTemplate[];
+	onStart: (template: WorkflowTemplate) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -163,8 +163,8 @@ export interface WorkflowGalleryProps {
 // ---------------------------------------------------------------------------
 
 export interface WorkflowCardProps {
-  workflow: WorkflowTemplate;
-  onStart: (template: WorkflowTemplate) => void;
+	workflow: WorkflowTemplate;
+	onStart: (template: WorkflowTemplate) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -174,10 +174,10 @@ export interface WorkflowCardProps {
 // ---------------------------------------------------------------------------
 
 export interface BottomInfoSectionProps {
-  recentActivity: ActivityItem[];
-  resourceLinks: ResourceLink[];
-  onAskAI: (prompt: string) => void;
-  onViewAllActivity?: () => void;
+	recentActivity: ActivityItem[];
+	resourceLinks: ResourceLink[];
+	onAskAI: (prompt: string) => void;
+	onViewAllActivity?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -186,8 +186,8 @@ export interface BottomInfoSectionProps {
 // ---------------------------------------------------------------------------
 
 export interface RecentActivityPanelProps {
-  items: ActivityItem[];
-  onViewAll?: () => void;
+	items: ActivityItem[];
+	onViewAll?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -196,7 +196,7 @@ export interface RecentActivityPanelProps {
 // ---------------------------------------------------------------------------
 
 export interface ResourceLinksPanelProps {
-  links: ResourceLink[];
+	links: ResourceLink[];
 }
 
 // ---------------------------------------------------------------------------
@@ -205,7 +205,7 @@ export interface ResourceLinksPanelProps {
 // ---------------------------------------------------------------------------
 
 export interface HelpPanelProps {
-  onAskAI: (prompt: string) => void;
+	onAskAI: (prompt: string) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -215,20 +215,20 @@ export interface HelpPanelProps {
 // ---------------------------------------------------------------------------
 
 export interface ChatOverlayProps {
-  /** Whether the overlay is visible */
-  open: boolean;
-  /** The AI SDK Chat instance — state owned by page */
-  chat: Chat;
-  /** Active workflow plan (if any) */
-  activeWorkflowPlan?: AgentPlan;
-  /** Whether the workflow panel is expanded */
-  workflowPanelOpen?: boolean;
-  /** Whether tool execution UI is hidden (show only results) */
-  hideToolExecution?: boolean;
-  /** Callback to close the overlay */
-  onClose: () => void;
-  /** Callback to toggle the workflow panel */
-  onToggleWorkflowPanel?: () => void;
+	/** Whether the overlay is visible */
+	open: boolean;
+	/** The AI SDK Chat instance — state owned by page */
+	chat: Chat;
+	/** Active workflow plan (if any) */
+	activeWorkflowPlan?: AgentPlan;
+	/** Whether the workflow panel is expanded */
+	workflowPanelOpen?: boolean;
+	/** Whether tool execution UI is hidden (show only results) */
+	hideToolExecution?: boolean;
+	/** Callback to close the overlay */
+	onClose: () => void;
+	/** Callback to toggle the workflow panel */
+	onToggleWorkflowPanel?: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -238,18 +238,18 @@ export interface ChatOverlayProps {
 
 /** A single tool part extracted from a message */
 export interface ChatToolPart {
-  type: string;
-  toolCallId: string;
-  state: string;
-  input?: unknown;
-  output?: unknown;
-  title?: string;
+	type: string;
+	toolCallId: string;
+	state: string;
+	input?: unknown;
+	output?: unknown;
+	title?: string;
 }
 
 export interface ChatMessageListProps {
-  messages: Chat['messages'];
-  chatStatus: Chat['status'];
-  hideToolExecution?: boolean;
+	messages: Chat['messages'];
+	chatStatus: Chat['status'];
+	hideToolExecution?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -258,10 +258,10 @@ export interface ChatMessageListProps {
 // ---------------------------------------------------------------------------
 
 export interface ChatMessageProps {
-  message: Chat['messages'][number];
-  isLastMessage: boolean;
-  isStreaming: boolean;
-  hideToolExecution?: boolean;
+	message: Chat['messages'][number];
+	isLastMessage: boolean;
+	isStreaming: boolean;
+	hideToolExecution?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -270,8 +270,8 @@ export interface ChatMessageProps {
 // ---------------------------------------------------------------------------
 
 export interface ToolCallCardProps {
-  part: ChatToolPart;
-  hideToolExecution?: boolean;
+	part: ChatToolPart;
+	hideToolExecution?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -287,12 +287,12 @@ export interface ToolCallCardProps {
 // ---------------------------------------------------------------------------
 
 export interface ChatInputProps {
-  /** Disable input while streaming */
-  disabled?: boolean;
-  /** Placeholder text */
-  placeholder?: string;
-  /** Callback when a message is submitted */
-  onSubmit: (text: string) => void;
+	/** Disable input while streaming */
+	disabled?: boolean;
+	/** Placeholder text */
+	placeholder?: string;
+	/** Callback when a message is submitted */
+	onSubmit: (text: string) => void;
 }
 
 // ---------------------------------------------------------------------------

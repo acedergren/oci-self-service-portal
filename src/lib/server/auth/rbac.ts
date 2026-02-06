@@ -15,6 +15,9 @@ export const PERMISSIONS = {
 	'tools:danger': 'Execute danger-level tools',
 	'sessions:read': 'View chat sessions',
 	'sessions:write': 'Create/modify chat sessions',
+	'workflows:read': 'View workflow definitions and runs',
+	'workflows:write': 'Create/modify workflow definitions',
+	'workflows:execute': 'Execute workflows',
 	'admin:users': 'Manage users',
 	'admin:orgs': 'Manage organizations',
 	'admin:audit': 'View audit logs',
@@ -28,13 +31,15 @@ export type Permission = keyof typeof PERMISSIONS;
 // ============================================================================
 
 const ROLE_PERMISSIONS: Record<string, Permission[]> = {
-	viewer: ['tools:read', 'sessions:read'],
+	viewer: ['tools:read', 'sessions:read', 'workflows:read'],
 	operator: [
 		'tools:read',
 		'tools:execute',
 		'tools:approve',
 		'sessions:read',
-		'sessions:write'
+		'sessions:write',
+		'workflows:read',
+		'workflows:execute'
 	],
 	admin: Object.keys(PERMISSIONS) as Permission[]
 };
@@ -77,10 +82,7 @@ export function requirePermission(event: RequestEvent, permission: Permission): 
 	const userPerms = event.locals.permissions ?? [];
 
 	if (!hasPermission(userPerms, permission) && !hasPermission(userPerms, 'admin:all')) {
-		log.warn(
-			{ userId: user.id, path: event.url.pathname, permission },
-			'insufficient permissions'
-		);
+		log.warn({ userId: user.id, path: event.url.pathname, permission }, 'insufficient permissions');
 		throw error(403, `Insufficient permissions: ${permission} required`);
 	}
 }

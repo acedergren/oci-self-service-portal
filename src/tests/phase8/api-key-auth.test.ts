@@ -23,17 +23,20 @@ const mockConn = {
 	execute: mockExecute,
 	commit: vi.fn().mockResolvedValue(undefined),
 	rollback: vi.fn().mockResolvedValue(undefined),
-	close: vi.fn().mockResolvedValue(undefined),
+	close: vi.fn().mockResolvedValue(undefined)
 };
 
 vi.mock('$lib/server/oracle/connection.js', () => ({
-	withConnection: vi.fn(async (fn: (conn: unknown) => Promise<unknown>) => fn(mockConn)),
+	withConnection: vi.fn(async (fn: (conn: unknown) => Promise<unknown>) => fn(mockConn))
 }));
 
 vi.mock('$lib/server/logger.js', () => ({
 	createLogger: () => ({
-		info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(),
-	}),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+		debug: vi.fn()
+	})
 }));
 
 let apiKeysModule: Record<string, unknown> | null = null;
@@ -54,7 +57,7 @@ describe('API Key Authentication (Phase 8.2)', () => {
 			if (moduleError) {
 				expect.fail(
 					`api-keys module not yet available: ${moduleError}. ` +
-					'Implement $lib/server/auth/api-keys.ts per Phase 8.2.'
+						'Implement $lib/server/auth/api-keys.ts per Phase 8.2.'
 				);
 			}
 			expect(apiKeysModule).not.toBeNull();
@@ -65,7 +68,9 @@ describe('API Key Authentication (Phase 8.2)', () => {
 		it('returns a key, keyHash, and id', async () => {
 			if (!apiKeysModule) return;
 			const createApiKey = apiKeysModule.createApiKey as (
-				orgId: string, name: string, permissions: string[]
+				orgId: string,
+				name: string,
+				permissions: string[]
 			) => Promise<{ key: string; keyHash: string; id: string }>;
 
 			mockExecute.mockResolvedValueOnce({ rows: [] }); // insert
@@ -81,7 +86,9 @@ describe('API Key Authentication (Phase 8.2)', () => {
 		it('key starts with a recognizable prefix', async () => {
 			if (!apiKeysModule) return;
 			const createApiKey = apiKeysModule.createApiKey as (
-				orgId: string, name: string, permissions: string[]
+				orgId: string,
+				name: string,
+				permissions: string[]
 			) => Promise<{ key: string }>;
 
 			mockExecute.mockResolvedValueOnce({ rows: [] });
@@ -100,14 +107,16 @@ describe('API Key Authentication (Phase 8.2)', () => {
 			) => Promise<{ orgId: string; permissions: string[]; keyId: string; keyName: string } | null>;
 
 			mockExecute.mockResolvedValueOnce({
-				rows: [{
-					ID: 'key-1',
-					ORG_ID: 'org-1',
-					NAME: 'CI Pipeline',
-					PERMISSIONS: '["tools:read","tools:execute"]',
-					REVOKED_AT: null,
-					EXPIRES_AT: new Date(Date.now() + 86400000),
-				}],
+				rows: [
+					{
+						ID: 'key-1',
+						ORG_ID: 'org-1',
+						NAME: 'CI Pipeline',
+						PERMISSIONS: '["tools:read","tools:execute"]',
+						REVOKED_AT: null,
+						EXPIRES_AT: new Date(Date.now() + 86400000)
+					}
+				]
 			});
 
 			const ctx = await validateApiKey('portal_valid_key_123');
@@ -119,9 +128,7 @@ describe('API Key Authentication (Phase 8.2)', () => {
 
 		it('returns null for invalid key', async () => {
 			if (!apiKeysModule) return;
-			const validateApiKey = apiKeysModule.validateApiKey as (
-				key: string
-			) => Promise<null>;
+			const validateApiKey = apiKeysModule.validateApiKey as (key: string) => Promise<null>;
 
 			mockExecute.mockResolvedValueOnce({ rows: [] });
 
@@ -131,17 +138,17 @@ describe('API Key Authentication (Phase 8.2)', () => {
 
 		it('returns null for revoked key', async () => {
 			if (!apiKeysModule) return;
-			const validateApiKey = apiKeysModule.validateApiKey as (
-				key: string
-			) => Promise<null>;
+			const validateApiKey = apiKeysModule.validateApiKey as (key: string) => Promise<null>;
 
 			mockExecute.mockResolvedValueOnce({
-				rows: [{
-					ID: 'key-1',
-					ORG_ID: 'org-1',
-					REVOKED_AT: new Date('2026-01-01'),
-					EXPIRES_AT: new Date(Date.now() + 86400000),
-				}],
+				rows: [
+					{
+						ID: 'key-1',
+						ORG_ID: 'org-1',
+						REVOKED_AT: new Date('2026-01-01'),
+						EXPIRES_AT: new Date(Date.now() + 86400000)
+					}
+				]
 			});
 
 			const ctx = await validateApiKey('portal_revoked_key');
@@ -150,17 +157,17 @@ describe('API Key Authentication (Phase 8.2)', () => {
 
 		it('returns null for expired key', async () => {
 			if (!apiKeysModule) return;
-			const validateApiKey = apiKeysModule.validateApiKey as (
-				key: string
-			) => Promise<null>;
+			const validateApiKey = apiKeysModule.validateApiKey as (key: string) => Promise<null>;
 
 			mockExecute.mockResolvedValueOnce({
-				rows: [{
-					ID: 'key-1',
-					ORG_ID: 'org-1',
-					REVOKED_AT: null,
-					EXPIRES_AT: new Date('2025-01-01'), // expired
-				}],
+				rows: [
+					{
+						ID: 'key-1',
+						ORG_ID: 'org-1',
+						REVOKED_AT: null,
+						EXPIRES_AT: new Date('2025-01-01') // expired
+					}
+				]
 			});
 
 			const ctx = await validateApiKey('portal_expired_key');
@@ -192,11 +199,23 @@ describe('API Key Authentication (Phase 8.2)', () => {
 
 			mockExecute.mockResolvedValueOnce({
 				rows: [
-					{ ID: 'key-1', NAME: 'CI Pipeline', PERMISSIONS: '["tools:read"]',
-					  CREATED_AT: new Date(), EXPIRES_AT: new Date(Date.now() + 86400000), REVOKED_AT: null },
-					{ ID: 'key-2', NAME: 'Monitoring', PERMISSIONS: '["tools:read"]',
-					  CREATED_AT: new Date(), EXPIRES_AT: null, REVOKED_AT: null },
-				],
+					{
+						ID: 'key-1',
+						NAME: 'CI Pipeline',
+						PERMISSIONS: '["tools:read"]',
+						CREATED_AT: new Date(),
+						EXPIRES_AT: new Date(Date.now() + 86400000),
+						REVOKED_AT: null
+					},
+					{
+						ID: 'key-2',
+						NAME: 'Monitoring',
+						PERMISSIONS: '["tools:read"]',
+						CREATED_AT: new Date(),
+						EXPIRES_AT: null,
+						REVOKED_AT: null
+					}
+				]
 			});
 
 			const keys = await listApiKeys('org-1');
@@ -213,7 +232,7 @@ describe('API Key Authentication (Phase 8.2)', () => {
 	describe('auth middleware integration contract', () => {
 		it('API requests should accept Authorization: Bearer <api-key> header', () => {
 			const headers = new Headers({
-				Authorization: 'Bearer portal_test_key_abc123',
+				Authorization: 'Bearer portal_test_key_abc123'
 			});
 			const authHeader = headers.get('Authorization');
 			expect(authHeader).toBeDefined();
@@ -224,7 +243,7 @@ describe('API Key Authentication (Phase 8.2)', () => {
 
 		it('API requests should also accept X-API-Key header', () => {
 			const headers = new Headers({
-				'X-API-Key': 'portal_test_key_abc123',
+				'X-API-Key': 'portal_test_key_abc123'
 			});
 			const apiKey = headers.get('X-API-Key');
 			expect(apiKey).toBeDefined();

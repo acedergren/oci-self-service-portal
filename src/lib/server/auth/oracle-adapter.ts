@@ -13,8 +13,52 @@ import crypto from 'crypto';
 const log = createLogger('oracle-adapter');
 
 // ============================================================================
-// Helpers: case conversion
+// Helpers: case conversion & validation
 // ============================================================================
+
+/** Valid Oracle column name: starts with letter or underscore, alphanumeric + underscore, max 128 chars. */
+const COLUMN_NAME_RE = /^[a-z_][a-z0-9_]{0,127}$/;
+
+/** Tables known to Better Auth that we allow in queries. */
+const ALLOWED_TABLES = new Set([
+	'user',
+	'session',
+	'account',
+	'verification',
+	'organization',
+	'member',
+	'invitation',
+	'jwks',
+	'two_factor'
+]);
+
+/**
+ * Validate a column name after snake_case conversion.
+ * Throws if the name contains characters that could enable SQL injection.
+ */
+export function validateColumnName(name: string): string {
+	const snake = toSnakeCase(name);
+	if (!COLUMN_NAME_RE.test(snake)) {
+		throw new Error(`Invalid column name: "${name}" (converted: "${snake}")`);
+	}
+	return snake;
+}
+
+/**
+ * Validate a table name against the known allowlist.
+ * Throws if the table is not in the allowlist.
+ */
+/** Escape LIKE wildcards (%, _) and the escape char itself (\). */
+function escapeLikeValue(input: string): string {
+	return input.replace(/[%_\\]/g, '\\$&');
+}
+
+export function validateTableName(name: string): string {
+	if (!ALLOWED_TABLES.has(name)) {
+		throw new Error(`Unknown table name: "${name}". Allowed: ${[...ALLOWED_TABLES].join(', ')}`);
+	}
+	return name;
+}
 
 export function toSnakeCase(str: string): string {
 	return str.replace(/[A-Z]/g, (c) => '_' + c.toLowerCase());
@@ -57,9 +101,10 @@ export interface CleanedWhere {
 	connector: 'AND' | 'OR';
 }
 
-export function buildWhereClause(
-	where: CleanedWhere[]
-): { sql: string; binds: Record<string, unknown> } {
+export function buildWhereClause(where: CleanedWhere[]): {
+	sql: string;
+	binds: Record<string, unknown>;
+} {
 	if (!where.length) return { sql: '', binds: {} };
 
 	const parts: string[] = [];
@@ -68,7 +113,7 @@ export function buildWhereClause(
 
 	for (let i = 0; i < where.length; i++) {
 		const clause = where[i];
-		const col = toSnakeCase(clause.field);
+		const col = validateColumnName(clause.field);
 		const bindName = `w${bindIdx++}`;
 
 		let condition: string;
@@ -126,16 +171,16 @@ export function buildWhereClause(
 				break;
 			}
 			case 'contains':
-				condition = `${col} LIKE :${bindName}`;
-				binds[bindName] = `%${clause.value}%`;
+				condition = `${col} LIKE :${bindName} ESCAPE '\\'`;
+				binds[bindName] = `%${escapeLikeValue(String(clause.value))}%`;
 				break;
 			case 'starts_with':
-				condition = `${col} LIKE :${bindName}`;
-				binds[bindName] = `${clause.value}%`;
+				condition = `${col} LIKE :${bindName} ESCAPE '\\'`;
+				binds[bindName] = `${escapeLikeValue(String(clause.value))}%`;
 				break;
 			case 'ends_with':
-				condition = `${col} LIKE :${bindName}`;
-				binds[bindName] = `%${clause.value}`;
+				condition = `${col} LIKE :${bindName} ESCAPE '\\'`;
+				binds[bindName] = `%${escapeLikeValue(String(clause.value))}`;
 				break;
 			default:
 				condition = `${col} = :${bindName}`;
@@ -159,7 +204,7 @@ export function buildWhereClause(
 
 function selectColumns(select: string[] | undefined): string {
 	if (!select || select.length === 0) return '*';
-	return select.map((f) => toSnakeCase(f)).join(', ');
+	return select.map((f) => validateColumnName(f)).join(', ');
 }
 
 /** Filter a row to only the selected fields (post-query, camelCase keys). */
@@ -218,14 +263,14 @@ export function oracleAdapter(): AdapterFactory {
 					data: T;
 					select?: string[];
 				}) => {
-					const table = getModelName(model);
+					const table = validateTableName(getModelName(model));
 					const entries = Object.entries(data);
 
 					if (entries.length === 0) {
 						throw new Error(`Cannot insert empty data into ${table}`);
 					}
 
-					const cols = entries.map(([k]) => toSnakeCase(k));
+					const cols = entries.map(([k]) => validateColumnName(k));
 					const bindNames = entries.map(([k]) => `:${k}`);
 					const binds: Record<string, unknown> = {};
 					for (const [k, v] of entries) {
@@ -263,7 +308,7 @@ export function oracleAdapter(): AdapterFactory {
 					where: CleanedWhere[];
 					select?: string[];
 				}) => {
-					const table = getModelName(model);
+					const table = validateTableName(getModelName(model));
 					const cols = selectColumns(select);
 					const { sql: whereSql, binds } = buildWhereClause(where);
 					const selectSql = `SELECT ${cols} FROM ${table}${whereSql} FETCH FIRST 1 ROWS ONLY`;
@@ -288,14 +333,14 @@ export function oracleAdapter(): AdapterFactory {
 					sortBy?: { field: string; direction: 'asc' | 'desc' };
 					offset?: number;
 				}) => {
-					const table = getModelName(model);
+					const table = validateTableName(getModelName(model));
 					const { sql: whereSql, binds } = buildWhereClause(where ?? []);
 
 					let sql = `SELECT * FROM ${table}${whereSql}`;
 
 					if (sortBy) {
 						const dir = sortBy.direction === 'desc' ? 'DESC' : 'ASC';
-						sql += ` ORDER BY ${toSnakeCase(sortBy.field)} ${dir}`;
+						sql += ` ORDER BY ${validateColumnName(sortBy.field)} ${dir}`;
 					}
 
 					if (offset !== undefined && offset > 0) {
@@ -313,14 +358,8 @@ export function oracleAdapter(): AdapterFactory {
 					});
 				},
 
-				count: async ({
-					model,
-					where
-				}: {
-					model: string;
-					where?: CleanedWhere[];
-				}) => {
-					const table = getModelName(model);
+				count: async ({ model, where }: { model: string; where?: CleanedWhere[] }) => {
+					const table = validateTableName(getModelName(model));
 					const { sql: whereSql, binds } = buildWhereClause(where ?? []);
 					const sql = `SELECT COUNT(*) AS cnt FROM ${table}${whereSql}`;
 
@@ -339,13 +378,13 @@ export function oracleAdapter(): AdapterFactory {
 					where: CleanedWhere[];
 					update: T;
 				}) => {
-					const table = getModelName(model);
+					const table = validateTableName(getModelName(model));
 
 					const updateObj = update as Record<string, unknown>;
 					const setEntries = Object.entries(updateObj);
 					if (setEntries.length === 0) return null;
 
-					const setClauses = setEntries.map(([k]) => `${toSnakeCase(k)} = :u_${k}`);
+					const setClauses = setEntries.map(([k]) => `${validateColumnName(k)} = :u_${k}`);
 					const setBinds: Record<string, unknown> = {};
 					for (const [k, v] of setEntries) {
 						setBinds[`u_${k}`] = v;
@@ -374,12 +413,12 @@ export function oracleAdapter(): AdapterFactory {
 					where: CleanedWhere[];
 					update: Record<string, unknown>;
 				}) => {
-					const table = getModelName(model);
+					const table = validateTableName(getModelName(model));
 
 					const setEntries = Object.entries(update);
 					if (setEntries.length === 0) return 0;
 
-					const setClauses = setEntries.map(([k]) => `${toSnakeCase(k)} = :u_${k}`);
+					const setClauses = setEntries.map(([k]) => `${validateColumnName(k)} = :u_${k}`);
 					const setBinds: Record<string, unknown> = {};
 					for (const [k, v] of setEntries) {
 						setBinds[`u_${k}`] = v;
@@ -395,14 +434,8 @@ export function oracleAdapter(): AdapterFactory {
 					});
 				},
 
-				delete: async ({
-					model,
-					where
-				}: {
-					model: string;
-					where: CleanedWhere[];
-				}) => {
-					const table = getModelName(model);
+				delete: async ({ model, where }: { model: string; where: CleanedWhere[] }) => {
+					const table = validateTableName(getModelName(model));
 					const { sql: whereSql, binds } = buildWhereClause(where);
 					const sql = `DELETE FROM ${table}${whereSql}`;
 
@@ -411,14 +444,8 @@ export function oracleAdapter(): AdapterFactory {
 					});
 				},
 
-				deleteMany: async ({
-					model,
-					where
-				}: {
-					model: string;
-					where: CleanedWhere[];
-				}) => {
-					const table = getModelName(model);
+				deleteMany: async ({ model, where }: { model: string; where: CleanedWhere[] }) => {
+					const table = validateTableName(getModelName(model));
 					const { sql: whereSql, binds } = buildWhereClause(where);
 					const sql = `DELETE FROM ${table}${whereSql}`;
 

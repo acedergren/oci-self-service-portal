@@ -26,25 +26,28 @@ const mockConn = {
 	execute: mockExecute,
 	commit: vi.fn().mockResolvedValue(undefined),
 	rollback: vi.fn().mockResolvedValue(undefined),
-	close: vi.fn().mockResolvedValue(undefined),
+	close: vi.fn().mockResolvedValue(undefined)
 };
 
 vi.mock('$lib/server/oracle/connection.js', () => ({
-	withConnection: vi.fn(async (fn: (conn: unknown) => Promise<unknown>) => fn(mockConn)),
+	withConnection: vi.fn(async (fn: (conn: unknown) => Promise<unknown>) => fn(mockConn))
 }));
 
 vi.mock('$lib/server/logger.js', () => ({
 	createLogger: () => ({
-		info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(),
-	}),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+		debug: vi.fn()
+	})
 }));
 
 vi.mock('$lib/server/auth/rbac.js', () => ({
-	requirePermission: vi.fn(),
+	requirePermission: vi.fn()
 }));
 
 vi.mock('$lib/server/session.js', () => ({
-	getCurrentSessionId: vi.fn().mockReturnValue('current-session-id'),
+	getCurrentSessionId: vi.fn().mockReturnValue('current-session-id')
 }));
 
 // Mock the session repository for the enhanced list + delete
@@ -60,8 +63,8 @@ vi.mock('$lib/server/oracle/repositories/session-repository.js', () => ({
 		list: vi.fn(),
 		getById: vi.fn(),
 		update: vi.fn(),
-		getMostRecent: vi.fn(),
-	},
+		getMostRecent: vi.fn()
+	}
 }));
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -89,7 +92,7 @@ function makeRequestEvent(options: {
 		user: { id: 'test-user-123' },
 		permissions: ['sessions:read', 'sessions:write'],
 		dbAvailable: true,
-		...options.locals,
+		...options.locals
 	};
 
 	return {
@@ -97,27 +100,29 @@ function makeRequestEvent(options: {
 		locals,
 		cookies: {
 			get: vi.fn().mockReturnValue('current-session-id'),
-			set: vi.fn(),
+			set: vi.fn()
 		},
 		params: options.params ?? {},
 		request: {
-			json: vi.fn().mockResolvedValue({}),
-		},
+			json: vi.fn().mockResolvedValue({})
+		}
 	};
 }
 
-function makeMockEnrichedSession(overrides: Partial<{
-	id: string;
-	title: string;
-	model: string;
-	region: string;
-	status: string;
-	messageCount: number;
-	lastMessage: string | null;
-	createdAt: Date;
-	updatedAt: Date;
-	userId: string;
-}> = {}) {
+function makeMockEnrichedSession(
+	overrides: Partial<{
+		id: string;
+		title: string;
+		model: string;
+		region: string;
+		status: string;
+		messageCount: number;
+		lastMessage: string | null;
+		createdAt: Date;
+		updatedAt: Date;
+		userId: string;
+	}> = {}
+) {
 	return {
 		id: overrides.id ?? 'session-1',
 		title: overrides.title ?? 'Test Session',
@@ -128,7 +133,7 @@ function makeMockEnrichedSession(overrides: Partial<{
 		lastMessage: overrides.lastMessage ?? null,
 		createdAt: overrides.createdAt ?? new Date('2026-02-06T09:00:00Z'),
 		updatedAt: overrides.updatedAt ?? new Date('2026-02-06T10:00:00Z'),
-		userId: overrides.userId ?? 'test-user-123',
+		userId: overrides.userId ?? 'test-user-123'
 	};
 }
 
@@ -154,14 +159,16 @@ beforeEach(async () => {
 
 	// Import the existing sessions endpoint (enhanced for Phase 5)
 	try {
-		sessionsModule = (await import('../../routes/api/sessions/+server.js')) as unknown as SessionsHandler;
+		sessionsModule =
+			(await import('../../routes/api/sessions/+server.js')) as unknown as SessionsHandler;
 	} catch (err) {
 		sessionsModuleError = (err as Error).message;
 	}
 
 	// Import the new DELETE endpoint
 	try {
-		sessionByIdModule = (await import('../../routes/api/sessions/[id]/+server.js')) as unknown as SessionByIdHandler;
+		sessionByIdModule =
+			(await import('../../routes/api/sessions/[id]/+server.js')) as unknown as SessionByIdHandler;
 	} catch (err) {
 		sessionByIdModuleError = (err as Error).message;
 	}
@@ -175,7 +182,7 @@ describe('Enhanced Sessions API (Phase 5.4)', () => {
 			if (sessionsModuleError) {
 				expect.fail(
 					`Sessions endpoint not importable: ${sessionsModuleError}. ` +
-					'Ensure src/routes/api/sessions/+server.ts compiles.'
+						'Ensure src/routes/api/sessions/+server.ts compiles.'
 				);
 			}
 			expect(sessionsModule).not.toBeNull();
@@ -185,7 +192,7 @@ describe('Enhanced Sessions API (Phase 5.4)', () => {
 			if (sessionByIdModuleError) {
 				expect.fail(
 					`Session [id] endpoint not yet available: ${sessionByIdModuleError}. ` +
-					'Implement src/routes/api/sessions/[id]/+server.ts per Phase 5.4.'
+						'Implement src/routes/api/sessions/[id]/+server.ts per Phase 5.4.'
 				);
 			}
 			expect(sessionByIdModule).not.toBeNull();
@@ -199,9 +206,9 @@ describe('Enhanced Sessions API (Phase 5.4)', () => {
 			mockListSessionsEnriched.mockResolvedValueOnce({
 				sessions: [
 					makeMockEnrichedSession({ id: 'sess-1', title: 'Deploy Web App', messageCount: 5 }),
-					makeMockEnrichedSession({ id: 'sess-2', title: 'Cost Review', messageCount: 3 }),
+					makeMockEnrichedSession({ id: 'sess-2', title: 'Cost Review', messageCount: 3 })
 				],
-				total: 2,
+				total: 2
 			});
 
 			const event = makeRequestEvent({});
@@ -228,14 +235,12 @@ describe('Enhanced Sessions API (Phase 5.4)', () => {
 			if (!sessionsModule) return;
 
 			mockListSessionsEnriched.mockResolvedValueOnce({
-				sessions: [
-					makeMockEnrichedSession({ id: 'sess-1', title: 'Deploy Web App' }),
-				],
-				total: 1,
+				sessions: [makeMockEnrichedSession({ id: 'sess-1', title: 'Deploy Web App' })],
+				total: 1
 			});
 
 			const event = makeRequestEvent({
-				searchParams: { search: 'Deploy' },
+				searchParams: { search: 'Deploy' }
 			});
 			const response = await sessionsModule.GET(event);
 			expect(response.status).toBe(200);
@@ -251,11 +256,11 @@ describe('Enhanced Sessions API (Phase 5.4)', () => {
 
 			mockListSessionsEnriched.mockResolvedValueOnce({
 				sessions: [],
-				total: 50,
+				total: 50
 			});
 
 			const event = makeRequestEvent({
-				searchParams: { offset: '10', limit: '5' },
+				searchParams: { offset: '10', limit: '5' }
 			});
 			const response = await sessionsModule.GET(event);
 			expect(response.status).toBe(200);
@@ -270,7 +275,7 @@ describe('Enhanced Sessions API (Phase 5.4)', () => {
 			if (!sessionsModule) return;
 
 			const event = makeRequestEvent({
-				locals: { dbAvailable: false },
+				locals: { dbAvailable: false }
 			});
 			const response = await sessionsModule.GET(event);
 			expect(response.status).toBe(200);
@@ -286,7 +291,7 @@ describe('Enhanced Sessions API (Phase 5.4)', () => {
 
 			const event = makeRequestEvent({
 				params: { id: 'sess-1' },
-				locals: { user: undefined as unknown as Locals['user'] },
+				locals: { user: undefined as unknown as Locals['user'] }
 			});
 
 			const response = await sessionByIdModule.DELETE(event);
@@ -300,7 +305,7 @@ describe('Enhanced Sessions API (Phase 5.4)', () => {
 			mockDeleteSession.mockResolvedValueOnce(false);
 
 			const event = makeRequestEvent({
-				params: { id: 'sess-1' },
+				params: { id: 'sess-1' }
 			});
 			const response = await sessionByIdModule.DELETE(event);
 			expect(response.status).toBe(404);
@@ -312,7 +317,7 @@ describe('Enhanced Sessions API (Phase 5.4)', () => {
 			mockDeleteSession.mockResolvedValueOnce(true);
 
 			const event = makeRequestEvent({
-				params: { id: 'sess-1' },
+				params: { id: 'sess-1' }
 			});
 			const response = await sessionByIdModule.DELETE(event);
 			expect(response.status).toBe(200);
@@ -327,7 +332,7 @@ describe('Enhanced Sessions API (Phase 5.4)', () => {
 			mockDeleteSession.mockResolvedValueOnce(true);
 
 			const event = makeRequestEvent({
-				params: { id: 'sess-1' },
+				params: { id: 'sess-1' }
 			});
 			await sessionByIdModule.DELETE(event);
 
@@ -340,7 +345,7 @@ describe('Enhanced Sessions API (Phase 5.4)', () => {
 
 			const event = makeRequestEvent({
 				params: { id: 'sess-1' },
-				locals: { dbAvailable: false },
+				locals: { dbAvailable: false }
 			});
 			const response = await sessionByIdModule.DELETE(event);
 			expect(response.status).toBe(503);
@@ -367,19 +372,17 @@ describe('Enhanced Sessions API (Phase 5.4)', () => {
 			event.request.json = vi.fn().mockResolvedValue({
 				model: 'meta.llama-3.3-70b-instruct',
 				region: 'eu-frankfurt-1',
-				title: 'Test Session',
+				title: 'Test Session'
 			});
 
-			mockSessionCreate.mockResolvedValueOnce(
-				makeMockEnrichedSession({ id: 'new-sess' })
-			);
+			mockSessionCreate.mockResolvedValueOnce(makeMockEnrichedSession({ id: 'new-sess' }));
 
 			await sessionsModule.POST(event);
 
 			// Verify userId was passed to the repository create call
 			expect(mockSessionCreate).toHaveBeenCalledWith(
 				expect.objectContaining({
-					userId: 'test-user-123',
+					userId: 'test-user-123'
 				})
 			);
 		});

@@ -53,8 +53,7 @@ export async function resolveCompartment(
 			return {
 				orgId: row.ID as string,
 				orgName: row.NAME as string,
-				compartmentId:
-					(row.OCI_COMPARTMENT_ID as string) || process.env.OCI_COMPARTMENT_ID || ''
+				compartmentId: (row.OCI_COMPARTMENT_ID as string) || process.env.OCI_COMPARTMENT_ID || ''
 			};
 		});
 	} catch (err) {

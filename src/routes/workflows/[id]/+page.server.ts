@@ -1,0 +1,13 @@
+import { getAllToolDefinitions } from '$lib/tools/registry.js';
+import type { PageServerLoad } from './$types';
+
+export const load: PageServerLoad = async () => {
+	const defs = getAllToolDefinitions();
+	const toolDefs = defs.map((d) => ({
+		name: d.name,
+		description: d.description,
+		category: d.category,
+		approvalLevel: d.approvalLevel
+	}));
+	return { toolDefs };
+};

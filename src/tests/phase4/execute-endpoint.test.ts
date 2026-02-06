@@ -22,19 +22,18 @@ vi.mock('$lib/tools/index.js', () => ({
 	requiresApproval: (...args: unknown[]) => mockRequiresApproval(args[0] as string),
 	getToolWarning: (...args: unknown[]) => mockGetToolWarning(args[0]),
 	executeTool: (...args: unknown[]) =>
-		mockExecuteTool(args[0] as string, args[1] as Record<string, unknown>),
+		mockExecuteTool(args[0] as string, args[1] as Record<string, unknown>)
 }));
 
-const mockConsumeApproval = vi.fn<(toolCallId: string, toolName: string) => boolean>();
+const mockConsumeApproval = vi.fn<(toolCallId: string, toolName: string) => Promise<boolean>>();
 
 vi.mock('$lib/server/approvals.js', () => ({
-	consumeApproval: (...args: unknown[]) =>
-		mockConsumeApproval(args[0] as string, args[1] as string),
+	consumeApproval: (...args: unknown[]) => mockConsumeApproval(args[0] as string, args[1] as string)
 }));
 
 vi.mock('$lib/server/audit.js', () => ({
 	logToolExecution: vi.fn(),
-	logToolApproval: vi.fn(),
+	logToolApproval: vi.fn()
 }));
 
 vi.mock('$lib/server/logger.js', () => ({
@@ -42,12 +41,21 @@ vi.mock('$lib/server/logger.js', () => ({
 		info: vi.fn(),
 		warn: vi.fn(),
 		error: vi.fn(),
-		debug: vi.fn(),
-	}),
+		debug: vi.fn()
+	})
 }));
 
 vi.mock('$lib/server/auth/rbac.js', () => ({
-	requirePermission: vi.fn(),
+	requirePermission: vi.fn()
+}));
+
+vi.mock('$lib/server/sentry.js', () => ({
+	captureError: vi.fn()
+}));
+
+vi.mock('$lib/server/metrics.js', () => ({
+	toolExecutions: { inc: vi.fn() },
+	toolDuration: { startTimer: vi.fn().mockReturnValue(vi.fn()) }
 }));
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -59,7 +67,7 @@ function makeToolDef(overrides: Partial<ToolDefinition> = {}): ToolDefinition {
 		category: 'compute',
 		approvalLevel: 'auto',
 		parameters: {} as ToolDefinition['parameters'],
-		...overrides,
+		...overrides
 	};
 }
 
@@ -82,15 +90,15 @@ function makeRequestEvent(options: {
 
 	const locals: Locals = {
 		user: { id: 'test-user' },
-		permissions: ['tools:execute'],
+		permissions: ['tools:execute']
 	};
 
 	return {
 		url,
 		locals,
 		request: {
-			json: vi.fn().mockResolvedValue(options.body ?? {}),
-		},
+			json: vi.fn().mockResolvedValue(options.body ?? {})
+		}
 	};
 }
 
@@ -143,7 +151,7 @@ describe('Execute Endpoint (Phase 4.1 - Task #3)', () => {
 
 			const event = makeRequestEvent({
 				method: 'GET',
-				searchParams: { toolName: 'nonExistentTool' },
+				searchParams: { toolName: 'nonExistentTool' }
 			});
 			const response = await serverModule.GET(event);
 			expect(response.status).toBe(404);
@@ -160,7 +168,7 @@ describe('Execute Endpoint (Phase 4.1 - Task #3)', () => {
 
 			const event = makeRequestEvent({
 				method: 'GET',
-				searchParams: { toolName: 'listInstances' },
+				searchParams: { toolName: 'listInstances' }
 			});
 			const response = await serverModule.GET(event);
 			expect(response.status).toBe(200);
@@ -176,18 +184,18 @@ describe('Execute Endpoint (Phase 4.1 - Task #3)', () => {
 			if (!serverModule) return;
 			const toolDef = makeToolDef({
 				name: 'terminateInstance',
-				approvalLevel: 'danger',
+				approvalLevel: 'danger'
 			});
 			mockGetToolDefinition.mockReturnValue(toolDef);
 			mockRequiresApproval.mockReturnValue(true);
 			mockGetToolWarning.mockReturnValue({
 				warning: 'This will permanently delete the instance.',
-				impact: 'Instance will be unrecoverable.',
+				impact: 'Instance will be unrecoverable.'
 			});
 
 			const event = makeRequestEvent({
 				method: 'GET',
-				searchParams: { toolName: 'terminateInstance' },
+				searchParams: { toolName: 'terminateInstance' }
 			});
 			const response = await serverModule.GET(event);
 			expect(response.status).toBe(200);
@@ -204,7 +212,7 @@ describe('Execute Endpoint (Phase 4.1 - Task #3)', () => {
 			if (!serverModule) return;
 			const event = makeRequestEvent({
 				method: 'POST',
-				body: { args: { foo: 'bar' } },
+				body: { args: { foo: 'bar' } }
 			});
 			const response = await serverModule.POST(event);
 			expect(response.status).toBe(400);
@@ -216,7 +224,7 @@ describe('Execute Endpoint (Phase 4.1 - Task #3)', () => {
 			if (!serverModule) return;
 			const event = makeRequestEvent({
 				method: 'POST',
-				body: { toolName: 'listInstances' },
+				body: { toolName: 'listInstances' }
 			});
 			const response = await serverModule.POST(event);
 			expect(response.status).toBe(400);
@@ -228,7 +236,7 @@ describe('Execute Endpoint (Phase 4.1 - Task #3)', () => {
 
 			const event = makeRequestEvent({
 				method: 'POST',
-				body: { toolName: 'nonExistentTool', args: {} },
+				body: { toolName: 'nonExistentTool', args: {} }
 			});
 			const response = await serverModule.POST(event);
 			expect(response.status).toBe(404);
@@ -240,26 +248,26 @@ describe('Execute Endpoint (Phase 4.1 - Task #3)', () => {
 			if (!serverModule) return;
 			const toolDef = makeToolDef({
 				name: 'terminateInstance',
-				approvalLevel: 'danger',
+				approvalLevel: 'danger'
 			});
 			mockGetToolDefinition.mockReturnValue(toolDef);
 			mockRequiresApproval.mockReturnValue(true);
-			mockConsumeApproval.mockReturnValue(false);
+			mockConsumeApproval.mockResolvedValue(false);
 
 			const event = makeRequestEvent({
 				method: 'POST',
 				body: {
 					toolName: 'terminateInstance',
 					args: { instanceId: 'ocid1.instance.test' },
-					toolCallId: 'tc-no-approval',
-				},
+					toolCallId: 'tc-no-approval'
+				}
 			});
 			const response = await serverModule.POST(event);
 			expect(response.status).toBe(403);
 
 			const data = await response.json();
-			expect(data.rejected).toBe(true);
 			expect(data.error).toContain('approval');
+			expect(data.code).toBeDefined();
 		});
 
 		it('returns 400 when invalid JSON is sent', async () => {
@@ -277,11 +285,11 @@ describe('Execute Endpoint (Phase 4.1 - Task #3)', () => {
 			if (!serverModule) return;
 			const toolDef = makeToolDef({
 				name: 'stopInstance',
-				approvalLevel: 'danger',
+				approvalLevel: 'danger'
 			});
 			mockGetToolDefinition.mockReturnValue(toolDef);
 			mockRequiresApproval.mockReturnValue(true);
-			mockConsumeApproval.mockReturnValue(true);
+			mockConsumeApproval.mockResolvedValue(true);
 			mockExecuteTool.mockResolvedValue({ lifecycleState: 'STOPPING' });
 
 			const event = makeRequestEvent({
@@ -289,8 +297,8 @@ describe('Execute Endpoint (Phase 4.1 - Task #3)', () => {
 				body: {
 					toolName: 'stopInstance',
 					args: { instanceId: 'ocid1.instance.test' },
-					toolCallId: 'tc-123',
-				},
+					toolCallId: 'tc-123'
+				}
 			});
 
 			const response = await serverModule.POST(event);
@@ -309,11 +317,11 @@ describe('Execute Endpoint (Phase 4.1 - Task #3)', () => {
 			if (!serverModule) return;
 			const toolDef = makeToolDef({
 				name: 'stopInstance',
-				approvalLevel: 'danger',
+				approvalLevel: 'danger'
 			});
 			mockGetToolDefinition.mockReturnValue(toolDef);
 			mockRequiresApproval.mockReturnValue(true);
-			mockConsumeApproval.mockReturnValue(true);
+			mockConsumeApproval.mockResolvedValue(true);
 			mockExecuteTool.mockRejectedValue(new Error('OCI CLI error: instance not found'));
 
 			const event = makeRequestEvent({
@@ -321,8 +329,8 @@ describe('Execute Endpoint (Phase 4.1 - Task #3)', () => {
 				body: {
 					toolName: 'stopInstance',
 					args: { instanceId: 'ocid1.instance.invalid' },
-					toolCallId: 'tc-456',
-				},
+					toolCallId: 'tc-456'
+				}
 			});
 
 			const response = await serverModule.POST(event);
@@ -343,7 +351,7 @@ describe('Execute Endpoint (Phase 4.1 - Task #3)', () => {
 
 			const event = makeRequestEvent({
 				method: 'GET',
-				searchParams: { toolName: 'listInstances' },
+				searchParams: { toolName: 'listInstances' }
 			});
 			mockGetToolDefinition.mockReturnValue(makeToolDef());
 			mockRequiresApproval.mockReturnValue(false);

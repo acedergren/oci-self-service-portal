@@ -21,8 +21,8 @@ export const RATE_LIMIT_CONFIG: RateLimitConfig = {
 	windowMs: 60_000,
 	maxRequests: {
 		chat: 20,
-		api: 60,
-	},
+		api: 60
+	}
 };
 
 /**
@@ -41,6 +41,13 @@ export async function checkRateLimit(
 ): Promise<RateLimitResult | null> {
 	const maxRequests = config.maxRequests[endpoint] ?? config.maxRequests.api ?? 60;
 	const windowMs = config.windowMs;
+
+	// Probabilistic cleanup: ~1% of requests trigger stale row deletion
+	if (Math.random() < 0.01) {
+		cleanupStaleRateLimits().catch(() => {
+			/* best-effort */
+		});
+	}
 
 	try {
 		return await withConnection(async (conn) => {
@@ -97,5 +104,28 @@ export async function checkRateLimit(
 		// Fail-open: allow the request through on DB errors
 		log.warn({ err, clientId, endpoint }, 'rate-limit check failed — allowing request');
 		return { remaining: maxRequests - 1, resetAt: Date.now() + windowMs };
+	}
+}
+
+/**
+ * Delete stale rate_limits rows older than 1 hour.
+ * Called probabilistically (1% of requests) to avoid extra DB round-trips.
+ */
+export async function cleanupStaleRateLimits(): Promise<number> {
+	try {
+		return await withConnection(async (conn) => {
+			const result = await conn.execute<never>(
+				`DELETE FROM rate_limits
+				  WHERE window_start < SYSTIMESTAMP - INTERVAL '1' HOUR`
+			);
+			const count = (result as { rowsAffected?: number }).rowsAffected ?? 0;
+			if (count > 0) {
+				log.info({ deleted: count }, 'cleaned up stale rate limit rows');
+			}
+			return count;
+		});
+	} catch (err) {
+		log.warn({ err }, 'rate-limit cleanup failed');
+		return 0;
 	}
 }

@@ -179,7 +179,10 @@ export async function runMigrations(): Promise<void> {
 
 		await withConnection(async (connection) => {
 			for (const statement of statements) {
-				log.debug({ version: migration.version, sql: statement.substring(0, 120) }, 'executing statement');
+				log.debug(
+					{ version: migration.version, sql: statement.substring(0, 120) },
+					'executing statement'
+				);
 				await connection.execute(statement);
 			}
 

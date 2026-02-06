@@ -1,0 +1,166 @@
+{
+	"metadata": {
+		"provider": "oci",
+		"category": "compute",
+		"lastUpdated": "2026-02-01",
+		"source": "static",
+		"version": "1.0.0",
+		"currency": "USD",
+		"notes": "Prices are for eu-frankfurt-1 region. OCPU = 2 vCPUs."
+	},
+	"instances": [
+		{
+			"id": "oci-vm-standard-e4-flex",
+			"name": "VM.Standard.E4.Flex",
+			"displayName": "AMD Standard E4 Flex",
+			"description": "Flexible AMD EPYC shape, 1-64 OCPUs",
+			"architecture": "x86",
+			"specs": {
+				"ocpuMin": 1,
+				"ocpuMax": 64,
+				"memoryPerOcpuGB": 16,
+				"memoryMaxGB": 1024
+			},
+			"pricing": {
+				"ocpuPerHour": 0.025,
+				"memoryGBPerHour": 0.0015
+			},
+			"preemptible": {
+				"ocpuPerHour": 0.0125,
+				"memoryGBPerHour": 0.00075
+			}
+		},
+		{
+			"id": "oci-vm-standard-e5-flex",
+			"name": "VM.Standard.E5.Flex",
+			"displayName": "AMD Standard E5 Flex",
+			"description": "Latest AMD EPYC Genoa, 1-94 OCPUs",
+			"architecture": "x86",
+			"specs": {
+				"ocpuMin": 1,
+				"ocpuMax": 94,
+				"memoryPerOcpuGB": 16,
+				"memoryMaxGB": 1504
+			},
+			"pricing": {
+				"ocpuPerHour": 0.03,
+				"memoryGBPerHour": 0.0017
+			},
+			"preemptible": {
+				"ocpuPerHour": 0.015,
+				"memoryGBPerHour": 0.00085
+			}
+		},
+		{
+			"id": "oci-vm-standard-a1-flex",
+			"name": "VM.Standard.A1.Flex",
+			"displayName": "Ampere A1 Flex (ARM)",
+			"description": "ARM-based Ampere Altra, 1-80 OCPUs",
+			"architecture": "arm",
+			"specs": {
+				"ocpuMin": 1,
+				"ocpuMax": 80,
+				"memoryPerOcpuGB": 6,
+				"memoryMaxGB": 512
+			},
+			"pricing": {
+				"ocpuPerHour": 0.01,
+				"memoryGBPerHour": 0.0006
+			},
+			"preemptible": {
+				"ocpuPerHour": 0.005,
+				"memoryGBPerHour": 0.0003
+			},
+			"freeEligible": true,
+			"freeAllowance": {
+				"ocpus": 4,
+				"memoryGB": 24
+			}
+		},
+		{
+			"id": "oci-vm-standard3-flex",
+			"name": "VM.Standard3.Flex",
+			"displayName": "Intel Standard 3 Flex",
+			"description": "Intel Ice Lake, 1-32 OCPUs",
+			"architecture": "x86",
+			"specs": {
+				"ocpuMin": 1,
+				"ocpuMax": 32,
+				"memoryPerOcpuGB": 16,
+				"memoryMaxGB": 512
+			},
+			"pricing": {
+				"ocpuPerHour": 0.04,
+				"memoryGBPerHour": 0.0024
+			}
+		},
+		{
+			"id": "oci-vm-optimized3-flex",
+			"name": "VM.Optimized3.Flex",
+			"displayName": "Intel Optimized 3 Flex",
+			"description": "High-frequency Intel for compute-intensive workloads",
+			"architecture": "x86",
+			"specs": {
+				"ocpuMin": 1,
+				"ocpuMax": 18,
+				"memoryPerOcpuGB": 14,
+				"memoryMaxGB": 256
+			},
+			"pricing": {
+				"ocpuPerHour": 0.054,
+				"memoryGBPerHour": 0.0032
+			}
+		},
+		{
+			"id": "oci-vm-gpu-a10-1",
+			"name": "VM.GPU.A10.1",
+			"displayName": "NVIDIA A10 (1 GPU)",
+			"description": "1x NVIDIA A10 Tensor Core GPU",
+			"architecture": "gpu",
+			"specs": {
+				"ocpus": 15,
+				"memoryGB": 240,
+				"gpuCount": 1,
+				"gpuType": "NVIDIA A10",
+				"gpuMemoryGB": 24
+			},
+			"pricing": {
+				"instancePerHour": 2.0
+			}
+		},
+		{
+			"id": "oci-vm-gpu-a10-2",
+			"name": "VM.GPU.A10.2",
+			"displayName": "NVIDIA A10 (2 GPUs)",
+			"description": "2x NVIDIA A10 Tensor Core GPUs",
+			"architecture": "gpu",
+			"specs": {
+				"ocpus": 30,
+				"memoryGB": 480,
+				"gpuCount": 2,
+				"gpuType": "NVIDIA A10",
+				"gpuMemoryGB": 48
+			},
+			"pricing": {
+				"instancePerHour": 4.0
+			}
+		},
+		{
+			"id": "oci-bm-gpu-h100-8",
+			"name": "BM.GPU.H100.8",
+			"displayName": "NVIDIA H100 Bare Metal (8 GPUs)",
+			"description": "8x NVIDIA H100 80GB GPUs for AI/ML training",
+			"architecture": "gpu",
+			"specs": {
+				"ocpus": 112,
+				"memoryGB": 2048,
+				"gpuCount": 8,
+				"gpuType": "NVIDIA H100",
+				"gpuMemoryGB": 640
+			},
+			"pricing": {
+				"instancePerHour": 32.0
+			}
+		}
+	]
+}

@@ -1,6 +1,7 @@
 // @ts-expect-error oracledb ships no type declarations
 import oracledb from 'oracledb';
 import { createLogger } from '../logger.js';
+import { wrapWithSpan } from '../sentry.js';
 
 const log = createLogger('oracle');
 
@@ -98,16 +99,18 @@ export async function initPool(config?: Partial<OracleConfig>): Promise<void> {
  * Initializes the pool on first call if it has not been created yet.
  */
 export async function withConnection<T>(fn: (conn: OracleConnection) => Promise<T>): Promise<T> {
-	if (!pool) {
-		await initPool();
-	}
+	return wrapWithSpan('db.withConnection', 'db', async () => {
+		if (!pool) {
+			await initPool();
+		}
 
-	const conn = await pool!.getConnection();
-	try {
-		return await fn(conn);
-	} finally {
-		await conn.close();
-	}
+		const conn = await pool!.getConnection();
+		try {
+			return await fn(conn);
+		} finally {
+			await conn.close();
+		}
+	});
 }
 
 /**

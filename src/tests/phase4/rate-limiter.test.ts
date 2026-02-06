@@ -18,17 +18,20 @@ const mockConn = {
 	execute: mockExecute,
 	commit: vi.fn().mockResolvedValue(undefined),
 	rollback: vi.fn().mockResolvedValue(undefined),
-	close: vi.fn().mockResolvedValue(undefined),
+	close: vi.fn().mockResolvedValue(undefined)
 };
 
 vi.mock('$lib/server/oracle/connection.js', () => ({
-	withConnection: vi.fn(async (fn: (conn: unknown) => Promise<unknown>) => fn(mockConn)),
+	withConnection: vi.fn(async (fn: (conn: unknown) => Promise<unknown>) => fn(mockConn))
 }));
 
 vi.mock('$lib/server/logger.js', () => ({
 	createLogger: () => ({
-		info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(),
-	}),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+		debug: vi.fn()
+	})
 }));
 
 let rateLimiterModule: Record<string, unknown> | null = null;
@@ -49,7 +52,7 @@ describe('DB-backed Rate Limiter (Phase 4.2)', () => {
 			if (moduleError) {
 				expect.fail(
 					`rate-limiter module not yet available: ${moduleError}. ` +
-					'Implement $lib/server/rate-limiter.ts per Phase 4.2.'
+						'Implement $lib/server/rate-limiter.ts per Phase 4.2.'
 				);
 			}
 			expect(rateLimiterModule).not.toBeNull();
@@ -60,13 +63,14 @@ describe('DB-backed Rate Limiter (Phase 4.2)', () => {
 		it('returns remaining count for first request in window', async () => {
 			if (!rateLimiterModule) return;
 			const checkRateLimit = rateLimiterModule.checkRateLimit as (
-				clientId: string, endpoint: string
+				clientId: string,
+				endpoint: string
 			) => Promise<{ remaining: number; resetAt: number } | null>;
 
 			// After H4/H5 fix: atomic MERGE (call 1) then SELECT (call 2)
 			mockExecute.mockResolvedValueOnce({ rowsAffected: 1 }); // MERGE INTO
 			mockExecute.mockResolvedValueOnce({
-				rows: [{ CNT: 1, RESET_AT: new Date(Date.now() + 60000) }],
+				rows: [{ CNT: 1, RESET_AT: new Date(Date.now() + 60000) }]
 			}); // SELECT back
 
 			const result = await checkRateLimit('192.168.1.1', 'chat');
@@ -78,13 +82,14 @@ describe('DB-backed Rate Limiter (Phase 4.2)', () => {
 		it('returns null when rate limit exceeded', async () => {
 			if (!rateLimiterModule) return;
 			const checkRateLimit = rateLimiterModule.checkRateLimit as (
-				clientId: string, endpoint: string
+				clientId: string,
+				endpoint: string
 			) => Promise<{ remaining: number; resetAt: number } | null>;
 
 			// After H4/H5 fix: MERGE increments, then SELECT shows over limit
 			mockExecute.mockResolvedValueOnce({ rowsAffected: 1 }); // MERGE
 			mockExecute.mockResolvedValueOnce({
-				rows: [{ CNT: 21, RESET_AT: new Date(Date.now() + 60000) }],
+				rows: [{ CNT: 21, RESET_AT: new Date(Date.now() + 60000) }]
 			}); // SELECT: count exceeds max (chat=20)
 
 			const result = await checkRateLimit('192.168.1.1', 'chat');
@@ -94,12 +99,13 @@ describe('DB-backed Rate Limiter (Phase 4.2)', () => {
 		it('uses atomic MERGE to prevent TOCTOU race (H4/H5 fix)', async () => {
 			if (!rateLimiterModule) return;
 			const checkRateLimit = rateLimiterModule.checkRateLimit as (
-				clientId: string, endpoint: string
+				clientId: string,
+				endpoint: string
 			) => Promise<{ remaining: number; resetAt: number } | null>;
 
 			mockExecute.mockResolvedValueOnce({ rowsAffected: 1 }); // MERGE
 			mockExecute.mockResolvedValueOnce({
-				rows: [{ CNT: 5, RESET_AT: new Date(Date.now() + 60000) }],
+				rows: [{ CNT: 5, RESET_AT: new Date(Date.now() + 60000) }]
 			});
 
 			await checkRateLimit('192.168.1.1', 'api');
@@ -124,7 +130,8 @@ describe('DB-backed Rate Limiter (Phase 4.2)', () => {
 		it('handles database errors gracefully (fail-open)', async () => {
 			if (!rateLimiterModule) return;
 			const checkRateLimit = rateLimiterModule.checkRateLimit as (
-				clientId: string, endpoint: string
+				clientId: string,
+				endpoint: string
 			) => Promise<{ remaining: number; resetAt: number } | null>;
 
 			mockExecute.mockRejectedValueOnce(new Error('DB down'));

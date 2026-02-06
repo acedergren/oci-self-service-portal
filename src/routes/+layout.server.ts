@@ -5,6 +5,6 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 		user: locals.user ?? null,
 		session: locals.session ?? null,
 		permissions: locals.permissions ?? [],
-		dbAvailable: locals.dbAvailable,
+		dbAvailable: locals.dbAvailable
 	};
 };

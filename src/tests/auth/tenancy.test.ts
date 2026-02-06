@@ -6,11 +6,11 @@ const mockConn = {
 	execute: mockExecute,
 	commit: vi.fn().mockResolvedValue(undefined),
 	rollback: vi.fn().mockResolvedValue(undefined),
-	close: vi.fn().mockResolvedValue(undefined),
+	close: vi.fn().mockResolvedValue(undefined)
 };
 
 vi.mock('$lib/server/oracle/connection.js', () => ({
-	withConnection: vi.fn(async (fn: (conn: unknown) => Promise<unknown>) => fn(mockConn)),
+	withConnection: vi.fn(async (fn: (conn: unknown) => Promise<unknown>) => fn(mockConn))
 }));
 
 // Mock logger
@@ -19,8 +19,8 @@ vi.mock('$lib/server/logger.js', () => ({
 		info: vi.fn(),
 		warn: vi.fn(),
 		error: vi.fn(),
-		debug: vi.fn(),
-	}),
+		debug: vi.fn()
+	})
 }));
 
 // Store original env
@@ -47,11 +47,13 @@ describe('Multi-tenancy', () => {
 	describe('resolveCompartment', () => {
 		it('resolves compartment for user with org that has compartment', async () => {
 			mockExecute.mockResolvedValueOnce({
-				rows: [{
-					ID: 'org-1',
-					NAME: 'Acme Corp',
-					OCI_COMPARTMENT_ID: 'ocid1.compartment.acme',
-				}],
+				rows: [
+					{
+						ID: 'org-1',
+						NAME: 'Acme Corp',
+						OCI_COMPARTMENT_ID: 'ocid1.compartment.acme'
+					}
+				]
 			});
 
 			const ctx = await resolveCompartment('user-with-org');
@@ -70,11 +72,13 @@ describe('Multi-tenancy', () => {
 
 		it('falls back to env compartment if org has no compartment', async () => {
 			mockExecute.mockResolvedValueOnce({
-				rows: [{
-					ID: 'org-2',
-					NAME: 'No Compartment Org',
-					OCI_COMPARTMENT_ID: null,
-				}],
+				rows: [
+					{
+						ID: 'org-2',
+						NAME: 'No Compartment Org',
+						OCI_COMPARTMENT_ID: null
+					}
+				]
 			});
 
 			const ctx = await resolveCompartment('user-org-no-compartment');
@@ -84,11 +88,13 @@ describe('Multi-tenancy', () => {
 
 		it('scopes lookup to specific org when orgId is provided', async () => {
 			mockExecute.mockResolvedValueOnce({
-				rows: [{
-					ID: 'org-specific',
-					NAME: 'Specific Org',
-					OCI_COMPARTMENT_ID: 'ocid1.compartment.specific',
-				}],
+				rows: [
+					{
+						ID: 'org-specific',
+						NAME: 'Specific Org',
+						OCI_COMPARTMENT_ID: 'ocid1.compartment.specific'
+					}
+				]
 			});
 
 			const ctx = await resolveCompartment('user-1', 'org-specific');
@@ -104,11 +110,13 @@ describe('Multi-tenancy', () => {
 			delete process.env.OCI_COMPARTMENT_ID;
 
 			mockExecute.mockResolvedValueOnce({
-				rows: [{
-					ID: 'org-3',
-					NAME: 'Org Without Compartment',
-					OCI_COMPARTMENT_ID: null,
-				}],
+				rows: [
+					{
+						ID: 'org-3',
+						NAME: 'Org Without Compartment',
+						OCI_COMPARTMENT_ID: null
+					}
+				]
 			});
 
 			const ctx = await resolveCompartment('user-1');
@@ -127,7 +135,7 @@ describe('Multi-tenancy', () => {
 	describe('getOrgRole', () => {
 		it('gets org role for user who is a member', async () => {
 			mockExecute.mockResolvedValueOnce({
-				rows: [{ ROLE: 'operator' }],
+				rows: [{ ROLE: 'operator' }]
 			});
 
 			const role = await getOrgRole('user-1', 'org-1');
@@ -143,7 +151,7 @@ describe('Multi-tenancy', () => {
 
 		it('returns admin role for org admin', async () => {
 			mockExecute.mockResolvedValueOnce({
-				rows: [{ ROLE: 'admin' }],
+				rows: [{ ROLE: 'admin' }]
 			});
 
 			const role = await getOrgRole('admin-user', 'org-1');

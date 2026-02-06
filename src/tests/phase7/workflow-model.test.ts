@@ -28,17 +28,20 @@ const mockConn = {
 	execute: mockExecute,
 	commit: vi.fn().mockResolvedValue(undefined),
 	rollback: vi.fn().mockResolvedValue(undefined),
-	close: vi.fn().mockResolvedValue(undefined),
+	close: vi.fn().mockResolvedValue(undefined)
 };
 
 vi.mock('$lib/server/oracle/connection.js', () => ({
-	withConnection: vi.fn(async (fn: (conn: unknown) => Promise<unknown>) => fn(mockConn)),
+	withConnection: vi.fn(async (fn: (conn: unknown) => Promise<unknown>) => fn(mockConn))
 }));
 
 vi.mock('$lib/server/logger.js', () => ({
 	createLogger: () => ({
-		info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(),
-	}),
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+		debug: vi.fn()
+	})
 }));
 
 let typesModule: Record<string, unknown> | null = null;
@@ -66,7 +69,7 @@ describe('Workflow Data Model (Phase 7.2)', () => {
 			if (typesError) {
 				expect.fail(
 					`workflows/types not yet available: ${typesError}. ` +
-					'Implement $lib/server/workflows/types.ts per Phase 7.2.'
+						'Implement $lib/server/workflows/types.ts per Phase 7.2.'
 				);
 			}
 			expect(typesModule).not.toBeNull();
@@ -76,7 +79,7 @@ describe('Workflow Data Model (Phase 7.2)', () => {
 			if (repoError) {
 				expect.fail(
 					`workflows/repository not yet available: ${repoError}. ` +
-					'Implement $lib/server/workflows/repository.ts per Phase 7.4.'
+						'Implement $lib/server/workflows/repository.ts per Phase 7.4.'
 				);
 			}
 			expect(repoModule).not.toBeNull();
@@ -99,15 +102,18 @@ describe('Workflow Data Model (Phase 7.2)', () => {
 				description: 'Deploy a compute instance',
 				nodes: [
 					{ id: 'n1', type: 'tool', data: { toolName: 'listImages' }, position: { x: 0, y: 0 } },
-					{ id: 'n2', type: 'tool', data: { toolName: 'launchInstance' }, position: { x: 200, y: 0 } },
+					{
+						id: 'n2',
+						type: 'tool',
+						data: { toolName: 'launchInstance' },
+						position: { x: 200, y: 0 }
+					}
 				],
-				edges: [
-					{ id: 'e1', source: 'n1', target: 'n2' },
-				],
+				edges: [{ id: 'e1', source: 'n1', target: 'n2' }],
 				userId: 'user-1',
 				orgId: 'org-1',
 				createdAt: new Date(),
-				updatedAt: new Date(),
+				updatedAt: new Date()
 			};
 
 			expect(() => schema.parse(validDef)).not.toThrow();
@@ -118,13 +124,15 @@ describe('Workflow Data Model (Phase 7.2)', () => {
 			const schema = typesModule.WorkflowDefinitionSchema as { parse: (v: unknown) => unknown };
 
 			// Missing name should fail
-			expect(() => schema.parse({
-				id: 'wf-123',
-				nodes: [],
-				edges: [],
-				createdAt: new Date(),
-				updatedAt: new Date(),
-			})).toThrow();
+			expect(() =>
+				schema.parse({
+					id: 'wf-123',
+					nodes: [],
+					edges: [],
+					createdAt: new Date(),
+					updatedAt: new Date()
+				})
+			).toThrow();
 		});
 	});
 
@@ -143,7 +151,7 @@ describe('Workflow Data Model (Phase 7.2)', () => {
 				definitionId: 'wf-123',
 				status: 'running',
 				startedAt: new Date(),
-				userId: 'user-1',
+				userId: 'user-1'
 			};
 
 			expect(() => schema.parse(validRun)).not.toThrow();
@@ -153,12 +161,14 @@ describe('Workflow Data Model (Phase 7.2)', () => {
 			if (!typesModule) return;
 			const schema = typesModule.WorkflowRunSchema as { parse: (v: unknown) => unknown };
 
-			expect(() => schema.parse({
-				id: 'run-1',
-				definitionId: 'wf-1',
-				status: 'invalid_status',
-				startedAt: new Date(),
-			})).toThrow();
+			expect(() =>
+				schema.parse({
+					id: 'run-1',
+					definitionId: 'wf-1',
+					status: 'invalid_status',
+					startedAt: new Date()
+				})
+			).toThrow();
 		});
 	});
 
@@ -180,7 +190,7 @@ describe('Workflow Data Model (Phase 7.2)', () => {
 				input: { compartmentId: 'ocid1...' },
 				output: { data: [{ id: 'instance-1' }] },
 				startedAt: new Date(),
-				completedAt: new Date(),
+				completedAt: new Date()
 			};
 
 			expect(() => schema.parse(validStep)).not.toThrow();
@@ -199,17 +209,19 @@ describe('Workflow Repository (Phase 7.4)', () => {
 			mockExecute
 				.mockResolvedValueOnce({ rows: [] }) // insert
 				.mockResolvedValueOnce({
-					rows: [{
-						ID: 'wf-new',
-						NAME: 'Test Workflow',
-						DESCRIPTION: 'A test',
-						NODES: '[]',
-						EDGES: '[]',
-						USER_ID: 'u1',
-						ORG_ID: 'o1',
-						CREATED_AT: new Date(),
-						UPDATED_AT: new Date(),
-					}],
+					rows: [
+						{
+							ID: 'wf-new',
+							NAME: 'Test Workflow',
+							DESCRIPTION: 'A test',
+							NODES: '[]',
+							EDGES: '[]',
+							USER_ID: 'u1',
+							ORG_ID: 'o1',
+							CREATED_AT: new Date(),
+							UPDATED_AT: new Date()
+						}
+					]
 				});
 
 			const wf = await repo.create({
@@ -218,7 +230,7 @@ describe('Workflow Repository (Phase 7.4)', () => {
 				nodes: [],
 				edges: [],
 				userId: 'u1',
-				orgId: 'o1',
+				orgId: 'o1'
 			});
 
 			expect(wf).toBeDefined();
@@ -245,9 +257,18 @@ describe('Workflow Repository (Phase 7.4)', () => {
 
 			mockExecute.mockResolvedValueOnce({
 				rows: [
-					{ ID: 'wf-1', NAME: 'WF 1', DESCRIPTION: '', NODES: '[]', EDGES: '[]',
-					  USER_ID: 'u1', ORG_ID: null, CREATED_AT: new Date(), UPDATED_AT: new Date() },
-				],
+					{
+						ID: 'wf-1',
+						NAME: 'WF 1',
+						DESCRIPTION: '',
+						NODES: '[]',
+						EDGES: '[]',
+						USER_ID: 'u1',
+						ORG_ID: null,
+						CREATED_AT: new Date(),
+						UPDATED_AT: new Date()
+					}
+				]
 			});
 
 			const workflows = await repo.list({ userId: 'u1' });
@@ -257,17 +278,28 @@ describe('Workflow Repository (Phase 7.4)', () => {
 		it('update modifies workflow and returns updated version', async () => {
 			if (!repoModule) return;
 			const repo = repoModule.workflowRepository as {
-				update: (id: string, input: Record<string, unknown>) => Promise<Record<string, unknown> | null>;
+				update: (
+					id: string,
+					input: Record<string, unknown>
+				) => Promise<Record<string, unknown> | null>;
 			};
 
 			mockExecute
 				.mockResolvedValueOnce({ rows: [] }) // update
 				.mockResolvedValueOnce({
-					rows: [{
-						ID: 'wf-1', NAME: 'Updated Name', DESCRIPTION: 'new desc',
-						NODES: '[]', EDGES: '[]', USER_ID: 'u1', ORG_ID: null,
-						CREATED_AT: new Date(), UPDATED_AT: new Date(),
-					}],
+					rows: [
+						{
+							ID: 'wf-1',
+							NAME: 'Updated Name',
+							DESCRIPTION: 'new desc',
+							NODES: '[]',
+							EDGES: '[]',
+							USER_ID: 'u1',
+							ORG_ID: null,
+							CREATED_AT: new Date(),
+							UPDATED_AT: new Date()
+						}
+					]
 				});
 
 			const wf = await repo.update('wf-1', { name: 'Updated Name' });
@@ -298,10 +330,15 @@ describe('Workflow Repository (Phase 7.4)', () => {
 			mockExecute
 				.mockResolvedValueOnce({ rows: [] }) // insert
 				.mockResolvedValueOnce({
-					rows: [{
-						ID: 'run-1', DEFINITION_ID: 'wf-1', STATUS: 'pending',
-						STARTED_AT: new Date(), USER_ID: 'u1',
-					}],
+					rows: [
+						{
+							ID: 'run-1',
+							DEFINITION_ID: 'wf-1',
+							STATUS: 'pending',
+							STARTED_AT: new Date(),
+							USER_ID: 'u1'
+						}
+					]
 				});
 
 			const run = await repo.createRun('wf-1', 'u1');
@@ -312,22 +349,31 @@ describe('Workflow Repository (Phase 7.4)', () => {
 		it('updateStep records step completion with output', async () => {
 			if (!repoModule) return;
 			const repo = repoModule.workflowRepository as {
-				updateStep: (stepId: string, input: Record<string, unknown>) => Promise<Record<string, unknown>>;
+				updateStep: (
+					stepId: string,
+					input: Record<string, unknown>
+				) => Promise<Record<string, unknown>>;
 			};
 
 			mockExecute
 				.mockResolvedValueOnce({ rows: [] }) // update
 				.mockResolvedValueOnce({
-					rows: [{
-						ID: 'step-1', RUN_ID: 'run-1', NODE_ID: 'n1',
-						STATUS: 'completed', OUTPUT: '{"result":"ok"}',
-						STARTED_AT: new Date(), COMPLETED_AT: new Date(),
-					}],
+					rows: [
+						{
+							ID: 'step-1',
+							RUN_ID: 'run-1',
+							NODE_ID: 'n1',
+							STATUS: 'completed',
+							OUTPUT: '{"result":"ok"}',
+							STARTED_AT: new Date(),
+							COMPLETED_AT: new Date()
+						}
+					]
 				});
 
 			const step = await repo.updateStep('step-1', {
 				status: 'completed',
-				output: { result: 'ok' },
+				output: { result: 'ok' }
 			});
 			expect(step).toBeDefined();
 		});
