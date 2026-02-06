@@ -1,0 +1,64 @@
+# Dependencies (installed in container)
+node_modules/
+
+# Build output (built in container)
+build/
+.svelte-kit/
+
+# Environment and secrets
+.env
+.env.*
+.env.local
+.env.production
+!.env.example
+
+# Version control
+.git/
+.gitignore
+
+# IDE and editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test files
+*.test.ts
+*.spec.ts
+__tests__/
+coverage/
+.vitest/
+
+# Documentation (not needed in image)
+*.md
+LICENSE
+
+# Docker files (avoid recursive)
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# Development tooling
+.eslintrc*
+.prettierrc*
+.editorconfig
+tsconfig.tsbuildinfo
+
+# Temporary and cache
+tmp/
+.cache/
+*.log
+
+# Static assets that shouldn't be in context
+# (remove these lines if you need static/ in the build)
+# static/
+
+# Serena / OpenCode / Claude config
+.serena/
+.opencode/
+.claude/

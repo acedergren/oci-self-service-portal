@@ -1,0 +1,73 @@
+# OCI AI Chat - Docker Compose Configuration
+# SvelteKit application with OCI GenAI integration
+#
+# Usage:
+#   cp .env.example .env   # then fill in values
+#   docker compose up -d
+#   docker compose logs -f oci-ai-chat
+#
+# Build context is the monorepo root (..) because workspace
+# packages (agent-state, mcp-client, oci-genai-provider, oci-genai-query)
+# are sibling directories resolved during the build.
+
+services:
+  oci-ai-chat:
+    build:
+      context: ..
+      dockerfile: oci-ai-chat/Dockerfile
+    container_name: oci-ai-chat
+    restart: unless-stopped
+
+    ports:
+      - "3000:3000"
+
+    env_file:
+      - .env
+
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOST=0.0.0.0
+      - OCI_REGION=eu-frankfurt-1
+      - OCI_AUTH_METHOD=config_file
+      - LOG_LEVEL=info
+
+    volumes:
+      # Persistent application data and audit logs
+      - ./data:/app/data
+
+      # OCI CLI configuration (read-only)
+      - ~/.oci:/home/portal/.oci:ro
+
+      # Oracle wallet for database connectivity (read-only)
+      # Available when deployed on OCI Compute (app01)
+      - /data/wallets:/wallets:ro
+
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+          cpus: "1.0"
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+    # ----------------------------------------------------------------
+    # Phase 2: Oracle Autonomous Database Configuration
+    # Uncomment when database integration is ready.
+    #
+    # environment (append to above):
+    #   - ORACLE_USER=ADMIN
+    #   - ORACLE_DSN=langflowdb_high
+    #   - ORACLE_WALLET_LOCATION=/wallets/langflow
+    #   - ORACLE_CONFIG_DIR=/wallets/langflow
+    #   - TNS_ADMIN=/wallets/langflow
+    #
+    # Secrets from OCI Vault (fetch at deploy time, set in .env):
+    #   - ORACLE_PASSWORD=          # oci secrets secret-bundle get --secret-id <oracle-admin-password-ocid>
+    #   - ORACLE_WALLET_PASSWORD=   # oci secrets secret-bundle get --secret-id <oracle-wallet-password-ocid>
+    # ----------------------------------------------------------------
