@@ -1,0 +1,60 @@
+# Serena Project Configuration for OCI Self-Service Portal
+project_name: "oci-self-service-portal"
+
+# Language servers
+languages:
+  - typescript
+
+# Encoding
+encoding: "utf-8"
+
+# Use .gitignore for file exclusions
+ignore_all_files_in_gitignore: true
+
+# Additional paths to ignore
+ignored_paths:
+  - "node_modules/**"
+  - ".svelte-kit/**"
+  - "build/**"
+  - "dist/**"
+  - "data/*.db"
+  - "wallets/**"
+  - ".serena/cache/**"
+
+# Not read-only
+read_only: false
+
+# No excluded tools
+excluded_tools: []
+
+# No optional tools
+included_optional_tools: []
+
+# No fixed tools
+fixed_tools: []
+
+# Base modes (use global defaults)
+base_modes:
+
+# Default modes (use global defaults)
+default_modes:
+
+# Initial prompt
+initial_prompt: |
+  You are working on OCI Self-Service Portal, a production-ready SvelteKit application with OCI Generative AI integration.
+
+  Key architecture:
+  - SvelteKit 2.50+ with Svelte 5 runes
+  - Vercel AI SDK for streaming chat
+  - Better Auth + OIDC with OCI IAM
+  - Oracle Database 26AI (fallback to SQLite)
+  - 60+ OCI CLI tool wrappers
+  - RBAC with 3 roles, 10 permissions
+
+  Important patterns:
+  - Phase 4: DB-backed rate limiting (atomic MERGE INTO), request tracing, approval tokens
+  - Phase 5: 17 portal components, shadcn-svelte, activity API
+  - All services support Oracle → SQLite → in-memory fallback chain
+  - Export helpers for testability (QA imports directly)
+
+  See CLAUDE.md for full context and project memory for phase-specific patterns.
