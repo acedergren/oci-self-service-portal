@@ -37,11 +37,12 @@
     "docker:run": "docker-compose up"
   },
   "dependencies": {
-    "@acedergren/oci-genai-provider": "^0.1.0",
+    "@acedergren/oci-genai-provider": "0.1.0",
     "@ai-sdk/svelte": "^4.0.69",
     "@tanstack/svelte-query": "^6.0.18",
     "ai": "^6.0.69",
     "better-auth": "^1.4.18",
+    "better-sqlite3": "^11.8.1",
     "clsx": "^2.1.1",
     "dompurify": "^3.3.1",
     "marked": "^17.0.1",
