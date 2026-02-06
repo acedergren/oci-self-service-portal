@@ -15,7 +15,7 @@ import type {
 	ComputePricing,
 	GenAIPricing
 } from './types.js';
-import { createLogger } from '$lib/server/logger.js';
+import { createLogger } from '../server/logger';
 
 const log = createLogger('pricing');
 

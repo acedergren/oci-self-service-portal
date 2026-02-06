@@ -1,8 +1,8 @@
 import { readFileSync, readdirSync } from 'fs';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { withConnection } from './connection.js';
-import { createLogger } from '../logger.js';
+import { withConnection } from './connection';
+import { createLogger } from '../../logger';
 
 const log = createLogger('migrations');
 

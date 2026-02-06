@@ -3,7 +3,7 @@ import Database from 'better-sqlite3';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { initializeSchema } from './schema.js';
+import { initializeSchema } from './schema';
 
 /**
  * Singleton connection state.

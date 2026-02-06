@@ -18,14 +18,14 @@
  */
 import { betterAuth } from 'better-auth';
 import { genericOAuth, organization } from 'better-auth/plugins';
-import { oracleAdapter } from './oracle-adapter.js';
-import { createLogger } from '$lib/server/logger.js';
+import { oracleAdapter } from './oracle-adapter';
+import { createLogger } from '../logger';
 import {
 	stashIdcsProfile,
 	consumeIdcsProfile,
 	resolveIdcsOrg,
 	provisionFromIdcsGroups
-} from './idcs-provisioning.js';
+} from './idcs-provisioning';
 
 const log = createLogger('auth-config');
 
@@ -83,7 +83,7 @@ interface IdcsProfile {
  */
 async function findOidcSub(userId: string): Promise<string | null> {
 	try {
-		const { withConnection } = await import('$lib/server/oracle/connection.js');
+		const { withConnection } = await import('../oracle/connection');
 		return await withConnection(async (conn) => {
 			const result = await conn.execute(
 				`SELECT account_id FROM account

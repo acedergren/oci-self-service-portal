@@ -12,10 +12,10 @@
  * - Auth enforcement: operations require valid auth context
  */
 
-import { getAllToolDefinitions, executeTool } from '$lib/tools/registry.js';
-import type { ToolDefinition } from '$lib/tools/types.js';
-import { createLogger } from '../logger.js';
-import { NotFoundError } from '../errors.js';
+import { getAllToolDefinitions, executeTool } from '../../tools/registry';
+import type { ToolDefinition } from '../../tools/types';
+import { createLogger } from '../logger';
+import { NotFoundError } from '../errors';
 import type { z } from 'zod';
 
 const log = createLogger('mcp-server');

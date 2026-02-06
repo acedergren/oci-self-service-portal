@@ -9,7 +9,7 @@
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import { createLogger } from '$lib/server/logger.js';
+import { createLogger } from '../server/logger';
 
 const log = createLogger('cloud-pricing');
 import type {

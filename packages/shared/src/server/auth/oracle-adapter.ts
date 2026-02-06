@@ -6,8 +6,8 @@
  */
 import { createAdapterFactory } from 'better-auth/adapters';
 import type { AdapterFactory } from 'better-auth/adapters';
-import { withConnection, type OracleConnection } from '$lib/server/oracle/connection.js';
-import { createLogger } from '$lib/server/logger.js';
+import { withConnection, type OracleConnection } from '../oracle/connection';
+import { createLogger } from '../logger';
 import crypto from 'crypto';
 
 const log = createLogger('oracle-adapter');

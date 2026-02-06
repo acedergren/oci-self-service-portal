@@ -9,7 +9,7 @@
  * Production emits newline-delimited JSON to stdout.
  *
  * Usage:
- *   import { createLogger } from '$lib/server/logger.js';
+ *   import { createLogger } from '../logger';
  *   const log = createLogger('chat');
  *   log.info({ model, region }, 'chat request');
  *   log.error({ err }, 'tool execution failed');

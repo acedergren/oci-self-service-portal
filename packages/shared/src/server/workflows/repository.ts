@@ -9,7 +9,7 @@
  * - LIKE escaping for search
  * - OFFSET/FETCH pagination
  */
-import { withConnection } from '$lib/server/oracle/connection.js';
+import { withConnection } from '../oracle/connection';
 import type {
 	WorkflowDefinition,
 	WorkflowRun,
@@ -18,7 +18,7 @@ import type {
 	WorkflowRunStatus,
 	WorkflowStepStatus,
 	NodeType
-} from '$lib/workflows/types.js';
+} from '../../workflows/types';
 
 // ============================================================================
 // Oracle Row Interfaces (UPPERCASE keys from OUT_FORMAT_OBJECT)

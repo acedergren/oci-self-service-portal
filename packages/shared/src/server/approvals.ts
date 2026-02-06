@@ -5,9 +5,9 @@
  * The in-memory approach is kept as fallback for when DB is unavailable.
  */
 
-import { createLogger } from './logger.js';
-import { withConnection } from './oracle/connection.js';
-import { approvalRepository } from './oracle/repositories/approval-repository.js';
+import { createLogger } from './logger';
+import { withConnection } from './oracle/connection';
+import { approvalRepository } from './oracle/repositories/approval-repository';
 
 const log = createLogger('approvals');
 

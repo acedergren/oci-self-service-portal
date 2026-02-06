@@ -9,7 +9,7 @@
  * This avoids adding Sentry to the bundle when it is not configured.
  *
  * Usage:
- *   import { initSentry, captureError, wrapWithSpan } from '$lib/server/sentry.js';
+ *   import { initSentry, captureError, wrapWithSpan } from '../sentry';
  *
  *   // In hooks.server.ts (once):
  *   initSentry({ dsn: env.SENTRY_DSN, environment: 'production' });
@@ -19,8 +19,8 @@
  *   const result = await wrapWithSpan('db.query', 'db', () => conn.execute(sql));
  */
 
-import { createLogger } from './logger.js';
-import type { PortalError } from './errors.js';
+import { createLogger } from './logger';
+import type { PortalError } from './errors';
 
 const log = createLogger('sentry');
 

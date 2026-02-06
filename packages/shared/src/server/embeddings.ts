@@ -9,9 +9,9 @@
  * so callers can skip embedding without breaking the request path.
  */
 
-import { createLogger } from './logger.js';
-import { OCIError, ValidationError } from './errors.js';
-import { wrapWithSpan } from './sentry.js';
+import { createLogger } from './logger';
+import { OCIError, ValidationError } from './errors';
+import { wrapWithSpan } from './sentry';
 
 const log = createLogger('embeddings');
 

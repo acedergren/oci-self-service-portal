@@ -15,16 +15,16 @@
  * - `last_used_at` is updated on each successful validation for audit visibility.
  */
 import crypto from 'crypto';
-import { withConnection } from '$lib/server/oracle/connection.js';
-import { createLogger } from '$lib/server/logger.js';
-import { ValidationError, DatabaseError } from '$lib/server/errors.js';
+import { withConnection } from '../oracle/connection';
+import { createLogger } from '../logger';
+import { ValidationError, DatabaseError } from '../errors';
 import type {
 	ApiKeyContext,
 	ApiKeyInfo,
 	CreateApiKeyResult,
 	ApiKeyRow
-} from '$lib/server/api/types.js';
-import { apiKeyRowToInfo, apiKeyRowToContext } from '$lib/server/api/types.js';
+} from '../api/types';
+import { apiKeyRowToInfo, apiKeyRowToContext } from '../api/types';
 
 const log = createLogger('api-keys');
 

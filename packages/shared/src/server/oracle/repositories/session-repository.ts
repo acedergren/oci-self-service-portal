@@ -1,5 +1,5 @@
-import { withConnection } from '../connection.js';
-import { ChatSessionSchema, type ChatSession, type SessionStatus } from '../types.js';
+import { withConnection } from '../connection';
+import { ChatSessionSchema, type ChatSession, type SessionStatus } from '../types';
 
 /** Oracle row shape for chat_sessions (OUT_FORMAT_OBJECT, uppercase keys). */
 interface ChatSessionRow {

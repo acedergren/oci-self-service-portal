@@ -8,8 +8,8 @@
  * GET /api/v1/openapi.json serves it as-is.
  */
 import { z } from 'zod';
-import { getAllToolDefinitions } from '$lib/tools/registry.js';
-import { createLogger } from '$lib/server/logger.js';
+import { getAllToolDefinitions } from '../../tools/registry';
+import { createLogger } from '../logger';
 
 const log = createLogger('openapi');
 

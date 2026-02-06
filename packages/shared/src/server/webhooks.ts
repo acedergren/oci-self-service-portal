@@ -9,8 +9,8 @@
  * - Fire-and-forget: dispatch is non-blocking in the request path
  */
 import { createHmac, timingSafeEqual } from 'crypto';
-import { createLogger } from './logger.js';
-import { webhookRepository } from './oracle/repositories/webhook-repository.js';
+import { createLogger } from './logger';
+import { webhookRepository } from './oracle/repositories/webhook-repository';
 
 const log = createLogger('webhooks');
 

@@ -5,7 +5,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { MCPClient } from './client.js';
+import { MCPClient } from './client';
 import type {
   MCPClientOptions,
   MCPServerConfig,
@@ -15,7 +15,7 @@ import type {
   ToolCallResult,
   ResourceReadResult,
   ConnectionState,
-} from './types.js';
+} from './types';
 
 export interface MCPServerEntry {
   name: string;

@@ -7,9 +7,9 @@
  *
  * Uses GRAPH_TABLE() operator with MATCH patterns for path traversal.
  */
-import { withConnection } from './connection.js';
-import { createLogger } from '$lib/server/logger.js';
-import type { GraphNode, GraphEdge, GraphQueryResult } from '$lib/server/api/types.js';
+import { withConnection } from './connection';
+import { createLogger } from '../../logger';
+import type { GraphNode, GraphEdge, GraphQueryResult } from '../../api/types';
 
 const log = createLogger('graph-analytics');
 

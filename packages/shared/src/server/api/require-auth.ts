@@ -10,9 +10,9 @@
  */
 import { error } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
-import type { Permission } from '$lib/server/auth/rbac.js';
-import { hasPermission } from '$lib/server/auth/rbac.js';
-import { createLogger } from '$lib/server/logger.js';
+import type { Permission } from '../auth/rbac';
+import { hasPermission } from '../auth/rbac';
+import { createLogger } from '../logger';
 
 const log = createLogger('api-v1-auth');
 

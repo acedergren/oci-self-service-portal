@@ -7,15 +7,15 @@
  * - Bind variables only (never string interpolation for data)
  * - Org-scoped queries to prevent IDOR
  */
-import { withConnection } from '../connection.js';
-import { createLogger } from '$lib/server/logger.js';
+import { withConnection } from '../connection';
+import { createLogger } from '../../logger';
 import type {
 	WebhookSubscriptionRow,
 	WebhookSubscription,
 	WebhookEventType,
 	WebhookStatus
-} from '$lib/server/api/types.js';
-import { webhookRowToSubscription } from '$lib/server/api/types.js';
+} from '../../api/types';
+import { webhookRowToSubscription } from '../../api/types';
 
 const log = createLogger('webhook-repository');
 

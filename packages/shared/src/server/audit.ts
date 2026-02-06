@@ -1,11 +1,11 @@
 import { appendFileSync, existsSync, mkdirSync } from 'fs';
 import { join, resolve } from 'path';
-import { createLogger } from './logger.js';
-import { auditRepository } from './oracle/repositories/audit-repository.js';
-import { blockchainAuditRepository } from './oracle/repositories/blockchain-audit-repository.js';
-import { fireWebhookEvent } from './webhooks.js';
-import type { InsertToolExecution } from './oracle/types.js';
-import type { BlockchainAuditEntry } from './api/types.js';
+import { createLogger } from './logger';
+import { auditRepository } from './oracle/repositories/audit-repository';
+import { blockchainAuditRepository } from './oracle/repositories/blockchain-audit-repository';
+import { fireWebhookEvent } from './webhooks';
+import type { InsertToolExecution } from './oracle/types';
+import type { BlockchainAuditEntry } from './api/types';
 
 const log = createLogger('audit');
 

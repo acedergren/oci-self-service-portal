@@ -7,9 +7,9 @@
  *
  * This runs post-login and updates the org_members table if needed.
  */
-import { withConnection } from '$lib/server/oracle/connection.js';
-import { mapIdcsGroupsToRole } from './config.js';
-import { createLogger } from '$lib/server/logger.js';
+import { withConnection } from '../oracle/connection';
+import { mapIdcsGroupsToRole } from './config';
+import { createLogger } from '../logger';
 
 const log = createLogger('idcs-provisioning');
 

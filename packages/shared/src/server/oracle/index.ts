@@ -5,8 +5,8 @@ export {
 	getPool,
 	getPoolStats,
 	isPoolInitialized
-} from './connection.js';
-export { runMigrations, getAppliedVersions } from './migrations.js';
-export type { OracleConfig } from './connection.js';
-export * from './types.js';
-export * from './repositories/index.js';
+} from './connection';
+export { runMigrations, getAppliedVersions } from './migrations';
+export type { OracleConfig } from './connection';
+export * from './types';
+export * from './repositories/index';

@@ -1,5 +1,5 @@
 import { tool } from 'ai';
-import type { ToolDefinition, ToolEntry, ApprovalLevel, ToolCategory } from './types.js';
+import type { ToolDefinition, ToolEntry, ApprovalLevel, ToolCategory } from './types';
 import {
 	computeTools,
 	networkingTools,
@@ -12,7 +12,7 @@ import {
 	billingTools,
 	loggingTools,
 	terraformTools
-} from './categories/index.js';
+} from './categories/index';
 
 /**
  * All tool entries from every category

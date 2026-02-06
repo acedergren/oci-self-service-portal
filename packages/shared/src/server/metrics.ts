@@ -5,7 +5,7 @@
  * that exposes metrics in Prometheus text exposition format.
  *
  * Usage:
- *   import { registry, chatRequests, toolDuration } from '$lib/server/metrics.js';
+ *   import { registry, chatRequests, toolDuration } from '../metrics';
  *
  *   chatRequests.inc({ model: 'gemini' });
  *   const end = toolDuration.startTimer({ tool: 'listInstances' });

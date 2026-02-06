@@ -1,2 +1,2 @@
-export { StdioTransport } from './stdio.js';
-export { SSETransport } from './sse.js';
+export { StdioTransport } from './stdio';
+export { SSETransport } from './sse';

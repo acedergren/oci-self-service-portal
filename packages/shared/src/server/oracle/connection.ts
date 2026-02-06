@@ -1,7 +1,7 @@
 // @ts-expect-error oracledb ships no type declarations
 import oracledb from 'oracledb';
-import { createLogger } from '../logger.js';
-import { wrapWithSpan } from '../sentry.js';
+import { createLogger } from '../../logger';
+import { wrapWithSpan } from '../sentry';
 
 const log = createLogger('oracle');
 

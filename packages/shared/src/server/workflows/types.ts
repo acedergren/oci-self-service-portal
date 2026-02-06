@@ -24,7 +24,7 @@ export {
 	InsertWorkflowDefinitionSchema,
 	InsertWorkflowRunSchema,
 	InsertWorkflowStepSchema
-} from '$lib/workflows/types.js';
+} from '../../workflows/types';
 
 export type {
 	NodeType,
@@ -47,4 +47,4 @@ export type {
 	InsertWorkflowDefinition,
 	InsertWorkflowRun,
 	InsertWorkflowStep
-} from '$lib/workflows/types.js';
+} from '../../workflows/types';

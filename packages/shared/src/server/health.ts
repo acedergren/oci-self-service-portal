@@ -6,16 +6,16 @@
  * Non-critical checks (OCI CLI, Sentry, metrics) degrade gracefully.
  *
  * Usage:
- *   import { runHealthChecks } from '$lib/server/health.js';
+ *   import { runHealthChecks } from '../health';
  *   const result = await runHealthChecks();
  *   // result.status: 'ok' | 'degraded' | 'error'
  */
 
 import { execFile } from 'node:child_process';
-import { withConnection, getPoolStats, isPoolInitialized } from '$lib/server/oracle/connection.js';
-import { isSentryEnabled } from '$lib/server/sentry.js';
-import { registry } from '$lib/server/metrics.js';
-import { createLogger } from '$lib/server/logger.js';
+import { withConnection, getPoolStats, isPoolInitialized } from './oracle/connection';
+import { isSentryEnabled } from './sentry';
+import { registry } from './metrics';
+import { createLogger } from './logger';
 
 const log = createLogger('health');
 

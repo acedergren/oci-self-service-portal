@@ -1,5 +1,5 @@
-import { withConnection } from '$lib/server/oracle/connection.js';
-import { createLogger } from '$lib/server/logger.js';
+import { withConnection } from '../oracle/connection';
+import { createLogger } from '../logger';
 
 const log = createLogger('tenancy');
 

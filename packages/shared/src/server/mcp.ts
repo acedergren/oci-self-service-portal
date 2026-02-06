@@ -5,13 +5,13 @@
  * This service runs server-side only in SvelteKit.
  */
 
-import { MCPManager, type MCPServerConfig, type MCPToolDefinition } from '$lib/server/mcp-client';
+import { MCPManager, type MCPServerConfig, type MCPToolDefinition } from '../mcp-client';
 import { tool } from 'ai';
 import { z } from 'zod';
 import { homedir } from 'os';
 import { join } from 'path';
 import { existsSync, readFileSync } from 'fs';
-import { createLogger } from './logger.js';
+import { createLogger } from './logger';
 
 const log = createLogger('mcp');
 

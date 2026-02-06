@@ -5,12 +5,12 @@
  */
 
 // Main exports
-export { MCPClient } from './client.js';
-export { MCPManager, type MCPServerEntry, type MCPManagerOptions } from './manager.js';
+export { MCPClient } from './client';
+export { MCPManager, type MCPServerEntry, type MCPManagerOptions } from './manager';
 
 // Transport exports
-export { StdioTransport } from './transports/stdio.js';
-export { SSETransport } from './transports/sse.js';
+export { StdioTransport } from './transports/stdio';
+export { SSETransport } from './transports/sse';
 
 // Type exports
 export type {
@@ -48,11 +48,11 @@ export type {
   // Client types
   MCPClientOptions,
   ConnectionState,
-} from './types.js';
+} from './types';
 
 // Schema exports for validation
 export {
   ToolCallResultSchema,
   MCPToolDefinitionSchema,
   InitializeResultSchema,
-} from './types.js';
+} from './types';

@@ -5,8 +5,8 @@ import {
 	OCIPricingClient,
 	AzurePricingClient,
 	AWSPricingClient
-} from '$lib/pricing/cloud-pricing-service.js';
-import type { WorkloadRequirements, CloudProvider } from '$lib/pricing/types.js';
+} from '../../pricing/cloud-pricing-service.js';
+import type { WorkloadRequirements, CloudProvider } from '../../pricing/types.js';
 
 export const pricingTools: ToolEntry[] = [
 	{

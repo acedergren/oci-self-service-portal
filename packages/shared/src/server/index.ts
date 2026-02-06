@@ -1,25 +1,25 @@
 // Core server exports
-export * from './errors.js';
-export * from './logger.js';
-export * from './metrics.js';
-export * from './sentry.js';
-export * from './tracing.js';
-export * from './health.js';
-export * from './db.js';
-export * from './embeddings.js';
-export * from './mcp.js';
+export * from './errors';
+export * from './logger';
+export * from './metrics';
+export * from './sentry';
+export * from './tracing';
+export * from './health';
+export * from './db';
+export * from './embeddings';
+export * from './mcp';
 
 // Service exports
-export * from './approvals.js';
-export * from './audit.js';
-export * from './rate-limiter.js';
-export * from './session.js';
-export * from './webhooks.js';
+export * from './approvals';
+export * from './audit';
+export * from './rate-limiter';
+export * from './session';
+export * from './webhooks';
 
 // Module exports
-export * from './auth/index.js';
-export * from './oracle/index.js';
-export * from './workflows/index.js';
-export * from './agent-state/index.js';
-export * from './api/index.js';
-export * from './mcp-client/index.js';
+export * from './auth/index';
+export * from './oracle/index';
+export * from './workflows/index';
+export * from './agent-state/index';
+export * from './api/index';
+export * from './mcp-client/index';

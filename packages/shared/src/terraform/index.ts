@@ -7,4 +7,4 @@ export {
 	type ComputeConfig,
 	type VcnConfig,
 	type SubnetConfig
-} from './generator.js';
+} from './generator';

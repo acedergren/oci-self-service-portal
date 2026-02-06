@@ -11,14 +11,14 @@
  * - withConnection() wrapper for all operations
  * - Bind variables only (never string interpolation for data)
  */
-import { withConnection } from '../connection.js';
-import { createLogger } from '$lib/server/logger.js';
+import { withConnection } from '../connection';
+import { createLogger } from '../../logger';
 import type {
 	BlockchainAuditEntry,
 	BlockchainAuditRecord,
 	BlockchainAuditRow
-} from '$lib/server/api/types.js';
-import { auditRowToRecord } from '$lib/server/api/types.js';
+} from '../../api/types';
+import { auditRowToRecord } from '../../api/types';
 
 const log = createLogger('blockchain-audit');
 

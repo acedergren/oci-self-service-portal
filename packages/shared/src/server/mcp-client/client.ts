@@ -18,10 +18,10 @@ import type {
   GetPromptResult,
   ConnectionState,
   InitializeResult,
-} from './types.js';
-import { InitializeResultSchema } from './types.js';
-import { StdioTransport } from './transports/stdio.js';
-import { SSETransport } from './transports/sse.js';
+} from './types';
+import { InitializeResultSchema } from './types';
+import { StdioTransport } from './transports/stdio';
+import { SSETransport } from './transports/sse';
 
 const MCP_PROTOCOL_VERSION = '2024-11-05';
 

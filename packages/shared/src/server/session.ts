@@ -1,8 +1,8 @@
 import type { Cookies } from '@sveltejs/kit';
 import { v4 as uuidv4 } from 'uuid';
-import { getRepository } from './db.js';
-import { createLogger } from './logger.js';
-import { sessionRepository } from './oracle/repositories/session-repository.js';
+import { getRepository } from './db';
+import { createLogger } from './logger';
+import { sessionRepository } from './oracle/repositories/session-repository';
 
 const log = createLogger('session');
 

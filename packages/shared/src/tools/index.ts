@@ -1,4 +1,4 @@
-export * from './types.js';
+export * from './types';
 export {
 	getToolDefinition,
 	getAllToolDefinitions,
@@ -7,10 +7,10 @@ export {
 	createAISDKToolsWithApproval,
 	executeTool,
 	toolDefinitions
-} from './registry.js';
+} from './registry';
 export {
 	inferApprovalLevel,
 	requiresApproval,
 	getToolWarning,
 	DESTRUCTIVE_TOOL_WARNINGS
-} from './types.js';
+} from './types';

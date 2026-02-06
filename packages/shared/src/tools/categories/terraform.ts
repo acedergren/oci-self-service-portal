@@ -4,7 +4,7 @@ import {
 	generateTerraformCode,
 	generateQuickComputeTerraform,
 	generateWebServerTerraform
-} from '$lib/terraform/generator.js';
+} from '../../terraform/generator.js';
 
 export const terraformTools: ToolEntry[] = [
 	{

@@ -9,10 +9,10 @@
  * - Input/Output node handling
  * - Error wrapping with PortalError hierarchy
  */
-import { createLogger } from '$lib/server/logger.js';
-import { executeTool } from '$lib/tools/registry.js';
-import { ValidationError } from '$lib/server/errors.js';
-import type { WorkflowNode, WorkflowEdge, WorkflowDefinition } from '$lib/workflows/types.js';
+import { createLogger } from '../logger';
+import { executeTool } from '../../tools/registry';
+import { ValidationError } from '../errors';
+import type { WorkflowNode, WorkflowEdge, WorkflowDefinition } from '../../workflows/types';
 
 const log = createLogger('workflow-executor');
 

@@ -12,7 +12,7 @@ import type {
   JsonRpcRequest,
   JsonRpcResponse,
   JsonRpcNotification,
-} from '../types.js';
+} from '../types';
 
 interface PendingRequest {
   resolve: (result: unknown) => void;

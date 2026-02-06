@@ -1,6 +1,6 @@
 import { error } from '@sveltejs/kit';
 import type { RequestEvent } from '@sveltejs/kit';
-import { createLogger } from '$lib/server/logger.js';
+import { createLogger } from '../logger';
 
 const log = createLogger('rbac');
 

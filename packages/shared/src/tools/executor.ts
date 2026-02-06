@@ -1,7 +1,7 @@
 import { execFileSync, execFile } from 'child_process';
 import { promisify } from 'util';
-import { OCIError } from '$lib/server/errors.js';
-import { wrapWithSpan, captureError } from '$lib/server/sentry.js';
+import { OCIError } from '../server/errors';
+import { wrapWithSpan, captureError } from '../server/sentry';
 
 const execFileAsync = promisify(execFile);
 

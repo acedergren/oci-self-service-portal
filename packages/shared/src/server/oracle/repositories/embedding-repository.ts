@@ -17,9 +17,9 @@
  *   - 'tool_execution'     : Standalone tool execution record
  */
 
-import { withConnection, type OracleConnection } from '../connection.js';
-import { createLogger } from '../../logger.js';
-import { DatabaseError } from '../../errors.js';
+import { withConnection, type OracleConnection } from '../connection';
+import { createLogger } from '../../logger';
+import { DatabaseError } from '../../errors';
 
 const log = createLogger('embedding-repo');
 

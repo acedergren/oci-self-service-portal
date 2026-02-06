@@ -11,7 +11,7 @@ import {
   MessageSchema,
   type ToolCall,
   ToolCallSchema,
-} from './types.js';
+} from './types';
 import { z } from 'zod';
 
 // ============================================================================
