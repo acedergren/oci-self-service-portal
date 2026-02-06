@@ -11,9 +11,15 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # =============================================================================
+  # Lint & Format (applies to all workspaces)
+  # =============================================================================
   lint:
     name: Lint & Format
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22, 23]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -23,10 +29,10 @@ jobs:
         with:
           version: 9
 
-      - name: Setup Node.js
+      - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: ${{ matrix.node-version }}
           cache: 'pnpm'
 
       - name: Configure npm for GitHub Packages
@@ -37,15 +43,21 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run ESLint
-        run: pnpm lint
+      - name: Run ESLint (all workspaces)
+        run: pnpm -r lint
 
-      - name: Check formatting
-        run: pnpm format:check
+      - name: Check formatting (all workspaces)
+        run: pnpm -r format:check
 
-  typecheck:
-    name: Type Check
+  # =============================================================================
+  # Type Check (per workspace)
+  # =============================================================================
+  typecheck-shared:
+    name: Type Check (packages/shared)
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22, 23]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -55,10 +67,10 @@ jobs:
         with:
           version: 9
 
-      - name: Setup Node.js
+      - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: ${{ matrix.node-version }}
           cache: 'pnpm'
 
       - name: Configure npm for GitHub Packages
@@ -69,12 +81,16 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run svelte-check
-        run: pnpm check
+      - name: Type check @portal/shared
+        run: pnpm --filter @portal/shared check
 
-  test:
-    name: Test
+  typecheck-api:
+    name: Type Check (apps/api)
     runs-on: ubuntu-latest
+    needs: typecheck-shared
+    strategy:
+      matrix:
+        node-version: [22, 23]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -84,10 +100,10 @@ jobs:
         with:
           version: 9
 
-      - name: Setup Node.js
+      - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: ${{ matrix.node-version }}
           cache: 'pnpm'
 
       - name: Configure npm for GitHub Packages
@@ -98,24 +114,96 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run tests
-        run: pnpm test -- --coverage
+      - name: Type check @portal/api
+        run: pnpm --filter @portal/api check
+
+  typecheck-frontend:
+    name: Type Check (apps/frontend)
+    runs-on: ubuntu-latest
+    needs: typecheck-shared
+    strategy:
+      matrix:
+        node-version: [22, 23]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+
+      - name: Configure npm for GitHub Packages
+        run: |
+          echo "@acedergren:registry=https://npm.pkg.github.com" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check @portal/frontend (svelte-check)
+        run: pnpm --filter @portal/frontend check
+
+  # =============================================================================
+  # Tests (per workspace)
+  # =============================================================================
+  test-shared:
+    name: Test (packages/shared)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [22, 23]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+
+      - name: Configure npm for GitHub Packages
+        run: |
+          echo "@acedergren:registry=https://npm.pkg.github.com" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run @portal/shared tests
+        run: pnpm --filter @portal/shared test -- --coverage
         env:
           BETTER_AUTH_SECRET: test-secret-for-ci
           OCI_COMPARTMENT_ID: ocid1.compartment.oc1..test
           OCI_REGION: us-chicago-1
 
-      - name: Upload coverage
+      - name: Upload @portal/shared coverage
         uses: codecov/codecov-action@v4
-        if: always()
+        if: matrix.node-version == 22 && always()
         with:
-          file: ./coverage/coverage-final.json
+          files: ./packages/shared/coverage/coverage-final.json
+          flags: shared
           fail_ci_if_error: false
 
-  build:
-    name: Build
+  test-api:
+    name: Test (apps/api)
     runs-on: ubuntu-latest
-    needs: [lint, typecheck, test]
+    needs: test-shared
+    strategy:
+      matrix:
+        node-version: [22, 23]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -125,10 +213,10 @@ jobs:
         with:
           version: 9
 
-      - name: Setup Node.js
+      - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: ${{ matrix.node-version }}
           cache: 'pnpm'
 
       - name: Configure npm for GitHub Packages
@@ -139,15 +227,154 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build application
-        run: pnpm build
+      - name: Run @portal/api tests
+        run: pnpm --filter @portal/api test -- --coverage
+        env:
+          BETTER_AUTH_SECRET: test-secret-for-ci
+          OCI_COMPARTMENT_ID: ocid1.compartment.oc1..test
+          OCI_REGION: us-chicago-1
+          DATABASE_URL: sqlite::memory:
+
+      - name: Upload @portal/api coverage
+        uses: codecov/codecov-action@v4
+        if: matrix.node-version == 22 && always()
+        with:
+          files: ./apps/api/coverage/coverage-final.json
+          flags: api
+          fail_ci_if_error: false
+
+  test-frontend:
+    name: Test (apps/frontend)
+    runs-on: ubuntu-latest
+    needs: test-shared
+    strategy:
+      matrix:
+        node-version: [22, 23]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+
+      - name: Configure npm for GitHub Packages
+        run: |
+          echo "@acedergren:registry=https://npm.pkg.github.com" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run @portal/frontend tests
+        run: pnpm --filter @portal/frontend test -- --coverage
+        env:
+          BETTER_AUTH_SECRET: test-secret-for-ci
+          OCI_COMPARTMENT_ID: ocid1.compartment.oc1..test
+          OCI_REGION: us-chicago-1
+
+      - name: Upload @portal/frontend coverage
+        uses: codecov/codecov-action@v4
+        if: matrix.node-version == 22 && always()
+        with:
+          files: ./apps/frontend/coverage/coverage-final.json
+          flags: frontend
+          fail_ci_if_error: false
+
+  # =============================================================================
+  # Build (per app, in parallel)
+  # =============================================================================
+  build-api:
+    name: Build (apps/api)
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck-api, test-api]
+    strategy:
+      matrix:
+        node-version: [22, 23]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+
+      - name: Configure npm for GitHub Packages
+        run: |
+          echo "@acedergren:registry=https://npm.pkg.github.com" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build @portal/api
+        run: pnpm --filter @portal/api build
         env:
           BETTER_AUTH_SECRET: build-secret
           OCI_COMPARTMENT_ID: ocid1.compartment.oc1..build
 
-      - name: Upload build artifacts
+      - name: Upload @portal/api build artifacts
         uses: actions/upload-artifact@v4
+        if: matrix.node-version == 22
         with:
-          name: build
-          path: build/
+          name: api-build
+          path: apps/api/dist/
+          retention-days: 7
+
+  build-frontend:
+    name: Build (apps/frontend)
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck-frontend, test-frontend]
+    strategy:
+      matrix:
+        node-version: [22, 23]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+
+      - name: Configure npm for GitHub Packages
+        run: |
+          echo "@acedergren:registry=https://npm.pkg.github.com" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build @portal/frontend
+        run: pnpm --filter @portal/frontend build
+        env:
+          BETTER_AUTH_SECRET: build-secret
+          OCI_COMPARTMENT_ID: ocid1.compartment.oc1..build
+
+      - name: Upload @portal/frontend build artifacts
+        uses: actions/upload-artifact@v4
+        if: matrix.node-version == 22
+        with:
+          name: frontend-build
+          path: apps/frontend/build/
           retention-days: 7
