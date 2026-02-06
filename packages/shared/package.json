@@ -30,5 +30,9 @@
 	"devDependencies": {
 		"@types/better-sqlite3": "^7.6.13",
 		"typescript": "^5.9.3"
+	},
+	"peerDependencies": {
+		"@sveltejs/kit": "^2.50.2",
+		"@tanstack/svelte-query": "^6.0.18"
 	}
 }

@@ -8,7 +8,7 @@ import {
 	deleteSession,
 	queryKeys,
 	type OciSession
-} from '$lib/query';
+} from './index';
 
 /**
  * Query hook for fetching available models
