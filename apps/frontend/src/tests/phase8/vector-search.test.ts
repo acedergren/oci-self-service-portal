@@ -53,8 +53,8 @@ vi.mock('util', async (importOriginal) => {
 vi.stubEnv('OCI_COMPARTMENT_ID', 'ocid1.compartment.oc1..test');
 vi.stubEnv('OCI_REGION', 'eu-frankfurt-1');
 
-import { generateEmbedding, generateEmbeddings } from '$lib/server/embeddings.js';
-import { embeddingRepository } from '$lib/server/oracle/repositories/embedding-repository.js';
+import { generateEmbedding, generateEmbeddings } from '@portal/shared/server/embeddings.js';
+import { embeddingRepository } from '@portal/shared/server/oracle/repositories/embedding-repository.js';
 
 /** Helper to build a mock OCI embed-text response */
 function mockEmbedResponse(count: number): string {

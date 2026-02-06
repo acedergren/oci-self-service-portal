@@ -1,10 +1,10 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { getToolDefinition } from '$lib/tools/registry.js';
-import { getToolWarning, requiresApproval } from '$lib/tools/types.js';
-import { requireApiAuth } from '$lib/server/api/require-auth.js';
-import { NotFoundError, errorResponse } from '$lib/server/errors.js';
-import { createLogger } from '$lib/server/logger.js';
+import { getToolDefinition } from '@portal/shared/tools/registry.js';
+import { getToolWarning, requiresApproval } from '@portal/shared/tools/types.js';
+import { requireApiAuth } from '@portal/shared/server/api/require-auth.js';
+import { NotFoundError, errorResponse } from '@portal/shared/server/errors.js';
+import { createLogger } from '@portal/shared/server/logger.js';
 
 const log = createLogger('api-v1-tools');
 

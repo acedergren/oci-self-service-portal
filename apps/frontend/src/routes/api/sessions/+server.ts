@@ -3,16 +3,16 @@ import type { RequestHandler } from './$types';
 import {
 	sessionRepository,
 	listSessionsEnriched
-} from '$lib/server/oracle/repositories/session-repository.js';
-import { getCurrentSessionId } from '$lib/server/session.js';
-import { createLogger } from '$lib/server/logger.js';
-import { requirePermission } from '$lib/server/auth/rbac.js';
+} from '@portal/shared/server/oracle/repositories/session-repository.js';
+import { getCurrentSessionId } from '@portal/shared/server/session.js';
+import { createLogger } from '@portal/shared/server/logger.js';
+import { requirePermission } from '@portal/shared/server/auth/rbac.js';
 import {
 	ValidationError,
 	DatabaseError,
 	toPortalError,
 	errorResponse
-} from '$lib/server/errors.js';
+} from '@portal/shared/server/errors.js';
 
 const log = createLogger('sessions-api');
 

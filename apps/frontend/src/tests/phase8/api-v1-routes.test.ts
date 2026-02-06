@@ -9,9 +9,9 @@ import {
 	getAllToolDefinitions,
 	getToolDefinition,
 	getToolsByCategory
-} from '$lib/tools/registry.js';
-import { requiresApproval } from '$lib/tools/types.js';
-import type { ToolCategory, ToolDefinition } from '$lib/tools/types.js';
+} from '@portal/shared/tools/registry.js';
+import { requiresApproval } from '@portal/shared/tools/types.js';
+import type { ToolCategory, ToolDefinition } from '@portal/shared/tools/types.js';
 
 // ============================================================================
 // OpenAPI Spec Generation

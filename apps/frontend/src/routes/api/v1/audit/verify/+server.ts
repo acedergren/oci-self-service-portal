@@ -6,9 +6,9 @@
  */
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
-import { requireApiAuth } from '$lib/server/api/require-auth.js';
-import { blockchainAuditRepository } from '$lib/server/oracle/repositories/blockchain-audit-repository.js';
-import { createLogger } from '$lib/server/logger.js';
+import { requireApiAuth } from '@portal/shared/server/api/require-auth.js';
+import { blockchainAuditRepository } from '@portal/shared/server/oracle/repositories/blockchain-audit-repository.js';
+import { createLogger } from '@portal/shared/server/logger.js';
 
 const log = createLogger('api:audit:verify');
 

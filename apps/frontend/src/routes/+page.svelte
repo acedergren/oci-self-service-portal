@@ -6,11 +6,11 @@
 	import MarkdownRenderer from '$lib/components/ui/MarkdownRenderer.svelte';
 	import { ThoughtPanel, ToolPanel, AgentWorkflowPanel } from '$lib/components/panels/index.js';
 	import type { AgentPlan } from '$lib/components/panels/index.js';
-	import type { ToolCall, PendingApproval } from '$lib/tools/types.js';
-	import { inferApprovalLevel, requiresApproval } from '$lib/tools/types.js';
+	import type { ToolCall, PendingApproval } from '@portal/shared/tools/types.js';
+	import { inferApprovalLevel, requiresApproval } from '@portal/shared/tools/types.js';
 	import { useQueryClient } from '@tanstack/svelte-query';
-	import { useModels, useSessions, useCreateSession, useDeleteSession } from '$lib/query/hooks.js';
-	import { queryKeys, fetchSessionDetail } from '$lib/query';
+	import { useModels, useSessions, useCreateSession, useDeleteSession } from '@portal/shared/query/hooks.js';
+	import { queryKeys, fetchSessionDetail } from '@portal/shared/query';
 	import { extractToolParts, getToolState, formatToolName } from '$lib/utils/message-parts.js';
 	import { BottomNav, Drawer } from '$lib/components/mobile/index.js';
 

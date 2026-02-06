@@ -7,14 +7,14 @@
 	import NodePalette from '$lib/components/workflows/NodePalette.svelte';
 	import NodeProperties from '$lib/components/workflows/NodeProperties.svelte';
 	import ExecutionTimeline from '$lib/components/workflows/ExecutionTimeline.svelte';
-	import type { WorkflowDefinition } from '$lib/workflows/types.js';
+	import type { WorkflowDefinition } from '@portal/shared/workflows/types.js';
 	import type {
 		PaletteGroup,
 		PaletteItem,
 		WorkflowNodeData,
 		WorkflowRunView
 	} from '$lib/components/workflows/types.js';
-	import type { NodeType } from '$lib/workflows/types.js';
+	import type { NodeType } from '@portal/shared/workflows/types.js';
 	import type { Node } from '@xyflow/svelte';
 
 	let { data } = $props();

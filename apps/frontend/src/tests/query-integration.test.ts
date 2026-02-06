@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
-import { queryKeys, modelsQueryOptions, sessionsQueryOptions } from '$lib/query';
+import { queryKeys, modelsQueryOptions, sessionsQueryOptions } from '@portal/shared/query';
 import { QueryClient } from '@tanstack/query-core';
 
 // Inline the default options to avoid importing from $lib/query/client.js

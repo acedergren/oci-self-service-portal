@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { generateOpenAPISpec } from '$lib/server/api/openapi.js';
+import { generateOpenAPISpec } from '@portal/shared/server/api/openapi.js';
 
 /**
  * GET /api/v1/openapi.json

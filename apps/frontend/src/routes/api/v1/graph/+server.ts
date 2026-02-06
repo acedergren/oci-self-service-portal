@@ -8,13 +8,13 @@
  */
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
-import { requireApiAuth } from '$lib/server/api/require-auth.js';
+import { requireApiAuth } from '@portal/shared/server/api/require-auth.js';
 import {
 	getUserActivity,
 	getToolAffinity,
 	getOrgImpact
-} from '$lib/server/oracle/graph-analytics.js';
-import { createLogger } from '$lib/server/logger.js';
+} from '@portal/shared/server/oracle/graph-analytics.js';
+import { createLogger } from '@portal/shared/server/logger.js';
 
 const log = createLogger('api:graph');
 

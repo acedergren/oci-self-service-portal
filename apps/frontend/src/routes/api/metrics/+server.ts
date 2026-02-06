@@ -1,5 +1,5 @@
 import type { RequestHandler } from './$types';
-import { registry } from '$lib/server/metrics.js';
+import { registry } from '@portal/shared/server/metrics.js';
 
 /**
  * GET /api/metrics — Prometheus scrape endpoint.

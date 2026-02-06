@@ -50,7 +50,7 @@ vi.mock('$lib/tools/registry.js', () => ({
 	getToolsByCategory: vi.fn().mockReturnValue([])
 }));
 
-import { workflowRepository, workflowRunRepository } from '$lib/server/workflows/repository.js';
+import { workflowRepository, workflowRunRepository } from '@portal/shared/server/workflows/repository.js';
 
 beforeEach(() => {
 	vi.clearAllMocks();

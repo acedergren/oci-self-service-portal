@@ -19,7 +19,7 @@
  *   - Auth is enforced on all operations
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getAllToolDefinitions } from '$lib/tools/registry.js';
+import { getAllToolDefinitions } from '@portal/shared/tools/registry.js';
 
 // Mock Oracle connection
 const mockExecute = vi.fn().mockResolvedValue({ rows: [] });

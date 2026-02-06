@@ -3,10 +3,10 @@ import type { RequestHandler } from './$types';
 import {
 	workflowRunRepository,
 	workflowRunStepRepository
-} from '$lib/server/workflows/repository.js';
-import { requirePermission } from '$lib/server/auth/rbac.js';
-import { createLogger } from '$lib/server/logger.js';
-import { NotFoundError, DatabaseError, errorResponse } from '$lib/server/errors.js';
+} from '@portal/shared/server/workflows/repository.js';
+import { requirePermission } from '@portal/shared/server/auth/rbac.js';
+import { createLogger } from '@portal/shared/server/logger.js';
+import { NotFoundError, DatabaseError, errorResponse } from '@portal/shared/server/errors.js';
 
 const log = createLogger('workflow-run-detail-api');
 

@@ -6,7 +6,7 @@
 		ApprovalNodeData,
 		InputNodeData,
 		OutputNodeData
-	} from '$lib/workflows/types.js';
+	} from '@portal/shared/workflows/types.js';
 
 	let { selectedNodeId, nodeType, nodeData, onUpdate, onDelete }: NodePropertiesProps = $props();
 

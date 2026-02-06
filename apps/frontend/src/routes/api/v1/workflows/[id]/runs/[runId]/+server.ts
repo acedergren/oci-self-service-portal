@@ -9,10 +9,10 @@ import type { RequestHandler } from './$types';
 import {
 	workflowRunRepository,
 	workflowRunStepRepository
-} from '$lib/server/workflows/repository.js';
-import { requireApiAuth, resolveOrgId } from '$lib/server/api/require-auth.js';
-import { createLogger } from '$lib/server/logger.js';
-import { NotFoundError, DatabaseError, errorResponse } from '$lib/server/errors.js';
+} from '@portal/shared/server/workflows/repository.js';
+import { requireApiAuth, resolveOrgId } from '@portal/shared/server/api/require-auth.js';
+import { createLogger } from '@portal/shared/server/logger.js';
+import { NotFoundError, DatabaseError, errorResponse } from '@portal/shared/server/errors.js';
 
 const log = createLogger('v1-workflow-run-status');
 

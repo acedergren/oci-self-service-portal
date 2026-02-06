@@ -20,8 +20,8 @@
  *   ExecutionTimeline (bottom drawer)
  */
 
-import type { ToolCategory, ApprovalLevel } from '$lib/tools/types.js';
-import type { NodeType } from '$lib/workflows/types.js';
+import type { ToolCategory, ApprovalLevel } from '@portal/shared/tools/types.js';
+import type { NodeType } from '@portal/shared/workflows/types.js';
 
 // Re-export the canonical node data types from backend
 export type {
@@ -31,7 +31,7 @@ export type {
 	InputNodeData,
 	OutputNodeData,
 	InputField
-} from '$lib/workflows/types.js';
+} from '@portal/shared/workflows/types.js';
 
 import type {
 	ToolNodeData,
@@ -39,7 +39,7 @@ import type {
 	ApprovalNodeData,
 	InputNodeData,
 	OutputNodeData
-} from '$lib/workflows/types.js';
+} from '@portal/shared/workflows/types.js';
 
 /** Union of all node data types for property editing */
 export type WorkflowNodeData =

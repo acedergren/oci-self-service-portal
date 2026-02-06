@@ -46,8 +46,8 @@ vi.mock('$lib/tools/registry.js', () => ({
 	executeTool: (...args: unknown[]) => mockExecuteTool(...args)
 }));
 
-import { topologicalSort, detectCycles, WorkflowExecutor } from '$lib/server/workflows/executor.js';
-import type { WorkflowNode, WorkflowEdge } from '$lib/workflows/types.js';
+import { topologicalSort, detectCycles, WorkflowExecutor } from '@portal/shared/server/workflows/executor.js';
+import type { WorkflowNode, WorkflowEdge } from '@portal/shared/workflows/types.js';
 
 beforeEach(() => {
 	vi.clearAllMocks();

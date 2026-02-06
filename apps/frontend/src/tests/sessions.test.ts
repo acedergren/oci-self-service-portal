@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { getConnection, StateRepository, resetConnection } from '$lib/server/agent-state';
+import { getConnection, StateRepository, resetConnection } from '@portal/shared/server/agent-state';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';

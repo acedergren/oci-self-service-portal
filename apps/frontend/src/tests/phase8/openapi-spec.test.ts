@@ -10,7 +10,7 @@
  *   - _invalidateOpenAPICache(): void
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getAllToolDefinitions } from '$lib/tools/registry.js';
+import { getAllToolDefinitions } from '@portal/shared/tools/registry.js';
 
 vi.mock('$lib/server/logger.js', () => ({
 	createLogger: () => ({
@@ -21,7 +21,7 @@ vi.mock('$lib/server/logger.js', () => ({
 	})
 }));
 
-import { generateOpenAPISpec, _invalidateOpenAPICache } from '$lib/server/api/openapi.js';
+import { generateOpenAPISpec, _invalidateOpenAPICache } from '@portal/shared/server/api/openapi.js';
 
 beforeEach(() => {
 	vi.clearAllMocks();

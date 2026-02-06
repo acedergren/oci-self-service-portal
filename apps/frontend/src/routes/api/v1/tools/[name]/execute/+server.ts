@@ -1,20 +1,20 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { z } from 'zod';
-import { getToolDefinition, executeTool } from '$lib/tools/registry.js';
-import { requiresApproval } from '$lib/tools/types.js';
-import { requireApiAuth } from '$lib/server/api/require-auth.js';
-import { logToolExecution } from '$lib/server/audit.js';
+import { getToolDefinition, executeTool } from '@portal/shared/tools/registry.js';
+import { requiresApproval } from '@portal/shared/tools/types.js';
+import { requireApiAuth } from '@portal/shared/server/api/require-auth.js';
+import { logToolExecution } from '@portal/shared/server/audit.js';
 import {
 	ValidationError,
 	NotFoundError,
 	AuthError,
 	toPortalError,
 	errorResponse
-} from '$lib/server/errors.js';
-import { createLogger } from '$lib/server/logger.js';
-import { captureError } from '$lib/server/sentry.js';
-import { toolExecutions, toolDuration } from '$lib/server/metrics.js';
+} from '@portal/shared/server/errors.js';
+import { createLogger } from '@portal/shared/server/logger.js';
+import { captureError } from '@portal/shared/server/sentry.js';
+import { toolExecutions, toolDuration } from '@portal/shared/server/metrics.js';
 
 const log = createLogger('api-v1-tools');
 

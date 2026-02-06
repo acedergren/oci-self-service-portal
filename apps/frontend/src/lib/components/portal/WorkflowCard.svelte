@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { getWorkflowIconSvg } from '$lib/workflows/index.js';
+	import { getWorkflowIconSvg } from '@portal/shared/workflows/index.js';
 	import type { WorkflowCardProps } from './types.js';
 
 	let { workflow, onStart }: WorkflowCardProps = $props();
