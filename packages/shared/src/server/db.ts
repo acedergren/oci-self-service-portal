@@ -1,4 +1,4 @@
-import { getConnection, StateRepository } from '../agent-state';
+import { getConnection, StateRepository } from './agent-state';
 
 /** @deprecated Use Oracle repositories from '../oracle' instead */
 let repository: StateRepository | null = null;
