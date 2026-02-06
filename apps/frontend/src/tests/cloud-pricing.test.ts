@@ -15,7 +15,7 @@ import type {
 	WorkloadRequirements,
 	CostEstimate,
 	CloudComparison
-} from '@portal/shared/pricing/types.js';
+} from '@portal/shared/pricing/types';
 
 // Service we're going to implement (doesn't exist yet - TDD!)
 // These imports will fail until we implement the module
@@ -27,7 +27,7 @@ import {
 	type OCIStoragePrice,
 	type AzureRetailPrice,
 	type PricingResult
-} from '@portal/shared/pricing/cloud-pricing-service.js';
+} from '@portal/shared/pricing/cloud-pricing-service';
 
 describe('OCIPricingClient', () => {
 	let client: OCIPricingClient;

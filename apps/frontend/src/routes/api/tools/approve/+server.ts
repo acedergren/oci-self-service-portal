@@ -1,11 +1,11 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { logToolApproval } from '@portal/shared/server/audit.js';
-import { getToolDefinition } from '@portal/shared/tools/index.js';
-import { createLogger } from '@portal/shared/server/logger.js';
-import { requirePermission } from '@portal/shared/server/auth/rbac.js';
-import { pendingApprovals, recordApproval } from '@portal/shared/server/approvals.js';
-import { ValidationError, NotFoundError, errorResponse } from '@portal/shared/server/errors.js';
+import { logToolApproval } from '@portal/shared/server/audit';
+import { getToolDefinition } from '@portal/shared/tools/index';
+import { createLogger } from '@portal/shared/server/logger';
+import { requirePermission } from '@portal/shared/server/auth/rbac';
+import { pendingApprovals, recordApproval } from '@portal/shared/server/approvals';
+import { ValidationError, NotFoundError, errorResponse } from '@portal/shared/server/errors';
 
 const log = createLogger('approve');
 

@@ -1,4 +1,4 @@
-import { getAllToolDefinitions } from '@portal/shared/tools/registry.js';
+import { getAllToolDefinitions } from '@portal/shared/tools/registry';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {

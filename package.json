@@ -6,7 +6,7 @@
 	"scripts": {
 		"dev": "pnpm --filter @portal/frontend dev",
 		"dev:api": "pnpm --filter @portal/api dev",
-		"build": "pnpm --filter @portal/shared build && pnpm --filter @portal/frontend build",
+		"build": "pnpm --filter @portal/frontend build",
 		"build:api": "pnpm --filter @portal/api build",
 		"test": "pnpm --recursive run test",
 		"lint": "pnpm --recursive run lint",

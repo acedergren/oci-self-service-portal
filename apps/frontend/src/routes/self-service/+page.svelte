@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { Chat } from '@ai-sdk/svelte';
 	import { DefaultChatTransport } from 'ai';
-	import { useModels } from '@portal/shared/query/hooks.js';
+	import { useModels } from '@portal/shared/query/hooks';
 	import {
 		WORKFLOW_TEMPLATES,
 		createPlanFromTemplate,
 		type WorkflowTemplate
-	} from '@portal/shared/workflows/index.js';
+	} from '@portal/shared/workflows/index';
 	import type { AgentPlan } from '$lib/components/panels/types.js';
 	import type { ServiceAction } from '$lib/components/portal/types.js';
 	import {

@@ -15,8 +15,8 @@ import {
 	getAllToolDefinitions,
 	getToolDefinition,
 	getToolsByCategory
-} from '@portal/shared/tools/registry.js';
-import type { ToolDefinition } from '@portal/shared/tools/types.js';
+} from '@portal/shared/tools/registry';
+import type { ToolDefinition } from '@portal/shared/tools/types';
 
 // These tests verify the data contracts that the API routes will serve.
 // The actual route handlers don't exist yet (Phase 8.1), but we can

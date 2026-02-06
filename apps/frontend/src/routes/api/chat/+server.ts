@@ -1,12 +1,12 @@
 import { streamText, type UIMessage, convertToModelMessages, stepCountIs } from 'ai';
 import { createOCI, supportsReasoning } from '@acedergren/oci-genai-provider';
 import { env } from '$env/dynamic/private';
-import { createAISDKTools } from '@portal/shared/tools/index.js';
-import { createLogger } from '@portal/shared/server/logger.js';
-import { requirePermission } from '@portal/shared/server/auth/rbac.js';
-import { chatRequests } from '@portal/shared/server/metrics.js';
-import { generateEmbedding } from '@portal/shared/server/embeddings.js';
-import { embeddingRepository } from '@portal/shared/server/oracle/repositories/embedding-repository.js';
+import { createAISDKTools } from '@portal/shared/tools/index';
+import { createLogger } from '@portal/shared/server/logger';
+import { requirePermission } from '@portal/shared/server/auth/rbac';
+import { chatRequests } from '@portal/shared/server/metrics';
+import { generateEmbedding } from '@portal/shared/server/embeddings';
+import { embeddingRepository } from '@portal/shared/server/oracle/repositories/embedding-repository';
 import type { RequestHandler } from './$types';
 
 const log = createLogger('chat');

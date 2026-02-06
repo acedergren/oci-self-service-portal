@@ -1,17 +1,17 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { workflowRepository, workflowRunRepository } from '@portal/shared/server/workflows/repository.js';
-import { WorkflowExecutor } from '@portal/shared/server/workflows/executor.js';
-import { requirePermission } from '@portal/shared/server/auth/rbac.js';
-import { createLogger } from '@portal/shared/server/logger.js';
+import { workflowRepository, workflowRunRepository } from '@portal/shared/server/workflows/repository';
+import { WorkflowExecutor } from '@portal/shared/server/workflows/executor';
+import { requirePermission } from '@portal/shared/server/auth/rbac';
+import { createLogger } from '@portal/shared/server/logger';
 import {
 	ValidationError,
 	NotFoundError,
 	DatabaseError,
 	errorResponse,
 	toPortalError
-} from '@portal/shared/server/errors.js';
-import type { EngineState } from '@portal/shared/server/workflows/executor.js';
+} from '@portal/shared/server/errors';
+import type { EngineState } from '@portal/shared/server/workflows/executor';
 
 const log = createLogger('workflow-approve-api');
 

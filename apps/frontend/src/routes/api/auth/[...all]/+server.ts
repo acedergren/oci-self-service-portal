@@ -1,4 +1,4 @@
-import { auth } from '@portal/shared/server/auth/config.js';
+import { auth } from '@portal/shared/server/auth/config';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 import { building } from '$app/environment';
 import type { RequestHandler } from './$types';

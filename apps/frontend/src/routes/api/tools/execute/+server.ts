@@ -1,15 +1,15 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { logToolExecution, logToolApproval } from '@portal/shared/server/audit.js';
+import { logToolExecution, logToolApproval } from '@portal/shared/server/audit';
 import {
 	getToolDefinition,
 	requiresApproval,
 	getToolWarning,
 	executeTool
-} from '@portal/shared/tools/index.js';
-import { createLogger } from '@portal/shared/server/logger.js';
-import { requirePermission } from '@portal/shared/server/auth/rbac.js';
-import { consumeApproval } from '@portal/shared/server/approvals.js';
+} from '@portal/shared/tools/index';
+import { createLogger } from '@portal/shared/server/logger';
+import { requirePermission } from '@portal/shared/server/auth/rbac';
+import { consumeApproval } from '@portal/shared/server/approvals';
 import {
 	ValidationError,
 	NotFoundError,
@@ -18,9 +18,9 @@ import {
 	toPortalError,
 	errorResponse,
 	isPortalError
-} from '@portal/shared/server/errors.js';
-import { captureError } from '@portal/shared/server/sentry.js';
-import { toolExecutions, toolDuration } from '@portal/shared/server/metrics.js';
+} from '@portal/shared/server/errors';
+import { captureError } from '@portal/shared/server/sentry';
+import { toolExecutions, toolDuration } from '@portal/shared/server/metrics';
 
 const log = createLogger('execute');
 

@@ -1,19 +1,19 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { workflowRepository } from '@portal/shared/server/workflows/repository.js';
-import { requirePermission } from '@portal/shared/server/auth/rbac.js';
-import { createLogger } from '@portal/shared/server/logger.js';
+import { workflowRepository } from '@portal/shared/server/workflows/repository';
+import { requirePermission } from '@portal/shared/server/auth/rbac';
+import { createLogger } from '@portal/shared/server/logger';
 import {
 	ValidationError,
 	NotFoundError,
 	DatabaseError,
 	errorResponse
-} from '@portal/shared/server/errors.js';
+} from '@portal/shared/server/errors';
 import {
 	WorkflowNodeSchema,
 	WorkflowEdgeSchema,
 	WorkflowStatusSchema
-} from '@portal/shared/workflows/types.js';
+} from '@portal/shared/workflows/types';
 import { z } from 'zod';
 
 const log = createLogger('workflow-detail-api');

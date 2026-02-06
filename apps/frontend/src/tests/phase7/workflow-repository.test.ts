@@ -38,7 +38,7 @@ import {
 	workflowRepository,
 	workflowRunRepository,
 	workflowRunStepRepository
-} from '@portal/shared/server/workflows/repository.js';
+} from '@portal/shared/server/workflows/repository';
 
 beforeEach(() => {
 	vi.clearAllMocks();

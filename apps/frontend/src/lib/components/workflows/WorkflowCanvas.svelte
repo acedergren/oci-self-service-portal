@@ -9,7 +9,7 @@
 	import InputNode from './nodes/InputNode.svelte';
 	import OutputNode from './nodes/OutputNode.svelte';
 
-	import type { WorkflowDefinition } from '@portal/shared/workflows/types.js';
+	import type { WorkflowDefinition } from '@portal/shared/workflows/types';
 	import type { PaletteItem } from './types.js';
 
 	interface Props {

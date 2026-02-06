@@ -20,11 +20,14 @@
 		"@sentry/sveltekit": "10.32.1",
 		"@tanstack/svelte-query": "^6.0.18",
 		"@xyflow/svelte": "^1.5.0",
+		"ai": "^6.0.69",
+		"better-auth": "^1.4.18",
 		"clsx": "^2.1.1",
 		"dompurify": "^3.3.1",
 		"marked": "^17.0.1",
 		"svelte-sonner": "^1.0.7",
-		"tailwind-merge": "^3.4.0"
+		"tailwind-merge": "^3.4.0",
+		"zod": "^4.3.6"
 	},
 	"devDependencies": {
 		"@sveltejs/adapter-node": "^5.5.2",

@@ -26,7 +26,7 @@ import {
 	WorkflowDefinitionSchema,
 	WorkflowRunSchema,
 	WorkflowStepSchema
-} from '@portal/shared/workflows/types.js';
+} from '@portal/shared/workflows/types';
 
 // ============================================================================
 // Enum schemas

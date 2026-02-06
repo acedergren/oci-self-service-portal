@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { runHealthChecks } from '@portal/shared/server/health.js';
+import { runHealthChecks } from '@portal/shared/server/health';
 
 /**
  * GET /api/health — Deep health check endpoint.

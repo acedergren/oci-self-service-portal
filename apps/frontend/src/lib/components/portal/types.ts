@@ -30,7 +30,7 @@
 
 import type { Chat } from '@ai-sdk/svelte';
 import type { AgentPlan } from '$lib/components/panels/types.js';
-import type { WorkflowTemplate } from '@portal/shared/workflows/index.js';
+import type { WorkflowTemplate } from '@portal/shared/workflows/index';
 
 // ---------------------------------------------------------------------------
 // Shared / Common

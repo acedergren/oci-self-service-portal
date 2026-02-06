@@ -50,6 +50,12 @@ importers:
       '@xyflow/svelte':
         specifier: ^1.5.0
         version: 1.5.0(svelte@5.49.2)
+      ai:
+        specifier: ^6.0.69
+        version: 6.0.73(zod@4.3.6)
+      better-auth:
+        specifier: ^1.4.18
+        version: 1.4.18(@sveltejs/kit@2.50.2(@opentelemetry/api@1.9.0)(@sveltejs/vite-plugin-svelte@5.1.1(svelte@5.49.2)(vite@6.4.1(@types/node@25.2.1)(jiti@2.6.1)(lightningcss@1.30.2)))(svelte@5.49.2)(typescript@5.9.3)(vite@6.4.1(@types/node@25.2.1)(jiti@2.6.1)(lightningcss@1.30.2)))(better-sqlite3@12.6.2)(svelte@5.49.2)(vitest@4.0.18(@opentelemetry/api@1.9.0)(@types/node@25.2.1)(jiti@2.6.1)(lightningcss@1.30.2))
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
@@ -65,6 +71,9 @@ importers:
       tailwind-merge:
         specifier: ^3.4.0
         version: 3.4.0
+      zod:
+        specifier: ^4.3.6
+        version: 4.3.6
     devDependencies:
       '@sveltejs/adapter-node':
         specifier: ^5.5.2

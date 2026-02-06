@@ -5,7 +5,7 @@ import {
 	requirePermission,
 	PERMISSIONS,
 	type Permission
-} from '@portal/shared/server/auth/rbac.js';
+} from '@portal/shared/server/auth/rbac';
 
 describe('RBAC Permission System', () => {
 	describe('getPermissionsForRole', () => {

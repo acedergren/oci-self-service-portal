@@ -7,11 +7,11 @@
  */
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
-import { requireApiAuth, resolveOrgId } from '@portal/shared/server/api/require-auth.js';
-import { webhookRepository } from '@portal/shared/server/oracle/repositories/webhook-repository.js';
-import { isValidWebhookUrl } from '@portal/shared/server/webhooks.js';
-import { CreateWebhookInputSchema } from '@portal/shared/server/api/types.js';
-import { createLogger } from '@portal/shared/server/logger.js';
+import { requireApiAuth, resolveOrgId } from '@portal/shared/server/api/require-auth';
+import { webhookRepository } from '@portal/shared/server/oracle/repositories/webhook-repository';
+import { isValidWebhookUrl } from '@portal/shared/server/webhooks';
+import { CreateWebhookInputSchema } from '@portal/shared/server/api/types';
+import { createLogger } from '@portal/shared/server/logger';
 
 const log = createLogger('api:webhooks');
 

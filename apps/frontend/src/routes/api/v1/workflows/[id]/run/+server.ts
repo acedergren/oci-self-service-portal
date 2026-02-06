@@ -6,17 +6,17 @@
  */
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { workflowRepository, workflowRunRepository } from '@portal/shared/server/workflows/repository.js';
-import { WorkflowExecutor } from '@portal/shared/server/workflows/executor.js';
-import { requireApiAuth, resolveOrgId } from '@portal/shared/server/api/require-auth.js';
-import { createLogger } from '@portal/shared/server/logger.js';
+import { workflowRepository, workflowRunRepository } from '@portal/shared/server/workflows/repository';
+import { WorkflowExecutor } from '@portal/shared/server/workflows/executor';
+import { requireApiAuth, resolveOrgId } from '@portal/shared/server/api/require-auth';
+import { createLogger } from '@portal/shared/server/logger';
 import {
 	ValidationError,
 	NotFoundError,
 	DatabaseError,
 	errorResponse,
 	toPortalError
-} from '@portal/shared/server/errors.js';
+} from '@portal/shared/server/errors';
 
 const log = createLogger('v1-workflow-run');
 
