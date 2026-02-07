@@ -20,7 +20,7 @@
 
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { createApp } from '../app.js';
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance } from 'fastify';
 
 // Mock auth and RBAC modules
 vi.mock('@portal/shared/server/oracle/connection', () => ({

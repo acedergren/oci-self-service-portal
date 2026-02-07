@@ -13,7 +13,7 @@
  * The backend dev will implement to make these pass.
  */
 
-import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock Oracle connection module — initial factory sets up structure.
 // mockReset: true clears return values between tests, so we re-setup in beforeEach.
