@@ -4,6 +4,8 @@ import fastifyCookie from '@fastify/cookie';
 import fastifyHelmet from '@fastify/helmet';
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifySensible from '@fastify/sensible';
+import fastifySwagger from '@fastify/swagger';
+import fastifySwaggerUi from '@fastify/swagger-ui';
 import {
 	serializerCompiler,
 	validatorCompiler,
@@ -51,6 +53,12 @@ export interface AppOptions {
 	 * Enable Helmet.js security headers (default: true)
 	 */
 	enableHelmet?: boolean;
+
+	/**
+	 * Enable OpenAPI docs at /api/docs (default: true in dev, false in production).
+	 * Requires admin:all permission.
+	 */
+	enableDocs?: boolean;
 }
 
 /**
@@ -65,7 +73,8 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 		corsOrigin,
 		enableRateLimit = true,
 		enableTracing = true,
-		enableHelmet = true
+		enableHelmet = true,
+		enableDocs
 	} = options;
 
 	const isProduction = process.env.NODE_ENV === 'production';
