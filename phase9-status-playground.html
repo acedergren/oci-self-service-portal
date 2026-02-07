@@ -313,7 +313,8 @@ const state = {
   viewType: 'architecture',
   showCritical: true,
   showHigh: true,
-  showMedium: true
+  showMedium: true,
+  answers: {}
 };
 
 const diagrams = {
@@ -561,19 +562,16 @@ const diagrams = {
     style I fill:#3d2c00,stroke:#d29922
     style S fill:#490b0b,stroke:#ff7b72`,
 
-  dataFlow: `graph LR
-    subgraph Browser
-      User[User Input]
+  dataFlow: `graph TB
+    Browser[Browser Client]
+
+    subgraph SvelteKit["apps/frontend — SvelteKit"]
+      SK_UI[UI Components + Chat + Workflows]
+      FF{FASTIFY_ENABLED?}
+      SK_API[SvelteKit API Routes]
     end
 
-    subgraph SvelteKit["apps/frontend (SvelteKit)"]
-      SK_UI[UI Components]
-      SK_Chat[Chat Stream]
-      SK_Workflows[Workflow Designer]
-      SK_Auth[Auth UI / OIDC]
-    end
-
-    subgraph Fastify["apps/api (Fastify 5)"]
+    subgraph Fastify["apps/api — Fastify 5"]
       FW_Helm[Helmet + CSP]
       FW_Auth[Auth Plugin]
       FW_RBAC[RBAC preHandler]
@@ -582,11 +580,9 @@ const diagrams = {
 
     subgraph Shared["packages/shared"]
       S_Auth[Better Auth Core]
-      S_Oracle[Oracle Pool]
-      S_Repos[Repositories]
+      S_Oracle[Oracle Pool + Repos]
       S_RBAC[RBAC / Permissions]
-      S_Errors[PortalError]
-      S_Metrics[Pino + Prometheus + Sentry]
+      S_Observ[Pino + Prometheus + Sentry]
     end
 
     subgraph Oracle["Oracle ADB 26AI"]
@@ -595,24 +591,21 @@ const diagrams = {
       GRAPH[(Property Graph)]
     end
 
-    User --> SK_UI
-    SK_UI --> SK_Chat
-    SK_UI --> SK_Workflows
-    SK_UI --> SK_Auth
-
-    SK_Chat -->|"/api/chat"| FW_Helm
-    SK_Workflows -->|"/api/workflows"| FW_Helm
-    SK_Auth -->|"/api/auth/*"| S_Auth
+    Browser --> SK_UI
+    SK_UI --> FF
+    FF -->|"true"| FW_Helm
+    FF -->|"false"| SK_API
 
     FW_Helm --> FW_Auth
     FW_Auth -->|"session resolve"| S_Auth
     FW_Auth --> FW_RBAC
-    FW_RBAC -->|"permission check"| S_RBAC
     FW_RBAC --> FW_Routes
-    FW_Routes --> S_Repos
-    FW_Routes --> S_Errors
-    FW_Routes --> S_Metrics
-    S_Repos --> S_Oracle
+
+    SK_API -->|"legacy path"| S_Auth
+    SK_API --> S_Oracle
+
+    FW_Routes --> S_Oracle
+    FW_Routes --> S_Observ
     S_Oracle --> DB
     S_Oracle --> VEC
     S_Oracle --> GRAPH
@@ -621,7 +614,8 @@ const diagrams = {
     style SvelteKit fill:#1a472a,stroke:#3fb950
     style Fastify fill:#0c2d6b,stroke:#58a6ff
     style Shared fill:#3d2c00,stroke:#d29922
-    style Oracle fill:#490b0b,stroke:#ff7b72`
+    style Oracle fill:#490b0b,stroke:#ff7b72
+    style FF fill:#3d1f00,stroke:#d29922`
 };
 
 function updateAll() {
@@ -641,20 +635,20 @@ function renderPreview() {
   // Stats header
   const statsGrid = createElement('div', { className: 'stats-grid' }, [
     createElement('div', { className: 'stat-card' }, [
-      createElement('div', { className: 'stat-value', textContent: '20' }),
-      createElement('div', { className: 'stat-label', textContent: 'COMMITS' })
-    ]),
-    createElement('div', { className: 'stat-card' }, [
       createElement('div', { className: 'stat-value', textContent: '203' }),
       createElement('div', { className: 'stat-label', textContent: 'TESTS PASSING' })
     ]),
     createElement('div', { className: 'stat-card' }, [
-      createElement('div', { className: 'stat-value', textContent: '329' }),
-      createElement('div', { className: 'stat-label', textContent: 'FILES CHANGED' })
+      createElement('div', { className: 'stat-value', textContent: '8/8' }),
+      createElement('div', { className: 'stat-label', textContent: 'FINDINGS FIXED' })
     ]),
     createElement('div', { className: 'stat-card' }, [
-      createElement('div', { className: 'stat-value', textContent: '12K' }),
-      createElement('div', { className: 'stat-label', textContent: 'LINES ADDED' })
+      createElement('div', { className: 'stat-value', textContent: '0' }),
+      createElement('div', { className: 'stat-label', textContent: 'SEMGREP ISSUES' })
+    ]),
+    createElement('div', { className: 'stat-card' }, [
+      createElement('div', { className: 'stat-value', textContent: '8' }),
+      createElement('div', { className: 'stat-label', textContent: 'QUESTIONS' })
     ])
   ]);
   preview.appendChild(statsGrid);
@@ -744,75 +738,252 @@ function renderDecisionLog(container) {
 
 function renderFindings(container) {
   const findings = [
-    { title: 'IDOR in tools approval', severity: 'critical', file: 'apps/api/src/routes/tools.ts:232', task: 15 },
-    { title: 'Auth path normalization', severity: 'high', file: 'apps/api/src/plugins/auth.ts:84', task: 16 },
-    { title: 'Health endpoint timeout', severity: 'high', file: 'apps/api/src/routes/health.ts:17', task: 17 },
-    { title: 'BETTER_AUTH_SECRET validation', severity: 'high', file: 'apps/api/src/app.ts:75', task: 18 },
-    { title: 'Certbot renewal logging', severity: 'medium', file: 'infrastructure/docker/phase9/docker-compose.yml:106', task: 19 },
-    { title: 'COEP header conflict', severity: 'medium', file: 'apps/api/src/app.ts:170', task: 20 }
+    { title: 'IDOR in tools approval', severity: 'critical', file: 'apps/api/src/routes/tools.ts:232', task: 15, status: 'fixed', commit: 'dd4d994' },
+    { title: 'Auth path normalization', severity: 'high', file: 'apps/api/src/plugins/auth.ts:84', task: 16, status: 'fixed', commit: 'dd4d994' },
+    { title: 'Health endpoint timeout', severity: 'high', file: 'apps/api/src/routes/health.ts:17', task: 17, status: 'fixed', commit: 'dd4d994' },
+    { title: 'BETTER_AUTH_SECRET validation', severity: 'high', file: 'apps/api/src/app.ts:75', task: 18, status: 'fixed', commit: 'dd4d994' },
+    { title: 'Certbot renewal logging', severity: 'medium', file: 'infrastructure/docker/phase9/docker-compose.yml:106', task: 19, status: 'fixed', commit: 'dd4d994' },
+    { title: 'COEP header conflict', severity: 'medium', file: 'apps/api/src/app.ts:170', task: 20, status: 'fixed', commit: 'dd4d994' },
+    { title: 'orgId not stored in pendingApprovals', severity: 'high', file: 'packages/shared/src/server/approvals.ts', task: 'audit', status: 'fixed', commit: '500e63f' },
+    { title: 'Health check swallows error details', severity: 'medium', file: 'apps/api/src/routes/health.ts', task: 'audit', status: 'fixed', commit: '500e63f' }
   ];
 
-  const title = createElement('h2', { textContent: 'Security Findings' });
+  const title = createElement('h2', { textContent: 'Security Findings (All Resolved)' });
   container.appendChild(title);
+
+  const summary = createElement('div', { style: { padding: '12px', background: '#1a472a', border: '1px solid #3fb950', borderRadius: '6px', marginBottom: '16px', fontSize: '13px', color: '#3fb950' } });
+  summary.textContent = '8/8 findings fixed. Semgrep: 0 findings (API), 2 false positives (shared). CodeQL: 0 findings.';
+  container.appendChild(summary);
 
   findings.forEach(f => {
     if ((f.severity === 'critical' && !state.showCritical) ||
         (f.severity === 'high' && !state.showHigh) ||
         (f.severity === 'medium' && !state.showMedium)) return;
 
-    const card = createElement('div', { className: 'finding-card' }, [
-      createElement('div', {}, [
-        createElement('strong', { textContent: f.title }),
-        createElement('span', { className: `status-badge ${f.severity}`, textContent: f.severity.toUpperCase() })
-      ]),
-      createElement('div', { textContent: f.file, style: { fontSize: '11px', color: '#8b949e', marginTop: '4px' } }),
-      createElement('div', { textContent: `Task #${f.task}`, style: { fontSize: '11px', color: '#58a6ff', marginTop: '4px' } })
-    ]);
+    const card = createElement('div', { className: 'finding-card' });
+    card.style.borderLeftColor = '#3fb950';
+    card.style.opacity = '0.7';
+
+    const header = createElement('div');
+    header.appendChild(createElement('strong', { textContent: f.title }));
+    header.appendChild(createElement('span', { className: 'status-badge pass', textContent: 'FIXED' }));
+    card.appendChild(header);
+
+    card.appendChild(createElement('div', { textContent: f.file, style: { fontSize: '11px', color: '#8b949e', marginTop: '4px' } }));
+    card.appendChild(createElement('div', { textContent: `Commit: ${f.commit}`, style: { fontSize: '11px', color: '#3fb950', marginTop: '4px' } }));
     container.appendChild(card);
   });
 }
 
 function renderQuestions(container) {
   const questions = [
-    { q: 'Block PR until all HIGH findings fixed?', opts: ['Fix all HIGH+', 'Draft PR + fix in review', 'CRITICAL only'] },
-    { q: 'Tolerance for 27 CodeRabbit nitpicks?', opts: ['Fix all', 'Follow-up tasks', 'Defer post-merge'] },
-    { q: 'IDOR fix: How to store orgId in pendingApprovals?', opts: ['Add orgId field', 'Lookup from session', 'Store full context'] },
-    { q: 'Semgrep/CodeQL scope?', opts: ['All 329 files', 'Only apps/api/', 'Incremental'] },
-    { q: 'Deployment strategy post-merge?', opts: ['Feature flag rollout', 'Staging first', 'Direct to prod'] }
+    {
+      id: 'merge-strategy',
+      q: 'Merge strategy for Phase 9 branch?',
+      context: '20+ commits on feature/phase9-fastify-migration. All security findings resolved, 203 tests passing.',
+      opts: [
+        { label: 'Squash merge to main', desc: 'Single commit, clean history', recommended: true },
+        { label: 'Rebase merge', desc: 'Preserve individual commits' },
+        { label: 'Keep as feature branch', desc: 'More work needed first' }
+      ]
+    },
+    {
+      id: 'fastify-rollout',
+      q: 'How should the Fastify backend be rolled out?',
+      context: 'FASTIFY_ENABLED feature flag is implemented. Nginx proxies to either SvelteKit or Fastify based on flag.',
+      opts: [
+        { label: 'Feature flag rollout (gradual)', desc: 'Start with health+metrics, expand to all routes', recommended: true },
+        { label: 'Full cutover in staging', desc: 'Test all routes in staging, then flip flag in prod' },
+        { label: 'Parallel run (shadow mode)', desc: 'Run both backends, compare responses' },
+        { label: 'Keep SvelteKit-only for now', desc: 'Fastify as backup, not primary' }
+      ]
+    },
+    {
+      id: 'remaining-nitpicks',
+      q: 'What to do with 27 CodeRabbit nitpicks?',
+      context: 'Unused imports, hardcoded test counts, timing assertions, type narrowing suggestions. No security impact.',
+      opts: [
+        { label: 'Fix quick wins now, defer rest', desc: 'Clean up imports + types, skip cosmetic', recommended: true },
+        { label: 'Fix all before merge', desc: 'Complete cleanup pass' },
+        { label: 'Create follow-up issue', desc: 'Track as tech debt, merge now' }
+      ]
+    },
+    {
+      id: 'semgrep-findings',
+      q: 'Handle 2 Semgrep findings in packages/shared?',
+      context: 'gcm-no-tag-length in crypto.ts (false positive — tag is set correctly). path-join-resolve-traversal in migrations.ts (already guarded with startsWith check).',
+      opts: [
+        { label: 'Add nosemgrep comments', desc: 'Document as false positives in code', recommended: true },
+        { label: 'Add explicit authTagLength:16', desc: 'Belt-and-suspenders for GCM' },
+        { label: 'Leave as-is', desc: 'Both are already mitigated' }
+      ]
+    },
+    {
+      id: 'chat-migration',
+      q: 'When should /api/chat streaming move to Fastify?',
+      context: 'Most complex endpoint — AI SDK streaming, tool execution, approval flow. Currently only in SvelteKit.',
+      opts: [
+        { label: 'Phase 10 (separate milestone)', desc: 'Focus Phase 9 on non-streaming routes', recommended: true },
+        { label: 'Add to Phase 9 scope', desc: 'Complete the migration fully' },
+        { label: 'Keep in SvelteKit permanently', desc: 'SSE streaming is well-supported in SvelteKit' }
+      ]
+    },
+    {
+      id: 'test-target',
+      q: 'Test coverage target for Phase 9 API?',
+      context: 'Currently 203 tests across 13 files. Every route has auth/RBAC/Zod/IDOR/fallback coverage.',
+      opts: [
+        { label: '200+ (current level is good)', desc: 'Focus on quality over quantity', recommended: true },
+        { label: '300+ (add edge cases)', desc: 'More boundary tests, error scenarios' },
+        { label: 'Match Phase 8 (662 total)', desc: 'Bring up to parity with SvelteKit tests' }
+      ]
+    },
+    {
+      id: 'deployment-env',
+      q: 'Target deployment environment?',
+      context: 'Docker Compose with Nginx + certbot is ready. Could also deploy to OCI Container Instances or Kubernetes.',
+      opts: [
+        { label: 'Docker Compose on app01', desc: 'Same as current Langflow deployment', recommended: true },
+        { label: 'OCI Container Instances', desc: 'Serverless containers, auto-scaling' },
+        { label: 'OKE (Kubernetes)', desc: 'Full orchestration, more complex' },
+        { label: 'Local dev only for now', desc: 'Not ready for production deployment' }
+      ]
+    },
+    {
+      id: 'openapi-docs',
+      q: 'Should OpenAPI docs be public or auth-gated?',
+      context: 'Fastify @fastify/swagger generates OpenAPI spec. /api/docs endpoint available.',
+      opts: [
+        { label: 'Auth-gated (admin only)', desc: 'Prevent API surface exposure', recommended: true },
+        { label: 'Public read-only', desc: 'Developer experience, API discovery' },
+        { label: 'Disabled in production', desc: 'Dev/staging only' }
+      ]
+    }
   ];
 
-  const title = createElement('h2', { textContent: 'Open Questions' });
+  // Store selections in state
+  if (!state.answers) state.answers = {};
+
+  const title = createElement('h2', { textContent: 'Outstanding Questions for Project Owner' });
   container.appendChild(title);
+
+  const intro = createElement('p', { textContent: 'Select your preferred option for each question. Your choices will be summarized into a copiable prompt below.', style: { fontSize: '13px', color: '#8b949e', marginBottom: '16px' } });
+  container.appendChild(intro);
 
   questions.forEach((item, idx) => {
     const card = createElement('div', { className: 'question-card' });
-    const heading = createElement('h3', { textContent: `${idx + 1}. ${item.q}` });
+
+    const heading = createElement('h3', { textContent: `${idx + 1}. ${item.q}`, style: { marginBottom: '6px' } });
     card.appendChild(heading);
 
-    const list = createElement('ul', { style: { marginTop: '8px', marginLeft: '20px', fontSize: '12px', color: '#8b949e' } });
-    item.opts.forEach(opt => {
-      const li = createElement('li', { textContent: opt });
-      list.appendChild(li);
+    const context = createElement('div', { textContent: item.context, style: { fontSize: '12px', color: '#8b949e', marginBottom: '12px', lineHeight: '1.5' } });
+    card.appendChild(context);
+
+    item.opts.forEach((opt, optIdx) => {
+      const optionId = `${item.id}-${optIdx}`;
+      const isSelected = state.answers[item.id] === opt.label;
+
+      const btn = createElement('button', {
+        textContent: `${opt.label}${opt.recommended ? ' (Recommended)' : ''}`,
+        style: {
+          display: 'block',
+          width: '100%',
+          textAlign: 'left',
+          padding: '10px 14px',
+          marginBottom: '6px',
+          background: isSelected ? '#1f6feb' : '#21262d',
+          color: isSelected ? '#ffffff' : '#c9d1d9',
+          border: isSelected ? '1px solid #58a6ff' : '1px solid #30363d',
+          borderRadius: '6px',
+          cursor: 'pointer',
+          fontSize: '13px',
+          fontFamily: 'inherit',
+          transition: 'all 0.15s'
+        }
+      });
+
+      const desc = createElement('div', { textContent: opt.desc, style: { fontSize: '11px', color: isSelected ? '#a5d8ff' : '#8b949e', marginTop: '2px' } });
+      btn.appendChild(desc);
+
+      btn.addEventListener('click', function() {
+        state.answers[item.id] = opt.label;
+        updateAll();
+      });
+
+      card.appendChild(btn);
     });
-    card.appendChild(list);
+
     container.appendChild(card);
   });
+
+  // Summary box
+  const answeredCount = Object.keys(state.answers).length;
+  const totalCount = questions.length;
+
+  if (answeredCount > 0) {
+    const summaryBox = createElement('div', { style: { background: '#0c2d6b', border: '1px solid #58a6ff', borderRadius: '8px', padding: '16px', marginTop: '16px' } });
+
+    const summaryTitle = createElement('h3', { textContent: `Decisions (${answeredCount}/${totalCount})`, style: { marginBottom: '10px', color: '#58a6ff' } });
+    summaryBox.appendChild(summaryTitle);
+
+    const summaryList = createElement('ul', { style: { listStyle: 'none', padding: '0' } });
+    questions.forEach(item => {
+      if (state.answers[item.id]) {
+        const li = createElement('li', { style: { padding: '4px 0', fontSize: '13px' } });
+        li.appendChild(createElement('strong', { textContent: item.q.replace('?', ': '), style: { color: '#c9d1d9' } }));
+        li.appendChild(createElement('span', { textContent: state.answers[item.id], style: { color: '#3fb950' } }));
+        summaryList.appendChild(li);
+      }
+    });
+    summaryBox.appendChild(summaryList);
+    container.appendChild(summaryBox);
+  }
 }
 
 function updatePrompt() {
-  let text = `Show ${state.viewType.replace('-', ' ')} view for Phase 9 Fastify Migration.`;
+  let text = '';
 
-  if (state.viewType === 'findings') {
-    const priorities = [];
-    if (state.showCritical) priorities.push('CRITICAL');
-    if (state.showHigh) priorities.push('HIGH');
-    if (state.showMedium) priorities.push('MEDIUM');
-    text += ` Filtering: ${priorities.join(' + ')} priority issues.`;
-  }
+  if (state.viewType === 'questions' && state.answers && Object.keys(state.answers).length > 0) {
+    // Generate decision prompt from answered questions
+    text = `Phase 9 Fastify Migration — Project Owner Decisions\n\n`;
+    text += `Status: 203 tests passing, 8/8 security findings fixed, Semgrep + CodeQL clean.\n\n`;
+    text += `Decisions:\n`;
 
-  text += `\n\n📊 Status: 20 commits, 203 tests passing, 329 files changed.`;
-  if (state.showCritical) {
-    text += `\n⚠️ 1 CRITICAL IDOR vulnerability (Task #15) blocking PR.`;
+    const questionMap = {
+      'merge-strategy': 'Merge strategy',
+      'fastify-rollout': 'Fastify rollout',
+      'remaining-nitpicks': 'CodeRabbit nitpicks',
+      'semgrep-findings': 'Semgrep findings',
+      'chat-migration': 'Chat streaming migration',
+      'test-target': 'Test coverage target',
+      'deployment-env': 'Deployment environment',
+      'openapi-docs': 'OpenAPI docs access'
+    };
+
+    Object.entries(state.answers).forEach(([key, value]) => {
+      const label = questionMap[key] || key;
+      text += `- ${label}: ${value}\n`;
+    });
+
+    const unanswered = Object.keys(questionMap).filter(k => !state.answers[k]);
+    if (unanswered.length > 0) {
+      text += `\nStill need decisions on: ${unanswered.map(k => questionMap[k]).join(', ')}.`;
+    }
+
+    text += `\n\nPlease proceed with the above decisions for the Phase 9 implementation team.`;
+  } else {
+    text = `Show ${state.viewType.replace('-', ' ')} view for Phase 9 Fastify Migration.`;
+
+    if (state.viewType === 'findings') {
+      const priorities = [];
+      if (state.showCritical) priorities.push('CRITICAL');
+      if (state.showHigh) priorities.push('HIGH');
+      if (state.showMedium) priorities.push('MEDIUM');
+      text += ` Filtering: ${priorities.join(' + ')} priority issues.`;
+      text += `\n\nAll 8 findings FIXED. Semgrep: 0 API findings, 2 false positives in shared. CodeQL: 0 findings.`;
+    }
+
+    text += `\n\nStatus: 203 tests passing, 8/8 security findings fixed, all scans clean.`;
   }
 
   document.getElementById('prompt').textContent = text;
