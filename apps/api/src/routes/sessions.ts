@@ -6,7 +6,7 @@ import {
 	deleteSession
 } from '@portal/shared/server/oracle/repositories/session-repository';
 import { createLogger } from '@portal/shared/server/logger';
-import { DatabaseError, ValidationError, errorResponse } from '@portal/shared/server/errors';
+import { DatabaseError, errorResponse } from '@portal/shared/server/errors';
 import { requireAuth } from '../plugins/rbac.js';
 
 const log = createLogger('api-sessions');
