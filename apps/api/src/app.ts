@@ -74,9 +74,10 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 
 	const isProduction = process.env.NODE_ENV === 'production';
 
-	// Runtime auth secret validation (matches SvelteKit hooks.server.ts C1 fix)
+	// Runtime auth secret validation — fail fast in production (matches SvelteKit hooks.server.ts C1 fix)
 	if (isProduction && !process.env.BETTER_AUTH_SECRET) {
-		log.error('BETTER_AUTH_SECRET is not set — sessions will use an insecure default secret');
+		log.fatal('BETTER_AUTH_SECRET is required in production');
+		throw new Error('BETTER_AUTH_SECRET is required in production');
 	}
 
 	// Create Fastify instance with Pino logger integration
@@ -179,7 +180,6 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 			reply.header('Pragma', 'no-cache');
 			reply.header('Expires', '0');
 			reply.header('X-Robots-Tag', 'noindex, nofollow');
-			reply.header('Cross-Origin-Embedder-Policy', 'credentialless');
 			reply.header(
 				'Permissions-Policy',
 				'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()'

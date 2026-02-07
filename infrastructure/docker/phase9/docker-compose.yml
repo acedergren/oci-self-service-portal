@@ -51,7 +51,7 @@ services:
       - ${TLS_CERT_PATH:-./certs}/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro
       - ${TLS_KEY_PATH:-./certs}/privkey.pem:/etc/nginx/certs/privkey.pem:ro
 
-      # DH parameters for forward secrecy (optional, generated at deploy time)
+      # DH parameters for forward secrecy (required — see README.md Prerequisites)
       - ${DH_PARAMS_PATH:-./certs/dhparam.pem}:/etc/nginx/certs/dhparam.pem:ro
 
       # ACME challenge webroot for Let's Encrypt HTTP-01 validation
@@ -92,7 +92,11 @@ services:
     image: certbot/certbot:latest
     container_name: portal-certbot
     restart: unless-stopped
+    read_only: true
     profiles: ['letsencrypt']
+
+    security_opt:
+      - no-new-privileges:true
 
     environment:
       - TLS_DOMAIN=${TLS_DOMAIN:-}
@@ -103,16 +107,25 @@ services:
       - ${TLS_CERT_PATH:-./certs}:/etc/letsencrypt
       - ./certbot-www:/var/www/certbot
 
+    # tmpfs for certbot runtime dirs since root fs is read-only
+    tmpfs:
+      - /var/log/letsencrypt:size=16m
+      - /tmp:size=16m
+
     entrypoint: /bin/sh
     command:
       - -c
       - |
         trap exit TERM
         while :; do
+          echo "[$(date -Iseconds)] Starting certbot renewal check"
           certbot renew --webroot -w /var/www/certbot --quiet || true
           if [ -n "$$TLS_DOMAIN" ] && [ -f "/etc/letsencrypt/live/$$TLS_DOMAIN/fullchain.pem" ] && [ -f "/etc/letsencrypt/live/$$TLS_DOMAIN/privkey.pem" ]; then
             cp "/etc/letsencrypt/live/$$TLS_DOMAIN/fullchain.pem" /etc/letsencrypt/fullchain.pem
             cp "/etc/letsencrypt/live/$$TLS_DOMAIN/privkey.pem" /etc/letsencrypt/privkey.pem
+            echo "[$(date -Iseconds)] Certificates copied for $$TLS_DOMAIN"
+          else
+            echo "[$(date -Iseconds)] WARNING: Certificate copy skipped (TLS_DOMAIN=$${TLS_DOMAIN:-unset})"
           fi
           sleep 12h & wait $$!
         done

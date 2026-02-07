@@ -81,7 +81,8 @@ const authPlugin: FastifyPluginAsync<AuthPluginOptions> = async (fastify, opts) 
 	fastify.addHook('onRequest', async (request) => {
 		request.permissions = [];
 
-		if (excludeSet.has(request.url.split('?')[0])) {
+		const path = request.url.split('?')[0].replace(/\/+$/, '') || '/';
+		if (excludeSet.has(path)) {
 			return;
 		}
 

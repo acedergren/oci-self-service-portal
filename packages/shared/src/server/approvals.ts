@@ -15,6 +15,7 @@ export interface PendingApprovalEntry {
 	toolName: string;
 	args: Record<string, unknown>;
 	sessionId?: string;
+	orgId?: string | null;
 	createdAt: number;
 	resolve: (approved: boolean) => void;
 }

@@ -18,7 +18,7 @@ import {
 } from '@portal/shared/server/errors';
 import { captureError } from '@portal/shared/server/sentry';
 import { toolExecutions, toolDuration } from '@portal/shared/server/metrics';
-import { requireAuth } from '../plugins/rbac.js';
+import { requireAuth, resolveOrgId } from '../plugins/rbac.js';
 
 const log = createLogger('api-tools');
 
@@ -211,19 +211,22 @@ export async function toolRoutes(app: FastifyInstance): Promise<void> {
 		}
 	);
 
-	// GET /api/tools/approve — list pending approvals
+	// GET /api/tools/approve — list pending approvals (scoped to caller's org)
 	app.get(
 		'/api/tools/approve',
 		{ preHandler: requireAuth('tools:approve') },
-		async (_request, reply) => {
-			const pending = Array.from(pendingApprovals.entries()).map(([id, data]) => ({
-				toolCallId: id,
-				toolName: data.toolName,
-				args: data.args,
-				sessionId: data.sessionId,
-				createdAt: new Date(data.createdAt).toISOString(),
-				age: Date.now() - data.createdAt
-			}));
+		async (request, reply) => {
+			const orgId = resolveOrgId(request);
+			const pending = Array.from(pendingApprovals.entries())
+				.filter(([, data]) => (data.orgId ?? null) === orgId)
+				.map(([id, data]) => ({
+					toolCallId: id,
+					toolName: data.toolName,
+					args: data.args,
+					sessionId: data.sessionId,
+					createdAt: new Date(data.createdAt).toISOString(),
+					age: Date.now() - data.createdAt
+				}));
 
 			return reply.send({ pending, count: pending.length });
 		}
@@ -244,7 +247,8 @@ export async function toolRoutes(app: FastifyInstance): Promise<void> {
 			>;
 
 			const pending = pendingApprovals.get(toolCallId);
-			if (!pending) {
+			const orgId = resolveOrgId(request);
+			if (!pending || (pending.orgId ?? null) !== orgId) {
 				return reply.status(404).send({
 					error: 'Not Found',
 					message: 'No pending approval found for this tool call',

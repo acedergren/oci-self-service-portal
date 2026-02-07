@@ -7,7 +7,7 @@ This runbook covers TLS certificate setup for the Nginx reverse proxy in
 
 - Certificate chain: `TLS_CERT_PATH/fullchain.pem`
 - Private key: `TLS_KEY_PATH/privkey.pem`
-- DH params: `DH_PARAMS_PATH` (optional but recommended)
+- DH params: `DH_PARAMS_PATH` (**required** — see below)
 
 Default paths from `.env`:
 
@@ -15,10 +15,20 @@ Default paths from `.env`:
 - `TLS_KEY_PATH=./certs`
 - `DH_PARAMS_PATH=./certs/dhparam.pem`
 
-Generate DH params once:
+### DH Parameters (Required Prerequisite)
+
+The `docker-compose.yml` bind-mounts `DH_PARAMS_PATH` into nginx unconditionally.
+If the file does not exist, Docker will either create an empty directory at the
+mount path (Linux) or fail to start the container (macOS). **You must generate
+this file before running `docker compose up`.**
+
 ```bash
+mkdir -p infrastructure/docker/phase9/certs
 openssl dhparam -out infrastructure/docker/phase9/certs/dhparam.pem 2048
 ```
+
+> **Note**: DH param generation takes 5–30 seconds depending on hardware. This is a
+> one-time operation — the file persists across container restarts.
 
 ## Development: Self-Signed Certificate
 

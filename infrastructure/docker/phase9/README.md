@@ -64,6 +64,25 @@ docker compose --profile letsencrypt up -d certbot
 - `CERTIFICATES.md` - Certificate provisioning, rotation, and alerting runbook
 - `check-certificate-expiry.sh` - Certificate expiry threshold check for monitoring
 
+## Prerequisites
+
+Before starting services, generate the required TLS files:
+
+```bash
+mkdir -p infrastructure/docker/phase9/certs
+
+# Generate DH parameters (required — nginx mount fails without this file)
+openssl dhparam -out infrastructure/docker/phase9/certs/dhparam.pem 2048
+
+# Generate self-signed cert for development (or provide your own)
+openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+  -keyout infrastructure/docker/phase9/certs/privkey.pem \
+  -out infrastructure/docker/phase9/certs/fullchain.pem \
+  -subj "/CN=localhost"
+```
+
+See [CERTIFICATES.md](CERTIFICATES.md) for production certificate options (Let's Encrypt, OCI Certificates).
+
 ## Usage
 
 ### Development
@@ -130,8 +149,15 @@ for certificate provisioning and alerting policy.
 # Validate nginx config
 docker compose exec nginx nginx -t
 
-# Check TLS files
-ls -l infrastructure/docker/phase9/certs
+# Check TLS files exist (all three are required)
+ls -l infrastructure/docker/phase9/certs/fullchain.pem \
+     infrastructure/docker/phase9/certs/privkey.pem \
+     infrastructure/docker/phase9/certs/dhparam.pem
+```
+
+If `dhparam.pem` is missing, generate it:
+```bash
+openssl dhparam -out infrastructure/docker/phase9/certs/dhparam.pem 2048
 ```
 
 ### Frontend can't reach API
