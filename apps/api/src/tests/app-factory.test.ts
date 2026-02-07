@@ -74,6 +74,14 @@ vi.mock('@portal/shared/server/logger', () => ({
 	})
 }));
 
+vi.mock('@portal/shared/server/auth/config', () => ({
+	auth: {
+		api: {
+			getSession: vi.fn().mockResolvedValue(null)
+		}
+	}
+}));
+
 vi.mock('@portal/shared/server/health', () => ({
 	runHealthChecks: vi.fn().mockResolvedValue({
 		status: 'ok',

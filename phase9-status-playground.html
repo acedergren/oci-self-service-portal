@@ -647,7 +647,7 @@ function renderPreview() {
       createElement('div', { className: 'stat-label', textContent: 'SEMGREP ISSUES' })
     ]),
     createElement('div', { className: 'stat-card' }, [
-      createElement('div', { className: 'stat-value', textContent: '8' }),
+      createElement('div', { className: 'stat-value', textContent: '12' }),
       createElement('div', { className: 'stat-label', textContent: 'QUESTIONS' })
     ])
   ]);
@@ -858,6 +858,46 @@ function renderQuestions(container) {
         { label: 'Public read-only', desc: 'Developer experience, API discovery' },
         { label: 'Disabled in production', desc: 'Dev/staging only' }
       ]
+    },
+    {
+      id: 'deploy-instance',
+      q: 'Deploy alongside Langflow on app01, or dedicated instance?',
+      context: 'app01 runs Langflow (4GB RAM, 1 CPU). Portal needs its own resources. Co-locating saves cost but risks resource contention.',
+      opts: [
+        { label: 'Dedicated instance', desc: 'Isolated resources, independent scaling', recommended: true },
+        { label: 'Co-locate on app01', desc: 'Cost savings, shared infra' },
+        { label: 'Defer deployment decision', desc: 'Finalize code first' }
+      ]
+    },
+    {
+      id: 'tls-cert-source',
+      q: 'TLS certificate source for production?',
+      context: 'Certbot profile is ready in Docker Compose. OCI also offers managed certificates via Load Balancer.',
+      opts: [
+        { label: 'Let\'s Encrypt via certbot', desc: 'Auto-renewal, free, already configured', recommended: true },
+        { label: 'OCI managed certificates', desc: 'Via OCI Load Balancer, no container needed' },
+        { label: 'Self-signed for now', desc: 'Dev/staging only, not for production' }
+      ]
+    },
+    {
+      id: 'oci-cli-auth',
+      q: 'OCI CLI auth method inside containers?',
+      context: 'Currently mounts ~/.oci as read-only bind. Instance principal auth eliminates config files but requires OCI dynamic group policy.',
+      opts: [
+        { label: 'Instance principal', desc: 'No config files, uses OCI dynamic groups', recommended: true },
+        { label: 'Config file mount', desc: 'Current approach, simpler setup' },
+        { label: 'Resource principal', desc: 'For OCI-managed containers (OKE, Container Instances)' }
+      ]
+    },
+    {
+      id: 'pre-push-codeql',
+      q: 'Keep CodeQL in pre-push hook or CI-only?',
+      context: 'CodeQL database creation takes 30-60s per push. Catches issues locally but slows developer workflow.',
+      opts: [
+        { label: 'CI-only', desc: 'Faster pushes, catch in PR checks', recommended: true },
+        { label: 'Keep in pre-push', desc: 'Catch everything before remote' },
+        { label: 'Optional (developer choice)', desc: 'Env var to enable/disable locally' }
+      ]
     }
   ];
 
@@ -957,7 +997,11 @@ function updatePrompt() {
       'chat-migration': 'Chat streaming migration',
       'test-target': 'Test coverage target',
       'deployment-env': 'Deployment environment',
-      'openapi-docs': 'OpenAPI docs access'
+      'openapi-docs': 'OpenAPI docs access',
+      'deploy-instance': 'Deploy instance',
+      'tls-cert-source': 'TLS certificate source',
+      'oci-cli-auth': 'OCI CLI auth method',
+      'pre-push-codeql': 'CodeQL hook placement'
     };
 
     Object.entries(state.answers).forEach(([key, value]) => {

@@ -181,6 +181,17 @@ describe('RBAC module (shared package)', () => {
 describe('Fastify auth middleware (TDD contract)', () => {
 	let app: FastifyInstance;
 
+	beforeEach(() => {
+		// Re-configure health mock after mockReset: true clears it
+		mockRunHealthChecks.mockResolvedValue({
+			status: 'ok',
+			checks: {},
+			timestamp: new Date().toISOString(),
+			uptime: 1,
+			version: '0.1.0'
+		});
+	});
+
 	afterEach(async () => {
 		if (app) await app.close();
 	});
