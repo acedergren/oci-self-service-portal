@@ -1,12 +1,24 @@
 # =============================================================================
 # OCI Self-Service Portal - Multi-Service Docker Compose
 # =============================================================================
-# Phase 9: Fastify backend + SvelteKit frontend as separate services
+# Phase 9: Nginx TLS termination + Fastify backend + SvelteKit frontend
 #
 # Usage:
 #   cp .env.example .env  # then fill in values
 #   docker compose up -d
 #   docker compose logs -f
+#
+# TLS certificates:
+#   Place TLS cert + key in the path set by TLS_CERT_PATH / TLS_KEY_PATH,
+#   or use the default ./certs/ directory:
+#     mkdir -p certs
+#     cp fullchain.pem certs/  # TLS certificate chain
+#     cp privkey.pem certs/    # Private key
+#
+#   For development, generate a self-signed cert:
+#     openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+#       -keyout certs/privkey.pem -out certs/fullchain.pem \
+#       -subj "/CN=localhost"
 #
 # Build context is the monorepo root (..) because packages/shared
 # is a sibling directory resolved during the build.
@@ -16,17 +28,114 @@ version: '3.9'
 
 services:
   # ---------------------------------------------------------------------------
-  # Fastify Backend API
+  # Nginx Reverse Proxy — TLS termination
+  # ---------------------------------------------------------------------------
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: portal-nginx
+    restart: unless-stopped
+    read_only: true
+
+    security_opt:
+      - no-new-privileges:true
+
+    ports:
+      - '${HTTPS_PORT:-443}:443'
+      - '${HTTP_PORT:-80}:80'
+
+    volumes:
+      # Nginx configuration (read-only)
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+
+      # TLS certificates (read-only)
+      - ${TLS_CERT_PATH:-./certs}/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro
+      - ${TLS_KEY_PATH:-./certs}/privkey.pem:/etc/nginx/certs/privkey.pem:ro
+
+      # DH parameters for forward secrecy (optional, generated at deploy time)
+      - ${DH_PARAMS_PATH:-./certs/dhparam.pem}:/etc/nginx/certs/dhparam.pem:ro
+
+      # ACME challenge webroot for Let's Encrypt HTTP-01 validation
+      - ./certbot-www:/var/www/certbot:ro
+
+    # tmpfs for nginx runtime directories (pid, cache, logs) since root fs is read-only
+    tmpfs:
+      - /var/cache/nginx:size=64m
+      - /var/run:size=1m
+      - /tmp:size=16m
+
+    networks:
+      - portal-network
+
+    depends_on:
+      api:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: '0.25'
+
+    healthcheck:
+      test: ['CMD', 'wget', '--spider', '-q', 'http://localhost:80/nginx-health']
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # ---------------------------------------------------------------------------
+  # Certbot (optional profile) — Let's Encrypt renewal loop
+  # ---------------------------------------------------------------------------
+  certbot:
+    image: certbot/certbot:latest
+    container_name: portal-certbot
+    restart: unless-stopped
+    profiles: ['letsencrypt']
+
+    environment:
+      - TLS_DOMAIN=${TLS_DOMAIN:-}
+      - CERTBOT_EMAIL=${CERTBOT_EMAIL:-}
+
+    volumes:
+      # Same path used by nginx TLS_CERT_PATH/TLS_KEY_PATH defaults
+      - ${TLS_CERT_PATH:-./certs}:/etc/letsencrypt
+      - ./certbot-www:/var/www/certbot
+
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        trap exit TERM
+        while :; do
+          certbot renew --webroot -w /var/www/certbot --quiet || true
+          if [ -n "$$TLS_DOMAIN" ] && [ -f "/etc/letsencrypt/live/$$TLS_DOMAIN/fullchain.pem" ] && [ -f "/etc/letsencrypt/live/$$TLS_DOMAIN/privkey.pem" ]; then
+            cp "/etc/letsencrypt/live/$$TLS_DOMAIN/fullchain.pem" /etc/letsencrypt/fullchain.pem
+            cp "/etc/letsencrypt/live/$$TLS_DOMAIN/privkey.pem" /etc/letsencrypt/privkey.pem
+          fi
+          sleep 12h & wait $$!
+        done
+
+    networks:
+      - portal-network
+
+  # ---------------------------------------------------------------------------
+  # Fastify Backend API (internal only — not exposed to host)
   # ---------------------------------------------------------------------------
   api:
     build:
-      context: ../..
+      context: ../../..
       dockerfile: infrastructure/docker/phase9/Dockerfile.api
     container_name: portal-api
     restart: unless-stopped
 
-    ports:
-      - '3001:3001'
+    security_opt:
+      - no-new-privileges:true
+
+    # No host port binding — only accessible via nginx on the portal-network
+    expose:
+      - '3001'
 
     env_file:
       - .env
@@ -80,17 +189,21 @@ services:
       start_period: 15s
 
   # ---------------------------------------------------------------------------
-  # SvelteKit Frontend
+  # SvelteKit Frontend (internal only — not exposed to host)
   # ---------------------------------------------------------------------------
   frontend:
     build:
-      context: ../..
+      context: ../../..
       dockerfile: infrastructure/docker/phase9/Dockerfile.frontend
     container_name: portal-frontend
     restart: unless-stopped
 
-    ports:
-      - '3000:3000'
+    security_opt:
+      - no-new-privileges:true
+
+    # No host port binding — only accessible via nginx on the portal-network
+    expose:
+      - '3000'
 
     env_file:
       - .env
@@ -103,8 +216,8 @@ services:
       # API connection (internal Docker network)
       - API_URL=http://api:3001
 
-      # Public API URL (for browser-side requests)
-      - PUBLIC_API_URL=${PUBLIC_API_URL:-http://localhost:3001}
+      # Public API URL (browser requests go through nginx)
+      - PUBLIC_API_URL=${PUBLIC_API_URL:-https://localhost/api}
 
     volumes:
       # Build cache (optional, for faster rebuilds)
