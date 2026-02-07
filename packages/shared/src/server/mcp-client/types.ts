@@ -304,7 +304,7 @@ export const MCPToolDefinitionSchema = z.object({
   description: z.string().optional(),
   inputSchema: z.object({
     type: z.literal('object'),
-    properties: z.record(z.unknown()).optional(),
+    properties: z.record(z.string(), z.unknown()).optional(),
     required: z.array(z.string()).optional(),
   }),
 });
@@ -322,7 +322,7 @@ export const InitializeResultSchema = z.object({
       listChanged: z.boolean().optional(),
     }).optional(),
     prompts: z.object({ listChanged: z.boolean().optional() }).optional(),
-    logging: z.record(z.unknown()).optional(),
+    logging: z.record(z.string(), z.unknown()).optional(),
   }),
   protocolVersion: z.string(),
 });

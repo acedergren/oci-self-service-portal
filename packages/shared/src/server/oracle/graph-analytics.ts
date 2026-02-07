@@ -9,7 +9,7 @@
  */
 import { withConnection } from './connection';
 import { createLogger } from '../logger';
-import type { GraphNode, GraphEdge, GraphQueryResult } from '../../api/types';
+import type { GraphNode, GraphEdge, GraphQueryResult } from '../api/types';
 
 const log = createLogger('graph-analytics');
 

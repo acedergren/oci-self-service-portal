@@ -3,6 +3,14 @@
 	"version": "0.1.0",
 	"private": true,
 	"type": "module",
+	"scripts": {
+		"build": "tsc",
+		"check": "tsc --noEmit",
+		"test": "echo \"No tests yet\"",
+		"lint": "eslint .",
+		"lint:fix": "eslint . --fix",
+		"format:check": "prettier --check ."
+	},
 	"exports": {
 		"./server/*": "./src/server/*.ts",
 		"./tools": "./src/tools/index.ts",

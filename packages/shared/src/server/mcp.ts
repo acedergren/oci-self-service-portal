@@ -5,7 +5,7 @@
  * This service runs server-side only in SvelteKit.
  */
 
-import { MCPManager, type MCPServerConfig, type MCPToolDefinition } from '../mcp-client';
+import { MCPManager, type MCPServerConfig, type MCPToolDefinition } from './mcp-client';
 import { tool } from 'ai';
 import { z } from 'zod';
 import { homedir } from 'os';
@@ -48,10 +48,10 @@ export function initMCP(): MCPManager {
 	mcpManager = new MCPManager({
 		autoReconnect: true,
 		reconnectDelay: 5000,
-		onToolsChanged: (tools) => {
+		onToolsChanged: (tools: MCPToolDefinition[]) => {
 			log.info({ toolCount: tools.length }, 'tools updated');
 		},
-		onLog: (serverName, level, message, data) => {
+		onLog: (serverName: string, level: string, message: string, data: unknown) => {
 			if (level === 'error') {
 				log.error({ server: serverName, data }, message);
 			}
@@ -136,8 +136,8 @@ export async function callMCPTool(
 
 	// Extract text content
 	const textContents = result.content
-		.filter((c) => c.type === 'text')
-		.map((c) => (c as { type: 'text'; text: string }).text);
+		.filter((c: { type: string }) => c.type === 'text')
+		.map((c: { type: string; text?: string }) => (c as { type: 'text'; text: string }).text);
 
 	if (result.isError) {
 		throw new Error(textContents.join('\n') || 'MCP tool call failed');
@@ -158,7 +158,7 @@ export async function readMCPResource(uri: string): Promise<string> {
 	const result = await manager.readResource(uri);
 
 	// Extract text content
-	const textContents = result.contents.filter((c) => c.text).map((c) => c.text);
+	const textContents = result.contents.filter((c: { text?: string }) => c.text).map((c: { text?: string }) => c.text);
 
 	return textContents.join('\n');
 }
@@ -172,7 +172,7 @@ export function getMCPServers(): Array<{ name: string; state: string; toolCount:
 		return [];
 	}
 
-	return manager.getServers().map((server) => ({
+	return manager.getServers().map((server: { name: string; state: string; client: { getTools(): unknown[] } }) => ({
 		name: server.name,
 		state: server.state,
 		toolCount: server.client.getTools().length

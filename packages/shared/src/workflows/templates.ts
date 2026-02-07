@@ -1,4 +1,4 @@
-import type { WorkflowStep, AgentPlan } from '../../../apps/frontend/src/lib/components/panels/types.js';
+import type { WorkflowStep, AgentPlan } from './panel-types';
 
 /**
  * Supported workflow icon IDs (map to SVGs)

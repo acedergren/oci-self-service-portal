@@ -108,4 +108,4 @@ EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
     CMD curl -f http://localhost:3001/health || exit 1
 
-ENTRYPOINT ["node", "dist/index.js"]
+ENTRYPOINT ["node", "dist/server.js"]

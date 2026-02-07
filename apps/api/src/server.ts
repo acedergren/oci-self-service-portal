@@ -1,7 +1,5 @@
 import { createApp, startServer, stopServer } from './app.js';
 import { createLogger } from '@portal/shared/server/logger';
-import { initPool, closePool } from '@portal/shared/server/oracle/connection';
-import { runMigrations } from '@portal/shared/server/oracle/migrations';
 import { initSentry, closeSentry } from '@portal/shared/server/sentry';
 
 const log = createLogger('server');
@@ -10,23 +8,12 @@ async function main() {
 	try {
 		// Initialize Sentry (optional)
 		if (process.env.SENTRY_DSN) {
-			initSentry(process.env.SENTRY_DSN);
+			await initSentry({ dsn: process.env.SENTRY_DSN });
 			log.info('Sentry initialized');
 		}
 
-		// Initialize Oracle connection pool
-		try {
-			await initPool();
-			log.info('Oracle connection pool initialized');
-
-			// Run database migrations
-			await runMigrations();
-			log.info('Database migrations complete');
-		} catch (error) {
-			log.warn({ err: error }, 'Oracle initialization failed, continuing with fallback storage');
-		}
-
 		// Create and start Fastify app
+		// Oracle pool init + migrations are handled by the oracle plugin inside createApp()
 		const app = await createApp({
 			corsOrigin: process.env.CORS_ORIGIN || '*',
 			enableRateLimit: process.env.ENABLE_RATE_LIMIT !== 'false',
@@ -39,16 +26,13 @@ async function main() {
 		await startServer(app, port, host);
 
 		// Graceful shutdown handlers
+		// Note: Oracle pool close is handled by the oracle plugin's onClose hook.
 		const shutdown = async (signal: string) => {
 			log.info(`${signal} received, shutting down gracefully`);
 
 			try {
-				// Stop accepting new requests
+				// Fastify close triggers all onClose hooks (oracle pool, etc.)
 				await stopServer(app);
-
-				// Close Oracle pool
-				await closePool();
-				log.info('Oracle connection pool closed');
 
 				// Close Sentry
 				await closeSentry();

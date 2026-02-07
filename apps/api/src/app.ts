@@ -1,6 +1,7 @@
 import Fastify, { type FastifyServerOptions, type FastifyInstance } from 'fastify';
 import fastifyCors from '@fastify/cors';
 import fastifyCookie from '@fastify/cookie';
+import fastifyHelmet from '@fastify/helmet';
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifySensible from '@fastify/sensible';
 import {
@@ -17,6 +18,15 @@ import {
 } from '@portal/shared/server/errors';
 import { RATE_LIMIT_CONFIG } from '@portal/shared/server/rate-limiter';
 import { generateRequestId, REQUEST_ID_HEADER } from '@portal/shared/server/tracing';
+import { getAuthCookieAttributes } from '@portal/shared/server/auth/cookies';
+import oraclePlugin from './plugins/oracle.js';
+import authPlugin from './plugins/auth.js';
+import rbacPlugin from './plugins/rbac.js';
+import { healthRoutes } from './routes/health.js';
+import { sessionRoutes } from './routes/sessions.js';
+import { activityRoutes } from './routes/activity.js';
+import { toolRoutes } from './routes/tools.js';
+import { metricsRoutes } from './routes/metrics.js';
 
 const log = createLogger('app');
 
@@ -40,6 +50,11 @@ export interface AppOptions {
 	 * Enable request tracing (default: true)
 	 */
 	enableTracing?: boolean;
+
+	/**
+	 * Enable Helmet.js security headers (default: true)
+	 */
+	enableHelmet?: boolean;
 }
 
 /**
@@ -53,12 +68,23 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 		fastifyOptions = {},
 		corsOrigin = process.env.CORS_ORIGIN || '*',
 		enableRateLimit = true,
-		enableTracing = true
+		enableTracing = true,
+		enableHelmet = true
 	} = options;
+
+	const isProduction = process.env.NODE_ENV === 'production';
+
+	// Runtime auth secret validation (matches SvelteKit hooks.server.ts C1 fix)
+	if (isProduction && !process.env.BETTER_AUTH_SECRET) {
+		log.error('BETTER_AUTH_SECRET is not set — sessions will use an insecure default secret');
+	}
 
 	// Create Fastify instance with Pino logger integration
 	const app = Fastify({
 		...fastifyOptions,
+		// Trust reverse proxy headers (X-Forwarded-Proto, X-Forwarded-For) from nginx.
+		// Required so secure cookies and request metadata behave correctly behind TLS termination.
+		trustProxy: fastifyOptions.trustProxy ?? true,
 		logger: {
 			level: process.env.LOG_LEVEL || 'info',
 			serializers: {
@@ -103,9 +129,71 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 		credentials: true
 	});
 
+	// Register Helmet.js — security headers matching SvelteKit hooks.server.ts
+	if (enableHelmet) {
+		await app.register(fastifyHelmet, {
+			enableCSPNonces: true,
+			contentSecurityPolicy: {
+				directives: {
+					defaultSrc: ["'self'"],
+					// Nonces are appended automatically by @fastify/helmet (enableCSPNonces: true).
+					scriptSrc: isProduction ? ["'self'"] : ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+					styleSrc: ["'self'", "'unsafe-inline'"],
+					imgSrc: ["'self'", 'data:', 'blob:'],
+					fontSrc: ["'self'"],
+					connectSrc: [
+						"'self'",
+						'https://identity.oraclecloud.com',
+						'https://*.identity.oraclecloud.com'
+					],
+					frameSrc: ["'none'"],
+					objectSrc: ["'none'"],
+					baseUri: ["'self'"],
+					formAction: ["'self'"],
+					frameAncestors: ["'none'"],
+					...(isProduction ? { upgradeInsecureRequests: [] } : {})
+				}
+			},
+			// HSTS: 1 year with includeSubDomains + preload (production only)
+			strictTransportSecurity: isProduction
+				? { maxAge: 31536000, includeSubDomains: true, preload: true }
+				: false,
+			// Explicitly configure all Helmet middlewares for predictable header hardening.
+			dnsPrefetchControl: { allow: false },
+			frameguard: { action: 'deny' },
+			hidePoweredBy: true,
+			ieNoOpen: true,
+			noSniff: true,
+			referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+			xssFilter: true,
+			permittedCrossDomainPolicies: { permittedPolicies: 'none' },
+			crossOriginOpenerPolicy: { policy: 'same-origin' },
+			crossOriginResourcePolicy: { policy: 'same-origin' },
+			crossOriginEmbedderPolicy: false, // Keep disabled for broad API compatibility.
+			originAgentCluster: true
+		});
+
+		// Additional non-Helmet headers (defense-in-depth for API responses).
+		app.addHook('onSend', async (_request, reply, payload) => {
+			reply.header('Cache-Control', 'no-store, max-age=0');
+			reply.header('Pragma', 'no-cache');
+			reply.header('Expires', '0');
+			reply.header('X-Robots-Tag', 'noindex, nofollow');
+			reply.header('Cross-Origin-Embedder-Policy', 'credentialless');
+			reply.header(
+				'Permissions-Policy',
+				'accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()'
+			);
+			return payload;
+		});
+	}
+
 	// Register cookie support (for Better Auth sessions)
+	// Cookie flags are shared with Better Auth config (packages/shared/server/auth/cookies.ts)
+	// to avoid drift between SvelteKit auth routes and Fastify API behavior.
 	await app.register(fastifyCookie, {
-		secret: process.env.BETTER_AUTH_SECRET || 'dev-secret-change-in-production'
+		secret: process.env.BETTER_AUTH_SECRET || 'dev-secret-change-in-production',
+		parseOptions: getAuthCookieAttributes()
 	});
 
 	// Register sensible (HTTP error helpers)
@@ -114,8 +202,8 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 	// Register rate limiting
 	if (enableRateLimit) {
 		await app.register(fastifyRateLimit, {
-			max: RATE_LIMIT_CONFIG.AUTHENTICATED.max,
-			timeWindow: RATE_LIMIT_CONFIG.AUTHENTICATED.windowMs,
+			max: RATE_LIMIT_CONFIG.maxRequests.api ?? 60,
+			timeWindow: RATE_LIMIT_CONFIG.windowMs,
 			skipOnError: true, // Fail open on Redis/DB errors
 			errorResponseBuilder: (req, context) => {
 				return {
@@ -148,12 +236,23 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 		reply.status(response.status).send(response);
 	});
 
-	// Health check endpoint
-	app.get('/health', async (request, reply) => {
-		return { status: 'ok', timestamp: new Date().toISOString() };
+	// Register application plugins (Oracle → Auth → RBAC, in dependency order)
+	await app.register(oraclePlugin, {
+		migrate: process.env.SKIP_MIGRATIONS !== 'true'
 	});
+	await app.register(authPlugin, {
+		excludePaths: ['/healthz', '/health', '/api/metrics']
+	});
+	await app.register(rbacPlugin);
 
-	log.info('Fastify app created');
+	// Register API routes
+	await app.register(healthRoutes);
+	await app.register(sessionRoutes);
+	await app.register(activityRoutes);
+	await app.register(toolRoutes);
+	await app.register(metricsRoutes);
+
+	log.info('Fastify app created with plugins and routes');
 	return app;
 }
 
