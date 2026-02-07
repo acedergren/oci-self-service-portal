@@ -21,6 +21,11 @@ import { genericOAuth, organization } from 'better-auth/plugins';
 import { oracleAdapter } from './oracle-adapter';
 import { createLogger } from '../logger';
 import {
+	AUTH_COOKIE_ATTRIBUTES,
+	AUTH_COOKIE_SAME_SITE,
+	AUTH_USE_SECURE_COOKIES
+} from './cookies';
+import {
 	stashIdcsProfile,
 	consumeIdcsProfile,
 	resolveIdcsOrg,
@@ -28,6 +33,11 @@ import {
 } from './idcs-provisioning';
 
 const log = createLogger('auth-config');
+const isProduction = process.env.NODE_ENV === 'production';
+const OAUTH_STATE_COOKIE_ATTRIBUTES = {
+	...AUTH_COOKIE_ATTRIBUTES,
+	sameSite: 'lax' as const
+};
 
 /**
  * Maps IDCS group names to portal roles.
@@ -105,6 +115,24 @@ export const auth = betterAuth({
 	// Fallback needed for build (SvelteKit post-build runs in NODE_ENV=production).
 	// Runtime validation in hooks.server.ts warns if secret is missing in production.
 	secret: process.env.BETTER_AUTH_SECRET || 'dev-build-only-secret',
+	advanced: {
+		useSecureCookies: AUTH_USE_SECURE_COOKIES,
+		defaultCookieAttributes: AUTH_COOKIE_ATTRIBUTES,
+		cookies: {
+			session_token: {
+				attributes: AUTH_COOKIE_ATTRIBUTES
+			},
+			session_data: {
+				attributes: AUTH_COOKIE_ATTRIBUTES
+			},
+			dont_remember: {
+				attributes: AUTH_COOKIE_ATTRIBUTES
+			},
+			oauth_state: {
+				attributes: OAUTH_STATE_COOKIE_ATTRIBUTES
+			}
+		}
+	},
 	plugins: [
 		genericOAuth({
 			config: [
@@ -187,6 +215,16 @@ export const auth = betterAuth({
 		}
 	}
 });
+
+if (!isProduction) {
+	log.debug(
+		{
+			secureCookies: AUTH_USE_SECURE_COOKIES,
+			sameSite: AUTH_COOKIE_SAME_SITE
+		},
+		'Better Auth cookie settings resolved'
+	);
+}
 
 export type Session = typeof auth.$Infer.Session.session;
 export type User = typeof auth.$Infer.Session.user;

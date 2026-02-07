@@ -5,6 +5,7 @@ import crypto from 'crypto';
 import { createLogger } from '@portal/shared/server/logger';
 import { initPool, closePool } from '@portal/shared/server/oracle/connection';
 import { runMigrations } from '@portal/shared/server/oracle/migrations';
+import { webhookRepository } from '@portal/shared/server/oracle/repositories/webhook-repository';
 import { auth } from '@portal/shared/server/auth/config';
 import { getPermissionsForRole, type Permission } from '@portal/shared/server/auth/rbac';
 import { getOrgRole } from '@portal/shared/server/auth/tenancy';
@@ -75,6 +76,16 @@ async function ensureDatabase(): Promise<boolean> {
 	try {
 		await initPool();
 		await runMigrations();
+
+		// Encrypt legacy webhook secrets in small batches after schema migration.
+		const webhookSecretMigration = await webhookRepository.migratePlaintextSecrets();
+		if (webhookSecretMigration.migrated > 0 || webhookSecretMigration.remaining > 0) {
+			log.info(
+				{ webhookSecretMigration },
+				'webhook secret encryption migration completed'
+			);
+		}
+
 		dbAvailable = true;
 		log.info('Oracle database initialized');
 	} catch (err) {

@@ -10,6 +10,7 @@ import type { RequestHandler } from './$types.js';
 import { requireApiAuth, resolveOrgId } from '@portal/shared/server/api/require-auth';
 import { webhookRepository } from '@portal/shared/server/oracle/repositories/webhook-repository';
 import { isValidWebhookUrl } from '@portal/shared/server/webhooks';
+import { isWebhookEncryptionEnabled } from '@portal/shared/server/crypto';
 import { CreateWebhookInputSchema } from '@portal/shared/server/api/types';
 import { createLogger } from '@portal/shared/server/logger';
 
@@ -63,6 +64,17 @@ export const POST: RequestHandler = async (event) => {
 
 	// Auto-generate secret
 	const secret = `whsec_${crypto.randomUUID().replace(/-/g, '')}`;
+
+	if (!isWebhookEncryptionEnabled()) {
+		log.error(
+			{ requestId: event.locals.requestId },
+			'Webhook creation blocked: WEBHOOK_ENCRYPTION_KEY is not configured'
+		);
+		return json(
+			{ error: 'Webhook encryption key is not configured' },
+			{ status: 503 }
+		);
+	}
 
 	try {
 		const result = await webhookRepository.create({

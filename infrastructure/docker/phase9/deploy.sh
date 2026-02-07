@@ -106,37 +106,55 @@ check_health_endpoints() {
     local max_attempts=30
     local attempt=1
 
-    # Wait for API
+    # Wait for nginx HTTP health endpoint
     while [[ $attempt -le $max_attempts ]]; do
-        if curl -sf http://localhost:3001/health > /dev/null 2>&1; then
-            log_success "API is healthy at http://localhost:3001/health"
+        if curl -sf http://localhost:80/nginx-health > /dev/null 2>&1; then
+            log_success "Nginx is healthy at http://localhost:80/nginx-health"
             break
         fi
-        log_info "Waiting for API... (attempt $attempt/$max_attempts)"
+        log_info "Waiting for nginx... (attempt $attempt/$max_attempts)"
         sleep 2
         ((attempt++))
     done
 
     if [[ $attempt -gt $max_attempts ]]; then
-        log_error "API failed to become healthy after $max_attempts attempts"
+        log_error "Nginx failed to become healthy after $max_attempts attempts"
+        docker compose -f "${SCRIPT_DIR}/docker-compose.yml" logs nginx
+        exit 1
+    fi
+
+    # Wait for proxied API health over HTTPS
+    attempt=1
+    while [[ $attempt -le $max_attempts ]]; do
+        if curl -skf https://localhost/health > /dev/null 2>&1; then
+            log_success "API is healthy via nginx at https://localhost/health"
+            break
+        fi
+        log_info "Waiting for API via nginx... (attempt $attempt/$max_attempts)"
+        sleep 2
+        ((attempt++))
+    done
+
+    if [[ $attempt -gt $max_attempts ]]; then
+        log_error "API failed to become healthy via nginx after $max_attempts attempts"
         docker compose -f "${SCRIPT_DIR}/docker-compose.yml" logs api
         exit 1
     fi
 
-    # Wait for frontend
+    # Wait for frontend health endpoint over HTTPS
     attempt=1
     while [[ $attempt -le $max_attempts ]]; do
-        if curl -sf http://localhost:3000/api/health > /dev/null 2>&1; then
-            log_success "Frontend is healthy at http://localhost:3000/api/health"
+        if curl -skf https://localhost/api/health > /dev/null 2>&1; then
+            log_success "Frontend health endpoint is reachable at https://localhost/api/health"
             break
         fi
-        log_info "Waiting for frontend... (attempt $attempt/$max_attempts)"
+        log_info "Waiting for frontend health via nginx... (attempt $attempt/$max_attempts)"
         sleep 2
         ((attempt++))
     done
 
     if [[ $attempt -gt $max_attempts ]]; then
-        log_error "Frontend failed to become healthy after $max_attempts attempts"
+        log_error "Frontend health endpoint failed after $max_attempts attempts"
         docker compose -f "${SCRIPT_DIR}/docker-compose.yml" logs frontend
         exit 1
     fi
@@ -231,8 +249,8 @@ main() {
     fi
 
     log_success "Deployment complete!"
-    log_info "API: http://localhost:3001"
-    log_info "Frontend: http://localhost:3000"
+    log_info "HTTPS Endpoint: https://localhost"
+    log_info "API via Proxy: https://localhost/api"
 }
 
 main

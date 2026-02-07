@@ -7,8 +7,14 @@
  * - Bind variables only (never string interpolation for data)
  * - Org-scoped queries to prevent IDOR
  */
+import { randomUUID } from 'node:crypto';
 import { withConnection } from '../connection';
 import { createLogger } from '../../logger';
+import {
+	decryptWebhookSecret,
+	encryptWebhookSecret,
+	isWebhookEncryptionEnabled
+} from '../../crypto';
 import type {
 	WebhookSubscriptionRow,
 	WebhookSubscription,
@@ -34,6 +40,7 @@ interface WebhookDispatchRow {
 	ID: string;
 	URL: string;
 	SECRET: string | null;
+	SECRET_IV: string | null;
 	EVENTS: string;
 	STATUS: string;
 	FAILURE_COUNT: number;
@@ -68,19 +75,21 @@ export const webhookRepository = {
 		secret: string;
 		events: string[];
 	}): Promise<{ id: string }> {
-		const id = crypto.randomUUID();
+		const id = randomUUID();
+		const encryptedSecret = encryptWebhookSecret(params.secret);
 
 		await withConnection(async (conn) => {
 			await conn.execute(
 				`INSERT INTO webhook_subscriptions
-				   (id, org_id, url, secret, events, status, failure_count)
+				   (id, org_id, url, secret, secret_iv, events, status, failure_count)
 				 VALUES
-				   (:id, :orgId, :url, :secret, :events, 'active', 0)`,
+				   (:id, :orgId, :url, :secret, :secretIv, :events, 'active', 0)`,
 				{
 					id,
 					orgId: params.orgId,
 					url: params.url,
-					secret: params.secret,
+					secret: encryptedSecret.ciphertext,
+					secretIv: encryptedSecret.iv,
 					events: JSON.stringify(params.events)
 				}
 			);
@@ -192,7 +201,7 @@ export const webhookRepository = {
 	async getActiveByEvent(orgId: string, eventType: string): Promise<WebhookDispatchRow[]> {
 		return withConnection(async (conn) => {
 			const result = await conn.execute<WebhookDispatchRow>(
-				`SELECT id, url, secret, events, status, failure_count
+				`SELECT id, url, secret, secret_iv, events, status, failure_count
 				 FROM webhook_subscriptions
 				 WHERE org_id = :orgId
 				   AND status = 'active'
@@ -200,7 +209,123 @@ export const webhookRepository = {
 				{ orgId, eventType }
 			);
 
-			return result.rows ?? [];
+			const rows = result.rows ?? [];
+			const resolved: WebhookDispatchRow[] = [];
+
+			for (const row of rows) {
+				let resolvedSecret = row.SECRET;
+				let skipRow = false;
+
+				// Encrypted secret path.
+				if (resolvedSecret && row.SECRET_IV) {
+					try {
+						resolvedSecret = decryptWebhookSecret(resolvedSecret, row.SECRET_IV);
+					} catch (err) {
+						log.error(
+							{ err, webhookId: row.ID },
+							'Failed to decrypt webhook signing secret; skipping webhook delivery'
+						);
+						skipRow = true;
+					}
+				}
+
+				// Legacy plaintext path (from pre-encryption records): encrypt lazily.
+				if (resolvedSecret && !row.SECRET_IV) {
+					if (isWebhookEncryptionEnabled()) {
+						try {
+							const encrypted = encryptWebhookSecret(resolvedSecret);
+							await conn.execute(
+								`UPDATE webhook_subscriptions
+								 SET secret = :secret,
+								     secret_iv = :secretIv,
+								     updated_at = SYSTIMESTAMP
+								 WHERE id = :id`,
+								{
+									id: row.ID,
+									secret: encrypted.ciphertext,
+									secretIv: encrypted.iv
+								}
+							);
+						} catch (err) {
+							log.error(
+								{ err, webhookId: row.ID },
+								'Failed to migrate plaintext webhook secret; skipping webhook delivery'
+							);
+							skipRow = true;
+						}
+					} else {
+						// Keep existing plaintext behavior only when encryption key is absent.
+						log.warn(
+							{ webhookId: row.ID },
+							'Webhook secret is stored in plaintext because WEBHOOK_ENCRYPTION_KEY is not configured'
+						);
+					}
+				}
+
+				if (!skipRow) {
+					resolved.push({
+						...row,
+						SECRET: resolvedSecret
+					});
+				}
+			}
+
+			return resolved;
+		});
+	},
+
+	/**
+	 * Encrypt legacy webhook secrets that were stored before task #30.
+	 * Safe to run repeatedly; only migrates rows missing secret_iv.
+	 */
+	async migratePlaintextSecrets(batchSize: number = 200): Promise<{ migrated: number; remaining: number }> {
+		if (!isWebhookEncryptionEnabled()) {
+			return { migrated: 0, remaining: 0 };
+		}
+
+		const safeBatchSize = Math.max(1, Math.min(batchSize, 1000));
+
+		return withConnection(async (conn) => {
+			const legacyRows = await conn.execute<{ ID: string; SECRET: string }>(
+				`SELECT id, secret
+				 FROM webhook_subscriptions
+				 WHERE secret IS NOT NULL
+				   AND secret_iv IS NULL
+				 FETCH FIRST ${safeBatchSize} ROWS ONLY`
+			);
+
+			let migrated = 0;
+
+			for (const row of legacyRows.rows ?? []) {
+				try {
+					const encrypted = encryptWebhookSecret(row.SECRET);
+					await conn.execute(
+						`UPDATE webhook_subscriptions
+						 SET secret = :secret,
+						     secret_iv = :secretIv,
+						     updated_at = SYSTIMESTAMP
+						 WHERE id = :id`,
+						{
+							id: row.ID,
+							secret: encrypted.ciphertext,
+							secretIv: encrypted.iv
+						}
+					);
+					migrated++;
+				} catch (err) {
+					log.error({ err, webhookId: row.ID }, 'Failed to migrate plaintext webhook secret');
+				}
+			}
+
+			const remainingResult = await conn.execute<{ COUNT: number }>(
+				`SELECT COUNT(*) AS count
+				 FROM webhook_subscriptions
+				 WHERE secret IS NOT NULL
+				   AND secret_iv IS NULL`
+			);
+
+			const remaining = remainingResult.rows?.[0]?.COUNT ?? 0;
+			return { migrated, remaining };
 		});
 	},
 

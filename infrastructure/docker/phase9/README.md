@@ -1,59 +1,68 @@
 # Phase 9: Multi-Service Docker Deployment
 
-This directory contains Docker configurations for the Phase 9 Fastify backend migration.
+This directory contains production Docker deployment assets for:
+
+- Nginx TLS termination and reverse proxy
+- Fastify API service
+- SvelteKit frontend service
+- Optional Certbot auto-renewal profile (Let's Encrypt)
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────┐
-│           docker-compose.yml                │
-├─────────────────────────────────────────────┤
-│                                             │
-│  ┌──────────────┐      ┌──────────────┐   │
-│  │  frontend    │─────▶│     api      │   │
-│  │  (SvelteKit) │      │  (Fastify)   │   │
-│  │  Port 5173   │      │  Port 3001   │   │
-│  └──────────────┘      └──────────────┘   │
-│         │                      │           │
-│         │                      │           │
-│         └──────────────────────┘           │
-│              Shared Network                │
-│                                             │
-│  External: Oracle Autonomous Database      │
-└─────────────────────────────────────────────┘
+Internet
+   |
+   v
+nginx (80/443, TLS termination, security headers, rate limit)
+   |                    \
+   |                     \-- /.well-known/acme-challenge/* (certbot webroot)
+   v
+frontend:3000 (SvelteKit) -----> api:3001 (Fastify) -----> Oracle ADB
 ```
 
 ## Services
 
-### 1. Frontend (SvelteKit)
-- **Port**: 5173 (development), 3000 (production with adapter-node)
-- **Dependencies**: api service
-- **Environment**:
-  - `API_URL=http://api:3001` - Internal Docker network communication
-  - `PUBLIC_API_URL=http://localhost:3001` - Browser-side API access
+### 1. Nginx Reverse Proxy
+- Ports: `80` and `443`
+- Responsibilities:
+  - TLS 1.2+/1.3 termination
+  - HSTS and proxy-level security headers
+  - API/frontend request routing
+  - ACME HTTP-01 challenge path for Let's Encrypt
 
-### 2. API (Fastify)
-- **Port**: 3001
-- **Dependencies**: Oracle ADB (external)
-- **Environment**:
-  - `DATABASE_URL` - Oracle connection string
-  - `BETTER_AUTH_SECRET` - Auth session encryption key
-  - `OCI_REGION` - Oracle Cloud region
-  - `LOG_LEVEL=info` - Pino logging level
+### 2. Frontend (SvelteKit)
+- Internal port: `3000`
+- Browser traffic comes via nginx (`https://<host>/`)
 
-### 3. Database (Oracle Autonomous Database)
+### 3. API (Fastify)
+- Internal port: `3001`
+- Browser/API traffic comes via nginx (`https://<host>/api/*`)
+- Includes:
+  - `@fastify/helmet` security headers
+  - CSP nonce support
+  - Secure cookie parsing aligned with Better Auth
+
+### 4. Certbot (optional profile: `letsencrypt`)
+- Runs certificate renewal loop
+- Uses shared `certbot-www` webroot and `certs` storage path
+- Enabled with:
+```bash
+docker compose --profile letsencrypt up -d certbot
+```
+
+### 5. Database (Oracle Autonomous Database)
 - **Type**: External managed service (not containerized)
 - **Connection**: Via wallet files mounted at `/wallets`
-- **Services**: `langflowdb_high`, `langflowdb_medium`, `langflowdb_low`
 
 ## Files
 
 - `Dockerfile.frontend` - Multi-stage build for SvelteKit app
 - `Dockerfile.api` - Multi-stage build for Fastify backend
-- `docker-compose.yml` - Orchestrates frontend + api services
+- `docker-compose.yml` - Orchestrates nginx + frontend + api (+ certbot profile)
 - `docker-compose.dev.yml` - Development overrides with hot-reload
-- `.dockerignore.frontend` - Frontend build context exclusions
-- `.dockerignore.api` - API build context exclusions
+- `nginx.conf` - TLS and reverse proxy configuration
+- `CERTIFICATES.md` - Certificate provisioning, rotation, and alerting runbook
+- `check-certificate-expiry.sh` - Certificate expiry threshold check for monitoring
 
 ## Usage
 
@@ -69,23 +78,23 @@ docker compose logs -f frontend
 
 ### Production
 ```bash
-# Build and start
+# Build and start (nginx + api + frontend)
 docker compose up -d
 
 # Check health
 docker compose ps
-curl http://localhost:3001/health
-curl http://localhost:5173/api/health
+curl -k https://localhost/health
+curl -k https://localhost/api/health
 
 # View metrics
-curl http://localhost:3001/metrics
+curl -k https://localhost/api/metrics
 ```
 
 ## Health Checks
 
-Both services implement health check endpoints:
-- **API**: `GET /health` - Returns database connectivity status
-- **Frontend**: `GET /api/health` - Proxies to API health check
+- **Nginx**: `GET /nginx-health` on port `80`
+- **API**: `GET /health` via nginx proxy (`/health`)
+- **Frontend**: `GET /api/health` via nginx proxy
 
 ## Volumes
 
@@ -93,6 +102,8 @@ Both services implement health check endpoints:
 - `frontend_data:/app/.svelte-kit` - Frontend build cache
 - `/data/wallets:/wallets:ro` - Oracle wallet (read-only, host mount)
 - `~/.oci:/home/portal/.oci:ro` - OCI CLI config (read-only, host mount)
+- `./certs` - TLS cert/key store
+- `./certbot-www` - ACME challenge webroot
 
 ## Network
 
@@ -103,60 +114,37 @@ Services communicate via a custom bridge network:
 
 ## Security
 
-- Non-root users (UID 1001)
-- Read-only wallet mounts
-- No hardcoded secrets (all via environment variables)
-- Resource limits (2GB memory, 1.0 CPU per service)
-- Health checks with automatic restarts
+- TLS 1.2+ with strong ciphers
+- HSTS + proxy security headers
+- API security headers via Helmet + CSP nonce support
+- Secure cookie policy aligned across Better Auth and Fastify
+- Webhook signing secrets encrypted at rest (`WEBHOOK_ENCRYPTION_KEY`)
 
-## Migration Path
-
-This configuration supports incremental migration:
-
-1. **Phase 9.0**: Both services run, frontend still uses `/api/*` routes internally
-2. **Phase 9.1**: Frontend switches to `fetch('http://api:3001/*')` for direct API calls
-3. **Phase 9.2**: Remove SvelteKit API routes, all logic in Fastify
-4. **Phase 9.3**: Add Nginx reverse proxy for production routing
+See `/Users/acedergr/Projects/oci-self-service-portal/infrastructure/docker/phase9/CERTIFICATES.md`
+for certificate provisioning and alerting policy.
 
 ## Troubleshooting
 
-### API won't start
+### Nginx won't start
 ```bash
-# Check database connectivity
-docker compose exec api sh -c 'curl http://localhost:3001/health'
+# Validate nginx config
+docker compose exec nginx nginx -t
 
-# View logs
-docker compose logs api
-
-# Check environment
-docker compose exec api env | grep DATABASE
+# Check TLS files
+ls -l infrastructure/docker/phase9/certs
 ```
 
 ### Frontend can't reach API
 ```bash
 # Test internal network
 docker compose exec frontend sh -c 'curl http://api:3001/health'
-
-# Check DNS resolution
-docker compose exec frontend nslookup api
 ```
 
-### Build failures
+### Certificate renewal issues
 ```bash
-# Clean build cache
-docker compose build --no-cache
+# Run certbot manually
+docker compose --profile letsencrypt run --rm certbot renew --webroot -w /var/www/certbot
 
-# Check build context
-docker compose build --progress=plain
+# Reload nginx after cert update
+docker compose exec nginx nginx -s reload
 ```
-
-## Performance
-
-Expected resource usage:
-- **API**: ~200MB memory, 0.1-0.5 CPU
-- **Frontend**: ~150MB memory, 0.1-0.3 CPU
-- **Total**: ~350MB memory, 0.2-0.8 CPU
-
-Startup times:
-- **API**: ~3-5 seconds (database connection pool init)
-- **Frontend**: ~2-3 seconds (SvelteKit server startup)

@@ -22,7 +22,7 @@
  *
  * Security: SSRF prevention blocks private IP ranges
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock Oracle connection
 const mockExecute = vi.fn().mockResolvedValue({ rows: [] });
@@ -55,9 +55,15 @@ let webhooksModule: Record<string, unknown> | null = null;
 let webhooksModuleError: string | null = null;
 let repoModule: Record<string, unknown> | null = null;
 let repoModuleError: string | null = null;
+const originalEnv = process.env;
 
 beforeEach(async () => {
+	process.env = {
+		...originalEnv,
+		WEBHOOK_ENCRYPTION_KEY: Buffer.alloc(32, 9).toString('base64')
+	};
 	vi.clearAllMocks();
+	vi.resetModules();
 	try {
 		webhooksModule = await import('$lib/server/webhooks.js');
 	} catch (err) {
@@ -68,6 +74,10 @@ beforeEach(async () => {
 	} catch (err) {
 		repoModuleError = (err as Error).message;
 	}
+});
+
+afterEach(() => {
+	process.env = originalEnv;
 });
 
 // ============================================================================
@@ -110,6 +120,12 @@ describe('Webhook Repository (Phase 8.4)', () => {
 
 			expect(result.id).toBeDefined();
 			expect(mockExecute).toHaveBeenCalled();
+
+			// Secrets must be encrypted at rest (ciphertext + IV), never stored plaintext.
+			const binds = mockExecute.mock.calls[0][1] as Record<string, unknown>;
+			expect(typeof binds.secret).toBe('string');
+			expect(typeof binds.secretIv).toBe('string');
+			expect(binds.secret).not.toBe('whsec_FAKE_TEST_VALUE_NOT_REAL');
 		});
 	});
 
