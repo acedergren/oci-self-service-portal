@@ -26,10 +26,12 @@ export async function healthRoutes(app: FastifyInstance): Promise<void> {
 			]);
 			const httpStatus = result.status === 'error' ? 503 : 200;
 			return reply.status(httpStatus).send(result);
-		} catch {
+		} catch (err) {
+			const isTimeout = err instanceof Error && err.message === 'Health check timeout';
 			return reply.status(503).send({
 				status: 'error',
-				message: 'Health check timed out',
+				message: isTimeout ? 'Health check timed out' : 'Health check failed',
+				...(isTimeout ? {} : { error: (err as Error).message }),
 				timestamp: new Date().toISOString()
 			});
 		}

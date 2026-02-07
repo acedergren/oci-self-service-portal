@@ -130,13 +130,15 @@ function registerPendingApprovalInMemory(
 	toolCallId: string,
 	toolName: string,
 	args: Record<string, unknown>,
-	sessionId?: string
+	sessionId?: string,
+	orgId?: string | null
 ): Promise<boolean> {
 	return new Promise((resolve) => {
 		pendingApprovals.set(toolCallId, {
 			toolName,
 			args,
 			sessionId,
+			orgId: orgId ?? null,
 			createdAt: Date.now(),
 			resolve
 		});
@@ -162,7 +164,8 @@ export function registerPendingApproval(
 	toolCallId: string,
 	toolName: string,
 	args: Record<string, unknown>,
-	sessionId?: string
+	sessionId?: string,
+	orgId?: string | null
 ): Promise<boolean> {
 	return approvalRepository
 		.create({
@@ -180,6 +183,7 @@ export function registerPendingApproval(
 				toolName,
 				args,
 				sessionId,
+				orgId: orgId ?? null,
 				createdAt: Date.now(),
 				resolve: (approved: boolean) => {
 					// When resolved via the approve endpoint, also update Oracle
@@ -193,6 +197,6 @@ export function registerPendingApproval(
 		})
 		.catch((err) => {
 			log.warn({ err }, 'Oracle approval create failed, falling back to in-memory');
-			return registerPendingApprovalInMemory(toolCallId, toolName, args, sessionId);
+			return registerPendingApprovalInMemory(toolCallId, toolName, args, sessionId, orgId);
 		});
 }
