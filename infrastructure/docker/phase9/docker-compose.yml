@@ -159,8 +159,8 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2g
-          cpus: '1.0'
+          memory: ${API_MEMORY_LIMIT:-2g}
+          cpus: '${API_CPU_LIMIT:-1.0}'
         reservations:
           memory: 512m
           cpus: '0.5'
@@ -196,15 +196,10 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - HOST=0.0.0.0
-
-      # API connection (internal Docker network)
       - API_URL=http://api:3001
-
-      # Public API URL (browser requests go through nginx)
       - PUBLIC_API_URL=${PUBLIC_API_URL:-https://localhost/api}
 
     volumes:
-      # Build cache (optional, for faster rebuilds)
       - frontend_data:/app/data
 
     networks:
@@ -217,8 +212,8 @@ services:
     deploy:
       resources:
         limits:
-          memory: 1g
-          cpus: '0.5'
+          memory: ${FRONTEND_MEMORY_LIMIT:-1g}
+          cpus: '${FRONTEND_CPU_LIMIT:-0.5}'
         reservations:
           memory: 256m
           cpus: '0.25'
@@ -230,17 +225,13 @@ services:
       retries: 3
       start_period: 15s
 
-# =============================================================================
-# Networks
-# =============================================================================
+# ---------------------------------------------------------------------------
 networks:
   portal-network:
     driver: bridge
     name: portal-network
 
-# =============================================================================
-# Volumes
-# =============================================================================
+# ---------------------------------------------------------------------------
 volumes:
   api_data:
     name: portal-api-data

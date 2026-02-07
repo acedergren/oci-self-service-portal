@@ -26,16 +26,18 @@ const mockConnection = {
 	rollback: vi.fn().mockResolvedValue(undefined)
 };
 
+const DEFAULT_POOL_STATS = {
+	connectionsOpen: 5,
+	connectionsInUse: 1,
+	poolMin: 2,
+	poolMax: 10
+};
+
 const mocks = {
 	initPool: vi.fn().mockResolvedValue(undefined),
 	closePool: vi.fn().mockResolvedValue(undefined),
 	withConnection: vi.fn(async <T>(fn: (conn: typeof mockConnection) => Promise<T>) => fn(mockConnection)),
-	getPoolStats: vi.fn().mockResolvedValue({
-		connectionsOpen: 5,
-		connectionsInUse: 1,
-		poolMin: 2,
-		poolMax: 10
-	}),
+	getPoolStats: vi.fn().mockResolvedValue(DEFAULT_POOL_STATS),
 	isPoolInitialized: vi.fn(() => true),
 	runMigrations: vi.fn().mockResolvedValue(undefined),
 	migratePlaintextSecrets: vi.fn().mockResolvedValue({ migrated: 0, remaining: 0 })
@@ -79,25 +81,47 @@ vi.mock('@portal/shared/server/sentry', () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Helper — builds a minimal Fastify app with just the Oracle plugin
+// Helpers
 // ---------------------------------------------------------------------------
 
+/** Resets all mocks to their default happy-path behaviour. */
+function resetMocksToDefaults(): void {
+	mocks.initPool.mockResolvedValue(undefined);
+	mocks.closePool.mockResolvedValue(undefined);
+	mocks.withConnection.mockImplementation(
+		async <T>(fn: (conn: typeof mockConnection) => Promise<T>) => fn(mockConnection)
+	);
+	mocks.getPoolStats.mockResolvedValue(DEFAULT_POOL_STATS);
+	mocks.isPoolInitialized.mockReturnValue(true);
+	mocks.runMigrations.mockResolvedValue(undefined);
+	mocks.migratePlaintextSecrets.mockResolvedValue({ migrated: 0, remaining: 0 });
+	mockConnection.execute.mockResolvedValue({ rows: [{ VAL: 1 }] });
+}
+
+/** Builds a minimal Fastify app with just the Oracle plugin. */
 async function buildApp(pluginOpts: Record<string, unknown> = {}): Promise<FastifyInstance> {
 	const app = Fastify({ logger: false });
 
 	const oraclePlugin = (await import('../../plugins/oracle.js')).default;
 	await app.register(oraclePlugin, pluginOpts);
 
-	// Add a test route to inspect request decorators
-	app.get('/test-db', async (request) => {
-		return {
-			dbAvailable: request.dbAvailable,
-			poolAvailable: app.oracle.isAvailable()
-		};
-	});
+	app.get('/test-db', async (request) => ({
+		dbAvailable: request.dbAvailable,
+		poolAvailable: app.oracle.isAvailable()
+	}));
 
 	await app.ready();
 	return app;
+}
+
+/** Safely closes a Fastify app, ignoring errors from already-closed instances. */
+async function closeApp(app: FastifyInstance | null): Promise<void> {
+	if (!app) return;
+	try {
+		await app.close();
+	} catch {
+		// Already closed or failed — safe to ignore in teardown
+	}
 }
 
 // ---------------------------------------------------------------------------
@@ -107,28 +131,8 @@ async function buildApp(pluginOpts: Record<string, unknown> = {}): Promise<Fasti
 describe('Oracle Fastify plugin – registration & decoration', () => {
 	let app: FastifyInstance;
 
-	beforeEach(() => {
-		// Reset all mocks to their default happy-path behaviour
-		mocks.initPool.mockResolvedValue(undefined);
-		mocks.closePool.mockResolvedValue(undefined);
-		mocks.withConnection.mockImplementation(
-			async <T>(fn: (conn: typeof mockConnection) => Promise<T>) => fn(mockConnection)
-		);
-		mocks.getPoolStats.mockResolvedValue({
-			connectionsOpen: 5,
-			connectionsInUse: 1,
-			poolMin: 2,
-			poolMax: 10
-		});
-		mocks.isPoolInitialized.mockReturnValue(true);
-		mocks.runMigrations.mockResolvedValue(undefined);
-		mocks.migratePlaintextSecrets.mockResolvedValue({ migrated: 0, remaining: 0 });
-		mockConnection.execute.mockResolvedValue({ rows: [{ VAL: 1 }] });
-	});
-
-	afterEach(async () => {
-		if (app) await app.close();
-	});
+	beforeEach(resetMocksToDefaults);
+	afterEach(async () => { await closeApp(app); });
 
 	it('decorates fastify.oracle', async () => {
 		app = await buildApp();
@@ -160,23 +164,8 @@ describe('Oracle Fastify plugin – registration & decoration', () => {
 describe('Oracle Fastify plugin – pool lifecycle', () => {
 	let app: FastifyInstance;
 
-	beforeEach(() => {
-		mocks.initPool.mockResolvedValue(undefined);
-		mocks.closePool.mockResolvedValue(undefined);
-		mocks.runMigrations.mockResolvedValue(undefined);
-		mocks.migratePlaintextSecrets.mockResolvedValue({ migrated: 0, remaining: 0 });
-		mocks.isPoolInitialized.mockReturnValue(true);
-	});
-
-	afterEach(async () => {
-		if (app) {
-			try {
-				await app.close();
-			} catch {
-				/* ok */
-			}
-		}
-	});
+	beforeEach(resetMocksToDefaults);
+	afterEach(async () => { await closeApp(app); });
 
 	it('calls initPool during registration', async () => {
 		app = await buildApp();
@@ -216,21 +205,8 @@ describe('Oracle Fastify plugin – pool lifecycle', () => {
 describe('Oracle Fastify plugin – withConnection', () => {
 	let app: FastifyInstance;
 
-	beforeEach(() => {
-		mocks.initPool.mockResolvedValue(undefined);
-		mocks.closePool.mockResolvedValue(undefined);
-		mocks.runMigrations.mockResolvedValue(undefined);
-		mocks.migratePlaintextSecrets.mockResolvedValue({ migrated: 0, remaining: 0 });
-		mocks.isPoolInitialized.mockReturnValue(true);
-		mocks.withConnection.mockImplementation(
-			async <T>(fn: (conn: typeof mockConnection) => Promise<T>) => fn(mockConnection)
-		);
-		mockConnection.execute.mockResolvedValue({ rows: [{ VAL: 1 }] });
-	});
-
-	afterEach(async () => {
-		if (app) await app.close();
-	});
+	beforeEach(resetMocksToDefaults);
+	afterEach(async () => { await closeApp(app); });
 
 	it('executes queries through the borrowed connection', async () => {
 		app = await buildApp();
@@ -280,17 +256,8 @@ describe('Oracle Fastify plugin – withConnection', () => {
 describe('Oracle Fastify plugin – request decorator', () => {
 	let app: FastifyInstance;
 
-	beforeEach(() => {
-		mocks.initPool.mockResolvedValue(undefined);
-		mocks.closePool.mockResolvedValue(undefined);
-		mocks.runMigrations.mockResolvedValue(undefined);
-		mocks.migratePlaintextSecrets.mockResolvedValue({ migrated: 0, remaining: 0 });
-		mocks.isPoolInitialized.mockReturnValue(true);
-	});
-
-	afterEach(async () => {
-		if (app) await app.close();
-	});
+	beforeEach(resetMocksToDefaults);
+	afterEach(async () => { await closeApp(app); });
 
 	it('sets request.dbAvailable=true when pool is initialized', async () => {
 		app = await buildApp();
@@ -319,35 +286,15 @@ describe('Oracle Fastify plugin – request decorator', () => {
 describe('Oracle Fastify plugin – pool statistics', () => {
 	let app: FastifyInstance;
 
-	beforeEach(() => {
-		mocks.initPool.mockResolvedValue(undefined);
-		mocks.closePool.mockResolvedValue(undefined);
-		mocks.runMigrations.mockResolvedValue(undefined);
-		mocks.migratePlaintextSecrets.mockResolvedValue({ migrated: 0, remaining: 0 });
-		mocks.isPoolInitialized.mockReturnValue(true);
-		mocks.getPoolStats.mockResolvedValue({
-			connectionsOpen: 5,
-			connectionsInUse: 1,
-			poolMin: 2,
-			poolMax: 10
-		});
-	});
-
-	afterEach(async () => {
-		if (app) await app.close();
-	});
+	beforeEach(resetMocksToDefaults);
+	afterEach(async () => { await closeApp(app); });
 
 	it('returns pool statistics', async () => {
 		app = await buildApp();
 
 		const stats = await app.oracle.getPoolStats();
 
-		expect(stats).toEqual({
-			connectionsOpen: 5,
-			connectionsInUse: 1,
-			poolMin: 2,
-			poolMax: 10
-		});
+		expect(stats).toEqual(DEFAULT_POOL_STATS);
 	});
 
 	it('returns null when pool is not initialized', async () => {
@@ -364,18 +311,15 @@ describe('Oracle Fastify plugin – fallback mode', () => {
 	let app: FastifyInstance;
 
 	beforeEach(() => {
-		mocks.closePool.mockResolvedValue(undefined);
+		resetMocksToDefaults();
 		mocks.isPoolInitialized.mockReturnValue(false);
 	});
 
-	afterEach(async () => {
-		if (app) await app.close();
-	});
+	afterEach(async () => { await closeApp(app); });
 
 	it('survives pool initialization failure', async () => {
 		mocks.initPool.mockRejectedValueOnce(new Error('Oracle unreachable'));
 
-		// Should NOT throw — the plugin catches the error
 		app = await buildApp();
 
 		expect(app.oracle).toBeDefined();
@@ -412,21 +356,8 @@ describe('Oracle Fastify plugin – fallback mode', () => {
 describe('Oracle Fastify plugin – concurrent requests', () => {
 	let app: FastifyInstance;
 
-	beforeEach(() => {
-		mocks.initPool.mockResolvedValue(undefined);
-		mocks.closePool.mockResolvedValue(undefined);
-		mocks.runMigrations.mockResolvedValue(undefined);
-		mocks.migratePlaintextSecrets.mockResolvedValue({ migrated: 0, remaining: 0 });
-		mocks.isPoolInitialized.mockReturnValue(true);
-		mocks.withConnection.mockImplementation(
-			async <T>(fn: (conn: typeof mockConnection) => Promise<T>) => fn(mockConnection)
-		);
-		mockConnection.execute.mockResolvedValue({ rows: [{ VAL: 1 }] });
-	});
-
-	afterEach(async () => {
-		if (app) await app.close();
-	});
+	beforeEach(resetMocksToDefaults);
+	afterEach(async () => { await closeApp(app); });
 
 	it('handles 10 concurrent requests without errors', async () => {
 		app = await buildApp();
