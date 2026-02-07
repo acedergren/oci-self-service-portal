@@ -10,14 +10,9 @@ import {
 	type ZodTypeProvider
 } from 'fastify-type-provider-zod';
 import { createLogger } from '@portal/shared/server/logger';
-import {
-	PortalError,
-	errorResponse,
-	isPortalError,
-	toPortalError
-} from '@portal/shared/server/errors';
+import { isPortalError, toPortalError } from '@portal/shared/server/errors';
 import { RATE_LIMIT_CONFIG } from '@portal/shared/server/rate-limiter';
-import { generateRequestId, REQUEST_ID_HEADER } from '@portal/shared/server/tracing';
+import { generateRequestId } from '@portal/shared/server/tracing';
 import { getAuthCookieAttributes } from '@portal/shared/server/auth/cookies';
 import oraclePlugin from './plugins/oracle.js';
 import authPlugin from './plugins/auth.js';
@@ -66,7 +61,7 @@ export interface AppOptions {
 export async function createApp(options: AppOptions = {}): Promise<FastifyInstance> {
 	const {
 		fastifyOptions = {},
-		corsOrigin = process.env.CORS_ORIGIN || '*',
+		corsOrigin,
 		enableRateLimit = true,
 		enableTracing = true,
 		enableHelmet = true
@@ -79,6 +74,15 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 		log.fatal('BETTER_AUTH_SECRET is required in production');
 		throw new Error('BETTER_AUTH_SECRET is required in production');
 	}
+
+	// CORS origin: credentials:true requires an explicit origin (not '*').
+	// In production, CORS_ORIGIN must be set. In development, fall back to 'true'
+	// (reflects the request origin — safe for local dev, rejected in prod).
+	if (isProduction && !corsOrigin && !process.env.CORS_ORIGIN) {
+		log.fatal('CORS_ORIGIN is required in production (credentials:true forbids wildcard)');
+		throw new Error('CORS_ORIGIN is required in production');
+	}
+	const resolvedCorsOrigin = corsOrigin ?? process.env.CORS_ORIGIN ?? true;
 
 	// Create Fastify instance with Pino logger integration
 	const app = Fastify({

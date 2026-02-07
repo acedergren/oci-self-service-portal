@@ -9,13 +9,7 @@ import {
 } from '@portal/shared/tools/index';
 import { consumeApproval, pendingApprovals, recordApproval } from '@portal/shared/server/approvals';
 import { createLogger } from '@portal/shared/server/logger';
-import {
-	ValidationError,
-	NotFoundError,
-	AuthError,
-	toPortalError,
-	errorResponse
-} from '@portal/shared/server/errors';
+import { toPortalError } from '@portal/shared/server/errors';
 import { captureError } from '@portal/shared/server/sentry';
 import { toolExecutions, toolDuration } from '@portal/shared/server/metrics';
 import { requireAuth, resolveOrgId } from '../plugins/rbac.js';
@@ -112,7 +106,8 @@ export async function toolRoutes(app: FastifyInstance): Promise<void> {
 
 			// If tool requires approval, verify server-side approval record
 			if (needsApproval) {
-				if (!toolCallId || !(await consumeApproval(toolCallId, toolName))) {
+				const orgId = resolveOrgId(request);
+				if (!toolCallId || !(await consumeApproval(toolCallId, toolName, orgId))) {
 					logToolApproval(
 						toolName,
 						toolDef.category,
@@ -242,7 +237,7 @@ export async function toolRoutes(app: FastifyInstance): Promise<void> {
 			}
 		},
 		async (request, reply) => {
-			const { toolCallId, approved, reason } = request.body as z.infer<
+			const { toolCallId, approved, reason: _reason } = request.body as z.infer<
 				typeof ApproveToolBodySchema
 			>;
 
@@ -270,7 +265,7 @@ export async function toolRoutes(app: FastifyInstance): Promise<void> {
 			log.info({ toolName: pending.toolName, approved, toolCallId }, 'approval decision');
 
 			if (approved) {
-				await recordApproval(toolCallId, pending.toolName);
+				await recordApproval(toolCallId, pending.toolName, orgId);
 			}
 
 			pending.resolve(approved);
