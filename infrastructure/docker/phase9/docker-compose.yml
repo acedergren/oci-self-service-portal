@@ -9,8 +9,7 @@
 #   docker compose logs -f
 #
 # TLS certificates:
-#   Place TLS cert + key in the path set by TLS_CERT_PATH / TLS_KEY_PATH,
-#   or use the default ./certs/ directory:
+#   Place TLS cert + key in the directory set by TLS_CERTS_DIR (default ./certs/):
 #     mkdir -p certs
 #     cp fullchain.pem certs/  # TLS certificate chain
 #     cp privkey.pem certs/    # Private key
@@ -23,8 +22,6 @@
 # Build context is the monorepo root (..) because packages/shared
 # is a sibling directory resolved during the build.
 # =============================================================================
-
-version: '3.9'
 
 services:
   # ---------------------------------------------------------------------------
@@ -44,20 +41,12 @@ services:
       - '${HTTP_PORT:-80}:80'
 
     volumes:
-      # Nginx configuration (read-only)
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-
-      # TLS certificates (read-only)
-      - ${TLS_CERT_PATH:-./certs}/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro
-      - ${TLS_KEY_PATH:-./certs}/privkey.pem:/etc/nginx/certs/privkey.pem:ro
-
-      # DH parameters for forward secrecy (required — see README.md Prerequisites)
-      - ${DH_PARAMS_PATH:-./certs/dhparam.pem}:/etc/nginx/certs/dhparam.pem:ro
-
-      # ACME challenge webroot for Let's Encrypt HTTP-01 validation
+      - ${TLS_CERTS_DIR:-./certs}/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro
+      - ${TLS_CERTS_DIR:-./certs}/privkey.pem:/etc/nginx/certs/privkey.pem:ro
+      - ${TLS_CERTS_DIR:-./certs}/dhparam.pem:/etc/nginx/certs/dhparam.pem:ro
       - ./certbot-www:/var/www/certbot:ro
 
-    # tmpfs for nginx runtime directories (pid, cache, logs) since root fs is read-only
     tmpfs:
       - /var/cache/nginx:size=64m
       - /var/run:size=1m
@@ -103,11 +92,9 @@ services:
       - CERTBOT_EMAIL=${CERTBOT_EMAIL:-}
 
     volumes:
-      # Same path used by nginx TLS_CERT_PATH/TLS_KEY_PATH defaults
-      - ${TLS_CERT_PATH:-./certs}:/etc/letsencrypt
+      - ${TLS_CERTS_DIR:-./certs}:/etc/letsencrypt
       - ./certbot-www:/var/www/certbot
 
-    # tmpfs for certbot runtime dirs since root fs is read-only
     tmpfs:
       - /var/log/letsencrypt:size=16m
       - /tmp:size=16m
@@ -158,28 +145,12 @@ services:
       - PORT=3001
       - HOST=0.0.0.0
       - LOG_LEVEL=info
-
-      # Oracle Database (via environment or .env)
-      # - DATABASE_URL=...
-      # - ORACLE_USER=ADMIN
-      # - ORACLE_DSN=langflowdb_high
-      # - ORACLE_WALLET_LOCATION=/wallets/langflow
-
-      # OCI Configuration
       - OCI_REGION=${OCI_REGION:-eu-frankfurt-1}
       - OCI_AUTH_METHOD=config_file
 
-      # Auth (must be set in .env)
-      # - BETTER_AUTH_SECRET=...
-
     volumes:
-      # Persistent application data
       - api_data:/app/data
-
-      # OCI CLI configuration (read-only)
       - ~/.oci:/home/portal/.oci:ro
-
-      # Oracle wallet for database connectivity (read-only)
       - ${WALLET_PATH:-/data/wallets}:/wallets:ro
 
     networks:
