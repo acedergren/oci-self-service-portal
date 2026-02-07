@@ -34,6 +34,50 @@ The Phase 9 Fastify migration is **well-architected and production-ready** with 
 | Low | 7 | Cookie fallback, trustProxy, health redirect, error shapes, unused code |
 | Nitpick | 24 | Listed below — all must be fixed before squash merge |
 
+### Review Scope
+
+All Phase 9 Fastify backend migration files were reviewed:
+
+| Area | Files Reviewed | Key Files |
+|------|---------------|-----------|
+| App factory & server | 2 | `app.ts`, `server.ts` |
+| Plugins | 4 | `oracle.ts`, `auth.ts`, `rbac.ts`, `index.ts` |
+| Routes | 5 | `health.ts`, `sessions.ts`, `activity.ts`, `tools.ts`, `metrics.ts` |
+| Type declarations | 1 | `app.d.ts` |
+| Tests | 13 files | `app-factory.test.ts`, `auth-middleware.test.ts`, `oracle-plugin.test.ts`, `health-endpoint.test.ts`, `server-lifecycle.test.ts`, `routes/*.test.ts`, `helpers.ts`, `test-helpers.ts` |
+| Infrastructure | 4 | `Dockerfile.api`, `Dockerfile.frontend`, `nginx.conf`, `deploy.sh` |
+| Shared package | Spot-checked | `connection.ts`, `rbac.ts`, `api-keys.ts`, `health.ts`, `crypto.ts`, `mcp.ts`, `graph-analytics.ts` |
+| Git hooks | 2 | `.githooks/pre-commit`, `.githooks/pre-push` |
+
+### Key Themes
+
+1. **CORS + Credentials**: The `origin: '*'` + `credentials: true` combination violates the Fetch spec and is silently ignored by browsers. This is the most impactful finding (H-1, task #38).
+
+2. **Auth & Type Safety**: The dual auth pattern (session + API key) is well-implemented, but the `X-API-Key` header contract tested in `rbac.test.ts` doesn't match the implementation which only checks `Authorization: Bearer portal_*` (H-3, task #39). Multiple routes use `as` type casts that bypass `fastify-type-provider-zod` inference.
+
+3. **Error Response Consistency**: Routes mix error response patterns — some use `errorResponse(portalError)`, others return ad-hoc `{ error: '...' }` objects. The global error handler at `app.ts:219` catches some but not all error paths. This is a low-severity consistency issue.
+
+4. **Observability Gaps**: Auth failures logged at `debug` level (invisible in production), metrics endpoint unauthenticated (info disclosure), health check timer leak. The `log.debug` for auth errors is the most operationally impactful — operators won't see session validation failures.
+
+5. **Infrastructure Polish**: Docker image includes devDependencies, deploy script has a misleading frontend health check URL, git hooks have minor robustness issues (spaces in filenames, suppressed stderr). None are blockers but all should be fixed for production readiness.
+
+### Cross-reference with Security Audit
+
+The security specialist (task #33) produced `docs/PHASE9_SECURITY_AUDIT.md` covering the same codebase. Key overlaps and complementary findings:
+
+| Area | Code Review | Security Audit | Alignment |
+|------|------------|----------------|-----------|
+| CORS misconfiguration | H-1 (wildcard + credentials) | Confirmed | Both flagged |
+| Auth fail-open logging | M-1 / N-1 (log.debug too quiet) | Confirmed, fixed in task #40 | Both flagged, fix applied |
+| Metrics exposure | H-2 (unauthenticated) | Flagged for auth-gating | Aligned — decision #8 gates OpenAPI, metrics TBD |
+| X-API-Key header gap | H-3 (test/impl mismatch) | Not covered (focused on session auth) | Complementary |
+| Approval org_id scoping | M-2 (tools.ts) | Confirmed, fixed in task #40 | Both flagged, fix applied |
+| Semgrep false positives | Not in scope | 2 findings, nosemgrep added (task #36) | Complementary |
+| LIKE ESCAPE clause | Not in scope | Flagged in session-repository, fixed in #40 | Complementary |
+| CSP nonce handling | Reviewed (Helmet config) | Detailed CSP analysis | Aligned |
+
+The code review and security audit together provide comprehensive coverage with no blind spots.
+
 ---
 
 ## Nitpick Checklist
