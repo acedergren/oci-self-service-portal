@@ -254,6 +254,8 @@ input[type="checkbox"] {
           <option value="test-coverage">Test Coverage</option>
           <option value="deployment">Deployment Infrastructure</option>
           <option value="findings">Security Findings</option>
+          <option value="decision-log">Decision Log</option>
+          <option value="data-flow">Data Flow</option>
           <option value="questions">Open Questions</option>
         </select>
       </div>
@@ -523,7 +525,103 @@ const diagrams = {
     SK --> ADB
     SK --> IDCS
     Fastify -.-> Vault
-    SK -.-> Vault`
+    SK -.-> Vault`,
+
+  testCoverage: `graph TB
+    subgraph T["203 Tests - 13 Files"]
+      subgraph P["Plugin Tests - 54"]
+        OT["oracle 25t"]
+        AT["auth 13t"]
+        RT["rbac 16t"]
+      end
+      subgraph R["Route Tests - 70"]
+        TT["tools 36t"]
+        ST["sessions 21t"]
+        ACT["activity 9t"]
+        MT["metrics 4t"]
+      end
+      subgraph I["Integration - 79"]
+        AF["app-factory 28t"]
+        HE["health 12t"]
+        OP["oracle-old 8t"]
+        AM["auth-mw 6t"]
+      end
+    end
+    subgraph S["Security Coverage"]
+      S1["401 unauth"]
+      S2["403 forbidden"]
+      S3["400 Zod schema"]
+      S4["IDOR userId"]
+      S5["503 DB fallback"]
+    end
+    R --> S
+    P --> S
+    style P fill:#1a472a,stroke:#3fb950
+    style R fill:#0c2d6b,stroke:#58a6ff
+    style I fill:#3d2c00,stroke:#d29922
+    style S fill:#490b0b,stroke:#ff7b72`,
+
+  dataFlow: `graph LR
+    subgraph Browser
+      User[User Input]
+    end
+
+    subgraph SvelteKit["apps/frontend (SvelteKit)"]
+      SK_UI[UI Components]
+      SK_Chat[Chat Stream]
+      SK_Workflows[Workflow Designer]
+      SK_Auth[Auth UI / OIDC]
+    end
+
+    subgraph Fastify["apps/api (Fastify 5)"]
+      FW_Helm[Helmet + CSP]
+      FW_Auth[Auth Plugin]
+      FW_RBAC[RBAC preHandler]
+      FW_Routes[Routes: sessions, tools, activity, health, metrics]
+    end
+
+    subgraph Shared["packages/shared"]
+      S_Auth[Better Auth Core]
+      S_Oracle[Oracle Pool]
+      S_Repos[Repositories]
+      S_RBAC[RBAC / Permissions]
+      S_Errors[PortalError]
+      S_Metrics[Pino + Prometheus + Sentry]
+    end
+
+    subgraph Oracle["Oracle ADB 26AI"]
+      DB[(Tables + JSON + Blockchain)]
+      VEC[(Vector Search)]
+      GRAPH[(Property Graph)]
+    end
+
+    User --> SK_UI
+    SK_UI --> SK_Chat
+    SK_UI --> SK_Workflows
+    SK_UI --> SK_Auth
+
+    SK_Chat -->|"/api/chat"| FW_Helm
+    SK_Workflows -->|"/api/workflows"| FW_Helm
+    SK_Auth -->|"/api/auth/*"| S_Auth
+
+    FW_Helm --> FW_Auth
+    FW_Auth -->|"session resolve"| S_Auth
+    FW_Auth --> FW_RBAC
+    FW_RBAC -->|"permission check"| S_RBAC
+    FW_RBAC --> FW_Routes
+    FW_Routes --> S_Repos
+    FW_Routes --> S_Errors
+    FW_Routes --> S_Metrics
+    S_Repos --> S_Oracle
+    S_Oracle --> DB
+    S_Oracle --> VEC
+    S_Oracle --> GRAPH
+
+    style Browser fill:#1a1a2e,stroke:#58a6ff
+    style SvelteKit fill:#1a472a,stroke:#3fb950
+    style Fastify fill:#0c2d6b,stroke:#58a6ff
+    style Shared fill:#3d2c00,stroke:#d29922
+    style Oracle fill:#490b0b,stroke:#ff7b72`
 };
 
 function updateAll() {
@@ -570,7 +668,8 @@ function renderPreview() {
     'database': 'database',
     'workflow': 'workflow',
     'test-coverage': 'testCoverage',
-    'deployment': 'deployment'
+    'deployment': 'deployment',
+    'data-flow': 'dataFlow'
   };
   const diagramKey = diagramKeyMap[state.viewType];
   if (diagramKey && diagrams[diagramKey]) {
@@ -584,9 +683,63 @@ function renderPreview() {
     setTimeout(() => mermaid.init(undefined, document.querySelectorAll('.mermaid')), 100);
   } else if (state.viewType === 'findings') {
     renderFindings(preview);
+  } else if (state.viewType === 'decision-log') {
+    renderDecisionLog(preview);
   } else if (state.viewType === 'questions') {
     renderQuestions(preview);
   }
+}
+
+function renderDecisionLog(container) {
+  const decisions = [
+    { decision: 'Fastify 5 + fastify-plugin (fp)', rationale: 'Encapsulation-breaking plugins expose decorators to all routes; Fastify 5 enforces getter/setter for reference-type decorators', alternatives: 'Express 5, Hono, Koa' },
+    { decision: 'fastify-type-provider-zod', rationale: 'Type-safe request validation with Zod schemas reused from shared package; compile-time inference', alternatives: 'Ajv JSON Schema (Fastify default), typebox, io-ts' },
+    { decision: 'toWebRequest() bridge for Better Auth', rationale: 'Better Auth expects Web API Request objects; Fastify uses its own request model. Bridge converts headers+cookies for getSession()', alternatives: 'Rewrite Better Auth adapter, use @better-auth/fastify (not available)' },
+    { decision: 'Symbol-based permissions decorator', rationale: 'Fastify 5 requires getter/setter for array-type request decorators; Symbol prevents property name collisions', alternatives: 'WeakMap, private class field, plain property with type assertion' },
+    { decision: 'Fail-open auth, fail-fast secret', rationale: 'Session resolution errors should not block requests (routes guard individually). But missing BETTER_AUTH_SECRET in production must crash immediately.', alternatives: 'Fail-closed auth (breaks health endpoints), warn-only for secrets' },
+    { decision: 'Oracle → Auth → RBAC plugin order', rationale: 'Auth depends on Oracle for DB-backed sessions; RBAC depends on auth decorators (user, permissions)', alternatives: 'Lazy init, single monolithic plugin' },
+    { decision: 'requireAuth() as standalone function', rationale: 'Routes choose their own auth requirements via preHandler, not one-size-fits-all middleware. Unifies session + API key auth.', alternatives: 'Global onRequest hook, route-level decorator, class-based guards' },
+    { decision: 'Promise.race health timeout (3s)', rationale: 'Prevents load balancer timeouts when Oracle is unresponsive. 3s balances between useful diagnostics and LB health check interval.', alternatives: 'AbortController, Fastify route timeout, no timeout (rely on LB)' },
+    { decision: 'IDOR fix via orgId on PendingApprovalEntry', rationale: 'Cross-org approval verification using resolveOrgId(). Nullable orgId supports both single-org and multi-org deployments.', alternatives: 'User-level scoping only, separate approval stores per org' },
+    { decision: 'Monorepo: apps/api + apps/frontend + packages/shared', rationale: 'Shared package contains all business logic (auth, oracle, errors, metrics). Both apps are thin shells. Prevents code duplication during migration.', alternatives: 'Polyrepo, single app with feature flags, micro-frontends' },
+    { decision: 'Certbot read_only + tmpfs', rationale: 'Principle of least privilege. Certbot only needs /etc/letsencrypt (volume mount) and /var/log + /tmp (tmpfs). Root fs locked down.', alternatives: 'Writable root fs, separate init container, host-level certbot' },
+    { decision: 'DH params as required prerequisite', rationale: 'Docker bind mount fails silently (Linux: empty dir) or hard (macOS) if dhparam.pem missing. Must generate before docker compose up.', alternatives: 'Generate in entrypoint, use nginx default DH params, skip DH entirely' }
+  ];
+
+  const title = createElement('h2', { textContent: 'Phase 9 Decision Log' });
+  container.appendChild(title);
+
+  const table = createElement('table', { className: 'decision-table', style: { width: '100%', borderCollapse: 'collapse', fontSize: '13px', marginTop: '16px' } });
+
+  // Header row
+  const thead = createElement('thead');
+  const headerRow = createElement('tr');
+  ['Decision', 'Rationale', 'Alternatives Considered'].forEach(text => {
+    const th = createElement('th', { textContent: text, style: { textAlign: 'left', padding: '10px 12px', borderBottom: '2px solid #30363d', color: '#f0f6fc', fontWeight: '600' } });
+    headerRow.appendChild(th);
+  });
+  thead.appendChild(headerRow);
+  table.appendChild(thead);
+
+  // Body rows
+  const tbody = createElement('tbody');
+  decisions.forEach((d, idx) => {
+    const row = createElement('tr', { style: { background: idx % 2 === 0 ? '#161b22' : '#0d1117' } });
+
+    const tdDecision = createElement('td', { textContent: d.decision, style: { padding: '10px 12px', borderBottom: '1px solid #21262d', color: '#58a6ff', fontWeight: '500', minWidth: '220px' } });
+    const tdRationale = createElement('td', { textContent: d.rationale, style: { padding: '10px 12px', borderBottom: '1px solid #21262d', color: '#c9d1d9', lineHeight: '1.5' } });
+    const tdAlternatives = createElement('td', { textContent: d.alternatives, style: { padding: '10px 12px', borderBottom: '1px solid #21262d', color: '#8b949e', fontStyle: 'italic', minWidth: '180px' } });
+
+    row.appendChild(tdDecision);
+    row.appendChild(tdRationale);
+    row.appendChild(tdAlternatives);
+    tbody.appendChild(row);
+  });
+  table.appendChild(tbody);
+
+  const tableContainer = createElement('div', { style: { overflowX: 'auto' } });
+  tableContainer.appendChild(table);
+  container.appendChild(tableContainer);
 }
 
 function renderFindings(container) {
