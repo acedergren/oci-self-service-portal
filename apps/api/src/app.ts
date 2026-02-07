@@ -10,7 +10,7 @@ import {
 	type ZodTypeProvider
 } from 'fastify-type-provider-zod';
 import { createLogger } from '@portal/shared/server/logger';
-import { isPortalError, toPortalError } from '@portal/shared/server/errors';
+import { errorResponse, isPortalError, toPortalError } from '@portal/shared/server/errors';
 import { RATE_LIMIT_CONFIG } from '@portal/shared/server/rate-limiter';
 import { generateRequestId } from '@portal/shared/server/tracing';
 import { getAuthCookieAttributes } from '@portal/shared/server/auth/cookies';

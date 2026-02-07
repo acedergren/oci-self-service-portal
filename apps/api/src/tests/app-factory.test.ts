@@ -271,7 +271,7 @@ describe('createApp – CORS', () => {
 		if (app) await app.close();
 	});
 
-	it('should set CORS headers with default origin *', async () => {
+	it('should reflect request origin when no CORS_ORIGIN is set (dev mode)', async () => {
 		app = await buildApp();
 		await app.ready();
 
@@ -284,9 +284,9 @@ describe('createApp – CORS', () => {
 			}
 		});
 
-		// fastify/cors returns 204 for preflight
+		// fastify/cors with origin:true reflects the request origin (safe for credentials:true)
 		expect(response.statusCode).toBe(204);
-		expect(response.headers['access-control-allow-origin']).toBe('*');
+		expect(response.headers['access-control-allow-origin']).toBe('http://example.com');
 	});
 
 	it('should respect custom corsOrigin option', async () => {
@@ -819,7 +819,8 @@ describe('createApp – security hardening', () => {
 		process.env = {
 			...originalEnv,
 			NODE_ENV: 'production',
-			BETTER_AUTH_SECRET: 'test-secret-for-security-tests-32-bytes'
+			BETTER_AUTH_SECRET: 'test-secret-for-security-tests-32-bytes',
+			CORS_ORIGIN: 'https://portal.example.com'
 		};
 	});
 
