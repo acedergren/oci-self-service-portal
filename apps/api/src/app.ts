@@ -128,9 +128,9 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 		});
 	}
 
-	// Register CORS
+	// Register CORS — origin is validated above; 'true' reflects the request origin (dev only)
 	await app.register(fastifyCors, {
-		origin: corsOrigin,
+		origin: resolvedCorsOrigin,
 		credentials: true
 	});
 
