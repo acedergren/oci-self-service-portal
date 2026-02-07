@@ -534,7 +534,7 @@ describe('POST /api/tools/execute', () => {
 			}
 		});
 
-		expect(mockConsumeApproval).toHaveBeenCalledWith('tc-check', 'terminate-instance');
+		expect(mockConsumeApproval).toHaveBeenCalledWith('tc-check', 'terminate-instance', null);
 	});
 
 	it('logs approval decision via audit for approval-required tool', async () => {
@@ -857,7 +857,7 @@ describe('POST /api/tools/approve', () => {
 		expect(body.message).toContain('approved');
 
 		// Should record server-side approval
-		expect(mockRecordApproval).toHaveBeenCalledWith('tc-approve-1', 'terminate-instance');
+		expect(mockRecordApproval).toHaveBeenCalledWith('tc-approve-1', 'terminate-instance', null);
 		// Should resolve the pending promise
 		expect(mockResolve).toHaveBeenCalledWith(true);
 		// Should remove from pending map

@@ -7,6 +7,24 @@ import { createLogger } from '@portal/shared/server/logger';
 const log = createLogger('fastify-rbac');
 
 /**
+ * Extract an API key from the request headers.
+ * Supports two formats:
+ *   - Authorization: Bearer portal_xxx
+ *   - X-API-Key: portal_xxx
+ */
+function extractApiKey(request: FastifyRequest): string | null {
+	const authHeader = request.headers.authorization;
+	if (authHeader?.startsWith('Bearer portal_')) {
+		return authHeader.slice(7); // Remove "Bearer "
+	}
+	const xApiKey = request.headers['x-api-key'];
+	if (typeof xApiKey === 'string' && xApiKey.startsWith('portal_')) {
+		return xApiKey;
+	}
+	return null;
+}
+
+/**
  * Create a Fastify preHandler hook that requires a specific permission.
  *
  * Supports dual auth: session (cookie) and API key (Authorization header).
@@ -57,9 +75,8 @@ export function requireAuth(permission: Permission) {
 		}
 
 		// 3. Try to resolve API key from header if not already resolved
-		const authHeader = request.headers.authorization;
-		if (authHeader?.startsWith('Bearer portal_')) {
-			const apiKey = authHeader.slice(7); // Remove "Bearer "
+		const apiKey = extractApiKey(request);
+		if (apiKey) {
 			try {
 				const context = await validateApiKey(apiKey);
 				if (context) {
@@ -114,10 +131,9 @@ export function requireAuthenticated() {
 	return async (request: FastifyRequest, reply: FastifyReply) => {
 		if (request.user) return;
 
-		// Try API key
-		const authHeader = request.headers.authorization;
-		if (authHeader?.startsWith('Bearer portal_')) {
-			const apiKey = authHeader.slice(7);
+		// Try API key (Authorization: Bearer portal_xxx or X-API-Key: portal_xxx)
+		const apiKey = extractApiKey(request);
+		if (apiKey) {
 			try {
 				const context = await validateApiKey(apiKey);
 				if (context) {

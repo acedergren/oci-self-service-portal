@@ -261,8 +261,8 @@ describe('GET /api/sessions', () => {
 		await app.ready();
 
 		const res = await app.inject({ method: 'GET', url: '/api/sessions' });
-		// Route catches the error and returns a DatabaseError response
-		expect(res.statusCode).toBeGreaterThanOrEqual(500);
+		// Route catches the error and returns a DatabaseError (503) response
+		expect(res.statusCode).toBe(503);
 	});
 });
 
