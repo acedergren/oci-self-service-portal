@@ -66,13 +66,7 @@ describe('server lifecycle', () => {
 		process.env = originalEnv;
 	});
 
-	it('should import the server module without errors', async () => {
-		// This validates that the module is well-formed and can be loaded
-		const appModule = await import('../app.js');
-		expect(appModule.createApp).toBeDefined();
-		expect(appModule.startServer).toBeDefined();
-		expect(appModule.stopServer).toBeDefined();
-	});
+	// Note: module import test removed — app-factory.test.ts covers createApp() comprehensively
 
 	it('should handle Oracle pool initialization failure gracefully', async () => {
 		const { initPool } = await import(
@@ -186,12 +180,5 @@ describe('graceful shutdown', () => {
 		expect(closeSentry).toHaveBeenCalled();
 	});
 
-	it('should stop the Fastify server during shutdown', async () => {
-		const { createApp, stopServer } = await import('../app.js');
-		const app = await createApp({ enableRateLimit: false });
-		await app.ready();
-
-		await stopServer(app);
-		// Server should be closed — no error thrown
-	});
+	// Note: stopServer test removed — app-factory.test.ts covers createApp()+close() comprehensively
 });
