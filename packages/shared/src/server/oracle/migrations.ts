@@ -23,8 +23,8 @@ export interface Migration {
  * MIGRATIONS_DIR to prevent path traversal.
  */
 function readMigrationFile(filename: string): string {
-	// nosemgrep: path-join-resolve-traversal
 	const filePath = `${MIGRATIONS_DIR}/${filename}`;
+	// nosemgrep: path-join-resolve-traversal — filenames are regex-validated ([0-9a-zA-Z_-] only), startsWith guard below
 	const resolved = resolve(filePath);
 
 	if (!resolved.startsWith(MIGRATIONS_DIR + '/')) {

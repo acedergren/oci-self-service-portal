@@ -107,8 +107,8 @@ export function decryptWebhookSecret(ciphertext: string, iv: string): string {
 	const encrypted = payload.subarray(0, payload.length - WEBHOOK_ENCRYPTION_TAG_BYTES);
 	const authTag = payload.subarray(payload.length - WEBHOOK_ENCRYPTION_TAG_BYTES);
 
+	// nosemgrep: gcm-no-tag-length — authTag is exactly WEBHOOK_ENCRYPTION_TAG_BYTES (16) bytes; default 128-bit tag is max GCM strength
 	const decipher = createDecipheriv(WEBHOOK_ENCRYPTION_ALGORITHM, key, ivBytes);
-	// nosemgrep: gcm-no-tag-length — authTag is exactly WEBHOOK_ENCRYPTION_TAG_BYTES (16) bytes, sliced at line above
 	decipher.setAuthTag(authTag);
 
 	const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
