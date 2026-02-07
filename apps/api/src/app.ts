@@ -32,9 +32,10 @@ export interface AppOptions {
 	fastifyOptions?: FastifyServerOptions;
 
 	/**
-	 * CORS origin (default: process.env.CORS_ORIGIN or '*')
+	 * CORS origin. In production, CORS_ORIGIN env var is required.
+	 * In development, defaults to `true` (reflects request origin).
 	 */
-	corsOrigin?: string | string[];
+	corsOrigin?: string | string[] | boolean;
 
 	/**
 	 * Enable rate limiting (default: true)

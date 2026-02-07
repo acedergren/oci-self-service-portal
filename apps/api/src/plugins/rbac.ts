@@ -137,7 +137,7 @@ export function requireAuthenticated() {
 	};
 }
 
-const rbacPlugin: FastifyPluginAsync = async (fastify) => {
+const rbacPlugin: FastifyPluginAsync = async (_fastify) => {
 	// The actual guards are standalone functions (requireAuth, resolveOrgId)
 	// that can be used as preHandler hooks on individual routes.
 	// This plugin just ensures the auth plugin decorators exist.
