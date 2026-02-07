@@ -41,7 +41,8 @@ vi.mock('@portal/shared/server/oracle/connection', () => ({
 		poolMin: 2,
 		poolMax: 10
 	}),
-	isPoolInitialized: vi.fn(() => true)
+	isPoolInitialized: vi.fn(() => true),
+	getPool: vi.fn()
 }));
 
 vi.mock('@portal/shared/server/oracle/migrations', () => ({
