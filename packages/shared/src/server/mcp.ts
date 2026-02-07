@@ -5,7 +5,7 @@
  * This service runs server-side only in SvelteKit.
  */
 
-import { MCPManager, type MCPServerConfig, type MCPToolDefinition } from './mcp-client';
+import { MCPManager, type MCPServerConfig, type MCPToolDefinition, type ToolResultContent, type ResourceContent } from './mcp-client';
 import { tool } from 'ai';
 import { z } from 'zod';
 import { homedir } from 'os';
@@ -136,8 +136,8 @@ export async function callMCPTool(
 
 	// Extract text content
 	const textContents = result.content
-		.filter((c: { type: string }) => c.type === 'text')
-		.map((c: { type: string; text?: string }) => (c as { type: 'text'; text: string }).text);
+		.filter((c: ToolResultContent): c is Extract<ToolResultContent, { type: 'text' }> => c.type === 'text')
+		.map((c) => c.text);
 
 	if (result.isError) {
 		throw new Error(textContents.join('\n') || 'MCP tool call failed');
@@ -158,7 +158,9 @@ export async function readMCPResource(uri: string): Promise<string> {
 	const result = await manager.readResource(uri);
 
 	// Extract text content
-	const textContents = result.contents.filter((c: { text?: string }) => c.text).map((c: { text?: string }) => c.text);
+	const textContents = result.contents
+		.filter((c: ResourceContent): c is ResourceContent & { text: string } => !!c.text)
+		.map((c) => c.text);
 
 	return textContents.join('\n');
 }

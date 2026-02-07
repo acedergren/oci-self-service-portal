@@ -8,10 +8,7 @@
  * Uses GRAPH_TABLE() operator with MATCH patterns for path traversal.
  */
 import { withConnection } from './connection';
-import { createLogger } from '../logger';
 import type { GraphNode, GraphEdge, GraphQueryResult } from '../api/types';
-
-const log = createLogger('graph-analytics');
 
 // ============================================================================
 // Oracle Row Interfaces for Graph Query Results
