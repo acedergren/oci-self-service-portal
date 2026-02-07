@@ -11,7 +11,7 @@
 | Severity | Count | Fixed | Accepted | Deferred |
 |----------|-------|-------|----------|----------|
 | Critical | 0 | - | - | - |
-| High | 2 | 0 | 0 | 2 (in progress) |
+| High | 2 | 1 | 0 | 1 (in progress) |
 | Medium | 3 | 3 | 0 | 0 |
 | Low | 4 | 1 | 3 | 0 |
 | Semgrep FP | 2 | 2 | 0 | 0 |
@@ -40,14 +40,16 @@ patterns are well-architected. No critical vulnerabilities found.
   in non-credentialed requests is unrestricted from any origin.
 
 #### H-2: X-API-Key header contract mismatch
-- **File**: `apps/api/src/tests/auth-middleware.test.ts:256`, `apps/api/src/plugins/rbac.ts:61`
+- **File**: `apps/api/src/plugins/rbac.ts:15-25`
 - **Severity**: HIGH
-- **Status**: In progress (task #39, assigned to backend-developer-2)
-- **Issue**: Tests assert `X-API-Key` header support but `rbac.ts` only checks
-  `Authorization: Bearer portal_*`. Clients relying on `X-API-Key` header get 401s.
-- **Fix**: Either implement `X-API-Key` header support in `requireAuth()` and
-  `requireAuthenticated()`, or remove the misleading test.
+- **Status**: FIXED
+- **Issue**: Tests assert `X-API-Key` header support but `rbac.ts` only checked
+  `Authorization: Bearer portal_*`. Clients relying on `X-API-Key` header got 401s.
+- **Fix applied**: Extracted `extractApiKey()` helper that checks both `Authorization: Bearer portal_*`
+  and `X-API-Key: portal_*` headers. Both `requireAuth()` and `requireAuthenticated()` now use
+  this shared helper. `Authorization` header takes precedence if both are present.
 - **Found by**: Code reviewer (not in security audit scope — test/code mismatch)
+- **Commit**: `fix(security): implement X-API-Key header support in RBAC middleware`
 
 ### MEDIUM
 
@@ -240,6 +242,7 @@ The CodeRabbit code-reviewer independently reviewed the same codebase and produc
 | M-1: LIKE ESCAPE clause | `packages/shared/.../session-repository.ts` | `fix(security): LIKE escape, approval org-scoping, auth log level` |
 | M-2: Approval org_id isolation | `packages/shared/src/server/approvals.ts`, `apps/api/src/routes/tools.ts` | `fix(security): LIKE escape, approval org-scoping, auth log level` |
 | M-3: Auth log level | `apps/api/src/plugins/auth.ts` | `fix(security): LIKE escape, approval org-scoping, auth log level` |
+| H-2: X-API-Key header support | `apps/api/src/plugins/rbac.ts` | `fix(security): implement X-API-Key header support in RBAC middleware` |
 
 ---
 
@@ -247,8 +250,7 @@ The CodeRabbit code-reviewer independently reviewed the same codebase and produc
 
 ### Short-term (before production)
 1. **H-1**: Require `CORS_ORIGIN` in production — fail fast if missing
-2. **H-2**: Resolve X-API-Key header contract (implement or remove test)
-3. **Migration**: Create `approved_tool_calls` table with `org_id` column
+2. **Migration**: Create `approved_tool_calls` table with `org_id` column
 
 ### Medium-term (next hardening pass)
 4. Validate `X-Request-Id` format (alphanumeric + hyphens, max 64 chars)
