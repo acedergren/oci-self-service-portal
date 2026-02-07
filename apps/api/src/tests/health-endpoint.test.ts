@@ -10,7 +10,7 @@
  * - NOT require authentication (public endpoint)
  */
 
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { createApp } from '../app.js';
 import type { FastifyInstance } from 'fastify';
 
@@ -78,6 +78,44 @@ vi.mock('@portal/shared/server/health', () => ({
 
 describe('GET /health (basic)', () => {
 	let app: FastifyInstance;
+
+	beforeEach(async () => {
+		// Re-setup mocks cleared by mockReset: true
+		const oracleMod = await import('@portal/shared/server/oracle/connection');
+		(oracleMod.initPool as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+		(oracleMod.closePool as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+		(oracleMod.withConnection as ReturnType<typeof vi.fn>).mockImplementation(
+			async (fn: (conn: unknown) => unknown) =>
+				fn({
+					execute: vi.fn().mockResolvedValue({ rows: [{ RESULT: 1 }] }),
+					close: vi.fn().mockResolvedValue(undefined),
+					commit: vi.fn(),
+					rollback: vi.fn()
+				})
+		);
+		(oracleMod.getPoolStats as ReturnType<typeof vi.fn>).mockResolvedValue({
+			connectionsOpen: 5,
+			connectionsInUse: 2,
+			poolMin: 2,
+			poolMax: 10
+		});
+		(oracleMod.isPoolInitialized as ReturnType<typeof vi.fn>).mockReturnValue(true);
+
+		const healthMod = await import('@portal/shared/server/health');
+		(healthMod.runHealthChecks as ReturnType<typeof vi.fn>).mockResolvedValue({
+			status: 'ok',
+			checks: {
+				database: { status: 'ok', latencyMs: 1 },
+				connection_pool: { status: 'ok', latencyMs: 1 },
+				oci_cli: { status: 'ok', latencyMs: 1 },
+				sentry: { status: 'ok', latencyMs: 1 },
+				metrics: { status: 'ok', latencyMs: 1 }
+			},
+			timestamp: new Date().toISOString(),
+			uptime: 1,
+			version: '0.1.0'
+		});
+	});
 
 	afterEach(async () => {
 		if (app) await app.close();

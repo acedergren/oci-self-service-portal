@@ -50,14 +50,17 @@ vi.mock('@portal/shared/server/logger', () => ({
 // ---------------------------------------------------------------------------
 
 describe('Oracle connection module (shared package)', () => {
-	const mockConn = {
-		execute: vi.fn().mockResolvedValue({ rows: [{ result: 1 }] }),
-		close: vi.fn().mockResolvedValue(undefined),
-		commit: vi.fn().mockResolvedValue(undefined),
-		rollback: vi.fn().mockResolvedValue(undefined)
-	};
+	// Define mockConn inside beforeEach to reset fresh each time
+	let mockConn: Record<string, ReturnType<typeof vi.fn>>;
 
 	beforeEach(async () => {
+		mockConn = {
+			execute: vi.fn().mockResolvedValue({ rows: [{ result: 1 }] }),
+			close: vi.fn().mockResolvedValue(undefined),
+			commit: vi.fn().mockResolvedValue(undefined),
+			rollback: vi.fn().mockResolvedValue(undefined)
+		};
+
 		// Re-setup mock implementations after mockReset clears them
 		const mod = await import('@portal/shared/server/oracle/connection');
 		(mod.initPool as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
@@ -72,10 +75,6 @@ describe('Oracle connection module (shared package)', () => {
 			poolMax: 10
 		});
 		(mod.isPoolInitialized as ReturnType<typeof vi.fn>).mockReturnValue(true);
-	});
-
-	afterEach(() => {
-		vi.clearAllMocks();
 	});
 
 	it('should export initPool function', async () => {

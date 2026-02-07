@@ -18,8 +18,132 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createApp, startServer, stopServer, type AppOptions } from '../app.js';
 import type { FastifyInstance } from 'fastify';
+
+// ---------------------------------------------------------------------------
+// Mocks — must be before app import
+// ---------------------------------------------------------------------------
+
+vi.mock('@portal/shared/server/oracle/connection', () => ({
+	initPool: vi.fn().mockResolvedValue(undefined),
+	closePool: vi.fn().mockResolvedValue(undefined),
+	withConnection: vi.fn(async (fn: (conn: unknown) => unknown) =>
+		fn({
+			execute: vi.fn().mockResolvedValue({ rows: [{ VAL: 1 }] }),
+			close: vi.fn().mockResolvedValue(undefined),
+			commit: vi.fn(),
+			rollback: vi.fn()
+		})
+	),
+	getPoolStats: vi.fn().mockResolvedValue({
+		connectionsOpen: 5,
+		connectionsInUse: 1,
+		poolMin: 2,
+		poolMax: 10
+	}),
+	isPoolInitialized: vi.fn(() => true)
+}));
+
+vi.mock('@portal/shared/server/oracle/migrations', () => ({
+	runMigrations: vi.fn().mockResolvedValue(undefined)
+}));
+
+vi.mock('@portal/shared/server/oracle/repositories/webhook-repository', () => ({
+	webhookRepository: {
+		migratePlaintextSecrets: vi.fn().mockResolvedValue({ migrated: 0, remaining: 0 })
+	}
+}));
+
+vi.mock('@portal/shared/server/sentry', () => ({
+	wrapWithSpan: vi.fn((_n: string, _o: string, fn: () => unknown) => fn()),
+	captureError: vi.fn(),
+	isSentryEnabled: vi.fn(() => false),
+	initSentry: vi.fn(),
+	closeSentry: vi.fn()
+}));
+
+vi.mock('@portal/shared/server/logger', () => ({
+	createLogger: () => ({
+		info: vi.fn(),
+		warn: vi.fn(),
+		error: vi.fn(),
+		fatal: vi.fn(),
+		debug: vi.fn(),
+		child: vi.fn().mockReturnThis()
+	})
+}));
+
+vi.mock('@portal/shared/server/health', () => ({
+	runHealthChecks: vi.fn().mockResolvedValue({
+		status: 'ok',
+		checks: {
+			database: { status: 'ok', latencyMs: 1 },
+			connection_pool: { status: 'ok', latencyMs: 1 },
+			oci_cli: { status: 'ok', latencyMs: 1 },
+			sentry: { status: 'ok', latencyMs: 1 },
+			metrics: { status: 'ok', latencyMs: 1 }
+		},
+		timestamp: new Date().toISOString(),
+		uptime: 1,
+		version: '0.1.0'
+	})
+}));
+
+// Import after mocks
+const { createApp, startServer, stopServer } = await import('../app.js');
+import type { AppOptions } from '../app.js';
+
+// ---------------------------------------------------------------------------
+// Re-setup mocks that mockReset: true clears between tests
+// ---------------------------------------------------------------------------
+
+beforeEach(async () => {
+	const oracleMod = await import('@portal/shared/server/oracle/connection');
+	(oracleMod.initPool as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+	(oracleMod.closePool as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+	(oracleMod.withConnection as ReturnType<typeof vi.fn>).mockImplementation(
+		async (fn: (conn: unknown) => unknown) =>
+			fn({
+				execute: vi.fn().mockResolvedValue({ rows: [{ VAL: 1 }] }),
+				close: vi.fn().mockResolvedValue(undefined),
+				commit: vi.fn(),
+				rollback: vi.fn()
+			})
+	);
+	(oracleMod.getPoolStats as ReturnType<typeof vi.fn>)?.mockResolvedValue({
+		connectionsOpen: 5,
+		connectionsInUse: 1,
+		poolMin: 2,
+		poolMax: 10
+	});
+	(oracleMod.isPoolInitialized as ReturnType<typeof vi.fn>).mockReturnValue(true);
+
+	const healthMod = await import('@portal/shared/server/health');
+	(healthMod.runHealthChecks as ReturnType<typeof vi.fn>).mockResolvedValue({
+		status: 'ok',
+		checks: {
+			database: { status: 'ok', latencyMs: 1 },
+			connection_pool: { status: 'ok', latencyMs: 1 },
+			oci_cli: { status: 'ok', latencyMs: 1 },
+			sentry: { status: 'ok', latencyMs: 1 },
+			metrics: { status: 'ok', latencyMs: 1 }
+		},
+		timestamp: new Date().toISOString(),
+		uptime: 1,
+		version: '0.1.0'
+	});
+
+	const migrationMod = await import('@portal/shared/server/oracle/migrations');
+	(migrationMod.runMigrations as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+
+	const webhookMod = await import(
+		'@portal/shared/server/oracle/repositories/webhook-repository'
+	);
+	(webhookMod.webhookRepository.migratePlaintextSecrets as ReturnType<typeof vi.fn>).mockResolvedValue({
+		migrated: 0,
+		remaining: 0
+	});
+});
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -39,6 +163,44 @@ async function buildApp(opts?: AppOptions): Promise<FastifyInstance> {
 
 describe('createApp', () => {
 	let app: FastifyInstance;
+
+	beforeEach(async () => {
+		// Re-setup mocks cleared by mockReset: true
+		const oracleMod = await import('@portal/shared/server/oracle/connection');
+		(oracleMod.initPool as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+		(oracleMod.closePool as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
+		(oracleMod.withConnection as ReturnType<typeof vi.fn>).mockImplementation(
+			async (fn: (conn: unknown) => unknown) =>
+				fn({
+					execute: vi.fn().mockResolvedValue({ rows: [{ VAL: 1 }] }),
+					close: vi.fn().mockResolvedValue(undefined),
+					commit: vi.fn(),
+					rollback: vi.fn()
+				})
+		);
+		(oracleMod.getPoolStats as ReturnType<typeof vi.fn>).mockResolvedValue({
+			connectionsOpen: 5,
+			connectionsInUse: 1,
+			poolMin: 2,
+			poolMax: 10
+		});
+		(oracleMod.isPoolInitialized as ReturnType<typeof vi.fn>).mockReturnValue(true);
+
+		const healthMod = await import('@portal/shared/server/health');
+		(healthMod.runHealthChecks as ReturnType<typeof vi.fn>).mockResolvedValue({
+			status: 'ok',
+			checks: {
+				database: { status: 'ok', latencyMs: 1 },
+				connection_pool: { status: 'ok', latencyMs: 1 },
+				oci_cli: { status: 'ok', latencyMs: 1 },
+				sentry: { status: 'ok', latencyMs: 1 },
+				metrics: { status: 'ok', latencyMs: 1 }
+			},
+			timestamp: new Date().toISOString(),
+			uptime: 1,
+			version: '0.1.0'
+		});
+	});
 
 	afterEach(async () => {
 		if (app) {
