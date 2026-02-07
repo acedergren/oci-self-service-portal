@@ -28,7 +28,7 @@ export const pendingApprovals = new Map<string, PendingApprovalEntry>();
  * Used by the execute endpoint to verify approval without trusting client input.
  * Entries are auto-cleaned after 5 minutes.
  */
-export const approvedToolCalls = new Map<string, { toolName: string; approvedAt: number }>();
+export const approvedToolCalls = new Map<string, { toolName: string; approvedAt: number; orgId?: string | null }>();
 
 const APPROVAL_TTL_MS = 5 * 60 * 1000;
 
@@ -36,18 +36,18 @@ const APPROVAL_TTL_MS = 5 * 60 * 1000;
  * Record that a tool call has been approved server-side.
  * Tries Oracle DB first; falls back to in-memory Map.
  */
-export async function recordApproval(toolCallId: string, toolName: string): Promise<void> {
+export async function recordApproval(toolCallId: string, toolName: string, orgId?: string | null): Promise<void> {
 	try {
 		await withConnection(async (conn) => {
 			await conn.execute(
-				`INSERT INTO approved_tool_calls (tool_call_id, tool_name, approved_at)
-         VALUES (:toolCallId, :toolName, SYSTIMESTAMP)`,
-				{ toolCallId, toolName }
+				`INSERT INTO approved_tool_calls (tool_call_id, tool_name, org_id, approved_at)
+         VALUES (:toolCallId, :toolName, :orgId, SYSTIMESTAMP)`,
+				{ toolCallId, toolName, orgId: orgId ?? null }
 			);
 		});
 	} catch (err) {
 		log.warn({ err, toolCallId }, 'Oracle approval insert failed, falling back to in-memory');
-		approvedToolCalls.set(toolCallId, { toolName, approvedAt: Date.now() });
+		approvedToolCalls.set(toolCallId, { toolName, approvedAt: Date.now(), orgId: orgId ?? null });
 	}
 
 	// Clean up expired in-memory entries
@@ -65,17 +65,18 @@ export async function recordApproval(toolCallId: string, toolName: string): Prom
  * The approval is consumed (deleted) to prevent replay.
  * Tries Oracle DB first; falls back to in-memory Map.
  */
-export async function consumeApproval(toolCallId: string, toolName: string): Promise<boolean> {
+export async function consumeApproval(toolCallId: string, toolName: string, orgId?: string | null): Promise<boolean> {
 	try {
 		return await withConnection(async (conn) => {
 			// Atomic DELETE — no TOCTOU race. Single statement checks tool_call_id,
-			// tool_name match, and 5-minute expiry. rowsAffected === 1 means consumed.
+			// tool_name match, org_id match, and 5-minute expiry. rowsAffected === 1 means consumed.
 			const result = await conn.execute(
 				`DELETE FROM approved_tool_calls
           WHERE tool_call_id = :toolCallId
             AND tool_name = :toolName
+            AND (org_id = :orgId OR (org_id IS NULL AND :orgId2 IS NULL))
             AND approved_at > SYSTIMESTAMP - INTERVAL '5' MINUTE`,
-				{ toolCallId, toolName }
+				{ toolCallId, toolName, orgId: orgId ?? null, orgId2: orgId ?? null }
 			);
 
 			return (result as { rowsAffected?: number }).rowsAffected === 1;
@@ -86,7 +87,7 @@ export async function consumeApproval(toolCallId: string, toolName: string): Pro
 		const entry = approvedToolCalls.get(toolCallId);
 		if (!entry) return false;
 
-		if (entry.toolName !== toolName || Date.now() - entry.approvedAt > APPROVAL_TTL_MS) {
+		if (entry.toolName !== toolName || (entry.orgId ?? null) !== (orgId ?? null) || Date.now() - entry.approvedAt > APPROVAL_TTL_MS) {
 			approvedToolCalls.delete(toolCallId);
 			return false;
 		}

@@ -103,7 +103,7 @@ const authPlugin: FastifyPluginAsync<AuthPluginOptions> = async (fastify, opts) 
 			}
 		} catch (err) {
 			// Auth failure should not block the request — endpoints guard individually.
-			log.debug({ err, url: request.url }, 'Session resolution failed');
+			log.warn({ err, url: request.url }, 'Session resolution failed');
 		}
 	});
 };

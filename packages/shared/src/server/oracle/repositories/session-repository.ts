@@ -214,8 +214,8 @@ export async function listSessionsEnriched(
 			binds.orgId = options.orgId;
 		}
 		if (options?.search) {
-			conditions.push('LOWER(s.title) LIKE LOWER(:search)');
-			binds.search = `%${options.search.replace(/[%_]/g, '\\$&')}%`;
+			conditions.push("LOWER(s.title) LIKE LOWER(:search) ESCAPE '\\'");
+			binds.search = `%${options.search.replace(/[%_\\]/g, '\\$&')}%`;
 		}
 
 		const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
