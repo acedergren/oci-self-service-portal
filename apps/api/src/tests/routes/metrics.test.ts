@@ -61,10 +61,9 @@ async function buildApp(): Promise<FastifyInstance> {
 describe('GET /api/metrics', () => {
 	let app: FastifyInstance;
 
-	beforeEach(async () => {
-		// Re-configure mocks after mockReset: true clears them
-		const metricsMod = await import('@portal/shared/server/metrics');
-		(metricsMod.registry.collect as ReturnType<typeof vi.fn>).mockReturnValue(
+	beforeEach(() => {
+		// Re-configure mockCollect after mockReset: true clears it
+		mockCollect.mockReturnValue(
 			'# HELP portal_http_requests_total Total HTTP requests\n' +
 				'# TYPE portal_http_requests_total counter\n' +
 				'portal_http_requests_total{method="GET",status="200"} 42\n'
