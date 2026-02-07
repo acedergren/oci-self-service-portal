@@ -55,6 +55,24 @@ vi.mock('@portal/shared/server/logger', () => ({
 	}))
 }));
 
+vi.mock('@portal/shared/server/oracle/migrations', () => ({
+	runMigrations: vi.fn().mockResolvedValue(undefined)
+}));
+
+vi.mock('@portal/shared/server/oracle/repositories/webhook-repository', () => ({
+	webhookRepository: {
+		migratePlaintextSecrets: vi.fn().mockResolvedValue({ migrated: 0, remaining: 0 })
+	}
+}));
+
+vi.mock('@portal/shared/server/auth/config', () => ({
+	auth: {
+		api: {
+			getSession: vi.fn().mockResolvedValue(null)
+		}
+	}
+}));
+
 // Mock the entire health module to avoid OCI CLI dependency
 vi.mock('@portal/shared/server/health', () => ({
 	runHealthChecks: vi.fn().mockResolvedValue({
