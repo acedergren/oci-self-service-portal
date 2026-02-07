@@ -18,7 +18,7 @@ import { generateRequestId } from '@portal/shared/server/tracing';
 import { getAuthCookieAttributes } from '@portal/shared/server/auth/cookies';
 import oraclePlugin from './plugins/oracle.js';
 import authPlugin from './plugins/auth.js';
-import rbacPlugin from './plugins/rbac.js';
+import rbacPlugin, { requireAuth } from './plugins/rbac.js';
 import { healthRoutes } from './routes/health.js';
 import { sessionRoutes } from './routes/sessions.js';
 import { activityRoutes } from './routes/activity.js';
@@ -258,6 +258,26 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 		excludePaths: ['/healthz', '/health', '/api/metrics']
 	});
 	await app.register(rbacPlugin);
+
+	// OpenAPI docs — enabled explicitly or defaults to non-production
+	const docsEnabled = enableDocs ?? !isProduction;
+	if (docsEnabled) {
+		await app.register(fastifySwagger, {
+			openapi: {
+				info: {
+					title: 'OCI Self-Service Portal API',
+					version: process.env.npm_package_version || '0.1.0'
+				}
+			}
+		});
+		await app.register(fastifySwaggerUi, {
+			routePrefix: '/api/docs',
+			uiConfig: { docExpansion: 'list' },
+			uiHooks: {
+				onRequest: requireAuth('admin:all')
+			}
+		});
+	}
 
 	// Register API routes
 	await app.register(healthRoutes);
