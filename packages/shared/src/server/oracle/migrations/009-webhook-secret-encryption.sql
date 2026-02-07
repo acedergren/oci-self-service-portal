@@ -12,3 +12,8 @@ ALTER TABLE webhook_subscriptions
 ADD (secret_iv VARCHAR2(64));
 
 CREATE INDEX idx_webhooks_secret_iv ON webhook_subscriptions(secret_iv);
+
+-- Rollback (if needed):
+-- DROP INDEX idx_webhooks_secret_iv;
+-- ALTER TABLE webhook_subscriptions DROP (secret_iv);
+-- ALTER TABLE webhook_subscriptions MODIFY (secret VARCHAR2(255));

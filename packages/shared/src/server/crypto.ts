@@ -15,21 +15,16 @@ function decodeWebhookEncryptionKey(raw: string): Buffer {
 		return Buffer.from(trimmed, 'hex');
 	}
 
-	try {
-		const key = Buffer.from(trimmed, 'base64url');
-		if (key.length === WEBHOOK_ENCRYPTION_KEY_BYTES) return key;
-	} catch {
-		// Continue to legacy base64 fallback.
-	}
+	const base64urlKey = Buffer.from(trimmed, 'base64url');
+	if (base64urlKey.length === WEBHOOK_ENCRYPTION_KEY_BYTES) return base64urlKey;
 
+	// Fallback to standard base64 encoding
 	const legacyBase64 = Buffer.from(trimmed, 'base64');
 	if (legacyBase64.length === WEBHOOK_ENCRYPTION_KEY_BYTES) {
 		return legacyBase64;
 	}
 
-	throw new Error(
-		'WEBHOOK_ENCRYPTION_KEY must be 32 bytes (64-char hex, base64url, or base64).'
-	);
+	throw new Error('WEBHOOK_ENCRYPTION_KEY must be 32 bytes (64-char hex, base64url, or base64).');
 }
 
 /**
@@ -56,9 +51,7 @@ export function isWebhookEncryptionEnabled(): boolean {
 function requireWebhookEncryptionKey(): Buffer {
 	const key = getWebhookEncryptionKey();
 	if (!key) {
-		throw new Error(
-			'WEBHOOK_ENCRYPTION_KEY is required for webhook secret encryption at rest.'
-		);
+		throw new Error('WEBHOOK_ENCRYPTION_KEY is required for webhook secret encryption at rest.');
 	}
 	return key;
 }

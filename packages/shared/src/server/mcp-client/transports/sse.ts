@@ -41,16 +41,24 @@ export class SSETransport extends EventEmitter implements MCPTransport {
 			throw new Error('Transport already started');
 		}
 
+		// Resolve EventSource implementation before entering Promise constructor.
+		// In Node.js, native EventSource is unavailable — use the `eventsource` polyfill.
+		let EventSourceImpl: typeof EventSource;
+		if (typeof EventSource !== 'undefined') {
+			EventSourceImpl = EventSource;
+		} else {
+			// @ts-expect-error — `eventsource` polyfill has no type declarations
+			const mod = await import('eventsource');
+			EventSourceImpl = (mod.default ?? mod) as typeof EventSource;
+		}
+
 		return new Promise((resolve, reject) => {
 			try {
-				// Use native EventSource or a polyfill in Node.js
-				const EventSourceImpl =
-					// eslint-disable-next-line @typescript-eslint/no-require-imports
-					typeof EventSource !== 'undefined' ? EventSource : require('eventsource');
-
+				// The `headers` option is supported by the `eventsource` polyfill
+				// but not in the native EventSourceInit interface.
 				this.eventSource = new EventSourceImpl(this.config.url, {
 					headers: this.config.headers
-				}) as EventSource;
+				} as EventSourceInit) as EventSource;
 
 				const es = this.eventSource;
 

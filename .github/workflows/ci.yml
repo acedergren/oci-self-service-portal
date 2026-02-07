@@ -233,7 +233,7 @@ jobs:
           BETTER_AUTH_SECRET: test-secret-for-ci
           OCI_COMPARTMENT_ID: ocid1.compartment.oc1..test
           OCI_REGION: us-chicago-1
-          DATABASE_URL: sqlite::memory:
+          DATABASE_URL: 'sqlite::memory:'
 
       - name: Upload @portal/api coverage
         uses: codecov/codecov-action@v4
