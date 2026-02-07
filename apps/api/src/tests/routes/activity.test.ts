@@ -15,10 +15,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
-import {
-	serializerCompiler,
-	validatorCompiler
-} from 'fastify-type-provider-zod';
+import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -155,7 +152,7 @@ describe('GET /api/activity', () => {
 
 	it('returns activity items for authorized user', async () => {
 		const now = new Date();
-		mockWithConnection.mockImplementation(async (fn: Function) =>
+		mockWithConnection.mockImplementation(async (fn: (conn: unknown) => unknown) =>
 			fn({
 				execute: vi
 					.fn()
@@ -231,7 +228,7 @@ describe('GET /api/activity', () => {
 
 	it('passes limit and offset query params', async () => {
 		let capturedBinds: unknown;
-		mockWithConnection.mockImplementation(async (fn: Function) =>
+		mockWithConnection.mockImplementation(async (fn: (conn: unknown) => unknown) =>
 			fn({
 				execute: vi.fn().mockImplementation(async (_sql: string, binds: unknown) => {
 					capturedBinds = binds;
@@ -250,9 +247,7 @@ describe('GET /api/activity', () => {
 		});
 
 		// The second execute call should have offset and maxRows
-		expect(capturedBinds).toEqual(
-			expect.objectContaining({ offset: 5, maxRows: 10 })
-		);
+		expect(capturedBinds).toEqual(expect.objectContaining({ offset: 5, maxRows: 10 }));
 	});
 
 	it('validates limit range (max 100)', async () => {
@@ -284,7 +279,7 @@ describe('GET /api/activity', () => {
 
 	it('maps activity status correctly for pending actions', async () => {
 		const now = new Date();
-		mockWithConnection.mockImplementation(async (fn: Function) =>
+		mockWithConnection.mockImplementation(async (fn: (conn: unknown) => unknown) =>
 			fn({
 				execute: vi
 					.fn()

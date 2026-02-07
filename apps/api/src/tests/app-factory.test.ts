@@ -145,10 +145,10 @@ beforeEach(async () => {
 	const migrationMod = await import('@portal/shared/server/oracle/migrations');
 	(migrationMod.runMigrations as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
-	const webhookMod = await import(
-		'@portal/shared/server/oracle/repositories/webhook-repository'
-	);
-	(webhookMod.webhookRepository.migratePlaintextSecrets as ReturnType<typeof vi.fn>).mockResolvedValue({
+	const webhookMod = await import('@portal/shared/server/oracle/repositories/webhook-repository');
+	(
+		webhookMod.webhookRepository.migratePlaintextSecrets as ReturnType<typeof vi.fn>
+	).mockResolvedValue({
 		migrated: 0,
 		remaining: 0
 	});
@@ -302,9 +302,7 @@ describe('createApp – CORS', () => {
 			}
 		});
 
-		expect(response.headers['access-control-allow-origin']).toBe(
-			'https://portal.example.com'
-		);
+		expect(response.headers['access-control-allow-origin']).toBe('https://portal.example.com');
 	});
 
 	it('should enable credentials in CORS', async () => {
@@ -419,9 +417,7 @@ describe('createApp – global error handler', () => {
 
 	it('should convert thrown PortalError to structured JSON response', async () => {
 		// Import error classes dynamically to avoid module resolution issues
-		const { ValidationError } = await import(
-			'@portal/shared/server/errors'
-		);
+		const { ValidationError } = await import('@portal/shared/server/errors');
 
 		app = await buildApp();
 
@@ -659,9 +655,9 @@ describe('createApp – Zod type provider', () => {
 
 	it('should validate request body with Zod schema', async () => {
 		// zod is a transitive dep via @portal/shared — import from shared's node_modules
-		const zod = await import(
-			'../../../../packages/shared/node_modules/zod/lib/index.js'
-		).catch(() => null);
+		const zod = await import('../../../../packages/shared/node_modules/zod/lib/index.js').catch(
+			() => null
+		);
 
 		if (!zod) {
 			// Skip if zod can't be resolved — CI may have different layout
@@ -711,9 +707,9 @@ describe('createApp – Zod type provider', () => {
 	});
 
 	it('should validate query parameters with Zod schema', async () => {
-		const zod = await import(
-			'../../../../packages/shared/node_modules/zod/lib/index.js'
-		).catch(() => null);
+		const zod = await import('../../../../packages/shared/node_modules/zod/lib/index.js').catch(
+			() => null
+		);
 
 		if (!zod) return;
 		const { z } = zod;
@@ -779,9 +775,7 @@ describe('createApp – environment configuration', () => {
 			}
 		});
 
-		expect(response.headers['access-control-allow-origin']).toBe(
-			'https://env-origin.example.com'
-		);
+		expect(response.headers['access-control-allow-origin']).toBe('https://env-origin.example.com');
 	});
 });
 
@@ -791,9 +785,7 @@ describe('createApp – environment configuration', () => {
 
 describe('RATE_LIMIT_CONFIG shape', () => {
 	it('should export windowMs and maxRequests (not AUTHENTICATED)', async () => {
-		const { RATE_LIMIT_CONFIG } = await import(
-			'@portal/shared/server/rate-limiter'
-		);
+		const { RATE_LIMIT_CONFIG } = await import('@portal/shared/server/rate-limiter');
 
 		// The shared module exports { windowMs, maxRequests: { chat, api } }
 		expect(RATE_LIMIT_CONFIG).toHaveProperty('windowMs');
@@ -904,5 +896,55 @@ describe('createApp – security hardening', () => {
 		expect(serialized).toContain('HttpOnly');
 		expect(serialized).toContain('Secure');
 		expect(serialized).toMatch(/SameSite=Strict/i);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// OpenAPI docs (admin-gated)
+// ---------------------------------------------------------------------------
+
+describe('createApp – OpenAPI docs', () => {
+	let app: FastifyInstance;
+
+	afterEach(async () => {
+		if (app) await app.close();
+	});
+
+	it('should register /api/docs route when enableDocs is true', async () => {
+		app = await buildApp({ enableDocs: true });
+		await app.ready();
+
+		const response = await app.inject({
+			method: 'GET',
+			url: '/api/docs/json'
+		});
+
+		// Unauthenticated — should be 401 due to requireAuth('admin:all')
+		expect(response.statusCode).toBe(401);
+	});
+
+	it('should NOT register /api/docs when enableDocs is false', async () => {
+		app = await buildApp({ enableDocs: false });
+		await app.ready();
+
+		const response = await app.inject({
+			method: 'GET',
+			url: '/api/docs/json'
+		});
+
+		expect(response.statusCode).toBe(404);
+	});
+
+	it('should default to enabled in non-production', async () => {
+		app = await buildApp();
+		await app.ready();
+
+		const response = await app.inject({
+			method: 'GET',
+			url: '/api/docs/json'
+		});
+
+		// Should exist (not 404) — but 401 because no auth
+		expect(response.statusCode).toBe(401);
 	});
 });
