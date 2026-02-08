@@ -35,6 +35,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@acedergren/oci-genai-provider':
+        specifier: ^0.2.0
+        version: 0.2.0(ai@6.0.73(zod@4.3.6))
       '@fastify/cookie':
         specifier: ^11.0.2
         version: 11.0.2
@@ -59,6 +62,9 @@ importers:
       '@portal/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      ai:
+        specifier: ^6.0.69
+        version: 6.0.73(zod@4.3.6)
       fastify:
         specifier: ^5.7.4
         version: 5.7.4

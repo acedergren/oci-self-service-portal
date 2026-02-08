@@ -24,6 +24,7 @@ import { sessionRoutes } from './routes/sessions.js';
 import { activityRoutes } from './routes/activity.js';
 import { toolRoutes } from './routes/tools.js';
 import { metricsRoutes } from './routes/metrics.js';
+import { chatRoutes } from './routes/chat.js';
 
 const log = createLogger('app');
 
@@ -285,6 +286,7 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 	await app.register(activityRoutes);
 	await app.register(toolRoutes);
 	await app.register(metricsRoutes);
+	await app.register(chatRoutes);
 
 	log.info('Fastify app created with plugins and routes');
 	return app;
