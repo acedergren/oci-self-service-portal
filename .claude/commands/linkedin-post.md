@@ -1,0 +1,1 @@
+../skills/linkedin-post/SKILL.md

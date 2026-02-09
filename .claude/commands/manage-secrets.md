@@ -1,0 +1,1 @@
+../skills/manage-secrets/SKILL.md
