@@ -15,6 +15,7 @@ import {
 	toPortalError
 } from '@portal/shared/server/errors';
 import type { EngineState } from '@portal/shared/server/workflows/executor';
+import { addDeprecationHeaders } from '$lib/server/deprecation.js';
 
 const log = createLogger('workflow-approve-api');
 
@@ -115,15 +116,21 @@ export const POST: RequestHandler = async (event) => {
 
 		log.info({ runId: run.id, status: result.status }, 'Workflow resumed after approval');
 
-		return json({
-			run: {
-				id: run.id,
-				workflowId: definition.id,
-				status: result.status,
-				output: result.output,
-				error: result.error
-			}
-		});
+		const headers = new Headers();
+		addDeprecationHeaders(headers, `/api/v1/workflows/${definition.id}/runs/${run.id}/approve`);
+
+		return json(
+			{
+				run: {
+					id: run.id,
+					workflowId: definition.id,
+					status: result.status,
+					output: result.output,
+					error: result.error
+				}
+			},
+			{ headers }
+		);
 	} catch (err) {
 		const portalErr = toPortalError(err, 'Workflow resume failed');
 		log.error({ err: portalErr, runId: run.id }, 'Workflow resume failed');

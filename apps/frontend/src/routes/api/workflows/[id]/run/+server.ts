@@ -14,6 +14,7 @@ import {
 	errorResponse,
 	toPortalError
 } from '@portal/shared/server/errors';
+import { addDeprecationHeaders } from '$lib/server/deprecation.js';
 
 const log = createLogger('workflow-run-api');
 
@@ -114,6 +115,9 @@ export const POST: RequestHandler = async (event) => {
 			'Workflow execution finished'
 		);
 
+		const headers = new Headers();
+		addDeprecationHeaders(headers, `/api/v1/workflows/${params.id}/run`);
+
 		return json(
 			{
 				run: {
@@ -127,7 +131,7 @@ export const POST: RequestHandler = async (event) => {
 						: undefined
 				}
 			},
-			{ status: 201 }
+			{ status: 201, headers }
 		);
 	} catch (err) {
 		const portalErr = toPortalError(err, 'Workflow execution failed');

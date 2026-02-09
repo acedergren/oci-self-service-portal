@@ -6,6 +6,7 @@ import { createLogger } from '@portal/shared/server/logger';
 import { ValidationError, DatabaseError, errorResponse } from '@portal/shared/server/errors';
 import { WorkflowNodeSchema, WorkflowEdgeSchema } from '@portal/shared/workflows/types';
 import { z } from 'zod';
+import { addDeprecationHeaders } from '$lib/server/deprecation.js';
 
 const log = createLogger('workflows-api');
 
@@ -43,20 +44,26 @@ export const GET: RequestHandler = async (event) => {
 			status: status as 'draft' | 'published' | 'archived' | undefined
 		});
 
-		return json({
-			workflows: workflows.map((w) => ({
-				id: w.id,
-				name: w.name,
-				description: w.description,
-				status: w.status,
-				version: w.version,
-				tags: w.tags,
-				nodeCount: w.nodes.length,
-				edgeCount: w.edges.length,
-				createdAt: w.createdAt.toISOString(),
-				updatedAt: w.updatedAt.toISOString()
-			}))
-		});
+		const headers = new Headers();
+		addDeprecationHeaders(headers, '/api/v1/workflows');
+
+		return json(
+			{
+				workflows: workflows.map((w) => ({
+					id: w.id,
+					name: w.name,
+					description: w.description,
+					status: w.status,
+					version: w.version,
+					tags: w.tags,
+					nodeCount: w.nodes.length,
+					edgeCount: w.edges.length,
+					createdAt: w.createdAt.toISOString(),
+					updatedAt: w.updatedAt.toISOString()
+				}))
+			},
+			{ headers }
+		);
 	} catch (err) {
 		const dbErr = new DatabaseError(
 			'Failed to list workflows',
@@ -103,7 +110,11 @@ export const POST: RequestHandler = async (event) => {
 		});
 
 		log.info({ workflowId: workflow.id, name: workflow.name }, 'Workflow created');
-		return json({ workflow }, { status: 201 });
+
+		const headers = new Headers();
+		addDeprecationHeaders(headers, '/api/v1/workflows');
+
+		return json({ workflow }, { status: 201, headers });
 	} catch (err) {
 		const dbErr = new DatabaseError(
 			'Failed to create workflow',

@@ -15,6 +15,7 @@ import {
 	WorkflowStatusSchema
 } from '@portal/shared/workflows/types';
 import { z } from 'zod';
+import { addDeprecationHeaders } from '$lib/server/deprecation.js';
 
 const log = createLogger('workflow-detail-api');
 
@@ -55,7 +56,10 @@ export const GET: RequestHandler = async (event) => {
 			);
 		}
 
-		return json({ workflow });
+		const headers = new Headers();
+		addDeprecationHeaders(headers, `/api/v1/workflows/${params.id}`);
+
+		return json({ workflow }, { headers });
 	} catch (err) {
 		const dbErr = new DatabaseError(
 			'Failed to get workflow',
@@ -108,7 +112,11 @@ export const PUT: RequestHandler = async (event) => {
 		}
 
 		log.info({ workflowId: params.id }, 'Workflow updated');
-		return json({ workflow });
+
+		const headers = new Headers();
+		addDeprecationHeaders(headers, `/api/v1/workflows/${params.id}`);
+
+		return json({ workflow }, { headers });
 	} catch (err) {
 		const dbErr = new DatabaseError(
 			'Failed to update workflow',
@@ -141,7 +149,11 @@ export const DELETE: RequestHandler = async (event) => {
 		}
 
 		log.info({ workflowId: params.id }, 'Workflow deleted');
-		return json({ success: true });
+
+		const headers = new Headers();
+		addDeprecationHeaders(headers, `/api/v1/workflows/${params.id}`);
+
+		return json({ success: true }, { headers });
 	} catch (err) {
 		const dbErr = new DatabaseError(
 			'Failed to delete workflow',
