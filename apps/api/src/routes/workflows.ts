@@ -405,14 +405,20 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 		},
 		async (request, reply) => {
 			const { workflows, runs } = getRepos();
+			const orgId = resolveOrgId(request);
+
+			if (!orgId) {
+				return reply.code(400).send({ error: 'Organization context required' });
+			}
+
 			const userId = request.user?.id;
 
 			if (!userId) {
 				return reply.code(400).send({ error: 'User context required' });
 			}
 
-			// Load run (IDOR via userId)
-			const run = await runs.getByIdForUser(request.params.runId, userId);
+			// Load run (IDOR via userId + orgId)
+			const run = await runs.getByIdForUser(request.params.runId, userId, orgId);
 
 			if (!run) {
 				throw new NotFoundError('Workflow run not found', {
@@ -441,8 +447,8 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 				});
 			}
 
-			// Load definition (IDOR via userId)
-			const definition = await workflows.getByIdForUser(run.definitionId, userId);
+			// Load definition (IDOR via userId + orgId)
+			const definition = await workflows.getByIdForUser(run.definitionId, userId, orgId);
 
 			if (!definition) {
 				throw new NotFoundError('Workflow definition not found', {

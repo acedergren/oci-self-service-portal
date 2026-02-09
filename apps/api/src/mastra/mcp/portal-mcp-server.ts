@@ -46,9 +46,14 @@ export interface MCPToolResult {
  *
  * Handles the common Zod types used in tool definitions:
  * ZodObject, ZodString, ZodNumber, ZodBoolean, ZodEnum, ZodOptional, ZodDefault, ZodArray.
+ *
+ * WARNING: This function accesses Zod's internal `._def` API which may change between versions.
+ * Tested with Zod 4.x. If this breaks after a Zod upgrade, consider using the `zod-to-json-schema`
+ * npm package instead.
  */
 function zodToJsonSchema(schema: z.ZodTypeAny): Record<string, unknown> {
-	const def = schema._def as unknown as Record<string, unknown>;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const def = (schema as any)._def as Record<string, unknown>;
 	const typeName = (def?.typeName ?? '') as string;
 
 	switch (typeName) {
@@ -61,7 +66,8 @@ function zodToJsonSchema(schema: z.ZodTypeAny): Record<string, unknown> {
 				const fieldSchema = value as z.ZodTypeAny;
 				properties[key] = zodToJsonSchema(fieldSchema);
 
-				const fieldDef = fieldSchema._def as unknown as Record<string, unknown>;
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				const fieldDef = (fieldSchema as any)._def as Record<string, unknown>;
 				const fieldTypeName = (fieldDef?.typeName ?? '') as string;
 				if (fieldTypeName !== 'ZodOptional' && fieldTypeName !== 'ZodDefault') {
 					required.push(key);
