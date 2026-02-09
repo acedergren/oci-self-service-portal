@@ -11,7 +11,12 @@ import { getPermissionsForRole, type Permission } from '@portal/shared/server/au
 import { getOrgRole } from '@portal/shared/server/auth/tenancy';
 import { checkRateLimit, RATE_LIMIT_CONFIG } from '@portal/shared/server/rate-limiter';
 import { generateRequestId, REQUEST_ID_HEADER } from '@portal/shared/server/tracing';
-import { RateLimitError, AuthError, PortalError, errorResponse } from '@portal/shared/server/errors';
+import {
+	RateLimitError,
+	AuthError,
+	PortalError,
+	errorResponse
+} from '@portal/shared/server/errors';
 import { httpRequestDuration } from '@portal/shared/server/metrics';
 import { initSentry, captureError, closeSentry } from '@portal/shared/server/sentry';
 import { validateApiKey } from '@portal/shared/server/auth/api-keys';
@@ -21,7 +26,9 @@ const log = createLogger('hooks');
 // ── CORS for /api/v1/* (external REST API) ──────────────────────────────────
 // Supports cross-origin browser clients using API key auth.
 // Set ALLOWED_ORIGINS to a comma-separated list of origins, or '*' for public.
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? (dev ? '*' : '')).split(',').filter(Boolean);
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? (dev ? '*' : ''))
+	.split(',')
+	.filter(Boolean);
 const V1_API_PREFIX = '/api/v1/';
 const CORS_MAX_AGE = '86400'; // 24 h preflight cache
 const CORS_ALLOWED_METHODS = 'GET, POST, PUT, DELETE, OPTIONS';
@@ -80,10 +87,7 @@ async function ensureDatabase(): Promise<boolean> {
 		// Encrypt legacy webhook secrets in small batches after schema migration.
 		const webhookSecretMigration = await webhookRepository.migratePlaintextSecrets();
 		if (webhookSecretMigration.migrated > 0 || webhookSecretMigration.remaining > 0) {
-			log.info(
-				{ webhookSecretMigration },
-				'webhook secret encryption migration completed'
-			);
+			log.info({ webhookSecretMigration }, 'webhook secret encryption migration completed');
 		}
 
 		dbAvailable = true;

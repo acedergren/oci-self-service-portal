@@ -70,10 +70,7 @@ export const POST: RequestHandler = async (event) => {
 			{ requestId: event.locals.requestId },
 			'Webhook creation blocked: WEBHOOK_ENCRYPTION_KEY is not configured'
 		);
-		return json(
-			{ error: 'Webhook encryption key is not configured' },
-			{ status: 503 }
-		);
+		return json({ error: 'Webhook encryption key is not configured' }, { status: 503 });
 	}
 
 	try {

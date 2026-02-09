@@ -9,7 +9,12 @@
 	import type { ToolCall, PendingApproval } from '@portal/shared/tools/types';
 	import { inferApprovalLevel, requiresApproval } from '@portal/shared/tools/types';
 	import { useQueryClient } from '@tanstack/svelte-query';
-	import { useModels, useSessions, useCreateSession, useDeleteSession } from '@portal/shared/query/hooks';
+	import {
+		useModels,
+		useSessions,
+		useCreateSession,
+		useDeleteSession
+	} from '@portal/shared/query/hooks';
 	import { queryKeys, fetchSessionDetail } from '@portal/shared/query';
 	import { extractToolParts, getToolState, formatToolName } from '$lib/utils/message-parts.js';
 	import { BottomNav, Drawer } from '$lib/components/mobile/index.js';
