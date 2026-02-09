@@ -430,12 +430,21 @@ export const workflowRepository = {
 		});
 	},
 
-	async delete(id: string, userId?: string): Promise<boolean> {
+	async delete(id: string, userId?: string, orgId?: string): Promise<boolean> {
 		return withConnection(async (conn) => {
-			const sql = userId
-				? 'DELETE FROM workflow_definitions WHERE id = :id AND user_id = :userId'
-				: 'DELETE FROM workflow_definitions WHERE id = :id';
-			const binds = userId ? { id, userId } : { id };
+			const conditions = ['id = :id'];
+			const binds: Record<string, string> = { id };
+
+			if (userId) {
+				conditions.push('user_id = :userId');
+				binds.userId = userId;
+			}
+			if (orgId) {
+				conditions.push('org_id = :orgId');
+				binds.orgId = orgId;
+			}
+
+			const sql = `DELETE FROM workflow_definitions WHERE ${conditions.join(' AND ')}`;
 			const result = await conn.execute(sql, binds);
 			return (result as { rowsAffected?: number }).rowsAffected === 1;
 		});

@@ -283,6 +283,18 @@ describe('workflowRepository', () => {
 			expect(deleteCall[0]).toContain('user_id = :userId');
 		});
 
+		it('scopes DELETE by org_id when orgId provided', async () => {
+			mockExecute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+			const deleted = await workflowRepository.delete('wf-1', 'u1', 'org-1');
+			expect(deleted).toBe(true);
+
+			const deleteCall = mockExecute.mock.calls[0];
+			expect(deleteCall[0]).toContain('org_id = :orgId');
+			expect(deleteCall[0]).toContain('user_id = :userId');
+			expect(deleteCall[1]).toEqual({ id: 'wf-1', userId: 'u1', orgId: 'org-1' });
+		});
+
 		it('returns false when no row deleted', async () => {
 			mockExecute.mockResolvedValueOnce({ rowsAffected: 0 });
 
