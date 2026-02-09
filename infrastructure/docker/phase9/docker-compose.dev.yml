@@ -17,7 +17,7 @@ services:
     build:
       context: ../..
       dockerfile: infrastructure/docker/phase9/Dockerfile.api
-      target: builder  # Stop at builder stage to keep TypeScript source
+      target: builder # Stop at builder stage to keep TypeScript source
 
     command: pnpm --filter @portal/api dev
 
@@ -46,7 +46,7 @@ services:
     build:
       context: ../..
       dockerfile: infrastructure/docker/phase9/Dockerfile.frontend
-      target: builder  # Stop at builder stage to keep source
+      target: builder # Stop at builder stage to keep source
 
     command: pnpm --filter @portal/frontend dev --host
 

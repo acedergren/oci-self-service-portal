@@ -48,13 +48,18 @@ openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
 
 1. Configure DNS so `TLS_DOMAIN` points to this host.
 2. Set in `.env`:
+
 - `TLS_DOMAIN=portal.example.com`
 - `CERTBOT_EMAIL=ops@example.com`
+
 3. Start nginx first (required for HTTP-01 challenge):
+
 ```bash
 docker compose -f infrastructure/docker/phase9/docker-compose.yml up -d nginx api frontend
 ```
+
 4. Request the initial certificate:
+
 ```bash
 docker compose --profile letsencrypt -f infrastructure/docker/phase9/docker-compose.yml run --rm certbot \
   certonly --webroot -w /var/www/certbot \
@@ -62,16 +67,22 @@ docker compose --profile letsencrypt -f infrastructure/docker/phase9/docker-comp
   --email "$CERTBOT_EMAIL" \
   --agree-tos --non-interactive --no-eff-email
 ```
+
 5. Copy certbot live files to nginx default paths:
+
 ```bash
 cp "infrastructure/docker/phase9/certs/live/$TLS_DOMAIN/fullchain.pem" infrastructure/docker/phase9/certs/fullchain.pem
 cp "infrastructure/docker/phase9/certs/live/$TLS_DOMAIN/privkey.pem" infrastructure/docker/phase9/certs/privkey.pem
 ```
+
 6. Reload nginx:
+
 ```bash
 docker compose -f infrastructure/docker/phase9/docker-compose.yml exec nginx nginx -s reload
 ```
+
 7. Enable auto-renew service:
+
 ```bash
 docker compose -f infrastructure/docker/phase9/docker-compose.yml --profile letsencrypt up -d certbot
 ```
@@ -186,21 +197,25 @@ Minimum required checks:
 1. TLS endpoint health (`https://<domain>/health`) every 1 minute.
 2. Certificate expiry days remaining daily.
 3. Alert thresholds:
+
 - Warning: `< 30` days
 - Critical: `< 14` days
 - Emergency: `< 7` days
 
 Example expiry check:
+
 ```bash
 openssl x509 -in infrastructure/docker/phase9/certs/fullchain.pem -noout -enddate
 ```
 
 Automatable expiry check (returns non-zero on warning/critical):
+
 ```bash
 infrastructure/docker/phase9/check-certificate-expiry.sh infrastructure/docker/phase9/certs/fullchain.pem
 ```
 
 Custom thresholds:
+
 ```bash
 WARNING_DAYS=45 CRITICAL_DAYS=21 infrastructure/docker/phase9/check-certificate-expiry.sh
 ```
@@ -272,9 +287,11 @@ docker compose -f infrastructure/docker/phase9/docker-compose.yml exec nginx ngi
 
 1. Install new `fullchain.pem` and `privkey.pem`.
 2. Validate syntax:
+
 ```bash
 docker compose -f infrastructure/docker/phase9/docker-compose.yml exec nginx nginx -t
 ```
+
 3. Reload nginx.
 4. Verify external TLS handshake and expiry date.
 5. Confirm monitoring alerts are cleared.

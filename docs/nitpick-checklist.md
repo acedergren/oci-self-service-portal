@@ -26,28 +26,28 @@ The Phase 9 Fastify migration is **well-architected and production-ready** with 
 
 ### Findings by Severity
 
-| Severity | Count | Description |
-|----------|-------|-------------|
-| Critical | 0 | None found |
-| High | 3 | CORS misconfiguration, metrics exposure, X-API-Key contract gap (separate tasks) |
-| Medium | 5 | Auth logging, LIKE escaping, approval scoping, Docker bloat, OpenAPI (separate tasks) |
-| Low | 7 | Cookie fallback, trustProxy, health redirect, error shapes, unused code |
-| Nitpick | 24 | Listed below — all must be fixed before squash merge |
+| Severity | Count | Description                                                                           |
+| -------- | ----- | ------------------------------------------------------------------------------------- |
+| Critical | 0     | None found                                                                            |
+| High     | 3     | CORS misconfiguration, metrics exposure, X-API-Key contract gap (separate tasks)      |
+| Medium   | 5     | Auth logging, LIKE escaping, approval scoping, Docker bloat, OpenAPI (separate tasks) |
+| Low      | 7     | Cookie fallback, trustProxy, health redirect, error shapes, unused code               |
+| Nitpick  | 24    | Listed below — all must be fixed before squash merge                                  |
 
 ### Review Scope
 
 All Phase 9 Fastify backend migration files were reviewed:
 
-| Area | Files Reviewed | Key Files |
-|------|---------------|-----------|
-| App factory & server | 2 | `app.ts`, `server.ts` |
-| Plugins | 4 | `oracle.ts`, `auth.ts`, `rbac.ts`, `index.ts` |
-| Routes | 5 | `health.ts`, `sessions.ts`, `activity.ts`, `tools.ts`, `metrics.ts` |
-| Type declarations | 1 | `app.d.ts` |
-| Tests | 13 files | `app-factory.test.ts`, `auth-middleware.test.ts`, `oracle-plugin.test.ts`, `health-endpoint.test.ts`, `server-lifecycle.test.ts`, `routes/*.test.ts`, `helpers.ts`, `test-helpers.ts` |
-| Infrastructure | 4 | `Dockerfile.api`, `Dockerfile.frontend`, `nginx.conf`, `deploy.sh` |
-| Shared package | Spot-checked | `connection.ts`, `rbac.ts`, `api-keys.ts`, `health.ts`, `crypto.ts`, `mcp.ts`, `graph-analytics.ts` |
-| Git hooks | 2 | `.githooks/pre-commit`, `.githooks/pre-push` |
+| Area                 | Files Reviewed | Key Files                                                                                                                                                                             |
+| -------------------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| App factory & server | 2              | `app.ts`, `server.ts`                                                                                                                                                                 |
+| Plugins              | 4              | `oracle.ts`, `auth.ts`, `rbac.ts`, `index.ts`                                                                                                                                         |
+| Routes               | 5              | `health.ts`, `sessions.ts`, `activity.ts`, `tools.ts`, `metrics.ts`                                                                                                                   |
+| Type declarations    | 1              | `app.d.ts`                                                                                                                                                                            |
+| Tests                | 13 files       | `app-factory.test.ts`, `auth-middleware.test.ts`, `oracle-plugin.test.ts`, `health-endpoint.test.ts`, `server-lifecycle.test.ts`, `routes/*.test.ts`, `helpers.ts`, `test-helpers.ts` |
+| Infrastructure       | 4              | `Dockerfile.api`, `Dockerfile.frontend`, `nginx.conf`, `deploy.sh`                                                                                                                    |
+| Shared package       | Spot-checked   | `connection.ts`, `rbac.ts`, `api-keys.ts`, `health.ts`, `crypto.ts`, `mcp.ts`, `graph-analytics.ts`                                                                                   |
+| Git hooks            | 2              | `.githooks/pre-commit`, `.githooks/pre-push`                                                                                                                                          |
 
 ### Key Themes
 
@@ -65,16 +65,16 @@ All Phase 9 Fastify backend migration files were reviewed:
 
 The security specialist (task #33) produced `docs/PHASE9_SECURITY_AUDIT.md` covering the same codebase. Key overlaps and complementary findings:
 
-| Area | Code Review | Security Audit | Alignment |
-|------|------------|----------------|-----------|
-| CORS misconfiguration | H-1 (wildcard + credentials) | Confirmed | Both flagged |
-| Auth fail-open logging | M-1 / N-1 (log.debug too quiet) | Confirmed, fixed in task #40 | Both flagged, fix applied |
-| Metrics exposure | H-2 (unauthenticated) | Flagged for auth-gating | Aligned — decision #8 gates OpenAPI, metrics TBD |
-| X-API-Key header gap | H-3 (test/impl mismatch) | Not covered (focused on session auth) | Complementary |
-| Approval org_id scoping | M-2 (tools.ts) | Confirmed, fixed in task #40 | Both flagged, fix applied |
-| Semgrep false positives | Not in scope | 2 findings, nosemgrep added (task #36) | Complementary |
-| LIKE ESCAPE clause | Not in scope | Flagged in session-repository, fixed in #40 | Complementary |
-| CSP nonce handling | Reviewed (Helmet config) | Detailed CSP analysis | Aligned |
+| Area                    | Code Review                     | Security Audit                              | Alignment                                        |
+| ----------------------- | ------------------------------- | ------------------------------------------- | ------------------------------------------------ |
+| CORS misconfiguration   | H-1 (wildcard + credentials)    | Confirmed                                   | Both flagged                                     |
+| Auth fail-open logging  | M-1 / N-1 (log.debug too quiet) | Confirmed, fixed in task #40                | Both flagged, fix applied                        |
+| Metrics exposure        | H-2 (unauthenticated)           | Flagged for auth-gating                     | Aligned — decision #8 gates OpenAPI, metrics TBD |
+| X-API-Key header gap    | H-3 (test/impl mismatch)        | Not covered (focused on session auth)       | Complementary                                    |
+| Approval org_id scoping | M-2 (tools.ts)                  | Confirmed, fixed in task #40                | Both flagged, fix applied                        |
+| Semgrep false positives | Not in scope                    | 2 findings, nosemgrep added (task #36)      | Complementary                                    |
+| LIKE ESCAPE clause      | Not in scope                    | Flagged in session-repository, fixed in #40 | Complementary                                    |
+| CSP nonce handling      | Reviewed (Helmet config)        | Detailed CSP analysis                       | Aligned                                          |
 
 The code review and security audit together provide comprehensive coverage with no blind spots.
 
@@ -208,21 +208,22 @@ The code review and security audit together provide comprehensive coverage with 
 
 ## Items Tracked in Separate Tasks (do not fix in nitpick sweep)
 
-| ID | Finding | Severity | Task # | Status |
-|----|---------|----------|--------|--------|
-| H-1 | CORS wildcard + credentials | High | #38 | in_progress |
-| H-2 | Metrics endpoint unauthenticated | High | #37 | pending |
-| H-3 | X-API-Key header missing | High | #39 | pending |
-| M-1 | Auth log level + LIKE ESCAPE | Medium | #40 | completed |
-| M-2 | Approval org_id scoping | Medium | #40 | completed |
-| M-3 | In-memory approvals not cluster-safe | Medium | — | deferred |
-| M-5 | Missing .openapi() annotations | Medium | #37 | pending |
+| ID  | Finding                              | Severity | Task # | Status      |
+| --- | ------------------------------------ | -------- | ------ | ----------- |
+| H-1 | CORS wildcard + credentials          | High     | #38    | in_progress |
+| H-2 | Metrics endpoint unauthenticated     | High     | #37    | pending     |
+| H-3 | X-API-Key header missing             | High     | #39    | pending     |
+| M-1 | Auth log level + LIKE ESCAPE         | Medium   | #40    | completed   |
+| M-2 | Approval org_id scoping              | Medium   | #40    | completed   |
+| M-3 | In-memory approvals not cluster-safe | Medium   | —      | deferred    |
+| M-5 | Missing .openapi() annotations       | Medium   | #37    | pending     |
 
 ---
 
 ## Fix Priority
 
 **Recommended order** (minimizes context switching):
+
 1. Items 1-7 — Fastify backend source
 2. Items 8-11 — Test files
 3. Items 12-16 — Shared package
@@ -233,15 +234,15 @@ The code review and security audit together provide comprehensive coverage with 
 
 ## Totals
 
-| Category | Count |
-|----------|-------|
-| Fastify backend | 7 |
-| Test files | 4 |
-| Shared package | 5 |
-| Frontend | 1 |
-| Infrastructure | 3 |
-| Git hooks | 3 |
-| Documentation | 1 |
-| **Nitpicks to fix** | **24** |
-| Tracked separately | 7 |
+| Category                 | Count  |
+| ------------------------ | ------ |
+| Fastify backend          | 7      |
+| Test files               | 4      |
+| Shared package           | 5      |
+| Frontend                 | 1      |
+| Infrastructure           | 3      |
+| Git hooks                | 3      |
+| Documentation            | 1      |
+| **Nitpicks to fix**      | **24** |
+| Tracked separately       | 7      |
 | **Grand total findings** | **31** |

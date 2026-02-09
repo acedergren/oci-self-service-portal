@@ -35,9 +35,9 @@ Type: `OracleDecorator`
 
 ```typescript
 export interface OracleDecorator {
-  withConnection: <T>(fn: (conn: OracleConnection) => Promise<T>) => Promise<T>;
-  getPoolStats: () => Promise<PoolStats | null>;
-  isAvailable: () => boolean;
+	withConnection: <T>(fn: (conn: OracleConnection) => Promise<T>) => Promise<T>;
+	getPoolStats: () => Promise<PoolStats | null>;
+	isAvailable: () => boolean;
 }
 ```
 
@@ -53,10 +53,10 @@ Set on every request via an `onRequest` hook. Routes can check this to provide g
 
 ```typescript
 app.get('/api/sessions', async (request, reply) => {
-  if (!request.dbAvailable) {
-    return reply.status(503).send({ error: 'Database unavailable' });
-  }
-  // ... proceed with DB query
+	if (!request.dbAvailable) {
+		return reply.status(503).send({ error: 'Database unavailable' });
+	}
+	// ... proceed with DB query
 });
 ```
 
@@ -104,21 +104,20 @@ This matches the SvelteKit pattern where all services have fallback to JSONL/in-
 import type { FastifyInstance } from 'fastify';
 
 export async function sessionRoutes(app: FastifyInstance) {
-  app.get('/api/sessions', async (request, reply) => {
-    if (!request.dbAvailable) {
-      return reply.status(503).send({ error: 'Database unavailable' });
-    }
+	app.get('/api/sessions', async (request, reply) => {
+		if (!request.dbAvailable) {
+			return reply.status(503).send({ error: 'Database unavailable' });
+		}
 
-    const sessions = await app.oracle.withConnection(async (conn) => {
-      const result = await conn.execute(
-        'SELECT * FROM portal_sessions WHERE user_id = :userId',
-        { userId: request.user?.id }
-      );
-      return result.rows;
-    });
+		const sessions = await app.oracle.withConnection(async (conn) => {
+			const result = await conn.execute('SELECT * FROM portal_sessions WHERE user_id = :userId', {
+				userId: request.user?.id
+			});
+			return result.rows;
+		});
 
-    return { sessions };
-  });
+		return { sessions };
+	});
 }
 ```
 
@@ -126,14 +125,14 @@ export async function sessionRoutes(app: FastifyInstance) {
 
 ```typescript
 app.get('/health', async (request, reply) => {
-  const stats = await app.oracle.getPoolStats();
-  return {
-    status: app.oracle.isAvailable() ? 'ok' : 'degraded',
-    database: {
-      available: app.oracle.isAvailable(),
-      pool: stats
-    }
-  };
+	const stats = await app.oracle.getPoolStats();
+	return {
+		status: app.oracle.isAvailable() ? 'ok' : 'degraded',
+		database: {
+			available: app.oracle.isAvailable(),
+			pool: stats
+		}
+	};
 });
 ```
 
@@ -170,9 +169,9 @@ See: `apps/api/src/tests/plugins/oracle.test.ts` (25 tests), `apps/api/src/tests
 
 ## Design Decisions
 
-| Decision | Rationale |
-|----------|-----------|
-| `fp()` (encapsulation breaking) | Decorators must be visible to all routes, not scoped to a sub-plugin |
-| Separate `request.dbAvailable` | Avoids null checks on `fastify.oracle` — the decorator always exists |
-| Migrations in plugin | Single responsibility: "Oracle is ready" means pool + schema |
+| Decision                         | Rationale                                                                 |
+| -------------------------------- | ------------------------------------------------------------------------- |
+| `fp()` (encapsulation breaking)  | Decorators must be visible to all routes, not scoped to a sub-plugin      |
+| Separate `request.dbAvailable`   | Avoids null checks on `fastify.oracle` — the decorator always exists      |
+| Migrations in plugin             | Single responsibility: "Oracle is ready" means pool + schema              |
 | `onClose` not `onReady` for init | Init runs at registration time (async plugin body), not in `onReady` hook |

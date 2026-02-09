@@ -8,13 +8,13 @@
 
 ## Summary
 
-| Severity | Count | Fixed | Accepted | Deferred |
-|----------|-------|-------|----------|----------|
-| Critical | 0 | - | - | - |
-| High | 2 | 1 | 0 | 1 (in progress) |
-| Medium | 3 | 3 | 0 | 0 |
-| Low | 4 | 1 | 3 | 0 |
-| Semgrep FP | 2 | 2 | 0 | 0 |
+| Severity   | Count | Fixed | Accepted | Deferred        |
+| ---------- | ----- | ----- | -------- | --------------- |
+| Critical   | 0     | -     | -        | -               |
+| High       | 2     | 1     | 0        | 1 (in progress) |
+| Medium     | 3     | 3     | 0        | 0               |
+| Low        | 4     | 1     | 3        | 0               |
+| Semgrep FP | 2     | 2     | 0        | 0               |
 
 **Overall assessment**: The Fastify migration preserves all security patterns from the SvelteKit
 implementation. The dual-auth model (session + API key), RBAC preHandler hooks, and Oracle fallback
@@ -27,6 +27,7 @@ patterns are well-architected. No critical vulnerabilities found.
 ### HIGH (from cross-reference with code reviewer)
 
 #### H-1: CORS credentials + wildcard misconfiguration
+
 - **File**: `apps/api/src/app.ts:69,128-131`
 - **Severity**: HIGH
 - **Status**: In progress (task #38, assigned to backend-developer-2)
@@ -40,6 +41,7 @@ patterns are well-architected. No critical vulnerabilities found.
   in non-credentialed requests is unrestricted from any origin.
 
 #### H-2: X-API-Key header contract mismatch
+
 - **File**: `apps/api/src/plugins/rbac.ts:15-25`
 - **Severity**: HIGH
 - **Status**: FIXED
@@ -54,6 +56,7 @@ patterns are well-architected. No critical vulnerabilities found.
 ### MEDIUM
 
 #### M-1: Missing LIKE ESCAPE clause in session search
+
 - **File**: `packages/shared/src/server/oracle/repositories/session-repository.ts:217`
 - **Severity**: MEDIUM
 - **Status**: FIXED
@@ -65,11 +68,12 @@ patterns are well-architected. No critical vulnerabilities found.
 - **Commit**: `fix(security): LIKE escape, approval org-scoping, auth log level`
 
 #### M-2: Cross-org approval consumption (IDOR)
+
 - **File**: `apps/api/src/routes/tools.ts:115` + `packages/shared/src/server/approvals.ts:68`
 - **Severity**: MEDIUM
 - **Status**: FIXED
 - **Issue**: `consumeApproval(toolCallId, toolName)` checked `tool_call_id` and `tool_name` but
-  NOT `org_id`. While approval *creation* was org-scoped, consumption was not — any authenticated
+  NOT `org_id`. While approval _creation_ was org-scoped, consumption was not — any authenticated
   user with the UUID could consume a cross-org approval.
 - **Risk**: Low probability (UUIDs are unguessable, 5-min TTL) but violates defense-in-depth for
   multi-tenant isolation.
@@ -82,6 +86,7 @@ patterns are well-architected. No critical vulnerabilities found.
 - **Commit**: `fix(security): LIKE escape, approval org-scoping, auth log level`
 
 #### M-3: Auth errors logged at DEBUG level
+
 - **File**: `apps/api/src/plugins/auth.ts:106`
 - **Severity**: MEDIUM (upgraded from LOW after code reviewer concurrence)
 - **Status**: FIXED
@@ -94,6 +99,7 @@ patterns are well-architected. No critical vulnerabilities found.
 ### LOW
 
 #### L-1: CORS defaults to `origin: '*'`
+
 - **File**: `apps/api/src/app.ts:69`
 - **Severity**: LOW (subsumes into H-1 for the full fix)
 - **Status**: Accepted for dev; addressed by H-1 for production
@@ -101,6 +107,7 @@ patterns are well-architected. No critical vulnerabilities found.
   in production via `CORS_ORIGIN` env var.
 
 #### L-2: X-Request-Id header trusted from external input
+
 - **File**: `apps/api/src/app.ts:118-119`
 - **Severity**: LOW
 - **Status**: Accepted
@@ -111,6 +118,7 @@ patterns are well-architected. No critical vulnerabilities found.
   pass.
 
 #### L-3: Cookie secret non-production fallback
+
 - **File**: `apps/api/src/app.ts:195`
 - **Severity**: LOW
 - **Status**: Accepted
@@ -119,6 +127,7 @@ patterns are well-architected. No critical vulnerabilities found.
 - **Mitigation**: The fatal check at line 78-81 covers the production deployment path.
 
 #### L-4: `trustProxy: true` unconditionally trusts all proxies
+
 - **File**: `apps/api/src/app.ts:88`
 - **Severity**: LOW
 - **Status**: Accepted
@@ -129,6 +138,7 @@ patterns are well-architected. No critical vulnerabilities found.
 ### Semgrep Findings (False Positives)
 
 #### S-1: `gcm-no-tag-length` in crypto.ts — FALSE POSITIVE
+
 - **File**: `packages/shared/src/server/crypto.ts:81,110`
 - **Status**: FIXED (nosemgrep directives added)
 - **Analysis**: Node.js `createCipheriv`/`createDecipheriv` defaults to 16-byte (128-bit) GCM auth
@@ -140,6 +150,7 @@ patterns are well-architected. No critical vulnerabilities found.
 - **Commit**: `fix(security): add nosemgrep comments for false positive findings`
 
 #### S-2: `path-join-resolve-traversal` in migrations.ts — FALSE POSITIVE
+
 - **File**: `packages/shared/src/server/oracle/migrations.ts:27`
 - **Status**: FIXED (nosemgrep directive enhanced with explanation)
 - **Analysis**: Triple mitigation in place:
@@ -198,61 +209,63 @@ The CodeRabbit code-reviewer independently reviewed the same codebase and produc
 
 ### Overlapping Findings (both reviewers found)
 
-| Finding | Security Audit | Code Review | Agreed Severity |
-|---------|---------------|-------------|-----------------|
-| Auth errors at DEBUG level | L-1 | M-1 | MEDIUM |
-| CORS wildcard default | L-2 | H-1 | HIGH |
-| Cookie secret fallback | L-4 | L-4 | LOW |
-| trustProxy:true | L-3 | L-6 | LOW |
+| Finding                    | Security Audit | Code Review | Agreed Severity |
+| -------------------------- | -------------- | ----------- | --------------- |
+| Auth errors at DEBUG level | L-1            | M-1         | MEDIUM          |
+| CORS wildcard default      | L-2            | H-1         | HIGH            |
+| Cookie secret fallback     | L-4            | L-4         | LOW             |
+| trustProxy:true            | L-3            | L-6         | LOW             |
 
 ### Security Audit Only
 
-| Finding | Severity | Rationale |
-|---------|----------|-----------|
-| M-1: LIKE ESCAPE clause | MEDIUM | Oracle-specific SQL — not visible in Fastify routes |
-| M-2: Cross-org approval IDOR | MEDIUM | Multi-tenant isolation gap in shared approvals module |
-| L-2: X-Request-Id validation | LOW | Log injection via untrusted header |
-| S-1: GCM tag length FP | FP | Confirmed default 128-bit is correct |
-| S-2: Path traversal FP | FP | Confirmed triple mitigation is adequate |
+| Finding                      | Severity | Rationale                                             |
+| ---------------------------- | -------- | ----------------------------------------------------- |
+| M-1: LIKE ESCAPE clause      | MEDIUM   | Oracle-specific SQL — not visible in Fastify routes   |
+| M-2: Cross-org approval IDOR | MEDIUM   | Multi-tenant isolation gap in shared approvals module |
+| L-2: X-Request-Id validation | LOW      | Log injection via untrusted header                    |
+| S-1: GCM tag length FP       | FP       | Confirmed default 128-bit is correct                  |
+| S-2: Path traversal FP       | FP       | Confirmed triple mitigation is adequate               |
 
 ### Code Reviewer Only
 
-| Finding | Severity | Notes |
-|---------|----------|-------|
-| H-3: X-API-Key header mismatch | HIGH | Test/code contract broken |
-| M-2: errorResponse() shape | MEDIUM | Fastify convention mismatch |
-| M-3: pendingApprovals not shared | MEDIUM | Single-worker limitation |
-| M-4: Dockerfile copies dev deps | MEDIUM | Image bloat, not security |
-| M-5: /healthz not in nginx | MEDIUM | Documentation gap |
-| L-1: Inconsistent error shapes | LOW | DX issue |
-| L-2: Zod import path fragility | LOW | CI risk |
-| L-3: Unnecessary `as` casts | LOW | Type safety bypass |
-| L-5: process.env replacement | LOW | Test fragility |
-| L-7: Empty __tests__ directory | LOW | Cleanup |
-| N-1 through N-7 | NITPICK | Various improvements |
+| Finding                          | Severity | Notes                       |
+| -------------------------------- | -------- | --------------------------- |
+| H-3: X-API-Key header mismatch   | HIGH     | Test/code contract broken   |
+| M-2: errorResponse() shape       | MEDIUM   | Fastify convention mismatch |
+| M-3: pendingApprovals not shared | MEDIUM   | Single-worker limitation    |
+| M-4: Dockerfile copies dev deps  | MEDIUM   | Image bloat, not security   |
+| M-5: /healthz not in nginx       | MEDIUM   | Documentation gap           |
+| L-1: Inconsistent error shapes   | LOW      | DX issue                    |
+| L-2: Zod import path fragility   | LOW      | CI risk                     |
+| L-3: Unnecessary `as` casts      | LOW      | Type safety bypass          |
+| L-5: process.env replacement     | LOW      | Test fragility              |
+| L-7: Empty **tests** directory   | LOW      | Cleanup                     |
+| N-1 through N-7                  | NITPICK  | Various improvements        |
 
 ---
 
 ## Fixes Applied
 
-| Fix | Files Changed | Commit |
-|-----|--------------|--------|
-| Nosemgrep: gcm-no-tag-length | `packages/shared/src/server/crypto.ts` | `fix(security): add nosemgrep comments for false positive findings` |
-| Nosemgrep: path-join-resolve-traversal | `packages/shared/src/server/oracle/migrations.ts` | `fix(security): add nosemgrep comments for false positive findings` |
-| M-1: LIKE ESCAPE clause | `packages/shared/.../session-repository.ts` | `fix(security): LIKE escape, approval org-scoping, auth log level` |
-| M-2: Approval org_id isolation | `packages/shared/src/server/approvals.ts`, `apps/api/src/routes/tools.ts` | `fix(security): LIKE escape, approval org-scoping, auth log level` |
-| M-3: Auth log level | `apps/api/src/plugins/auth.ts` | `fix(security): LIKE escape, approval org-scoping, auth log level` |
-| H-2: X-API-Key header support | `apps/api/src/plugins/rbac.ts` | `fix(security): implement X-API-Key header support in RBAC middleware` |
+| Fix                                    | Files Changed                                                             | Commit                                                                 |
+| -------------------------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Nosemgrep: gcm-no-tag-length           | `packages/shared/src/server/crypto.ts`                                    | `fix(security): add nosemgrep comments for false positive findings`    |
+| Nosemgrep: path-join-resolve-traversal | `packages/shared/src/server/oracle/migrations.ts`                         | `fix(security): add nosemgrep comments for false positive findings`    |
+| M-1: LIKE ESCAPE clause                | `packages/shared/.../session-repository.ts`                               | `fix(security): LIKE escape, approval org-scoping, auth log level`     |
+| M-2: Approval org_id isolation         | `packages/shared/src/server/approvals.ts`, `apps/api/src/routes/tools.ts` | `fix(security): LIKE escape, approval org-scoping, auth log level`     |
+| M-3: Auth log level                    | `apps/api/src/plugins/auth.ts`                                            | `fix(security): LIKE escape, approval org-scoping, auth log level`     |
+| H-2: X-API-Key header support          | `apps/api/src/plugins/rbac.ts`                                            | `fix(security): implement X-API-Key header support in RBAC middleware` |
 
 ---
 
 ## Recommendations for Future Phases
 
 ### Short-term (before production)
+
 1. **H-1**: Require `CORS_ORIGIN` in production — fail fast if missing
 2. **Migration**: Create `approved_tool_calls` table with `org_id` column
 
 ### Medium-term (next hardening pass)
+
 4. Validate `X-Request-Id` format (alphanumeric + hyphens, max 64 chars)
 5. Use `trustProxy: 1` instead of `true` in production
 6. Align XSS header strategy: nginx sets `X-XSS-Protection: 0`, Helmet sets `1`
@@ -260,10 +273,11 @@ The CodeRabbit code-reviewer independently reviewed the same codebase and produc
 8. Add auth resolution failure metric counter for monitoring dashboards
 
 ### Long-term (multi-worker scaling)
+
 9. Move `pendingApprovals` fully to Oracle DB (currently in-memory Map with DB fallback)
 10. Consider Redis for rate limiting and approval state in clustered deployments
 11. Implement API key rate limiting separate from session rate limiting
 
 ---
 
-*Report generated by security-specialist agent, Phase 9 implementation team.*
+_Report generated by security-specialist agent, Phase 9 implementation team._

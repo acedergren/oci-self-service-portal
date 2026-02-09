@@ -36,12 +36,12 @@ Scaffold a new phase of development for the self-service portal, following the e
 4. **Create TDD test shell**: Create a test file at `apps/frontend/src/tests/phase{N}/{feature-name}.test.ts` with `describe` blocks matching the planned tasks. Use the project's vitest setup:
 
    ```typescript
-   import { describe, it, expect } from "vitest";
+   import { describe, it, expect } from 'vitest';
 
-   describe("Phase {N}: {Title}", () => {
-     describe("{N}.1 - {First task}", () => {
-       it.todo("should ...");
-     });
+   describe('Phase {N}: {Title}', () => {
+   	describe('{N}.1 - {First task}', () => {
+   		it.todo('should ...');
+   	});
    });
    ```
 

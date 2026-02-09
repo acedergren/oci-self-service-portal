@@ -1,324 +1,341 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Phase 9 Fastify Migration - Status & Architecture Explorer</title>
-<style>
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Phase 9 Fastify Migration - Status & Architecture Explorer</title>
+		<style>
+			* {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: #0d1117;
-  color: #c9d1d9;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
+			body {
+				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+				background: #0d1117;
+				color: #c9d1d9;
+				height: 100vh;
+				display: flex;
+				flex-direction: column;
+			}
 
-.container {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
+			.container {
+				display: flex;
+				flex: 1;
+				overflow: hidden;
+			}
 
-.controls {
-  width: 380px;
-  background: #161b22;
-  border-right: 1px solid #30363d;
-  padding: 20px;
-  overflow-y: auto;
-}
+			.controls {
+				width: 380px;
+				background: #161b22;
+				border-right: 1px solid #30363d;
+				padding: 20px;
+				overflow-y: auto;
+			}
 
-.preview {
-  flex: 1;
-  padding: 20px;
-  overflow-y: auto;
-  background: #0d1117;
-}
+			.preview {
+				flex: 1;
+				padding: 20px;
+				overflow-y: auto;
+				background: #0d1117;
+			}
 
-.output {
-  background: #161b22;
-  border-top: 1px solid #30363d;
-  padding: 16px 20px;
-  font-family: 'SF Mono', Monaco, monospace;
-  font-size: 13px;
-  line-height: 1.6;
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-}
+			.output {
+				background: #161b22;
+				border-top: 1px solid #30363d;
+				padding: 16px 20px;
+				font-family: 'SF Mono', Monaco, monospace;
+				font-size: 13px;
+				line-height: 1.6;
+				display: flex;
+				gap: 12px;
+				align-items: flex-start;
+			}
 
-.output-text {
-  flex: 1;
-  white-space: pre-wrap;
-  color: #8b949e;
-}
+			.output-text {
+				flex: 1;
+				white-space: pre-wrap;
+				color: #8b949e;
+			}
 
-.copy-btn {
-  background: #238636;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 12px;
-  white-space: nowrap;
-  transition: background 0.2s;
-}
+			.copy-btn {
+				background: #238636;
+				color: white;
+				border: none;
+				padding: 6px 12px;
+				border-radius: 6px;
+				cursor: pointer;
+				font-size: 12px;
+				white-space: nowrap;
+				transition: background 0.2s;
+			}
 
-.copy-btn:hover {
-  background: #2ea043;
-}
+			.copy-btn:hover {
+				background: #2ea043;
+			}
 
-.copy-btn.copied {
-  background: #1f6feb;
-}
+			.copy-btn.copied {
+				background: #1f6feb;
+			}
 
-h2 {
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 16px;
-  color: #f0f6fc;
-}
+			h2 {
+				font-size: 16px;
+				font-weight: 600;
+				margin-bottom: 16px;
+				color: #f0f6fc;
+			}
 
-h3 {
-  font-size: 14px;
-  font-weight: 600;
-  margin: 20px 0 12px;
-  color: #f0f6fc;
-}
+			h3 {
+				font-size: 14px;
+				font-weight: 600;
+				margin: 20px 0 12px;
+				color: #f0f6fc;
+			}
 
-.section {
-  margin-bottom: 24px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid #21262d;
-}
+			.section {
+				margin-bottom: 24px;
+				padding-bottom: 24px;
+				border-bottom: 1px solid #21262d;
+			}
 
-.section:last-child {
-  border-bottom: none;
-}
+			.section:last-child {
+				border-bottom: none;
+			}
 
-.control-group {
-  margin-bottom: 16px;
-}
+			.control-group {
+				margin-bottom: 16px;
+			}
 
-label {
-  display: block;
-  font-size: 13px;
-  font-weight: 500;
-  margin-bottom: 6px;
-  color: #c9d1d9;
-}
+			label {
+				display: block;
+				font-size: 13px;
+				font-weight: 500;
+				margin-bottom: 6px;
+				color: #c9d1d9;
+			}
 
-select, input[type="range"] {
-  width: 100%;
-  background: #0d1117;
-  color: #c9d1d9;
-  border: 1px solid #30363d;
-  border-radius: 6px;
-  padding: 8px;
-  font-size: 13px;
-}
+			select,
+			input[type='range'] {
+				width: 100%;
+				background: #0d1117;
+				color: #c9d1d9;
+				border: 1px solid #30363d;
+				border-radius: 6px;
+				padding: 8px;
+				font-size: 13px;
+			}
 
-select:focus, input:focus {
-  outline: none;
-  border-color: #1f6feb;
-}
+			select:focus,
+			input:focus {
+				outline: none;
+				border-color: #1f6feb;
+			}
 
-input[type="checkbox"] {
-  margin-right: 8px;
-}
+			input[type='checkbox'] {
+				margin-right: 8px;
+			}
 
-.checkbox-label {
-  display: flex;
-  align-items: center;
-  font-size: 13px;
-  margin-bottom: 8px;
-  cursor: pointer;
-}
+			.checkbox-label {
+				display: flex;
+				align-items: center;
+				font-size: 13px;
+				margin-bottom: 8px;
+				cursor: pointer;
+			}
 
-.preset-btn {
-  background: #21262d;
-  color: #c9d1d9;
-  border: 1px solid #30363d;
-  padding: 8px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 12px;
-  margin-right: 8px;
-  margin-bottom: 8px;
-  transition: all 0.2s;
-}
+			.preset-btn {
+				background: #21262d;
+				color: #c9d1d9;
+				border: 1px solid #30363d;
+				padding: 8px 12px;
+				border-radius: 6px;
+				cursor: pointer;
+				font-size: 12px;
+				margin-right: 8px;
+				margin-bottom: 8px;
+				transition: all 0.2s;
+			}
 
-.preset-btn:hover {
-  background: #30363d;
-  border-color: #1f6feb;
-}
+			.preset-btn:hover {
+				background: #30363d;
+				border-color: #1f6feb;
+			}
 
-.mermaid-container {
-  background: #161b22;
-  border: 1px solid #30363d;
-  border-radius: 8px;
-  padding: 24px;
-  margin-bottom: 24px;
-  overflow-x: auto;
-}
+			.mermaid-container {
+				background: #161b22;
+				border: 1px solid #30363d;
+				border-radius: 8px;
+				padding: 24px;
+				margin-bottom: 24px;
+				overflow-x: auto;
+			}
 
-.mermaid {
-  text-align: center;
-}
+			.mermaid {
+				text-align: center;
+			}
 
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 12px;
-  margin-bottom: 24px;
-}
+			.stats-grid {
+				display: grid;
+				grid-template-columns: repeat(2, 1fr);
+				gap: 12px;
+				margin-bottom: 24px;
+			}
 
-.stat-card {
-  background: #161b22;
-  border: 1px solid #30363d;
-  border-radius: 6px;
-  padding: 16px;
-  text-align: center;
-}
+			.stat-card {
+				background: #161b22;
+				border: 1px solid #30363d;
+				border-radius: 6px;
+				padding: 16px;
+				text-align: center;
+			}
 
-.stat-value {
-  font-size: 32px;
-  font-weight: 700;
-  color: #58a6ff;
-  line-height: 1;
-}
+			.stat-value {
+				font-size: 32px;
+				font-weight: 700;
+				color: #58a6ff;
+				line-height: 1;
+			}
 
-.stat-label {
-  font-size: 11px;
-  color: #8b949e;
-  margin-top: 8px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
+			.stat-label {
+				font-size: 11px;
+				color: #8b949e;
+				margin-top: 8px;
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+			}
 
-.question-card {
-  background: #161b22;
-  border: 1px solid #30363d;
-  border-radius: 6px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
+			.question-card {
+				background: #161b22;
+				border: 1px solid #30363d;
+				border-radius: 6px;
+				padding: 16px;
+				margin-bottom: 16px;
+			}
 
-.finding-card {
-  background: #161b22;
-  border-left: 3px solid #ff7b72;
-  padding: 12px;
-  margin-bottom: 12px;
-  border-radius: 4px;
-}
+			.finding-card {
+				background: #161b22;
+				border-left: 3px solid #ff7b72;
+				padding: 12px;
+				margin-bottom: 12px;
+				border-radius: 4px;
+			}
 
-.status-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 600;
-  margin-left: 8px;
-}
+			.status-badge {
+				display: inline-block;
+				padding: 2px 8px;
+				border-radius: 12px;
+				font-size: 11px;
+				font-weight: 600;
+				margin-left: 8px;
+			}
 
-.status-badge.pass { background: #1a472a; color: #3fb950; }
-.status-badge.pending { background: #3d2c00; color: #d29922; }
-.status-badge.critical { background: #490b0b; color: #ff7b72; }
-.status-badge.high { background: #5a1e02; color: #ffa657; }
-</style>
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js" integrity="sha384-enVdc7lTHDGtpROV85t9+VqPC2EyyB0hsRD0MrvQnHUsHmTHIz2D8SPP4EnBkstH" crossorigin="anonymous"></script>
-</head>
-<body>
+			.status-badge.pass {
+				background: #1a472a;
+				color: #3fb950;
+			}
+			.status-badge.pending {
+				background: #3d2c00;
+				color: #d29922;
+			}
+			.status-badge.critical {
+				background: #490b0b;
+				color: #ff7b72;
+			}
+			.status-badge.high {
+				background: #5a1e02;
+				color: #ffa657;
+			}
+		</style>
+		<script
+			src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"
+			integrity="sha384-enVdc7lTHDGtpROV85t9+VqPC2EyyB0hsRD0MrvQnHUsHmTHIz2D8SPP4EnBkstH"
+			crossorigin="anonymous"
+		></script>
+	</head>
+	<body>
+		<div class="container">
+			<div class="controls">
+				<h2>Phase 9 Explorer</h2>
 
-<div class="container">
-  <div class="controls">
-    <h2>Phase 9 Explorer</h2>
+				<div class="section">
+					<h3>View Focus</h3>
+					<div class="control-group">
+						<label>Primary View</label>
+						<select id="viewType" onchange="updateAll()">
+							<option value="architecture">Architecture</option>
+							<option value="plugin-lifecycle">Plugin Lifecycle</option>
+							<option value="user-journey">User Journey</option>
+							<option value="database">Database Schema</option>
+							<option value="workflow">Workflow Executor</option>
+							<option value="test-coverage">Test Coverage</option>
+							<option value="deployment">Deployment Infrastructure</option>
+							<option value="findings">Security Findings</option>
+							<option value="decision-log">Decision Log</option>
+							<option value="data-flow">Data Flow</option>
+							<option value="questions">Open Questions</option>
+						</select>
+					</div>
+				</div>
 
-    <div class="section">
-      <h3>View Focus</h3>
-      <div class="control-group">
-        <label>Primary View</label>
-        <select id="viewType" onchange="updateAll()">
-          <option value="architecture">Architecture</option>
-          <option value="plugin-lifecycle">Plugin Lifecycle</option>
-          <option value="user-journey">User Journey</option>
-          <option value="database">Database Schema</option>
-          <option value="workflow">Workflow Executor</option>
-          <option value="test-coverage">Test Coverage</option>
-          <option value="deployment">Deployment Infrastructure</option>
-          <option value="findings">Security Findings</option>
-          <option value="decision-log">Decision Log</option>
-          <option value="data-flow">Data Flow</option>
-          <option value="questions">Open Questions</option>
-        </select>
-      </div>
-    </div>
+				<div class="section">
+					<h3>Filter Priority</h3>
+					<label class="checkbox-label">
+						<input type="checkbox" id="showCritical" checked onchange="updateAll()" />
+						Critical (1)
+					</label>
+					<label class="checkbox-label">
+						<input type="checkbox" id="showHigh" checked onchange="updateAll()" />
+						High (3)
+					</label>
+					<label class="checkbox-label">
+						<input type="checkbox" id="showMedium" checked onchange="updateAll()" />
+						Medium (3)
+					</label>
+				</div>
 
-    <div class="section">
-      <h3>Filter Priority</h3>
-      <label class="checkbox-label">
-        <input type="checkbox" id="showCritical" checked onchange="updateAll()">
-        Critical (1)
-      </label>
-      <label class="checkbox-label">
-        <input type="checkbox" id="showHigh" checked onchange="updateAll()">
-        High (3)
-      </label>
-      <label class="checkbox-label">
-        <input type="checkbox" id="showMedium" checked onchange="updateAll()">
-        Medium (3)
-      </label>
-    </div>
+				<div class="section">
+					<h3>Quick Presets</h3>
+					<button class="preset-btn" onclick="applyPreset('blocking')">🚨 Blocking</button>
+					<button class="preset-btn" onclick="applyPreset('diagrams')">📊 Diagrams</button>
+					<button class="preset-btn" onclick="applyPreset('questions')">❓ Questions</button>
+				</div>
+			</div>
 
-    <div class="section">
-      <h3>Quick Presets</h3>
-      <button class="preset-btn" onclick="applyPreset('blocking')">🚨 Blocking</button>
-      <button class="preset-btn" onclick="applyPreset('diagrams')">📊 Diagrams</button>
-      <button class="preset-btn" onclick="applyPreset('questions')">❓ Questions</button>
-    </div>
-  </div>
+			<div class="preview" id="preview"></div>
+		</div>
 
-  <div class="preview" id="preview"></div>
-</div>
+		<div class="output">
+			<div class="output-text" id="prompt"></div>
+			<button class="copy-btn" id="copyBtn" onclick="copyPrompt()">Copy</button>
+		</div>
 
-<div class="output">
-  <div class="output-text" id="prompt"></div>
-  <button class="copy-btn" id="copyBtn" onclick="copyPrompt()">Copy</button>
-</div>
+		<script>
+			// Safe DOM helper
+			function createElement(tag, props = {}, children = []) {
+				const el = document.createElement(tag);
+				Object.entries(props).forEach(([key, value]) => {
+					if (key === 'className') el.className = value;
+					else if (key === 'textContent') el.textContent = value;
+					else if (key === 'style') Object.assign(el.style, value);
+					else el.setAttribute(key, value);
+				});
+				children.forEach((child) => {
+					el.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
+				});
+				return el;
+			}
 
-<script>
-// Safe DOM helper
-function createElement(tag, props = {}, children = []) {
-  const el = document.createElement(tag);
-  Object.entries(props).forEach(([key, value]) => {
-    if (key === 'className') el.className = value;
-    else if (key === 'textContent') el.textContent = value;
-    else if (key === 'style') Object.assign(el.style, value);
-    else el.setAttribute(key, value);
-  });
-  children.forEach(child => {
-    el.appendChild(typeof child === 'string' ? document.createTextNode(child) : child);
-  });
-  return el;
-}
+			const state = {
+				viewType: 'architecture',
+				showCritical: true,
+				showHigh: true,
+				showMedium: true,
+				answers: {}
+			};
 
-const state = {
-  viewType: 'architecture',
-  showCritical: true,
-  showHigh: true,
-  showMedium: true,
-  answers: {}
-};
-
-const diagrams = {
-  architecture: `graph TB
+			const diagrams = {
+				architecture: `graph TB
     subgraph Frontend["apps/frontend (SvelteKit)"]
       UI[UI Components]
       Routes[31 API Routes]
@@ -351,7 +368,7 @@ const diagrams = {
     AuthPlugin --> BetterAuth
     RBAC --> BetterAuth`,
 
-  pluginLifecycle: `sequenceDiagram
+				pluginLifecycle: `sequenceDiagram
     participant C as Client
     participant F as Fastify Core
     participant T as Tracing Hook
@@ -378,7 +395,7 @@ const diagrams = {
     end
     F->>F: onClose: closePool()`,
 
-  userJourney: `journey
+				userJourney: `journey
     title AI Chat with Tool Execution Journey
     section Login
       Visit /login: 3: User
@@ -403,7 +420,7 @@ const diagrams = {
       Execute workflow: 5: Executor
       Approve manual step: 4: User`,
 
-  database: `erDiagram
+				database: `erDiagram
     SESSIONS ||--o{ MESSAGES : contains
     SESSIONS {
       string id PK
@@ -465,7 +482,7 @@ const diagrams = {
       timestamp expiresAt
     }`,
 
-  workflow: `graph LR
+				workflow: `graph LR
     Start([Start]) --> Input[Input Node]
     Input --> Validate{Validate Input}
     Validate -->|Valid| Tool1[OCI Tool: List Instances]
@@ -485,7 +502,7 @@ const diagrams = {
     Cancel --> End
     Error --> End`,
 
-  deployment: `graph TB
+				deployment: `graph TB
     subgraph Internet["Internet"]
       Client[Browser / API Client]
     end
@@ -528,7 +545,7 @@ const diagrams = {
     Fastify -.-> Vault
     SK -.-> Vault`,
 
-  testCoverage: `graph TB
+				testCoverage: `graph TB
     subgraph T["203 Tests - 13 Files"]
       subgraph P["Plugin Tests - 54"]
         OT["oracle 25t"]
@@ -562,7 +579,7 @@ const diagrams = {
     style I fill:#3d2c00,stroke:#d29922
     style S fill:#490b0b,stroke:#ff7b72`,
 
-  dataFlow: `graph TB
+				dataFlow: `graph TB
     Browser[Browser Client]
 
     subgraph SvelteKit["apps/frontend — SvelteKit"]
@@ -616,472 +633,769 @@ const diagrams = {
     style Shared fill:#3d2c00,stroke:#d29922
     style Oracle fill:#490b0b,stroke:#ff7b72
     style FF fill:#3d1f00,stroke:#d29922`
-};
+			};
 
-function updateAll() {
-  state.viewType = document.getElementById('viewType').value;
-  state.showCritical = document.getElementById('showCritical').checked;
-  state.showHigh = document.getElementById('showHigh').checked;
-  state.showMedium = document.getElementById('showMedium').checked;
+			function updateAll() {
+				state.viewType = document.getElementById('viewType').value;
+				state.showCritical = document.getElementById('showCritical').checked;
+				state.showHigh = document.getElementById('showHigh').checked;
+				state.showMedium = document.getElementById('showMedium').checked;
 
-  renderPreview();
-  updatePrompt();
-}
+				renderPreview();
+				updatePrompt();
+			}
 
-function renderPreview() {
-  const preview = document.getElementById('preview');
-  preview.textContent = ''; // Clear existing content safely
+			function renderPreview() {
+				const preview = document.getElementById('preview');
+				preview.textContent = ''; // Clear existing content safely
 
-  // Stats header
-  const statsGrid = createElement('div', { className: 'stats-grid' }, [
-    createElement('div', { className: 'stat-card' }, [
-      createElement('div', { className: 'stat-value', textContent: '203' }),
-      createElement('div', { className: 'stat-label', textContent: 'TESTS PASSING' })
-    ]),
-    createElement('div', { className: 'stat-card' }, [
-      createElement('div', { className: 'stat-value', textContent: '8/8' }),
-      createElement('div', { className: 'stat-label', textContent: 'FINDINGS FIXED' })
-    ]),
-    createElement('div', { className: 'stat-card' }, [
-      createElement('div', { className: 'stat-value', textContent: '0' }),
-      createElement('div', { className: 'stat-label', textContent: 'SEMGREP ISSUES' })
-    ]),
-    createElement('div', { className: 'stat-card' }, [
-      createElement('div', { className: 'stat-value', textContent: '12' }),
-      createElement('div', { className: 'stat-label', textContent: 'QUESTIONS' })
-    ])
-  ]);
-  preview.appendChild(statsGrid);
+				// Stats header
+				const statsGrid = createElement('div', { className: 'stats-grid' }, [
+					createElement('div', { className: 'stat-card' }, [
+						createElement('div', { className: 'stat-value', textContent: '203' }),
+						createElement('div', { className: 'stat-label', textContent: 'TESTS PASSING' })
+					]),
+					createElement('div', { className: 'stat-card' }, [
+						createElement('div', { className: 'stat-value', textContent: '8/8' }),
+						createElement('div', { className: 'stat-label', textContent: 'FINDINGS FIXED' })
+					]),
+					createElement('div', { className: 'stat-card' }, [
+						createElement('div', { className: 'stat-value', textContent: '0' }),
+						createElement('div', { className: 'stat-label', textContent: 'SEMGREP ISSUES' })
+					]),
+					createElement('div', { className: 'stat-card' }, [
+						createElement('div', { className: 'stat-value', textContent: '12' }),
+						createElement('div', { className: 'stat-label', textContent: 'QUESTIONS' })
+					])
+				]);
+				preview.appendChild(statsGrid);
 
-  // Main content based on view
-  // Map select values to diagram keys (handles kebab-case → camelCase)
-  const diagramKeyMap = {
-    'architecture': 'architecture',
-    'plugin-lifecycle': 'pluginLifecycle',
-    'user-journey': 'userJourney',
-    'database': 'database',
-    'workflow': 'workflow',
-    'test-coverage': 'testCoverage',
-    'deployment': 'deployment',
-    'data-flow': 'dataFlow'
-  };
-  const diagramKey = diagramKeyMap[state.viewType];
-  if (diagramKey && diagrams[diagramKey]) {
-    const container = createElement('div', { className: 'mermaid-container' });
-    const mermaidDiv = createElement('div', { className: 'mermaid' });
-    mermaidDiv.textContent = diagrams[diagramKey];
-    container.appendChild(mermaidDiv);
-    preview.appendChild(container);
+				// Main content based on view
+				// Map select values to diagram keys (handles kebab-case → camelCase)
+				const diagramKeyMap = {
+					architecture: 'architecture',
+					'plugin-lifecycle': 'pluginLifecycle',
+					'user-journey': 'userJourney',
+					database: 'database',
+					workflow: 'workflow',
+					'test-coverage': 'testCoverage',
+					deployment: 'deployment',
+					'data-flow': 'dataFlow'
+				};
+				const diagramKey = diagramKeyMap[state.viewType];
+				if (diagramKey && diagrams[diagramKey]) {
+					const container = createElement('div', { className: 'mermaid-container' });
+					const mermaidDiv = createElement('div', { className: 'mermaid' });
+					mermaidDiv.textContent = diagrams[diagramKey];
+					container.appendChild(mermaidDiv);
+					preview.appendChild(container);
 
-    // Re-initialize mermaid
-    setTimeout(() => mermaid.init(undefined, document.querySelectorAll('.mermaid')), 100);
-  } else if (state.viewType === 'findings') {
-    renderFindings(preview);
-  } else if (state.viewType === 'decision-log') {
-    renderDecisionLog(preview);
-  } else if (state.viewType === 'questions') {
-    renderQuestions(preview);
-  }
-}
+					// Re-initialize mermaid
+					setTimeout(() => mermaid.init(undefined, document.querySelectorAll('.mermaid')), 100);
+				} else if (state.viewType === 'findings') {
+					renderFindings(preview);
+				} else if (state.viewType === 'decision-log') {
+					renderDecisionLog(preview);
+				} else if (state.viewType === 'questions') {
+					renderQuestions(preview);
+				}
+			}
 
-function renderDecisionLog(container) {
-  const decisions = [
-    { decision: 'Fastify 5 + fastify-plugin (fp)', rationale: 'Encapsulation-breaking plugins expose decorators to all routes; Fastify 5 enforces getter/setter for reference-type decorators', alternatives: 'Express 5, Hono, Koa' },
-    { decision: 'fastify-type-provider-zod', rationale: 'Type-safe request validation with Zod schemas reused from shared package; compile-time inference', alternatives: 'Ajv JSON Schema (Fastify default), typebox, io-ts' },
-    { decision: 'toWebRequest() bridge for Better Auth', rationale: 'Better Auth expects Web API Request objects; Fastify uses its own request model. Bridge converts headers+cookies for getSession()', alternatives: 'Rewrite Better Auth adapter, use @better-auth/fastify (not available)' },
-    { decision: 'Symbol-based permissions decorator', rationale: 'Fastify 5 requires getter/setter for array-type request decorators; Symbol prevents property name collisions', alternatives: 'WeakMap, private class field, plain property with type assertion' },
-    { decision: 'Fail-open auth, fail-fast secret', rationale: 'Session resolution errors should not block requests (routes guard individually). But missing BETTER_AUTH_SECRET in production must crash immediately.', alternatives: 'Fail-closed auth (breaks health endpoints), warn-only for secrets' },
-    { decision: 'Oracle → Auth → RBAC plugin order', rationale: 'Auth depends on Oracle for DB-backed sessions; RBAC depends on auth decorators (user, permissions)', alternatives: 'Lazy init, single monolithic plugin' },
-    { decision: 'requireAuth() as standalone function', rationale: 'Routes choose their own auth requirements via preHandler, not one-size-fits-all middleware. Unifies session + API key auth.', alternatives: 'Global onRequest hook, route-level decorator, class-based guards' },
-    { decision: 'Promise.race health timeout (3s)', rationale: 'Prevents load balancer timeouts when Oracle is unresponsive. 3s balances between useful diagnostics and LB health check interval.', alternatives: 'AbortController, Fastify route timeout, no timeout (rely on LB)' },
-    { decision: 'IDOR fix via orgId on PendingApprovalEntry', rationale: 'Cross-org approval verification using resolveOrgId(). Nullable orgId supports both single-org and multi-org deployments.', alternatives: 'User-level scoping only, separate approval stores per org' },
-    { decision: 'Monorepo: apps/api + apps/frontend + packages/shared', rationale: 'Shared package contains all business logic (auth, oracle, errors, metrics). Both apps are thin shells. Prevents code duplication during migration.', alternatives: 'Polyrepo, single app with feature flags, micro-frontends' },
-    { decision: 'Certbot read_only + tmpfs', rationale: 'Principle of least privilege. Certbot only needs /etc/letsencrypt (volume mount) and /var/log + /tmp (tmpfs). Root fs locked down.', alternatives: 'Writable root fs, separate init container, host-level certbot' },
-    { decision: 'DH params as required prerequisite', rationale: 'Docker bind mount fails silently (Linux: empty dir) or hard (macOS) if dhparam.pem missing. Must generate before docker compose up.', alternatives: 'Generate in entrypoint, use nginx default DH params, skip DH entirely' }
-  ];
+			function renderDecisionLog(container) {
+				const decisions = [
+					{
+						decision: 'Fastify 5 + fastify-plugin (fp)',
+						rationale:
+							'Encapsulation-breaking plugins expose decorators to all routes; Fastify 5 enforces getter/setter for reference-type decorators',
+						alternatives: 'Express 5, Hono, Koa'
+					},
+					{
+						decision: 'fastify-type-provider-zod',
+						rationale:
+							'Type-safe request validation with Zod schemas reused from shared package; compile-time inference',
+						alternatives: 'Ajv JSON Schema (Fastify default), typebox, io-ts'
+					},
+					{
+						decision: 'toWebRequest() bridge for Better Auth',
+						rationale:
+							'Better Auth expects Web API Request objects; Fastify uses its own request model. Bridge converts headers+cookies for getSession()',
+						alternatives: 'Rewrite Better Auth adapter, use @better-auth/fastify (not available)'
+					},
+					{
+						decision: 'Symbol-based permissions decorator',
+						rationale:
+							'Fastify 5 requires getter/setter for array-type request decorators; Symbol prevents property name collisions',
+						alternatives: 'WeakMap, private class field, plain property with type assertion'
+					},
+					{
+						decision: 'Fail-open auth, fail-fast secret',
+						rationale:
+							'Session resolution errors should not block requests (routes guard individually). But missing BETTER_AUTH_SECRET in production must crash immediately.',
+						alternatives: 'Fail-closed auth (breaks health endpoints), warn-only for secrets'
+					},
+					{
+						decision: 'Oracle → Auth → RBAC plugin order',
+						rationale:
+							'Auth depends on Oracle for DB-backed sessions; RBAC depends on auth decorators (user, permissions)',
+						alternatives: 'Lazy init, single monolithic plugin'
+					},
+					{
+						decision: 'requireAuth() as standalone function',
+						rationale:
+							'Routes choose their own auth requirements via preHandler, not one-size-fits-all middleware. Unifies session + API key auth.',
+						alternatives: 'Global onRequest hook, route-level decorator, class-based guards'
+					},
+					{
+						decision: 'Promise.race health timeout (3s)',
+						rationale:
+							'Prevents load balancer timeouts when Oracle is unresponsive. 3s balances between useful diagnostics and LB health check interval.',
+						alternatives: 'AbortController, Fastify route timeout, no timeout (rely on LB)'
+					},
+					{
+						decision: 'IDOR fix via orgId on PendingApprovalEntry',
+						rationale:
+							'Cross-org approval verification using resolveOrgId(). Nullable orgId supports both single-org and multi-org deployments.',
+						alternatives: 'User-level scoping only, separate approval stores per org'
+					},
+					{
+						decision: 'Monorepo: apps/api + apps/frontend + packages/shared',
+						rationale:
+							'Shared package contains all business logic (auth, oracle, errors, metrics). Both apps are thin shells. Prevents code duplication during migration.',
+						alternatives: 'Polyrepo, single app with feature flags, micro-frontends'
+					},
+					{
+						decision: 'Certbot read_only + tmpfs',
+						rationale:
+							'Principle of least privilege. Certbot only needs /etc/letsencrypt (volume mount) and /var/log + /tmp (tmpfs). Root fs locked down.',
+						alternatives: 'Writable root fs, separate init container, host-level certbot'
+					},
+					{
+						decision: 'DH params as required prerequisite',
+						rationale:
+							'Docker bind mount fails silently (Linux: empty dir) or hard (macOS) if dhparam.pem missing. Must generate before docker compose up.',
+						alternatives: 'Generate in entrypoint, use nginx default DH params, skip DH entirely'
+					}
+				];
 
-  const title = createElement('h2', { textContent: 'Phase 9 Decision Log' });
-  container.appendChild(title);
+				const title = createElement('h2', { textContent: 'Phase 9 Decision Log' });
+				container.appendChild(title);
 
-  const table = createElement('table', { className: 'decision-table', style: { width: '100%', borderCollapse: 'collapse', fontSize: '13px', marginTop: '16px' } });
+				const table = createElement('table', {
+					className: 'decision-table',
+					style: { width: '100%', borderCollapse: 'collapse', fontSize: '13px', marginTop: '16px' }
+				});
 
-  // Header row
-  const thead = createElement('thead');
-  const headerRow = createElement('tr');
-  ['Decision', 'Rationale', 'Alternatives Considered'].forEach(text => {
-    const th = createElement('th', { textContent: text, style: { textAlign: 'left', padding: '10px 12px', borderBottom: '2px solid #30363d', color: '#f0f6fc', fontWeight: '600' } });
-    headerRow.appendChild(th);
-  });
-  thead.appendChild(headerRow);
-  table.appendChild(thead);
+				// Header row
+				const thead = createElement('thead');
+				const headerRow = createElement('tr');
+				['Decision', 'Rationale', 'Alternatives Considered'].forEach((text) => {
+					const th = createElement('th', {
+						textContent: text,
+						style: {
+							textAlign: 'left',
+							padding: '10px 12px',
+							borderBottom: '2px solid #30363d',
+							color: '#f0f6fc',
+							fontWeight: '600'
+						}
+					});
+					headerRow.appendChild(th);
+				});
+				thead.appendChild(headerRow);
+				table.appendChild(thead);
 
-  // Body rows
-  const tbody = createElement('tbody');
-  decisions.forEach((d, idx) => {
-    const row = createElement('tr', { style: { background: idx % 2 === 0 ? '#161b22' : '#0d1117' } });
+				// Body rows
+				const tbody = createElement('tbody');
+				decisions.forEach((d, idx) => {
+					const row = createElement('tr', {
+						style: { background: idx % 2 === 0 ? '#161b22' : '#0d1117' }
+					});
 
-    const tdDecision = createElement('td', { textContent: d.decision, style: { padding: '10px 12px', borderBottom: '1px solid #21262d', color: '#58a6ff', fontWeight: '500', minWidth: '220px' } });
-    const tdRationale = createElement('td', { textContent: d.rationale, style: { padding: '10px 12px', borderBottom: '1px solid #21262d', color: '#c9d1d9', lineHeight: '1.5' } });
-    const tdAlternatives = createElement('td', { textContent: d.alternatives, style: { padding: '10px 12px', borderBottom: '1px solid #21262d', color: '#8b949e', fontStyle: 'italic', minWidth: '180px' } });
+					const tdDecision = createElement('td', {
+						textContent: d.decision,
+						style: {
+							padding: '10px 12px',
+							borderBottom: '1px solid #21262d',
+							color: '#58a6ff',
+							fontWeight: '500',
+							minWidth: '220px'
+						}
+					});
+					const tdRationale = createElement('td', {
+						textContent: d.rationale,
+						style: {
+							padding: '10px 12px',
+							borderBottom: '1px solid #21262d',
+							color: '#c9d1d9',
+							lineHeight: '1.5'
+						}
+					});
+					const tdAlternatives = createElement('td', {
+						textContent: d.alternatives,
+						style: {
+							padding: '10px 12px',
+							borderBottom: '1px solid #21262d',
+							color: '#8b949e',
+							fontStyle: 'italic',
+							minWidth: '180px'
+						}
+					});
 
-    row.appendChild(tdDecision);
-    row.appendChild(tdRationale);
-    row.appendChild(tdAlternatives);
-    tbody.appendChild(row);
-  });
-  table.appendChild(tbody);
+					row.appendChild(tdDecision);
+					row.appendChild(tdRationale);
+					row.appendChild(tdAlternatives);
+					tbody.appendChild(row);
+				});
+				table.appendChild(tbody);
 
-  const tableContainer = createElement('div', { style: { overflowX: 'auto' } });
-  tableContainer.appendChild(table);
-  container.appendChild(tableContainer);
-}
+				const tableContainer = createElement('div', { style: { overflowX: 'auto' } });
+				tableContainer.appendChild(table);
+				container.appendChild(tableContainer);
+			}
 
-function renderFindings(container) {
-  const findings = [
-    { title: 'IDOR in tools approval', severity: 'critical', file: 'apps/api/src/routes/tools.ts:232', task: 15, status: 'fixed', commit: 'dd4d994' },
-    { title: 'Auth path normalization', severity: 'high', file: 'apps/api/src/plugins/auth.ts:84', task: 16, status: 'fixed', commit: 'dd4d994' },
-    { title: 'Health endpoint timeout', severity: 'high', file: 'apps/api/src/routes/health.ts:17', task: 17, status: 'fixed', commit: 'dd4d994' },
-    { title: 'BETTER_AUTH_SECRET validation', severity: 'high', file: 'apps/api/src/app.ts:75', task: 18, status: 'fixed', commit: 'dd4d994' },
-    { title: 'Certbot renewal logging', severity: 'medium', file: 'infrastructure/docker/phase9/docker-compose.yml:106', task: 19, status: 'fixed', commit: 'dd4d994' },
-    { title: 'COEP header conflict', severity: 'medium', file: 'apps/api/src/app.ts:170', task: 20, status: 'fixed', commit: 'dd4d994' },
-    { title: 'orgId not stored in pendingApprovals', severity: 'high', file: 'packages/shared/src/server/approvals.ts', task: 'audit', status: 'fixed', commit: '500e63f' },
-    { title: 'Health check swallows error details', severity: 'medium', file: 'apps/api/src/routes/health.ts', task: 'audit', status: 'fixed', commit: '500e63f' }
-  ];
+			function renderFindings(container) {
+				const findings = [
+					{
+						title: 'IDOR in tools approval',
+						severity: 'critical',
+						file: 'apps/api/src/routes/tools.ts:232',
+						task: 15,
+						status: 'fixed',
+						commit: 'dd4d994'
+					},
+					{
+						title: 'Auth path normalization',
+						severity: 'high',
+						file: 'apps/api/src/plugins/auth.ts:84',
+						task: 16,
+						status: 'fixed',
+						commit: 'dd4d994'
+					},
+					{
+						title: 'Health endpoint timeout',
+						severity: 'high',
+						file: 'apps/api/src/routes/health.ts:17',
+						task: 17,
+						status: 'fixed',
+						commit: 'dd4d994'
+					},
+					{
+						title: 'BETTER_AUTH_SECRET validation',
+						severity: 'high',
+						file: 'apps/api/src/app.ts:75',
+						task: 18,
+						status: 'fixed',
+						commit: 'dd4d994'
+					},
+					{
+						title: 'Certbot renewal logging',
+						severity: 'medium',
+						file: 'infrastructure/docker/phase9/docker-compose.yml:106',
+						task: 19,
+						status: 'fixed',
+						commit: 'dd4d994'
+					},
+					{
+						title: 'COEP header conflict',
+						severity: 'medium',
+						file: 'apps/api/src/app.ts:170',
+						task: 20,
+						status: 'fixed',
+						commit: 'dd4d994'
+					},
+					{
+						title: 'orgId not stored in pendingApprovals',
+						severity: 'high',
+						file: 'packages/shared/src/server/approvals.ts',
+						task: 'audit',
+						status: 'fixed',
+						commit: '500e63f'
+					},
+					{
+						title: 'Health check swallows error details',
+						severity: 'medium',
+						file: 'apps/api/src/routes/health.ts',
+						task: 'audit',
+						status: 'fixed',
+						commit: '500e63f'
+					}
+				];
 
-  const title = createElement('h2', { textContent: 'Security Findings (All Resolved)' });
-  container.appendChild(title);
+				const title = createElement('h2', { textContent: 'Security Findings (All Resolved)' });
+				container.appendChild(title);
 
-  const summary = createElement('div', { style: { padding: '12px', background: '#1a472a', border: '1px solid #3fb950', borderRadius: '6px', marginBottom: '16px', fontSize: '13px', color: '#3fb950' } });
-  summary.textContent = '8/8 findings fixed. Semgrep: 0 findings (API), 2 false positives (shared). CodeQL: 0 findings.';
-  container.appendChild(summary);
+				const summary = createElement('div', {
+					style: {
+						padding: '12px',
+						background: '#1a472a',
+						border: '1px solid #3fb950',
+						borderRadius: '6px',
+						marginBottom: '16px',
+						fontSize: '13px',
+						color: '#3fb950'
+					}
+				});
+				summary.textContent =
+					'8/8 findings fixed. Semgrep: 0 findings (API), 2 false positives (shared). CodeQL: 0 findings.';
+				container.appendChild(summary);
 
-  findings.forEach(f => {
-    if ((f.severity === 'critical' && !state.showCritical) ||
-        (f.severity === 'high' && !state.showHigh) ||
-        (f.severity === 'medium' && !state.showMedium)) return;
+				findings.forEach((f) => {
+					if (
+						(f.severity === 'critical' && !state.showCritical) ||
+						(f.severity === 'high' && !state.showHigh) ||
+						(f.severity === 'medium' && !state.showMedium)
+					)
+						return;
 
-    const card = createElement('div', { className: 'finding-card' });
-    card.style.borderLeftColor = '#3fb950';
-    card.style.opacity = '0.7';
+					const card = createElement('div', { className: 'finding-card' });
+					card.style.borderLeftColor = '#3fb950';
+					card.style.opacity = '0.7';
 
-    const header = createElement('div');
-    header.appendChild(createElement('strong', { textContent: f.title }));
-    header.appendChild(createElement('span', { className: 'status-badge pass', textContent: 'FIXED' }));
-    card.appendChild(header);
+					const header = createElement('div');
+					header.appendChild(createElement('strong', { textContent: f.title }));
+					header.appendChild(
+						createElement('span', { className: 'status-badge pass', textContent: 'FIXED' })
+					);
+					card.appendChild(header);
 
-    card.appendChild(createElement('div', { textContent: f.file, style: { fontSize: '11px', color: '#8b949e', marginTop: '4px' } }));
-    card.appendChild(createElement('div', { textContent: `Commit: ${f.commit}`, style: { fontSize: '11px', color: '#3fb950', marginTop: '4px' } }));
-    container.appendChild(card);
-  });
-}
+					card.appendChild(
+						createElement('div', {
+							textContent: f.file,
+							style: { fontSize: '11px', color: '#8b949e', marginTop: '4px' }
+						})
+					);
+					card.appendChild(
+						createElement('div', {
+							textContent: `Commit: ${f.commit}`,
+							style: { fontSize: '11px', color: '#3fb950', marginTop: '4px' }
+						})
+					);
+					container.appendChild(card);
+				});
+			}
 
-function renderQuestions(container) {
-  const questions = [
-    {
-      id: 'merge-strategy',
-      q: 'Merge strategy for Phase 9 branch?',
-      context: '20+ commits on feature/phase9-fastify-migration. All security findings resolved, 203 tests passing.',
-      opts: [
-        { label: 'Squash merge to main', desc: 'Single commit, clean history', recommended: true },
-        { label: 'Rebase merge', desc: 'Preserve individual commits' },
-        { label: 'Keep as feature branch', desc: 'More work needed first' }
-      ]
-    },
-    {
-      id: 'fastify-rollout',
-      q: 'How should the Fastify backend be rolled out?',
-      context: 'FASTIFY_ENABLED feature flag is implemented. Nginx proxies to either SvelteKit or Fastify based on flag.',
-      opts: [
-        { label: 'Feature flag rollout (gradual)', desc: 'Start with health+metrics, expand to all routes', recommended: true },
-        { label: 'Full cutover in staging', desc: 'Test all routes in staging, then flip flag in prod' },
-        { label: 'Parallel run (shadow mode)', desc: 'Run both backends, compare responses' },
-        { label: 'Keep SvelteKit-only for now', desc: 'Fastify as backup, not primary' }
-      ]
-    },
-    {
-      id: 'remaining-nitpicks',
-      q: 'What to do with 27 CodeRabbit nitpicks?',
-      context: 'Unused imports, hardcoded test counts, timing assertions, type narrowing suggestions. No security impact.',
-      opts: [
-        { label: 'Fix quick wins now, defer rest', desc: 'Clean up imports + types, skip cosmetic', recommended: true },
-        { label: 'Fix all before merge', desc: 'Complete cleanup pass' },
-        { label: 'Create follow-up issue', desc: 'Track as tech debt, merge now' }
-      ]
-    },
-    {
-      id: 'semgrep-findings',
-      q: 'Handle 2 Semgrep findings in packages/shared?',
-      context: 'gcm-no-tag-length in crypto.ts (false positive — tag is set correctly). path-join-resolve-traversal in migrations.ts (already guarded with startsWith check).',
-      opts: [
-        { label: 'Add nosemgrep comments', desc: 'Document as false positives in code', recommended: true },
-        { label: 'Add explicit authTagLength:16', desc: 'Belt-and-suspenders for GCM' },
-        { label: 'Leave as-is', desc: 'Both are already mitigated' }
-      ]
-    },
-    {
-      id: 'chat-migration',
-      q: 'When should /api/chat streaming move to Fastify?',
-      context: 'Most complex endpoint — AI SDK streaming, tool execution, approval flow. Currently only in SvelteKit.',
-      opts: [
-        { label: 'Phase 10 (separate milestone)', desc: 'Focus Phase 9 on non-streaming routes', recommended: true },
-        { label: 'Add to Phase 9 scope', desc: 'Complete the migration fully' },
-        { label: 'Keep in SvelteKit permanently', desc: 'SSE streaming is well-supported in SvelteKit' }
-      ]
-    },
-    {
-      id: 'test-target',
-      q: 'Test coverage target for Phase 9 API?',
-      context: 'Currently 203 tests across 13 files. Every route has auth/RBAC/Zod/IDOR/fallback coverage.',
-      opts: [
-        { label: '200+ (current level is good)', desc: 'Focus on quality over quantity', recommended: true },
-        { label: '300+ (add edge cases)', desc: 'More boundary tests, error scenarios' },
-        { label: 'Match Phase 8 (662 total)', desc: 'Bring up to parity with SvelteKit tests' }
-      ]
-    },
-    {
-      id: 'deployment-env',
-      q: 'Target deployment environment?',
-      context: 'Docker Compose with Nginx + certbot is ready. Could also deploy to OCI Container Instances or Kubernetes.',
-      opts: [
-        { label: 'Docker Compose on app01', desc: 'Same as current Langflow deployment', recommended: true },
-        { label: 'OCI Container Instances', desc: 'Serverless containers, auto-scaling' },
-        { label: 'OKE (Kubernetes)', desc: 'Full orchestration, more complex' },
-        { label: 'Local dev only for now', desc: 'Not ready for production deployment' }
-      ]
-    },
-    {
-      id: 'openapi-docs',
-      q: 'Should OpenAPI docs be public or auth-gated?',
-      context: 'Fastify @fastify/swagger generates OpenAPI spec. /api/docs endpoint available.',
-      opts: [
-        { label: 'Auth-gated (admin only)', desc: 'Prevent API surface exposure', recommended: true },
-        { label: 'Public read-only', desc: 'Developer experience, API discovery' },
-        { label: 'Disabled in production', desc: 'Dev/staging only' }
-      ]
-    },
-    {
-      id: 'deploy-instance',
-      q: 'Deploy alongside Langflow on app01, or dedicated instance?',
-      context: 'app01 runs Langflow (4GB RAM, 1 CPU). Portal needs its own resources. Co-locating saves cost but risks resource contention.',
-      opts: [
-        { label: 'Dedicated instance', desc: 'Isolated resources, independent scaling', recommended: true },
-        { label: 'Co-locate on app01', desc: 'Cost savings, shared infra' },
-        { label: 'Defer deployment decision', desc: 'Finalize code first' }
-      ]
-    },
-    {
-      id: 'tls-cert-source',
-      q: 'TLS certificate source for production?',
-      context: 'Certbot profile is ready in Docker Compose. OCI also offers managed certificates via Load Balancer.',
-      opts: [
-        { label: 'Let\'s Encrypt via certbot', desc: 'Auto-renewal, free, already configured', recommended: true },
-        { label: 'OCI managed certificates', desc: 'Via OCI Load Balancer, no container needed' },
-        { label: 'Self-signed for now', desc: 'Dev/staging only, not for production' }
-      ]
-    },
-    {
-      id: 'oci-cli-auth',
-      q: 'OCI CLI auth method inside containers?',
-      context: 'Currently mounts ~/.oci as read-only bind. Instance principal auth eliminates config files but requires OCI dynamic group policy.',
-      opts: [
-        { label: 'Instance principal', desc: 'No config files, uses OCI dynamic groups', recommended: true },
-        { label: 'Config file mount', desc: 'Current approach, simpler setup' },
-        { label: 'Resource principal', desc: 'For OCI-managed containers (OKE, Container Instances)' }
-      ]
-    },
-    {
-      id: 'pre-push-codeql',
-      q: 'Keep CodeQL in pre-push hook or CI-only?',
-      context: 'CodeQL database creation takes 30-60s per push. Catches issues locally but slows developer workflow.',
-      opts: [
-        { label: 'CI-only', desc: 'Faster pushes, catch in PR checks', recommended: true },
-        { label: 'Keep in pre-push', desc: 'Catch everything before remote' },
-        { label: 'Optional (developer choice)', desc: 'Env var to enable/disable locally' }
-      ]
-    }
-  ];
+			function renderQuestions(container) {
+				const questions = [
+					{
+						id: 'merge-strategy',
+						q: 'Merge strategy for Phase 9 branch?',
+						context:
+							'20+ commits on feature/phase9-fastify-migration. All security findings resolved, 203 tests passing.',
+						opts: [
+							{
+								label: 'Squash merge to main',
+								desc: 'Single commit, clean history',
+								recommended: true
+							},
+							{ label: 'Rebase merge', desc: 'Preserve individual commits' },
+							{ label: 'Keep as feature branch', desc: 'More work needed first' }
+						]
+					},
+					{
+						id: 'fastify-rollout',
+						q: 'How should the Fastify backend be rolled out?',
+						context:
+							'FASTIFY_ENABLED feature flag is implemented. Nginx proxies to either SvelteKit or Fastify based on flag.',
+						opts: [
+							{
+								label: 'Feature flag rollout (gradual)',
+								desc: 'Start with health+metrics, expand to all routes',
+								recommended: true
+							},
+							{
+								label: 'Full cutover in staging',
+								desc: 'Test all routes in staging, then flip flag in prod'
+							},
+							{ label: 'Parallel run (shadow mode)', desc: 'Run both backends, compare responses' },
+							{ label: 'Keep SvelteKit-only for now', desc: 'Fastify as backup, not primary' }
+						]
+					},
+					{
+						id: 'remaining-nitpicks',
+						q: 'What to do with 27 CodeRabbit nitpicks?',
+						context:
+							'Unused imports, hardcoded test counts, timing assertions, type narrowing suggestions. No security impact.',
+						opts: [
+							{
+								label: 'Fix quick wins now, defer rest',
+								desc: 'Clean up imports + types, skip cosmetic',
+								recommended: true
+							},
+							{ label: 'Fix all before merge', desc: 'Complete cleanup pass' },
+							{ label: 'Create follow-up issue', desc: 'Track as tech debt, merge now' }
+						]
+					},
+					{
+						id: 'semgrep-findings',
+						q: 'Handle 2 Semgrep findings in packages/shared?',
+						context:
+							'gcm-no-tag-length in crypto.ts (false positive — tag is set correctly). path-join-resolve-traversal in migrations.ts (already guarded with startsWith check).',
+						opts: [
+							{
+								label: 'Add nosemgrep comments',
+								desc: 'Document as false positives in code',
+								recommended: true
+							},
+							{ label: 'Add explicit authTagLength:16', desc: 'Belt-and-suspenders for GCM' },
+							{ label: 'Leave as-is', desc: 'Both are already mitigated' }
+						]
+					},
+					{
+						id: 'chat-migration',
+						q: 'When should /api/chat streaming move to Fastify?',
+						context:
+							'Most complex endpoint — AI SDK streaming, tool execution, approval flow. Currently only in SvelteKit.',
+						opts: [
+							{
+								label: 'Phase 10 (separate milestone)',
+								desc: 'Focus Phase 9 on non-streaming routes',
+								recommended: true
+							},
+							{ label: 'Add to Phase 9 scope', desc: 'Complete the migration fully' },
+							{
+								label: 'Keep in SvelteKit permanently',
+								desc: 'SSE streaming is well-supported in SvelteKit'
+							}
+						]
+					},
+					{
+						id: 'test-target',
+						q: 'Test coverage target for Phase 9 API?',
+						context:
+							'Currently 203 tests across 13 files. Every route has auth/RBAC/Zod/IDOR/fallback coverage.',
+						opts: [
+							{
+								label: '200+ (current level is good)',
+								desc: 'Focus on quality over quantity',
+								recommended: true
+							},
+							{ label: '300+ (add edge cases)', desc: 'More boundary tests, error scenarios' },
+							{
+								label: 'Match Phase 8 (662 total)',
+								desc: 'Bring up to parity with SvelteKit tests'
+							}
+						]
+					},
+					{
+						id: 'deployment-env',
+						q: 'Target deployment environment?',
+						context:
+							'Docker Compose with Nginx + certbot is ready. Could also deploy to OCI Container Instances or Kubernetes.',
+						opts: [
+							{
+								label: 'Docker Compose on app01',
+								desc: 'Same as current Langflow deployment',
+								recommended: true
+							},
+							{ label: 'OCI Container Instances', desc: 'Serverless containers, auto-scaling' },
+							{ label: 'OKE (Kubernetes)', desc: 'Full orchestration, more complex' },
+							{ label: 'Local dev only for now', desc: 'Not ready for production deployment' }
+						]
+					},
+					{
+						id: 'openapi-docs',
+						q: 'Should OpenAPI docs be public or auth-gated?',
+						context:
+							'Fastify @fastify/swagger generates OpenAPI spec. /api/docs endpoint available.',
+						opts: [
+							{
+								label: 'Auth-gated (admin only)',
+								desc: 'Prevent API surface exposure',
+								recommended: true
+							},
+							{ label: 'Public read-only', desc: 'Developer experience, API discovery' },
+							{ label: 'Disabled in production', desc: 'Dev/staging only' }
+						]
+					},
+					{
+						id: 'deploy-instance',
+						q: 'Deploy alongside Langflow on app01, or dedicated instance?',
+						context:
+							'app01 runs Langflow (4GB RAM, 1 CPU). Portal needs its own resources. Co-locating saves cost but risks resource contention.',
+						opts: [
+							{
+								label: 'Dedicated instance',
+								desc: 'Isolated resources, independent scaling',
+								recommended: true
+							},
+							{ label: 'Co-locate on app01', desc: 'Cost savings, shared infra' },
+							{ label: 'Defer deployment decision', desc: 'Finalize code first' }
+						]
+					},
+					{
+						id: 'tls-cert-source',
+						q: 'TLS certificate source for production?',
+						context:
+							'Certbot profile is ready in Docker Compose. OCI also offers managed certificates via Load Balancer.',
+						opts: [
+							{
+								label: "Let's Encrypt via certbot",
+								desc: 'Auto-renewal, free, already configured',
+								recommended: true
+							},
+							{
+								label: 'OCI managed certificates',
+								desc: 'Via OCI Load Balancer, no container needed'
+							},
+							{ label: 'Self-signed for now', desc: 'Dev/staging only, not for production' }
+						]
+					},
+					{
+						id: 'oci-cli-auth',
+						q: 'OCI CLI auth method inside containers?',
+						context:
+							'Currently mounts ~/.oci as read-only bind. Instance principal auth eliminates config files but requires OCI dynamic group policy.',
+						opts: [
+							{
+								label: 'Instance principal',
+								desc: 'No config files, uses OCI dynamic groups',
+								recommended: true
+							},
+							{ label: 'Config file mount', desc: 'Current approach, simpler setup' },
+							{
+								label: 'Resource principal',
+								desc: 'For OCI-managed containers (OKE, Container Instances)'
+							}
+						]
+					},
+					{
+						id: 'pre-push-codeql',
+						q: 'Keep CodeQL in pre-push hook or CI-only?',
+						context:
+							'CodeQL database creation takes 30-60s per push. Catches issues locally but slows developer workflow.',
+						opts: [
+							{ label: 'CI-only', desc: 'Faster pushes, catch in PR checks', recommended: true },
+							{ label: 'Keep in pre-push', desc: 'Catch everything before remote' },
+							{ label: 'Optional (developer choice)', desc: 'Env var to enable/disable locally' }
+						]
+					}
+				];
 
-  // Store selections in state
-  if (!state.answers) state.answers = {};
+				// Store selections in state
+				if (!state.answers) state.answers = {};
 
-  const title = createElement('h2', { textContent: 'Outstanding Questions for Project Owner' });
-  container.appendChild(title);
+				const title = createElement('h2', {
+					textContent: 'Outstanding Questions for Project Owner'
+				});
+				container.appendChild(title);
 
-  const intro = createElement('p', { textContent: 'Select your preferred option for each question. Your choices will be summarized into a copiable prompt below.', style: { fontSize: '13px', color: '#8b949e', marginBottom: '16px' } });
-  container.appendChild(intro);
+				const intro = createElement('p', {
+					textContent:
+						'Select your preferred option for each question. Your choices will be summarized into a copiable prompt below.',
+					style: { fontSize: '13px', color: '#8b949e', marginBottom: '16px' }
+				});
+				container.appendChild(intro);
 
-  questions.forEach((item, idx) => {
-    const card = createElement('div', { className: 'question-card' });
+				questions.forEach((item, idx) => {
+					const card = createElement('div', { className: 'question-card' });
 
-    const heading = createElement('h3', { textContent: `${idx + 1}. ${item.q}`, style: { marginBottom: '6px' } });
-    card.appendChild(heading);
+					const heading = createElement('h3', {
+						textContent: `${idx + 1}. ${item.q}`,
+						style: { marginBottom: '6px' }
+					});
+					card.appendChild(heading);
 
-    const context = createElement('div', { textContent: item.context, style: { fontSize: '12px', color: '#8b949e', marginBottom: '12px', lineHeight: '1.5' } });
-    card.appendChild(context);
+					const context = createElement('div', {
+						textContent: item.context,
+						style: { fontSize: '12px', color: '#8b949e', marginBottom: '12px', lineHeight: '1.5' }
+					});
+					card.appendChild(context);
 
-    item.opts.forEach((opt, optIdx) => {
-      const optionId = `${item.id}-${optIdx}`;
-      const isSelected = state.answers[item.id] === opt.label;
+					item.opts.forEach((opt, optIdx) => {
+						const optionId = `${item.id}-${optIdx}`;
+						const isSelected = state.answers[item.id] === opt.label;
 
-      const btn = createElement('button', {
-        textContent: `${opt.label}${opt.recommended ? ' (Recommended)' : ''}`,
-        style: {
-          display: 'block',
-          width: '100%',
-          textAlign: 'left',
-          padding: '10px 14px',
-          marginBottom: '6px',
-          background: isSelected ? '#1f6feb' : '#21262d',
-          color: isSelected ? '#ffffff' : '#c9d1d9',
-          border: isSelected ? '1px solid #58a6ff' : '1px solid #30363d',
-          borderRadius: '6px',
-          cursor: 'pointer',
-          fontSize: '13px',
-          fontFamily: 'inherit',
-          transition: 'all 0.15s'
-        }
-      });
+						const btn = createElement('button', {
+							textContent: `${opt.label}${opt.recommended ? ' (Recommended)' : ''}`,
+							style: {
+								display: 'block',
+								width: '100%',
+								textAlign: 'left',
+								padding: '10px 14px',
+								marginBottom: '6px',
+								background: isSelected ? '#1f6feb' : '#21262d',
+								color: isSelected ? '#ffffff' : '#c9d1d9',
+								border: isSelected ? '1px solid #58a6ff' : '1px solid #30363d',
+								borderRadius: '6px',
+								cursor: 'pointer',
+								fontSize: '13px',
+								fontFamily: 'inherit',
+								transition: 'all 0.15s'
+							}
+						});
 
-      const desc = createElement('div', { textContent: opt.desc, style: { fontSize: '11px', color: isSelected ? '#a5d8ff' : '#8b949e', marginTop: '2px' } });
-      btn.appendChild(desc);
+						const desc = createElement('div', {
+							textContent: opt.desc,
+							style: {
+								fontSize: '11px',
+								color: isSelected ? '#a5d8ff' : '#8b949e',
+								marginTop: '2px'
+							}
+						});
+						btn.appendChild(desc);
 
-      btn.addEventListener('click', function() {
-        state.answers[item.id] = opt.label;
-        updateAll();
-      });
+						btn.addEventListener('click', function () {
+							state.answers[item.id] = opt.label;
+							updateAll();
+						});
 
-      card.appendChild(btn);
-    });
+						card.appendChild(btn);
+					});
 
-    container.appendChild(card);
-  });
+					container.appendChild(card);
+				});
 
-  // Summary box
-  const answeredCount = Object.keys(state.answers).length;
-  const totalCount = questions.length;
+				// Summary box
+				const answeredCount = Object.keys(state.answers).length;
+				const totalCount = questions.length;
 
-  if (answeredCount > 0) {
-    const summaryBox = createElement('div', { style: { background: '#0c2d6b', border: '1px solid #58a6ff', borderRadius: '8px', padding: '16px', marginTop: '16px' } });
+				if (answeredCount > 0) {
+					const summaryBox = createElement('div', {
+						style: {
+							background: '#0c2d6b',
+							border: '1px solid #58a6ff',
+							borderRadius: '8px',
+							padding: '16px',
+							marginTop: '16px'
+						}
+					});
 
-    const summaryTitle = createElement('h3', { textContent: `Decisions (${answeredCount}/${totalCount})`, style: { marginBottom: '10px', color: '#58a6ff' } });
-    summaryBox.appendChild(summaryTitle);
+					const summaryTitle = createElement('h3', {
+						textContent: `Decisions (${answeredCount}/${totalCount})`,
+						style: { marginBottom: '10px', color: '#58a6ff' }
+					});
+					summaryBox.appendChild(summaryTitle);
 
-    const summaryList = createElement('ul', { style: { listStyle: 'none', padding: '0' } });
-    questions.forEach(item => {
-      if (state.answers[item.id]) {
-        const li = createElement('li', { style: { padding: '4px 0', fontSize: '13px' } });
-        li.appendChild(createElement('strong', { textContent: item.q.replace('?', ': '), style: { color: '#c9d1d9' } }));
-        li.appendChild(createElement('span', { textContent: state.answers[item.id], style: { color: '#3fb950' } }));
-        summaryList.appendChild(li);
-      }
-    });
-    summaryBox.appendChild(summaryList);
-    container.appendChild(summaryBox);
-  }
-}
+					const summaryList = createElement('ul', { style: { listStyle: 'none', padding: '0' } });
+					questions.forEach((item) => {
+						if (state.answers[item.id]) {
+							const li = createElement('li', { style: { padding: '4px 0', fontSize: '13px' } });
+							li.appendChild(
+								createElement('strong', {
+									textContent: item.q.replace('?', ': '),
+									style: { color: '#c9d1d9' }
+								})
+							);
+							li.appendChild(
+								createElement('span', {
+									textContent: state.answers[item.id],
+									style: { color: '#3fb950' }
+								})
+							);
+							summaryList.appendChild(li);
+						}
+					});
+					summaryBox.appendChild(summaryList);
+					container.appendChild(summaryBox);
+				}
+			}
 
-function updatePrompt() {
-  let text = '';
+			function updatePrompt() {
+				let text = '';
 
-  if (state.viewType === 'questions' && state.answers && Object.keys(state.answers).length > 0) {
-    // Generate decision prompt from answered questions
-    text = `Phase 9 Fastify Migration — Project Owner Decisions\n\n`;
-    text += `Status: 203 tests passing, 8/8 security findings fixed, Semgrep + CodeQL clean.\n\n`;
-    text += `Decisions:\n`;
+				if (
+					state.viewType === 'questions' &&
+					state.answers &&
+					Object.keys(state.answers).length > 0
+				) {
+					// Generate decision prompt from answered questions
+					text = `Phase 9 Fastify Migration — Project Owner Decisions\n\n`;
+					text += `Status: 203 tests passing, 8/8 security findings fixed, Semgrep + CodeQL clean.\n\n`;
+					text += `Decisions:\n`;
 
-    const questionMap = {
-      'merge-strategy': 'Merge strategy',
-      'fastify-rollout': 'Fastify rollout',
-      'remaining-nitpicks': 'CodeRabbit nitpicks',
-      'semgrep-findings': 'Semgrep findings',
-      'chat-migration': 'Chat streaming migration',
-      'test-target': 'Test coverage target',
-      'deployment-env': 'Deployment environment',
-      'openapi-docs': 'OpenAPI docs access',
-      'deploy-instance': 'Deploy instance',
-      'tls-cert-source': 'TLS certificate source',
-      'oci-cli-auth': 'OCI CLI auth method',
-      'pre-push-codeql': 'CodeQL hook placement'
-    };
+					const questionMap = {
+						'merge-strategy': 'Merge strategy',
+						'fastify-rollout': 'Fastify rollout',
+						'remaining-nitpicks': 'CodeRabbit nitpicks',
+						'semgrep-findings': 'Semgrep findings',
+						'chat-migration': 'Chat streaming migration',
+						'test-target': 'Test coverage target',
+						'deployment-env': 'Deployment environment',
+						'openapi-docs': 'OpenAPI docs access',
+						'deploy-instance': 'Deploy instance',
+						'tls-cert-source': 'TLS certificate source',
+						'oci-cli-auth': 'OCI CLI auth method',
+						'pre-push-codeql': 'CodeQL hook placement'
+					};
 
-    Object.entries(state.answers).forEach(([key, value]) => {
-      const label = questionMap[key] || key;
-      text += `- ${label}: ${value}\n`;
-    });
+					Object.entries(state.answers).forEach(([key, value]) => {
+						const label = questionMap[key] || key;
+						text += `- ${label}: ${value}\n`;
+					});
 
-    const unanswered = Object.keys(questionMap).filter(k => !state.answers[k]);
-    if (unanswered.length > 0) {
-      text += `\nStill need decisions on: ${unanswered.map(k => questionMap[k]).join(', ')}.`;
-    }
+					const unanswered = Object.keys(questionMap).filter((k) => !state.answers[k]);
+					if (unanswered.length > 0) {
+						text += `\nStill need decisions on: ${unanswered.map((k) => questionMap[k]).join(', ')}.`;
+					}
 
-    text += `\n\nPlease proceed with the above decisions for the Phase 9 implementation team.`;
-  } else {
-    text = `Show ${state.viewType.replace('-', ' ')} view for Phase 9 Fastify Migration.`;
+					text += `\n\nPlease proceed with the above decisions for the Phase 9 implementation team.`;
+				} else {
+					text = `Show ${state.viewType.replace('-', ' ')} view for Phase 9 Fastify Migration.`;
 
-    if (state.viewType === 'findings') {
-      const priorities = [];
-      if (state.showCritical) priorities.push('CRITICAL');
-      if (state.showHigh) priorities.push('HIGH');
-      if (state.showMedium) priorities.push('MEDIUM');
-      text += ` Filtering: ${priorities.join(' + ')} priority issues.`;
-      text += `\n\nAll 8 findings FIXED. Semgrep: 0 API findings, 2 false positives in shared. CodeQL: 0 findings.`;
-    }
+					if (state.viewType === 'findings') {
+						const priorities = [];
+						if (state.showCritical) priorities.push('CRITICAL');
+						if (state.showHigh) priorities.push('HIGH');
+						if (state.showMedium) priorities.push('MEDIUM');
+						text += ` Filtering: ${priorities.join(' + ')} priority issues.`;
+						text += `\n\nAll 8 findings FIXED. Semgrep: 0 API findings, 2 false positives in shared. CodeQL: 0 findings.`;
+					}
 
-    text += `\n\nStatus: 203 tests passing, 8/8 security findings fixed, all scans clean.`;
-  }
+					text += `\n\nStatus: 203 tests passing, 8/8 security findings fixed, all scans clean.`;
+				}
 
-  document.getElementById('prompt').textContent = text;
-}
+				document.getElementById('prompt').textContent = text;
+			}
 
-function copyPrompt() {
-  const text = document.getElementById('prompt').textContent;
-  navigator.clipboard.writeText(text).then(() => {
-    const btn = document.getElementById('copyBtn');
-    btn.textContent = 'Copied!';
-    btn.classList.add('copied');
-    setTimeout(() => {
-      btn.textContent = 'Copy';
-      btn.classList.remove('copied');
-    }, 2000);
-  });
-}
+			function copyPrompt() {
+				const text = document.getElementById('prompt').textContent;
+				navigator.clipboard.writeText(text).then(() => {
+					const btn = document.getElementById('copyBtn');
+					btn.textContent = 'Copied!';
+					btn.classList.add('copied');
+					setTimeout(() => {
+						btn.textContent = 'Copy';
+						btn.classList.remove('copied');
+					}, 2000);
+				});
+			}
 
-function applyPreset(preset) {
-  if (preset === 'blocking') {
-    state.viewType = 'findings';
-    state.showCritical = true;
-    state.showHigh = true;
-    state.showMedium = false;
-  } else if (preset === 'diagrams') {
-    state.viewType = 'architecture';
-  } else if (preset === 'questions') {
-    state.viewType = 'questions';
-  }
+			function applyPreset(preset) {
+				if (preset === 'blocking') {
+					state.viewType = 'findings';
+					state.showCritical = true;
+					state.showHigh = true;
+					state.showMedium = false;
+				} else if (preset === 'diagrams') {
+					state.viewType = 'architecture';
+				} else if (preset === 'questions') {
+					state.viewType = 'questions';
+				}
 
-  document.getElementById('viewType').value = state.viewType;
-  document.getElementById('showCritical').checked = state.showCritical;
-  document.getElementById('showHigh').checked = state.showHigh;
-  document.getElementById('showMedium').checked = state.showMedium;
+				document.getElementById('viewType').value = state.viewType;
+				document.getElementById('showCritical').checked = state.showCritical;
+				document.getElementById('showHigh').checked = state.showHigh;
+				document.getElementById('showMedium').checked = state.showMedium;
 
-  updateAll();
-}
+				updateAll();
+			}
 
-// Initialize mermaid
-mermaid.initialize({
-  startOnLoad: false,
-  theme: 'dark',
-  themeVariables: {
-    primaryColor: '#161b22',
-    primaryTextColor: '#c9d1d9',
-    primaryBorderColor: '#30363d',
-    lineColor: '#58a6ff',
-    secondaryColor: '#0d1117',
-    tertiaryColor: '#21262d'
-  }
-});
+			// Initialize mermaid
+			mermaid.initialize({
+				startOnLoad: false,
+				theme: 'dark',
+				themeVariables: {
+					primaryColor: '#161b22',
+					primaryTextColor: '#c9d1d9',
+					primaryBorderColor: '#30363d',
+					lineColor: '#58a6ff',
+					secondaryColor: '#0d1117',
+					tertiaryColor: '#21262d'
+				}
+			});
 
-// Initial render
-updateAll();
-</script>
-</body>
+			// Initial render
+			updateAll();
+		</script>
+	</body>
 </html>

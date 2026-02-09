@@ -52,13 +52,13 @@ Uses a Symbol-based getter/setter to work with Fastify 5's reference-type decora
 const PERMISSIONS_KEY = Symbol('fastify.request.permissions');
 
 fastify.decorateRequest('permissions', {
-  getter(this: FastifyRequest): string[] {
-    if (!this[PERMISSIONS_KEY]) this[PERMISSIONS_KEY] = [];
-    return this[PERMISSIONS_KEY];
-  },
-  setter(this: FastifyRequest, value: string[]) {
-    this[PERMISSIONS_KEY] = value;
-  }
+	getter(this: FastifyRequest): string[] {
+		if (!this[PERMISSIONS_KEY]) this[PERMISSIONS_KEY] = [];
+		return this[PERMISSIONS_KEY];
+	},
+	setter(this: FastifyRequest, value: string[]) {
+		this[PERMISSIONS_KEY] = value;
+	}
 });
 ```
 
@@ -74,14 +74,14 @@ Better Auth expects `Request` objects (Web API Fetch standard). The plugin conve
 
 ```typescript
 function toWebRequest(request: FastifyRequest): Request {
-  const url = `${request.protocol}://${request.hostname}${request.url}`;
-  const headers = new Headers();
-  for (const [key, value] of Object.entries(request.headers)) {
-    if (value) {
-      headers.set(key, Array.isArray(value) ? value.join(', ') : value);
-    }
-  }
-  return new Request(url, { method: request.method, headers });
+	const url = `${request.protocol}://${request.hostname}${request.url}`;
+	const headers = new Headers();
+	for (const [key, value] of Object.entries(request.headers)) {
+		if (value) {
+			headers.set(key, Array.isArray(value) ? value.join(', ') : value);
+		}
+	}
+	return new Request(url, { method: request.method, headers });
 }
 ```
 
@@ -121,7 +121,7 @@ Paths in `excludePaths` skip session resolution entirely. Query params are strip
 
 ```typescript
 if (excludeSet.has(request.url.split('?')[0])) {
-  return; // Skip session resolution
+	return; // Skip session resolution
 }
 ```
 
@@ -131,11 +131,11 @@ Default excludes: `/healthz`, `/health`. App.ts adds `/api/metrics`.
 
 The plugin resolves permissions from the session role using `@portal/shared/server/auth/rbac`:
 
-| Role | Permissions |
-|------|------------|
-| `viewer` | tools:read, sessions:read, workflows:read |
+| Role       | Permissions                                                                             |
+| ---------- | --------------------------------------------------------------------------------------- |
+| `viewer`   | tools:read, sessions:read, workflows:read                                               |
 | `operator` | viewer + tools:execute, tools:approve, sessions:write, activity:read, workflows:execute |
-| `admin` | All 13 permissions including admin:all, admin:users, tools:danger, workflows:write |
+| `admin`    | All 13 permissions including admin:all, admin:users, tools:danger, workflows:write      |
 
 Unknown roles fall back to `viewer` permissions.
 
@@ -155,15 +155,15 @@ Individual routes guard access via RBAC `preHandler` hooks (see RBAC_HOOKS_DESIG
 
 ```typescript
 app.get('/api/sessions', {
-  preHandler: requireAuth('sessions:read'),
-  handler: async (request, reply) => {
-    // request.user is guaranteed non-null (requireAuth verified it)
-    const userId = request.user!.id;
-    const orgId = resolveOrgId(request);
+	preHandler: requireAuth('sessions:read'),
+	handler: async (request, reply) => {
+		// request.user is guaranteed non-null (requireAuth verified it)
+		const userId = request.user!.id;
+		const orgId = resolveOrgId(request);
 
-    const sessions = await listSessionsForUser(userId, orgId);
-    return { sessions };
-  }
+		const sessions = await listSessionsForUser(userId, orgId);
+		return { sessions };
+	}
 });
 ```
 
@@ -171,16 +171,16 @@ app.get('/api/sessions', {
 
 ```typescript
 app.get('/api/profile', async (request, reply) => {
-  if (!request.user) {
-    return reply.status(401).send({ error: 'Not authenticated' });
-  }
+	if (!request.user) {
+		return reply.status(401).send({ error: 'Not authenticated' });
+	}
 
-  const isAdmin = request.permissions.includes('admin:all');
-  return {
-    user: request.user,
-    isAdmin,
-    permissions: request.permissions
-  };
+	const isAdmin = request.permissions.includes('admin:all');
+	return {
+		user: request.user,
+		isAdmin,
+		permissions: request.permissions
+	};
 });
 ```
 
@@ -215,14 +215,14 @@ See: `apps/api/src/tests/plugins/auth.test.ts` (14 tests)
 
 ## Design Decisions
 
-| Decision | Rationale |
-|----------|-----------|
-| `onRequest` not `preHandler` | Session resolution runs for all requests, not per-route |
-| `toWebRequest()` bridge | Better Auth is framework-agnostic, expects Web API Request |
-| Symbol for permissions | Fastify 5 requires getter/setter for reference-type decorators |
-| `excludeSet` with URL splitting | Efficient O(1) lookup, query params don't affect matching |
-| `session.role` not `getOrgRole()` | Simplification — org role resolution is deferred to route-level |
-| Fail-open on auth errors | Matches SvelteKit pattern; routes handle their own auth requirements |
+| Decision                          | Rationale                                                            |
+| --------------------------------- | -------------------------------------------------------------------- |
+| `onRequest` not `preHandler`      | Session resolution runs for all requests, not per-route              |
+| `toWebRequest()` bridge           | Better Auth is framework-agnostic, expects Web API Request           |
+| Symbol for permissions            | Fastify 5 requires getter/setter for reference-type decorators       |
+| `excludeSet` with URL splitting   | Efficient O(1) lookup, query params don't affect matching            |
+| `session.role` not `getOrgRole()` | Simplification — org role resolution is deferred to route-level      |
+| Fail-open on auth errors          | Matches SvelteKit pattern; routes handle their own auth requirements |
 
 ## Known Limitations
 
