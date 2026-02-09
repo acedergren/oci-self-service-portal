@@ -19,12 +19,16 @@ import { getAuthCookieAttributes } from '@portal/shared/server/auth/cookies';
 import oraclePlugin from './plugins/oracle.js';
 import authPlugin from './plugins/auth.js';
 import rbacPlugin, { requireAuth } from './plugins/rbac.js';
-import { healthRoutes } from './routes/health.js';
-import { sessionRoutes } from './routes/sessions.js';
+import mastraPlugin from './plugins/mastra.js';
+import healthRoutes from './routes/health.js';
+import sessionRoutes from './routes/sessions.js';
 import { activityRoutes } from './routes/activity.js';
-import { toolRoutes } from './routes/tools.js';
-import { metricsRoutes } from './routes/metrics.js';
+import { toolExecuteRoutes, toolApproveRoutes } from './routes/tools/index.js';
+import workflowRoutes from './routes/workflows.js';
 import { chatRoutes } from './routes/chat.js';
+import mcpRoutes from './routes/mcp.js';
+import searchRoutes from './routes/search.js';
+import { metricsRoutes } from './routes/metrics.js';
 
 const log = createLogger('app');
 
@@ -139,10 +143,27 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 		});
 	}
 
-	// Register CORS — origin is validated above; 'true' reflects the request origin (dev only)
-	await app.register(fastifyCors, {
-		origin: resolvedCorsOrigin,
-		credentials: true
+	// ── Infrastructure plugins (order matters) ──────────────────────────
+
+	// Global error handler - maps PortalError to HTTP responses
+	app.setErrorHandler((error, request, reply) => {
+		// Convert unknown errors to PortalError
+		const portalError = isPortalError(error) ? error : toPortalError(error);
+
+		// Log error with context
+		log.error(
+			{
+				err: portalError,
+				requestId: request.headers['x-request-id'],
+				method: request.method,
+				url: request.url
+			},
+			'Request error'
+		);
+
+		// Send error response
+		const response = errorResponse(portalError);
+		reply.status(response.status).send(response);
 	});
 
 	// Register Helmet.js — security headers matching SvelteKit hooks.server.ts
@@ -203,16 +224,11 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 		});
 	}
 
-	// Register cookie support (for Better Auth sessions)
-	// Cookie flags are shared with Better Auth config (packages/shared/server/auth/cookies.ts)
-	// to avoid drift between SvelteKit auth routes and Fastify API behavior.
-	await app.register(fastifyCookie, {
-		secret: process.env.BETTER_AUTH_SECRET || 'dev-secret-change-in-production',
-		parseOptions: getAuthCookieAttributes()
+	// Register CORS — origin is validated above; 'true' reflects the request origin (dev only)
+	await app.register(fastifyCors, {
+		origin: resolvedCorsOrigin,
+		credentials: true
 	});
-
-	// Register sensible (HTTP error helpers)
-	await app.register(fastifySensible);
 
 	// Register rate limiting
 	if (enableRateLimit) {
@@ -230,35 +246,33 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 		});
 	}
 
-	// Global error handler - maps PortalError to HTTP responses
-	app.setErrorHandler((error, request, reply) => {
-		// Convert unknown errors to PortalError
-		const portalError = isPortalError(error) ? error : toPortalError(error);
-
-		// Log error with context
-		log.error(
-			{
-				err: portalError,
-				requestId: request.headers['x-request-id'],
-				method: request.method,
-				url: request.url
-			},
-			'Request error'
-		);
-
-		// Send error response
-		const response = errorResponse(portalError);
-		reply.status(response.status).send(response);
+	// Register cookie support (for Better Auth sessions)
+	// Cookie flags are shared with Better Auth config (packages/shared/server/auth/cookies.ts)
+	// to avoid drift between SvelteKit auth routes and Fastify API behavior.
+	await app.register(fastifyCookie, {
+		secret: process.env.BETTER_AUTH_SECRET || 'dev-secret-change-in-production',
+		parseOptions: getAuthCookieAttributes()
 	});
+
+	// Register sensible (HTTP error helpers)
+	await app.register(fastifySensible);
+
+	// ── Auth chain (oracle → auth → RBAC) ───────────────────
 
 	// Register application plugins (Oracle → Auth → RBAC, in dependency order)
 	await app.register(oraclePlugin, {
 		migrate: process.env.SKIP_MIGRATIONS !== 'true'
 	});
 	await app.register(authPlugin, {
-		excludePaths: ['/healthz', '/health', '/api/metrics']
+		excludePaths: ['/healthz', '/health', '/api/metrics', '/api/health', '/api/healthz']
 	});
 	await app.register(rbacPlugin);
+
+	// ── Mastra framework (agents, workflows, MCP) ─────────────────────
+
+	await app.register(mastraPlugin);
+
+	// ── OpenAPI docs ────────────────────────────────────────────────────
 
 	// OpenAPI docs — enabled explicitly or defaults to non-production
 	const docsEnabled = enableDocs ?? !isProduction;
@@ -280,13 +294,18 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 		});
 	}
 
-	// Register API routes
+	// ── Route modules ───────────────────────────────────────────────────
+
 	await app.register(healthRoutes);
 	await app.register(sessionRoutes);
 	await app.register(activityRoutes);
-	await app.register(toolRoutes);
-	await app.register(metricsRoutes);
+	await app.register(toolExecuteRoutes);
+	await app.register(toolApproveRoutes);
+	await app.register(workflowRoutes);
 	await app.register(chatRoutes);
+	await app.register(mcpRoutes);
+	await app.register(searchRoutes);
+	await app.register(metricsRoutes);
 
 	log.info('Fastify app created with plugins and routes');
 	return app;
