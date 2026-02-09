@@ -1,0 +1,849 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Phase 9 Fastify Migration - Architecture Explorer</title>
+		<style>
+			* {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+			body {
+				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+				background: #0d1117;
+				color: #c9d1d9;
+				height: 100vh;
+				display: flex;
+				flex-direction: column;
+			}
+			.container {
+				display: flex;
+				flex: 1;
+				overflow: hidden;
+			}
+			.controls {
+				width: 340px;
+				background: #161b22;
+				border-right: 1px solid #30363d;
+				padding: 20px;
+				overflow-y: auto;
+			}
+			.preview {
+				flex: 1;
+				padding: 20px;
+				overflow-y: auto;
+				background: #0d1117;
+			}
+			.output {
+				background: #161b22;
+				border-top: 1px solid #30363d;
+				padding: 14px 20px;
+				font-family: 'SF Mono', Monaco, monospace;
+				font-size: 13px;
+				line-height: 1.5;
+				display: flex;
+				gap: 12px;
+				align-items: flex-start;
+			}
+			.output-text {
+				flex: 1;
+				white-space: pre-wrap;
+				color: #8b949e;
+			}
+			.copy-btn {
+				background: #238636;
+				color: white;
+				border: none;
+				padding: 6px 12px;
+				border-radius: 6px;
+				cursor: pointer;
+				font-size: 12px;
+				white-space: nowrap;
+				transition: background 0.2s;
+			}
+			.copy-btn:hover {
+				background: #2ea043;
+			}
+			.copy-btn.copied {
+				background: #1f6feb;
+			}
+			h2 {
+				font-size: 16px;
+				font-weight: 600;
+				margin-bottom: 16px;
+				color: #f0f6fc;
+			}
+			h3 {
+				font-size: 14px;
+				font-weight: 600;
+				margin: 20px 0 12px;
+				color: #f0f6fc;
+			}
+			.section {
+				margin-bottom: 24px;
+				padding-bottom: 24px;
+				border-bottom: 1px solid #21262d;
+			}
+			.section:last-child {
+				border-bottom: none;
+			}
+			.control-group {
+				margin-bottom: 16px;
+			}
+			label {
+				display: block;
+				font-size: 13px;
+				font-weight: 500;
+				margin-bottom: 6px;
+				color: #c9d1d9;
+			}
+			select {
+				width: 100%;
+				background: #0d1117;
+				color: #c9d1d9;
+				border: 1px solid #30363d;
+				border-radius: 6px;
+				padding: 8px;
+				font-size: 13px;
+			}
+			select:focus {
+				outline: none;
+				border-color: #1f6feb;
+			}
+			input[type='checkbox'] {
+				margin-right: 8px;
+			}
+			.checkbox-label {
+				display: flex;
+				align-items: center;
+				font-size: 13px;
+				margin-bottom: 8px;
+				cursor: pointer;
+			}
+			.preset-btn {
+				background: #21262d;
+				color: #c9d1d9;
+				border: 1px solid #30363d;
+				padding: 8px 12px;
+				border-radius: 6px;
+				cursor: pointer;
+				font-size: 12px;
+				margin-right: 8px;
+				margin-bottom: 8px;
+				transition: all 0.2s;
+			}
+			.preset-btn:hover {
+				background: #30363d;
+				border-color: #1f6feb;
+			}
+			.diagram-box {
+				background: #161b22;
+				border: 1px solid #30363d;
+				border-radius: 8px;
+				padding: 24px;
+				margin-bottom: 24px;
+				overflow-x: auto;
+			}
+			.diagram-title {
+				font-size: 13px;
+				color: #8b949e;
+				margin-bottom: 16px;
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+			}
+			.stats-grid {
+				display: grid;
+				grid-template-columns: repeat(4, 1fr);
+				gap: 12px;
+				margin-bottom: 24px;
+			}
+			.stat-card {
+				background: #161b22;
+				border: 1px solid #30363d;
+				border-radius: 6px;
+				padding: 16px;
+				text-align: center;
+			}
+			.stat-value {
+				font-size: 28px;
+				font-weight: 700;
+				color: #58a6ff;
+				line-height: 1;
+			}
+			.stat-label {
+				font-size: 10px;
+				color: #8b949e;
+				margin-top: 8px;
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+			}
+			.question-card {
+				background: #161b22;
+				border: 1px solid #30363d;
+				border-radius: 6px;
+				padding: 16px;
+				margin-bottom: 16px;
+			}
+			.finding-card {
+				background: #161b22;
+				border-left: 3px solid #3fb950;
+				padding: 12px;
+				margin-bottom: 12px;
+				border-radius: 4px;
+			}
+			.status-badge {
+				display: inline-block;
+				padding: 2px 8px;
+				border-radius: 12px;
+				font-size: 11px;
+				font-weight: 600;
+				margin-left: 8px;
+			}
+			.status-badge.fixed {
+				background: #1a472a;
+				color: #3fb950;
+			}
+			.render-error {
+				color: #ff7b72;
+				font-size: 12px;
+				margin-top: 12px;
+				font-family: monospace;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="container">
+			<div class="controls">
+				<h2>Phase 9 Explorer</h2>
+				<div class="section">
+					<h3>Diagrams</h3>
+					<div class="control-group">
+						<label>View</label>
+						<select id="viewType" onchange="updateAll()">
+							<option value="architecture">Monorepo Architecture</option>
+							<option value="request">Request Lifecycle</option>
+							<option value="security">Security Layers</option>
+							<option value="database">Database Schema</option>
+							<option value="workflow">Workflow Executor</option>
+							<option value="infra">Infrastructure</option>
+							<option value="journey">User Journey</option>
+							<option value="dataflow">Data Flow</option>
+							<option value="findings">Security Findings</option>
+							<option value="questions">Open Questions</option>
+						</select>
+					</div>
+				</div>
+				<div class="section">
+					<h3>Finding Filters</h3>
+					<label class="checkbox-label"
+						><input type="checkbox" id="showCritical" checked onchange="updateAll()" /> Critical
+						(1)</label
+					>
+					<label class="checkbox-label"
+						><input type="checkbox" id="showHigh" checked onchange="updateAll()" /> High (3)</label
+					>
+					<label class="checkbox-label"
+						><input type="checkbox" id="showMedium" checked onchange="updateAll()" /> Medium
+						(3)</label
+					>
+				</div>
+				<div class="section">
+					<h3>Presets</h3>
+					<button class="preset-btn" onclick="applyPreset('arch')">Architecture</button>
+					<button class="preset-btn" onclick="applyPreset('security')">Security</button>
+					<button class="preset-btn" onclick="applyPreset('data')">Data</button>
+					<button class="preset-btn" onclick="applyPreset('findings')">Findings</button>
+					<button class="preset-btn" onclick="applyPreset('questions')">Questions</button>
+				</div>
+			</div>
+			<div class="preview" id="preview"></div>
+		</div>
+		<div class="output">
+			<div class="output-text" id="prompt"></div>
+			<button class="copy-btn" id="copyBtn" onclick="copyPrompt()">Copy</button>
+		</div>
+
+		<script type="module">
+			import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+
+			mermaid.initialize({
+				startOnLoad: false,
+				theme: 'dark',
+				themeVariables: {
+					primaryColor: '#1f6feb',
+					primaryTextColor: '#c9d1d9',
+					primaryBorderColor: '#30363d',
+					lineColor: '#58a6ff',
+					secondaryColor: '#161b22',
+					tertiaryColor: '#21262d',
+					noteBkgColor: '#161b22',
+					noteTextColor: '#c9d1d9'
+				},
+				flowchart: { htmlLabels: true, curve: 'basis' },
+				sequence: { mirrorActors: false }
+			});
+
+			function el(tag, props, children) {
+				const e = document.createElement(tag);
+				if (props)
+					Object.entries(props).forEach(([k, v]) => {
+						if (k === 'cls') e.className = v;
+						else if (k === 'text') e.textContent = v;
+						else if (k === 'css') Object.assign(e.style, v);
+						else e.setAttribute(k, v);
+					});
+				if (children)
+					children.forEach((c) =>
+						e.appendChild(typeof c === 'string' ? document.createTextNode(c) : c)
+					);
+				return e;
+			}
+
+			const state = {
+				viewType: 'architecture',
+				showCritical: true,
+				showHigh: true,
+				showMedium: true
+			};
+			let renderCounter = 0;
+
+			const diagrams = {
+				architecture: `flowchart TB
+  subgraph FE["apps/frontend - SvelteKit"]
+    direction LR
+    UI["60+ Components"]
+    SR["31 API Routes"]
+    BA["Better Auth UI"]
+  end
+  subgraph API["apps/api - Fastify 5"]
+    direction LR
+    AF["App Factory"]
+    OP["Oracle Plugin"]
+    AP["Auth Plugin"]
+    RP["RBAC Plugin"]
+  end
+  subgraph Routes["Fastify Routes"]
+    direction LR
+    RH["GET /health"]
+    RS["CRUD /api/sessions"]
+    RT["POST /api/tools"]
+    RA["GET /api/activity"]
+    RM["GET /api/metrics"]
+  end
+  subgraph Shared["packages/shared"]
+    direction LR
+    DB[("Oracle ADB 26AI")]
+    BAC["Better Auth Core"]
+    WF["Workflow Executor"]
+    MS["Metrics + Sentry"]
+    CR["AES-256-GCM Crypto"]
+  end
+  FE -->|"feature flag proxy"| API
+  AF --> OP & AP & RP
+  OP --> Routes
+  AP --> Routes
+  RP --> Routes
+  OP --> DB
+  AP --> BAC
+  RP --> BAC
+  RT --> WF
+  RM --> MS
+  RT --> CR`,
+
+				request: `sequenceDiagram
+  participant C as Client
+  participant N as Nginx TLS
+  participant F as Fastify
+  participant Au as Auth Plugin
+  participant RB as RBAC Hook
+  participant H as Handler
+  participant O as Oracle ADB
+  C->>N: HTTPS Request
+  N->>F: Upstream HTTP/2
+  F->>F: Rate Limit Check
+  alt Rate Limit Exceeded
+    F-->>C: 429 Too Many Requests
+  end
+  F->>Au: onRequest hook
+  Au->>Au: Check session cookie
+  alt Session Auth
+    Au->>Au: Map role to permissions
+  else API Key Auth
+    Au->>Au: Validate Bearer portal_ key
+  else Anonymous
+    Au->>Au: Set user = null
+  end
+  F->>RB: preHandler hook
+  RB->>RB: Check required permission
+  alt Permission Denied
+    RB-->>C: 403 Forbidden
+  end
+  F->>H: Route Handler
+  H->>O: withConnection query
+  O-->>H: Result rows
+  H-->>C: JSON Response`,
+
+				security: `flowchart TB
+  subgraph Transit["Encryption in Transit"]
+    TLS["TLS 1.2+ via Nginx"]
+    MTLS["mTLS Oracle Wallet"]
+    HTTPS["HTTPS-only APIs"]
+  end
+  subgraph Headers["Security Headers via Helmet.js"]
+    CSP["CSP with Nonces"]
+    HSTS["HSTS Preload"]
+    XFO["X-Frame-Options DENY"]
+    PP["Permissions-Policy"]
+  end
+  subgraph AuthN["Authentication Layer"]
+    SESS["Session Cookies httpOnly"]
+    APIKEY["API Keys SHA-256 hashed"]
+    OIDC["OCI IDCS OIDC + PKCE"]
+  end
+  subgraph AuthZ["Authorization Layer"]
+    ROLES["3 Roles: viewer operator admin"]
+    PERMS["13 Permissions"]
+    ORG["Org-scoped Isolation"]
+  end
+  subgraph Rest["Encryption at Rest"]
+    BCRYPT["bcrypt Password Hashing"]
+    AES["AES-256-GCM Webhook Secrets"]
+    SHA["SHA-256 API Key Storage"]
+    VAULT["OCI Vault for Credentials"]
+  end
+  subgraph Valid["Input Validation"]
+    ZOD["Zod Schema Validation"]
+    SSRF["SSRF URL Blocking"]
+    SQLI["Parameterized Queries"]
+    ESC["LIKE Escape Injection"]
+  end
+  Transit --> Headers --> AuthN --> AuthZ --> Rest --> Valid`,
+
+				database: `erDiagram
+  SESSIONS ||--o{ MESSAGES : contains
+  SESSIONS {
+    varchar id PK
+    varchar userId FK
+    timestamp createdAt
+    timestamp lastActivity
+  }
+  MESSAGES {
+    varchar id PK
+    varchar sessionId FK
+    varchar role
+    clob content
+    timestamp ts
+  }
+  TOOL_EXECUTIONS }o--|| SESSIONS : references
+  TOOL_EXECUTIONS {
+    varchar id PK
+    varchar toolName
+    varchar action
+    varchar userId FK
+    varchar sessionId FK
+    number success
+    timestamp executedAt
+  }
+  WORKFLOW_DEFINITIONS ||--o{ WORKFLOW_RUNS : executes
+  WORKFLOW_DEFINITIONS {
+    varchar id PK
+    varchar name
+    varchar orgId FK
+    clob nodes
+    clob edges
+    timestamp createdAt
+  }
+  WORKFLOW_RUNS ||--o{ WORKFLOW_RUN_STEPS : contains
+  WORKFLOW_RUNS {
+    varchar id PK
+    varchar workflowId FK
+    varchar status
+    clob context
+    timestamp startedAt
+  }
+  WORKFLOW_RUN_STEPS {
+    varchar id PK
+    varchar runId FK
+    varchar nodeId
+    varchar status
+    clob output
+    timestamp completedAt
+  }
+  API_KEYS }o--|| ORG_MEMBERS : belongs
+  API_KEYS {
+    varchar id PK
+    varchar keyHash
+    varchar keyPrefix
+    varchar orgId FK
+    clob permissions
+    timestamp expiresAt
+  }
+  WEBHOOK_SUBSCRIPTIONS }o--|| ORG_MEMBERS : owns
+  WEBHOOK_SUBSCRIPTIONS {
+    varchar id PK
+    varchar orgId FK
+    varchar url
+    varchar secret
+    varchar secretIv
+    varchar status
+  }`,
+
+				workflow: `flowchart LR
+  Start(["Start"]) --> Input["Input Node"]
+  Input --> Validate{"Validate"}
+  Validate -->|"Valid"| Tool1["List Instances"]
+  Validate -->|"Invalid"| Error(["Error"])
+  Tool1 --> Cond{"Count check"}
+  Cond -->|"Has instances"| Fork["Parallel Fork"]
+  Cond -->|"None found"| Out1["Output: Empty"]
+  Fork --> StopA["Stop Instance A"]
+  Fork --> StopB["Stop Instance B"]
+  StopA --> Join["Join"]
+  StopB --> Join
+  Join --> Approve{"Manual Approval"}
+  Approve -->|"Approved"| Term["Terminate"]
+  Approve -->|"Rejected"| Cancel(["Cancelled"])
+  Term --> Out2["Output: Done"]
+  Out1 --> Fin(["End"])
+  Out2 --> Fin
+  Cancel --> Fin
+  Error --> Fin`,
+
+				infra: `flowchart TB
+  subgraph Internet["Internet"]
+    User["Browser or API Client"]
+  end
+  subgraph Docker["Docker Compose Stack"]
+    subgraph Proxy["Nginx Reverse Proxy"]
+      TLSt["TLS 1.2+ Termination"]
+      HSTSt["HSTS + Security Headers"]
+      DHt["DH Params Forward Secrecy"]
+    end
+    subgraph AppC["Application Containers"]
+      FE2["SvelteKit Frontend :3000"]
+      API2["Fastify API :4000"]
+    end
+    CB["Certbot Sidecar"]
+  end
+  subgraph OCI["Oracle Cloud Infrastructure"]
+    ADB[("Oracle ADB 26AI")]
+    VLT["OCI Vault Secrets"]
+    IDCS["OCI IDCS Identity"]
+  end
+  subgraph Vols["Mounted Volumes"]
+    CRT["TLS Certificates"]
+    WLT["Oracle Wallet mTLS"]
+    DHP["dhparam.pem"]
+  end
+  User -->|"HTTPS"| Proxy
+  TLSt --> FE2
+  TLSt --> API2
+  CB -->|"Auto-renew"| CRT
+  API2 -->|"mTLS"| ADB
+  API2 --> VLT
+  API2 --> IDCS
+  CRT --> Proxy
+  WLT --> API2
+  DHP --> Proxy`,
+
+				journey: `journey
+  title OCI AI Chat Portal User Journey
+  section Authentication
+    Visit login page: 3: User
+    Redirect to OCI IDCS: 4: System
+    OIDC callback with groups: 5: System
+    Map groups to portal role: 5: Server
+  section AI Chat Session
+    Select AI model: 4: User
+    Send chat message: 4: User
+    AI suggests OCI tool: 5: AI
+    Review tool parameters: 3: User
+    Approve tool execution: 4: User
+  section Tool Execution
+    Validate approval token: 5: Server
+    Execute OCI CLI command: 5: Server
+    Log to audit trail: 5: Server
+    Display formatted result: 4: User
+  section Workflow Designer
+    Create new workflow: 4: User
+    Drag nodes onto canvas: 4: User
+    Configure node properties: 3: User
+    Save and execute: 5: Server
+    Approve manual step: 4: User`,
+
+				dataflow: `flowchart LR
+  subgraph Client["Browser"]
+    SV["SvelteKit SSR"]
+    CHAT["AI Chat UI"]
+    WFD["Workflow Designer"]
+  end
+  subgraph FF["Feature Flag Router"]
+    FFD{"FASTIFY_ENABLED?"}
+  end
+  subgraph SK["SvelteKit Routes"]
+    SC["/api/chat"]
+    SW["/api/workflows"]
+    SV1["/api/v1 REST"]
+    SAU["/api/auth"]
+  end
+  subgraph FR["Fastify Routes - Phase 9"]
+    FH["/health"]
+    FS["/api/sessions"]
+    FT["/api/tools"]
+    FA["/api/activity"]
+    FM["/api/metrics"]
+  end
+  subgraph SP["packages/shared"]
+    ORA[("Oracle ADB")]
+    AUTH["Better Auth"]
+    RBAC2["RBAC Engine"]
+    TOOLS["Tool Registry"]
+    WFE["Workflow Executor"]
+  end
+  SV --> FFD
+  FFD -->|"Yes"| FR
+  FFD -->|"No"| SK
+  CHAT --> SC
+  WFD --> SW
+  SK --> SP
+  FR --> SP
+  TOOLS --> ORA
+  WFE --> ORA
+  AUTH --> ORA`
+			};
+
+			const titles = {
+				architecture: 'Monorepo Architecture',
+				request: 'Request Lifecycle - Fastify',
+				security: 'Security Defense Layers',
+				database: 'Oracle ADB 26AI Schema',
+				workflow: 'Workflow Executor Engine',
+				infra: 'Docker Deployment Architecture',
+				journey: 'User Journey',
+				dataflow: 'Data Flow + Feature Flag Migration'
+			};
+
+			async function renderPreview() {
+				const preview = document.getElementById('preview');
+				preview.textContent = '';
+
+				const stats = el('div', { cls: 'stats-grid' }, [
+					el('div', { cls: 'stat-card' }, [
+						el('div', { cls: 'stat-value', text: '21' }),
+						el('div', { cls: 'stat-label', text: 'COMMITS' })
+					]),
+					el('div', { cls: 'stat-card' }, [
+						el('div', { cls: 'stat-value', text: '203' }),
+						el('div', { cls: 'stat-label', text: 'TESTS' })
+					]),
+					el('div', { cls: 'stat-card' }, [
+						el('div', { cls: 'stat-value', text: '329' }),
+						el('div', { cls: 'stat-label', text: 'FILES' })
+					]),
+					el('div', { cls: 'stat-card' }, [
+						el('div', { cls: 'stat-value', text: '12K' }),
+						el('div', { cls: 'stat-label', text: 'LINES' })
+					])
+				]);
+				preview.appendChild(stats);
+
+				if (diagrams[state.viewType]) {
+					const box = el('div', { cls: 'diagram-box' });
+					box.appendChild(
+						el('div', { cls: 'diagram-title', text: titles[state.viewType] || state.viewType })
+					);
+					renderCounter++;
+					const mId = 'mermaid-render-' + renderCounter;
+					const mPre = el('pre', { cls: 'mermaid', id: mId });
+					mPre.textContent = diagrams[state.viewType];
+					box.appendChild(mPre);
+					preview.appendChild(box);
+					try {
+						await mermaid.run({ nodes: [document.getElementById(mId)] });
+					} catch (err) {
+						box.appendChild(
+							el('div', { cls: 'render-error', text: 'Render error: ' + err.message })
+						);
+					}
+				} else if (state.viewType === 'findings') {
+					renderFindings(preview);
+				} else if (state.viewType === 'questions') {
+					renderQuestions(preview);
+				}
+			}
+
+			function renderFindings(container) {
+				const findings = [
+					{
+						title: 'IDOR in tools approval',
+						sev: 'critical',
+						file: 'apps/api/src/routes/tools.ts:232',
+						task: 15
+					},
+					{
+						title: 'Auth path normalization',
+						sev: 'high',
+						file: 'apps/api/src/plugins/auth.ts:84',
+						task: 16
+					},
+					{
+						title: 'Health endpoint timeout',
+						sev: 'high',
+						file: 'apps/api/src/routes/health.ts:17',
+						task: 17
+					},
+					{
+						title: 'BETTER_AUTH_SECRET validation',
+						sev: 'high',
+						file: 'apps/api/src/app.ts:75',
+						task: 18
+					},
+					{
+						title: 'Certbot renewal logging',
+						sev: 'medium',
+						file: 'docker-compose.yml:106',
+						task: 19
+					},
+					{
+						title: 'COEP header conflict',
+						sev: 'medium',
+						file: 'apps/api/src/app.ts:170',
+						task: 20
+					},
+					{ title: 'DH params prerequisite', sev: 'medium', file: 'CERTIFICATES.md', task: 21 }
+				];
+				container.appendChild(el('h2', { text: 'Security Findings - All 7 Fixed in dd4d994' }));
+				findings.forEach((f) => {
+					if (
+						(f.sev === 'critical' && !state.showCritical) ||
+						(f.sev === 'high' && !state.showHigh) ||
+						(f.sev === 'medium' && !state.showMedium)
+					)
+						return;
+					container.appendChild(
+						el('div', { cls: 'finding-card' }, [
+							el('div', {}, [
+								el('strong', { text: f.title }),
+								el('span', { cls: 'status-badge fixed', text: 'FIXED' })
+							]),
+							el('div', {
+								text: f.file,
+								css: { fontSize: '11px', color: '#8b949e', marginTop: '4px' }
+							}),
+							el('div', {
+								text: 'Task #' + f.task,
+								css: { fontSize: '11px', color: '#58a6ff', marginTop: '4px' }
+							})
+						])
+					);
+				});
+			}
+
+			function renderQuestions(container) {
+				const questions = [
+					{
+						q: 'Ready to create PR for Phase 9?',
+						detail: 'All 7 CodeRabbit findings fixed. 203 tests. 21 commits.',
+						opts: ['Create PR now', 'Wait for scans', 'Draft PR']
+					},
+					{
+						q: 'How to handle 27 CodeRabbit nitpicks?',
+						detail: 'Unused imports, hardcoded counts, timing assertions.',
+						opts: ['Fix all', 'Follow-up issue', 'Defer']
+					},
+					{
+						q: 'Semgrep and CodeQL scope?',
+						detail: 'Team running scans on Phase 9 code.',
+						opts: ['All files', 'Only apps/api/', 'Incremental']
+					},
+					{
+						q: 'Deployment strategy?',
+						detail: 'Feature flag FASTIFY_ENABLED controls routing.',
+						opts: ['Feature flag rollout', 'Staging first', 'Direct prod']
+					},
+					{
+						q: 'Phase 10 priority?',
+						detail: 'Migrate more routes, Swagger, or observability?',
+						opts: ['More routes', 'OpenAPI + Swagger', 'Observability']
+					}
+				];
+				container.appendChild(el('h2', { text: 'Open Questions for Product Owner' }));
+				questions.forEach((item, idx) => {
+					const card = el('div', { cls: 'question-card' });
+					card.appendChild(el('h3', { text: idx + 1 + '. ' + item.q }));
+					card.appendChild(
+						el('p', {
+							text: item.detail,
+							css: { fontSize: '12px', color: '#8b949e', margin: '8px 0' }
+						})
+					);
+					const list = el('ul', {
+						css: { marginLeft: '20px', fontSize: '12px', color: '#c9d1d9' }
+					});
+					item.opts.forEach((opt) =>
+						list.appendChild(el('li', { text: opt, css: { marginBottom: '4px' } }))
+					);
+					card.appendChild(list);
+					container.appendChild(card);
+				});
+			}
+
+			function updatePrompt() {
+				const labels = {
+					architecture: 'monorepo architecture',
+					request: 'request lifecycle',
+					security: 'security defense layers',
+					database: 'database schema',
+					workflow: 'workflow executor',
+					infra: 'Docker infrastructure',
+					journey: 'user journey',
+					dataflow: 'data flow and migration path',
+					findings: 'security findings',
+					questions: 'open questions'
+				};
+				let text = 'Phase 9 Fastify Migration: ' + (labels[state.viewType] || state.viewType) + '.';
+				text += '\n\nStatus: 21 commits, 203 tests, 7/7 CodeRabbit findings FIXED (dd4d994).';
+				document.getElementById('prompt').textContent = text;
+			}
+
+			function updateAll() {
+				state.viewType = document.getElementById('viewType').value;
+				state.showCritical = document.getElementById('showCritical').checked;
+				state.showHigh = document.getElementById('showHigh').checked;
+				state.showMedium = document.getElementById('showMedium').checked;
+				renderPreview();
+				updatePrompt();
+			}
+
+			window.updateAll = updateAll;
+			window.copyPrompt = function () {
+				const text = document.getElementById('prompt').textContent;
+				navigator.clipboard.writeText(text).then(() => {
+					const btn = document.getElementById('copyBtn');
+					btn.textContent = 'Copied!';
+					btn.classList.add('copied');
+					setTimeout(() => {
+						btn.textContent = 'Copy';
+						btn.classList.remove('copied');
+					}, 2000);
+				});
+			};
+			window.applyPreset = function (p) {
+				const map = {
+					arch: 'architecture',
+					security: 'security',
+					data: 'dataflow',
+					findings: 'findings',
+					questions: 'questions'
+				};
+				state.viewType = map[p] || p;
+				document.getElementById('viewType').value = state.viewType;
+				updateAll();
+			};
+
+			updateAll();
+		</script>
+	</body>
+</html>

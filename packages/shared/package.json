@@ -1,0 +1,70 @@
+{
+	"name": "@portal/shared",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"build": "tsc",
+		"check": "tsc --noEmit",
+		"test": "echo \"No tests yet\"",
+		"lint": "eslint .",
+		"lint:fix": "eslint . --fix",
+		"format:check": "prettier --check ."
+	},
+	"exports": {
+		"./server/admin": "./src/server/admin/index.ts",
+		"./server/admin/*.js": "./src/server/admin/*.ts",
+		"./server/admin/*": "./src/server/admin/*.ts",
+		"./server/agent-state": "./src/server/agent-state/index.ts",
+		"./server/agent-state/*.js": "./src/server/agent-state/*.ts",
+		"./server/agent-state/*": "./src/server/agent-state/*.ts",
+		"./server/auth/*.js": "./src/server/auth/*.ts",
+		"./server/auth/*": "./src/server/auth/*.ts",
+		"./server/oracle/*.js": "./src/server/oracle/*.ts",
+		"./server/oracle/*": "./src/server/oracle/*.ts",
+		"./server/oracle/repositories/*.js": "./src/server/oracle/repositories/*.ts",
+		"./server/oracle/repositories/*": "./src/server/oracle/repositories/*.ts",
+		"./server/workflows/*.js": "./src/server/workflows/*.ts",
+		"./server/workflows/*": "./src/server/workflows/*.ts",
+		"./server/mcp-client": "./src/server/mcp-client/index.ts",
+		"./server/mcp-client/*.js": "./src/server/mcp-client/*.ts",
+		"./server/mcp-client/*": "./src/server/mcp-client/*.ts",
+		"./server/*.js": "./src/server/*.ts",
+		"./server/*": "./src/server/*.ts",
+		"./tools": "./src/tools/index.ts",
+		"./tools/*.js": "./src/tools/*.ts",
+		"./tools/*": "./src/tools/*.ts",
+		"./pricing": "./src/pricing/index.ts",
+		"./pricing/*.js": "./src/pricing/*.ts",
+		"./pricing/*": "./src/pricing/*.ts",
+		"./terraform": "./src/terraform/index.ts",
+		"./terraform/*.js": "./src/terraform/*.ts",
+		"./terraform/*": "./src/terraform/*.ts",
+		"./workflows": "./src/workflows/index.ts",
+		"./workflows/*.js": "./src/workflows/*.ts",
+		"./workflows/*": "./src/workflows/*.ts",
+		"./query": "./src/query/index.ts",
+		"./query/*.js": "./src/query/*.ts",
+		"./query/*": "./src/query/*.ts",
+		"./stubs/*.js": "./src/stubs/*.ts",
+		"./stubs/*": "./src/stubs/*.ts"
+	},
+	"dependencies": {
+		"@acedergren/oci-genai-provider": "^0.2.0",
+		"ai": "^6.0.69",
+		"better-auth": "^1.4.18",
+		"better-sqlite3": "^12.6.2",
+		"oracledb": "^6.10.0",
+		"pino": "^10.3.0",
+		"uuid": "^13.0.0",
+		"zod": "^4.3.6"
+	},
+	"devDependencies": {
+		"@types/better-sqlite3": "^7.6.13",
+		"typescript": "^5.9.3"
+	},
+	"peerDependencies": {
+		"@sveltejs/kit": "^2.50.2",
+		"@tanstack/svelte-query": "^6.0.18"
+	}
+}

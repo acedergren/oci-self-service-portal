@@ -1,0 +1,96 @@
+# =============================================================================
+# .dockerignore for SvelteKit Frontend Service
+# =============================================================================
+# Excludes unnecessary files from the frontend build context.
+#
+# Usage: Copy to build context root before building
+#   cp infrastructure/docker/phase9/.dockerignore.frontend .dockerignore
+#   docker build -f infrastructure/docker/phase9/Dockerfile.frontend .
+# =============================================================================
+
+# Dependencies (installed in container)
+**/node_modules/
+**/dist/
+**/.pnpm/
+
+# Backend API (not needed for frontend build)
+apps/api/
+
+# Environment and secrets
+.env
+.env.*
+.env.local
+.env.production
+!.env.example
+
+# Version control
+.git/
+.gitignore
+.gitattributes
+
+# IDE and editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+*.log
+
+# Test files
+*.test.ts
+*.spec.ts
+**/__tests__/
+**/coverage/
+**/.vitest/
+**/vitest.config.ts
+
+# Documentation (not needed in image)
+*.md
+!packages/shared/README.md
+LICENSE
+
+# Docker files (avoid recursive)
+**/Dockerfile*
+**/.dockerignore*
+**/docker-compose*.yml
+
+# Development tooling
+.eslintrc*
+.prettierrc*
+.editorconfig
+**/tsconfig.tsbuildinfo
+
+# Build artifacts (built in container)
+**/.svelte-kit/
+**/build/
+**/.turbo/
+
+# Temporary and cache
+tmp/
+.cache/
+.pnpm-store/
+
+# Infrastructure configs (not needed at runtime)
+infrastructure/
+
+# Serena / OpenCode / Claude config
+.serena/
+.opencode/
+.claude/
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+azure-pipelines.yml
+
+# Monitoring and operations
+**/grafana-dashboard*.json
+**/prometheus.yml
+
+# Server-side only code (not needed in frontend)
+# Note: packages/shared may contain both client and server code
+# so we include it but rely on tree-shaking

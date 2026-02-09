@@ -1,0 +1,44 @@
+{
+	"name": "@portal/api",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"dev": "tsx watch src/server.ts",
+		"build": "tsc",
+		"start": "node dist/server.js",
+		"check": "tsc --noEmit",
+		"test": "vitest run",
+		"lint": "eslint .",
+		"lint:fix": "eslint . --fix",
+		"format:check": "prettier --check ."
+	},
+	"dependencies": {
+		"@acedergren/oci-genai-provider": "^0.2.0",
+		"@ai-sdk/anthropic": "^3.0.39",
+		"@ai-sdk/google": "^3.0.22",
+		"@ai-sdk/openai": "^3.0.26",
+		"@fastify/cookie": "^11.0.2",
+		"@fastify/cors": "^11.2.0",
+		"@fastify/helmet": "^13.0.2",
+		"@fastify/rate-limit": "^10.3.0",
+		"@fastify/sensible": "^6.0.4",
+		"@fastify/swagger": "^9.6.1",
+		"@fastify/swagger-ui": "^5.2.5",
+		"@mastra/core": "^1.2.0",
+		"@mastra/fastify": "^1.1.1",
+		"@mastra/memory": "^1.1.0",
+		"@mastra/rag": "2.1.0",
+		"@portal/shared": "workspace:*",
+		"ai": "^6.0.69",
+		"fastify": "^5.7.4",
+		"fastify-plugin": "^5.1.0",
+		"fastify-type-provider-zod": "^6.1.0",
+		"zod": "^4.3.6"
+	},
+	"devDependencies": {
+		"tsx": "^4.21.0",
+		"typescript": "^5.9.3",
+		"vitest": "^4.0.18"
+	}
+}

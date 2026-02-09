@@ -1,0 +1,293 @@
+/**
+ * MCP Server exposing all portal tools for external AI agents.
+ *
+ * Wraps the tool registry as an MCP (Model Context Protocol) server,
+ * allowing tools like Claude Code, Cursor, and other MCP-compatible
+ * clients to discover and execute OCI portal tools.
+ *
+ * Migrated from apps/frontend in Phase 9.7.
+ */
+
+import { getAllToolDefinitions, executeTool } from '../tools/registry.js';
+import type { ToolDefinition } from '../tools/types.js';
+import { AuthError, NotFoundError } from '@portal/shared';
+import type { z } from 'zod';
+
+/** MCP Tool representation */
+export interface MCPTool {
+	name: string;
+	description: string;
+	inputSchema: Record<string, unknown>;
+}
+
+/** MCP Resource representation */
+export interface MCPResource {
+	uri: string;
+	name: string;
+	description: string;
+	mimeType: string;
+}
+
+/** Auth context for MCP operations */
+export interface MCPAuthContext {
+	orgId: string;
+	userId: string;
+	permissions: string[];
+}
+
+/** MCP Tool execution result */
+export interface MCPToolResult {
+	content: Array<{ type: string; text: string }>;
+	isError?: boolean;
+}
+
+/**
+ * Convert a Zod schema to a JSON Schema object.
+ *
+ * Handles the common Zod types used in tool definitions:
+ * ZodObject, ZodString, ZodNumber, ZodBoolean, ZodEnum, ZodOptional, ZodDefault, ZodArray.
+ *
+ * WARNING: This function accesses Zod's internal `._def` API which may change between versions.
+ * Tested with Zod 4.x. If this breaks after a Zod upgrade, consider using the `zod-to-json-schema`
+ * npm package instead.
+ */
+function zodToJsonSchema(schema: z.ZodTypeAny): Record<string, unknown> {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const def = (schema as any)._def as Record<string, unknown>;
+	const typeName = (def?.typeName ?? '') as string;
+
+	switch (typeName) {
+		case 'ZodObject': {
+			const shape = (schema as z.ZodObject<z.ZodRawShape>).shape;
+			const properties: Record<string, unknown> = {};
+			const required: string[] = [];
+
+			for (const [key, value] of Object.entries(shape)) {
+				const fieldSchema = value as z.ZodTypeAny;
+				properties[key] = zodToJsonSchema(fieldSchema);
+
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				const fieldDef = (fieldSchema as any)._def as Record<string, unknown>;
+				const fieldTypeName = (fieldDef?.typeName ?? '') as string;
+				if (fieldTypeName !== 'ZodOptional' && fieldTypeName !== 'ZodDefault') {
+					required.push(key);
+				}
+			}
+
+			return {
+				type: 'object',
+				properties,
+				...(required.length > 0 ? { required } : {})
+			};
+		}
+
+		case 'ZodString': {
+			const result: Record<string, unknown> = { type: 'string' };
+			if (def.description) result.description = def.description;
+			if (def.checks && Array.isArray(def.checks)) {
+				for (const check of def.checks as unknown as Array<{
+					kind: string;
+					value?: unknown;
+				}>) {
+					if (check.kind === 'min') result.minLength = check.value;
+					if (check.kind === 'max') result.maxLength = check.value;
+				}
+			}
+			return result;
+		}
+
+		case 'ZodNumber': {
+			const result: Record<string, unknown> = { type: 'number' };
+			if (def.description) result.description = def.description;
+			return result;
+		}
+
+		case 'ZodBoolean':
+			return {
+				type: 'boolean',
+				...(def.description ? { description: def.description } : {})
+			};
+
+		case 'ZodEnum':
+			return {
+				type: 'string',
+				enum: def.values as string[],
+				...(def.description ? { description: def.description } : {})
+			};
+
+		case 'ZodOptional':
+			return zodToJsonSchema(def.innerType as z.ZodTypeAny);
+
+		case 'ZodDefault':
+			return {
+				...zodToJsonSchema(def.innerType as z.ZodTypeAny),
+				default:
+					typeof def.defaultValue === 'function'
+						? (def.defaultValue as () => unknown)()
+						: def.defaultValue
+			};
+
+		case 'ZodArray':
+			return {
+				type: 'array',
+				items: zodToJsonSchema(def.type as z.ZodTypeAny)
+			};
+
+		case 'ZodLiteral':
+			return { const: def.value };
+
+		default:
+			return { type: 'object' };
+	}
+}
+
+/** Convert a ToolDefinition to an MCP Tool. */
+function toolDefToMCPTool(def: ToolDefinition): MCPTool {
+	return {
+		name: def.name,
+		description: def.description,
+		inputSchema: zodToJsonSchema(def.parameters)
+	};
+}
+
+/** Static MCP resource definitions. */
+const MCP_RESOURCES: MCPResource[] = [
+	{
+		uri: 'portal://sessions',
+		name: 'Chat Sessions',
+		description: 'List and access chat session history',
+		mimeType: 'application/json'
+	},
+	{
+		uri: 'portal://workflows',
+		name: 'Workflow Definitions',
+		description: 'List and access workflow definitions and runs',
+		mimeType: 'application/json'
+	},
+	{
+		uri: 'portal://search',
+		name: 'Semantic Search',
+		description: 'Search across portal data using vector embeddings',
+		mimeType: 'application/json'
+	}
+];
+
+/**
+ * Portal MCP Server.
+ *
+ * Exposes all portal tools as MCP tools and provides resource access
+ * for sessions, workflows, and semantic search.
+ */
+export class PortalMCPServer {
+	private tools: MCPTool[];
+
+	constructor() {
+		const definitions = getAllToolDefinitions();
+		this.tools = definitions.map(toolDefToMCPTool);
+	}
+
+	/** List all available MCP tools. */
+	listTools(): MCPTool[] {
+		return this.tools;
+	}
+
+	/**
+	 * Execute a tool by name with the given arguments.
+	 * Auth context is REQUIRED — checks for tools:execute permission.
+	 */
+	async executeTool(
+		name: string,
+		args: Record<string, unknown>,
+		context?: MCPAuthContext
+	): Promise<unknown> {
+		if (!context?.permissions) {
+			throw new AuthError('MCP authentication required', 401, { tool: name });
+		}
+
+		if (!context.permissions.includes('tools:execute')) {
+			throw new AuthError('Insufficient permissions for tool execution', 403, {
+				tool: name,
+				required: 'tools:execute'
+			});
+		}
+
+		return executeTool(name, args);
+	}
+
+	/** List available MCP resources. */
+	listResources(): MCPResource[] {
+		return MCP_RESOURCES;
+	}
+
+	/** Get a resource by URI. */
+	async getResource(
+		uri: string,
+		_context?: MCPAuthContext
+	): Promise<{
+		contents: Array<{ uri: string; mimeType: string; text: string }>;
+	}> {
+		if (uri === 'portal://sessions') {
+			return {
+				contents: [
+					{
+						uri,
+						mimeType: 'application/json',
+						text: JSON.stringify({
+							type: 'sessions',
+							description: 'Use GET /api/v1/sessions to list chat sessions',
+							endpoints: {
+								list: 'GET /api/sessions',
+								get: 'GET /api/sessions/:id'
+							}
+						})
+					}
+				]
+			};
+		}
+
+		if (uri === 'portal://workflows') {
+			return {
+				contents: [
+					{
+						uri,
+						mimeType: 'application/json',
+						text: JSON.stringify({
+							type: 'workflows',
+							description: 'Use workflow APIs to manage workflow definitions and runs',
+							endpoints: {
+								list: 'GET /api/workflows',
+								get: 'GET /api/workflows/:id',
+								run: 'POST /api/workflows/:id/run'
+							}
+						})
+					}
+				]
+			};
+		}
+
+		if (uri === 'portal://search') {
+			return {
+				contents: [
+					{
+						uri,
+						mimeType: 'application/json',
+						text: JSON.stringify({
+							type: 'search',
+							description: 'Semantic search using Oracle 26AI vector embeddings',
+							endpoints: {
+								search: 'GET /api/v1/search?q=<query>&type=<filter>&limit=<n>'
+							}
+						})
+					}
+				]
+			};
+		}
+
+		throw new NotFoundError(`Unknown MCP resource: ${uri}`, { uri });
+	}
+}
+
+/** Factory function for creating a PortalMCPServer instance. */
+export function createPortalMCPServer(): PortalMCPServer {
+	return new PortalMCPServer();
+}

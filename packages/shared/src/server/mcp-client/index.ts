@@ -1,0 +1,54 @@
+/**
+ * MCP Client Library
+ *
+ * Provides client functionality for connecting to MCP (Model Context Protocol) servers.
+ */
+
+// Main exports
+export { MCPClient } from './client';
+export { MCPManager, type MCPServerEntry, type MCPManagerOptions } from './manager';
+
+// Transport exports
+export { StdioTransport } from './transports/stdio';
+export { SSETransport } from './transports/sse';
+
+// Type exports
+export type {
+	// JSON-RPC types
+	JsonRpcRequest,
+	JsonRpcResponse,
+	JsonRpcError,
+	JsonRpcNotification,
+
+	// MCP types
+	ServerInfo,
+	ServerCapabilities,
+	InitializeResult,
+	MCPToolDefinition,
+	JsonSchema,
+	ToolCallRequest,
+	ToolResultContent,
+	ToolCallResult,
+	MCPResource,
+	ResourceContent,
+	ResourceReadResult,
+	MCPPrompt,
+	MCPPromptArgument,
+	PromptMessage,
+	PromptContent,
+	GetPromptResult,
+
+	// Transport types
+	MCPTransport,
+	StdioServerConfig,
+	SSEServerConfig,
+	HTTPServerConfig,
+	MCPServerConfig,
+
+	// Client types
+	MCPClientOptions,
+	ConnectionState
+} from './types';
+
+// Schema exports for validation
+export { ToolCallResultSchema, MCPToolDefinitionSchema, InitializeResultSchema } from './types';

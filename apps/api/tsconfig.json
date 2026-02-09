@@ -1,0 +1,25 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "ES2022",
+		"lib": ["ES2022"],
+		"moduleResolution": "bundler",
+		"allowJs": true,
+		"checkJs": false,
+		"esModuleInterop": true,
+		"forceConsistentCasingInFileNames": true,
+		"resolveJsonModule": true,
+		"skipLibCheck": true,
+		"sourceMap": true,
+		"strict": true,
+		"declaration": true,
+		"declarationMap": true,
+		"outDir": "./dist",
+		"paths": {
+			"@portal/shared": ["../../packages/shared/dist/index"],
+			"@portal/shared/*": ["../../packages/shared/dist/*"]
+		}
+	},
+	"include": ["src/**/*"],
+	"exclude": ["node_modules", "dist", "src/tests", "src/**/*.test.ts"]
+}

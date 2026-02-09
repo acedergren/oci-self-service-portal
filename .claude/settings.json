@@ -1,0 +1,80 @@
+{
+	"enabledPlugins": {
+		"vercel@claude-plugins-official": true
+	},
+	"hooks": {
+		"PreToolUse": [
+			{
+				"matcher": "Bash",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-commit-checks.sh",
+						"timeout": 120,
+						"statusMessage": "Pre-commit: lint + type checks"
+					},
+					{
+						"type": "command",
+						"command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/pre-push-security.sh",
+						"timeout": 120,
+						"statusMessage": "Pre-push: semgrep security scan"
+					},
+					{
+						"type": "command",
+						"command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-bulk-staging.sh",
+						"timeout": 5,
+						"statusMessage": "Checking for bulk git add"
+					},
+					{
+						"type": "command",
+						"command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/doc-drift-warning.sh",
+						"timeout": 10,
+						"statusMessage": "Checking for documentation drift"
+					}
+				]
+			},
+			{
+				"matcher": "Edit|Write",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-sensitive-files.sh",
+						"timeout": 5,
+						"statusMessage": "Checking for sensitive files"
+					},
+					{
+						"type": "command",
+						"command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/validate-migration-filename.sh",
+						"timeout": 5,
+						"statusMessage": "Validating migration filename"
+					}
+				]
+			}
+		],
+		"PostToolUse": [
+			{
+				"matcher": "Edit|Write",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-edit-format.sh",
+						"timeout": 15,
+						"statusMessage": "Auto-formatting with Prettier"
+					},
+					{
+						"type": "command",
+						"command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/auto-lint-fix.sh",
+						"timeout": 15,
+						"statusMessage": "Auto-fixing lint issues"
+					},
+					{
+						"type": "command",
+						"command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-related-tests.sh",
+						"timeout": 60,
+						"statusMessage": "Running related tests"
+					}
+				]
+			}
+		]
+	}
+}
