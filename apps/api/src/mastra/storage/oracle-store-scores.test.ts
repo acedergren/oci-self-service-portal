@@ -6,7 +6,7 @@ import { ScoresOracle } from './oracle-store.js';
 function createMockConnection() {
 	return {
 		OBJECT: 4003,
-	execute: vi.fn().mockResolvedValue({ rows: [] }),
+		execute: vi.fn().mockResolvedValue({ rows: [] }),
 		commit: vi.fn().mockResolvedValue(undefined),
 		rollback: vi.fn().mockResolvedValue(undefined),
 		close: vi.fn().mockResolvedValue(undefined)
