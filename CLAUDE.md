@@ -64,7 +64,7 @@ oci-self-service-portal/
             ├── errors.ts            # PortalError hierarchy
             ├── index.ts             # Re-exports
             ├── api/types.ts         # API response types
-            ├── auth/rbac.ts         # Roles, permissions, type guards
+            ├── server/auth/rbac.ts   # Roles, permissions, type guards
             ├── tools/types.ts       # Tool definition types
             ├── workflows/           # graph-utils.ts, types.ts
             └── server/
@@ -200,7 +200,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 
 ### Fastify 5 — Auth Hook Ordering
 
-- **Plugin registration order is load-bearing**: error-handler → request-logger → helmet → CORS → rate-limit → cookie → oracle → session → RBAC. See `apps/api/src/app.ts:68-129`.
+- **Plugin registration order is load-bearing**: error-handler → helmet → CORS → rate-limit → cookie → sensible → oracle → auth → rbac → mastra → swagger → routes. See `apps/api/src/app.ts:148-308`.
 - **`fp()` declares dependencies**: Plugins providing shared decorators must use `fastify-plugin` with `dependencies` array.
 - **Deny-by-default auth gate**: `onRequest` hook rejects unauthenticated requests not in `PUBLIC_ROUTES`. Forgetting an endpoint = 401s.
 
@@ -289,7 +289,7 @@ The Mastra plugin (`apps/api/src/plugins/mastra.ts`) wires the RAG pipeline:
 - **Column/table names can't be bind variables** — validate with `validateColumnName()`/`validateTableName()`
 - **IDOR prevention**: All endpoints verify org ownership via `resolveOrgId()`
 - **SSRF prevention**: `isValidWebhookUrl()` blocks private IPs, requires HTTPS
-- **Webhook signatures**: HMAC-SHA256 via `X-Portal-Signature: sha256=<hex>`
+- **Webhook signatures**: HMAC-SHA256 via `X-Webhook-Signature: sha256=<hex>`
 - **CSP nonce**: `crypto.randomUUID()` per request in production
 - **AES-256-GCM**: Webhook secret encryption at rest (migration 009)
 

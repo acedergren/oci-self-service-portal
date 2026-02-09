@@ -5,13 +5,21 @@ Fastify 5 API routes registered in `apps/api/src/app.ts`. All routes use the Zod
 ## Plugin Registration Order
 
 ```
-oracle  ->  auth  ->  rbac  ->  swagger (optional)  ->  routes
+error-handler → helmet → CORS → rate-limit → cookie → sensible
+  → oracle → auth → rbac → mastra → swagger (optional) → routes
 ```
 
-1. **oracle** (`fp()` wrapped): Initializes Oracle connection pool, runs migrations, decorates `fastify.oracle` and `request.dbAvailable`
-2. **auth** (`fp()` wrapped): Resolves session via Better Auth `toWebRequest()` bridge, decorates `request.user`, `request.session`, `request.permissions`
-3. **rbac** (`fp()` wrapped): Registers standalone guards (`requireAuth`, `resolveOrgId`) used as `preHandler` hooks
-4. **swagger** (optional): OpenAPI spec + Swagger UI at `/api/docs`, gated by `admin:all`
+1. **error-handler**: Global PortalError → HTTP response mapping
+2. **helmet**: Security headers (CSP, HSTS, X-Frame-Options, etc.)
+3. **CORS**: Origin validation (explicit in production, reflective in dev)
+4. **rate-limit**: Per-endpoint rate limiting with fail-open
+5. **cookie**: Cookie parsing for Better Auth sessions
+6. **sensible**: HTTP error helpers
+7. **oracle** (`fp()` wrapped): Initializes Oracle connection pool, runs migrations, decorates `fastify.oracle` and `request.dbAvailable`
+8. **auth** (`fp()` wrapped): Resolves session via Better Auth `toWebRequest()` bridge, decorates `request.user`, `request.session`, `request.permissions`
+9. **rbac** (`fp()` wrapped): Registers standalone guards (`requireAuth`, `resolveOrgId`) used as `preHandler` hooks
+10. **mastra**: Mastra framework integration (agents, RAG, MCP, workflows)
+11. **swagger** (optional): OpenAPI spec + Swagger UI at `/api/docs`, gated by `admin:all`
 
 ## Authentication
 
@@ -27,20 +35,26 @@ Returns **401** if unauthenticated, **403** if lacking the required permission.
 
 ## Route Summary
 
-| Method | Path                 | Permission       | Auth     | Description                              |
-| ------ | -------------------- | ---------------- | -------- | ---------------------------------------- |
-| GET    | `/healthz`           | none             | public   | Liveness probe (plain text "ok")         |
-| GET    | `/health`            | none             | public   | Deep health check with subsystem details |
-| GET    | `/api/metrics`       | none             | public   | Prometheus metrics (text format)         |
-| GET    | `/api/docs/*`        | `admin:all`      | required | OpenAPI Swagger UI (dev only by default) |
-| GET    | `/api/sessions`      | `sessions:read`  | required | List sessions with message counts        |
-| POST   | `/api/sessions`      | `sessions:write` | required | Create a new chat session                |
-| DELETE | `/api/sessions/:id`  | `sessions:write` | required | Delete a session (user-scoped)           |
-| GET    | `/api/activity`      | `tools:read`     | required | List recent tool executions              |
-| GET    | `/api/tools/execute` | `tools:execute`  | required | Get tool approval requirements           |
-| POST   | `/api/tools/execute` | `tools:execute`  | required | Execute a tool                           |
-| GET    | `/api/tools/approve` | `tools:approve`  | required | List pending approvals (org-scoped)      |
-| POST   | `/api/tools/approve` | `tools:approve`  | required | Approve or reject a tool execution       |
+| Method | Path                 | Permission        | Auth     | Description                              |
+| ------ | -------------------- | ----------------- | -------- | ---------------------------------------- |
+| GET    | `/healthz`           | none              | public   | Liveness probe (plain text "ok")         |
+| GET    | `/health`            | none              | public   | Deep health check with subsystem details |
+| GET    | `/api/metrics`       | none              | public   | Prometheus metrics (text format)         |
+| GET    | `/api/docs/*`        | `admin:all`       | required | OpenAPI Swagger UI (dev only by default) |
+| GET    | `/api/sessions`      | `sessions:read`   | required | List sessions with message counts        |
+| POST   | `/api/sessions`      | `sessions:write`  | required | Create a new chat session                |
+| DELETE | `/api/sessions/:id`  | `sessions:write`  | required | Delete a session (user-scoped)           |
+| GET    | `/api/activity`      | `tools:read`      | required | List recent tool executions              |
+| GET    | `/api/tools/execute` | `tools:execute`   | required | Get tool approval requirements           |
+| POST   | `/api/tools/execute` | `tools:execute`   | required | Execute a tool                           |
+| GET    | `/api/tools/approve` | `tools:approve`   | required | List pending approvals (org-scoped)      |
+| POST   | `/api/tools/approve` | `tools:approve`   | required | Approve or reject a tool execution       |
+| POST   | `/api/chat`          | `sessions:write`  | required | AI chat streaming (SSE)                  |
+| GET    | `/api/v1/search`     | `sessions:read`   | required | Semantic vector search                   |
+| \*     | `/api/mcp/*`         | `tools:execute`   | required | MCP server (tool discovery + execution)  |
+| GET    | `/api/workflows`     | `workflows:read`  | required | List workflow definitions                |
+| POST   | `/api/workflows`     | `workflows:write` | required | Create workflow                          |
+| \*     | `/api/workflows/:id` | `workflows:*`     | required | Workflow CRUD + execution                |
 
 ## Route Details
 
@@ -301,11 +315,11 @@ All errors use the `PortalError` hierarchy, serialized via `errorResponse()`:
 
 ## RBAC Permission Matrix
 
-| Role         | Permissions                                                                                         |
-| ------------ | --------------------------------------------------------------------------------------------------- |
-| **viewer**   | `tools:read`, `sessions:read`, `workflows:read`                                                     |
-| **operator** | viewer + `tools:execute`, `tools:approve`, `sessions:write`, `workflows:execute`, `workflows:write` |
-| **admin**    | all 13 permissions including `admin:all`, `tools:danger`, `admin:read`, `admin:write`               |
+| Role         | Permissions                                                                                          |
+| ------------ | ---------------------------------------------------------------------------------------------------- |
+| **viewer**   | `tools:read`, `sessions:read`, `workflows:read`                                                      |
+| **operator** | viewer + `tools:execute`, `tools:approve`, `sessions:write`, `workflows:execute`                     |
+| **admin**    | all 13 permissions including `admin:all`, `tools:danger`, `admin:users`, `admin:orgs`, `admin:audit` |
 
 Unknown roles fall back to viewer permissions.
 
@@ -320,4 +334,4 @@ Every route is tested for:
 - DB fallback behavior (`dbAvailable=false`)
 - IDOR prevention (user/org scoping)
 
-Current count: **204 tests** across 13 files.
+Current count: **28 test files** across `apps/api/src/` (tests/, plugins/, mastra/).

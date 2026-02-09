@@ -1,42 +1,87 @@
 # Phase 9 Test Report — Fastify Backend Migration
 
-**Date**: 2026-02-06
-**Branch**: `feature/phase0-foundation-hardening`
-**Test Framework**: Vitest 3.0.4 with `mockReset: true`
-**Total Tests**: 204 passing, 0 failures across 13 test files
+**Date**: 2026-02-09
+**Branch**: `feature/backport-ai-chat-improvements`
+**Test Framework**: Vitest with `mockReset: true`
+**Total Tests**: 28 test files in `apps/api/src/` (tests/, plugins/, mastra/)
 
 ## Test Suite Summary
 
-| Test File                           | Tests | Duration | Coverage Area                                                               |
-| ----------------------------------- | ----: | -------- | --------------------------------------------------------------------------- |
-| `app-factory.test.ts`               |    31 | 413ms    | App creation, plugins, CORS, Helmet, Zod, error handler, security hardening |
-| `plugins/oracle.test.ts`            |    25 | 342ms    | Oracle plugin lifecycle, pool init, migrations, graceful fallback           |
-| `routes/tools.test.ts`              |    36 | 588ms    | Tool listing, execution, approval flow, rate limiting, dual auth            |
-| `routes/sessions.test.ts`           |    21 | 558ms    | Session CRUD, search, LIKE escaping, org-scoped access                      |
-| `auth-middleware.test.ts`           |    16 | 139ms    | RBAC module, auth contract, dual auth, public/protected routes              |
-| `plugins/rbac.test.ts`              |    16 | 119ms    | Permission decoration, role mapping, hasPermission hook                     |
-| `plugins/auth.test.ts`              |    13 | 390ms    | Session resolution, cookie parsing, auth exclusion paths                    |
-| `server-lifecycle.test.ts`          |    12 | 65ms     | Server startup, shutdown, env config, Sentry/Oracle lifecycle               |
-| `routes/activity.test.ts`           |     9 | 295ms    | Activity queries, pagination, Oracle fallback                               |
-| `health-endpoint.test.ts`           |     9 | 205ms    | /healthz liveness, /health deep check, degraded status                      |
-| `oracle-plugin.test.ts`             |     8 | 12ms     | Plugin registration, decorator types, option handling                       |
-| `routes/metrics.test.ts`            |     4 | 186ms    | Prometheus text format, metric types, auth bypass                           |
-| `webhook-secret-encryption.test.ts` |     4 | 404ms    | AES-256-GCM encryption, key derivation, migration                           |
+### Core Tests (`tests/`)
+
+| Test File                           | Coverage Area                                                               |
+| ----------------------------------- | --------------------------------------------------------------------------- |
+| `app-factory.test.ts`               | App creation, plugins, CORS, Helmet, Zod, error handler, security hardening |
+| `server-lifecycle.test.ts`          | Server startup, shutdown, env config, Sentry/Oracle lifecycle               |
+| `auth-middleware.test.ts`           | RBAC module, auth contract, dual auth, public/protected routes              |
+| `oracle-plugin.test.ts`             | Plugin registration, decorator types, option handling                       |
+| `health-endpoint.test.ts`           | /healthz liveness, /health deep check, degraded status                      |
+| `webhook-secret-encryption.test.ts` | AES-256-GCM encryption, key derivation, migration                           |
+| `plugins/oracle.test.ts`            | Oracle plugin lifecycle, pool init, migrations, graceful fallback           |
+| `plugins/auth.test.ts`              | Session resolution, cookie parsing, auth exclusion paths                    |
+| `plugins/rbac.test.ts`              | Permission decoration, role mapping, hasPermission hook                     |
+| `routes/tools.test.ts`              | Tool listing, execution, approval flow, rate limiting, dual auth            |
+| `routes/sessions.test.ts`           | Session CRUD, search, LIKE escaping, org-scoped access                      |
+| `routes/activity.test.ts`           | Activity queries, pagination, Oracle fallback                               |
+| `routes/chat.test.ts`               | AI chat streaming, session context, SSE responses                           |
+| `routes/metrics.test.ts`            | Prometheus text format, metric types, auth bypass                           |
+
+### Plugin Unit Tests (`plugins/`)
+
+| Test File                        | Coverage Area                                               |
+| -------------------------------- | ----------------------------------------------------------- |
+| `plugins/cors.test.ts`           | CORS origin validation, credentials, dev vs production      |
+| `plugins/error-handler.test.ts`  | PortalError mapping, unknown error wrapping, response shape |
+| `plugins/helmet.test.ts`         | CSP directives, HSTS, security headers                      |
+| `plugins/rate-limit.test.ts`     | Rate limit config, skip-on-error, per-endpoint limits       |
+| `plugins/request-logger.test.ts` | Request logging, header redaction, timing                   |
+
+### Mastra Tests (`mastra/`)
+
+| Test File                                    | Coverage Area                                               |
+| -------------------------------------------- | ----------------------------------------------------------- |
+| `mastra/agents/cloud-advisor.test.ts`        | CloudAdvisor agent configuration, tool binding              |
+| `mastra/models/provider-registry.test.ts`    | Provider registry, model resolution, fallback               |
+| `mastra/rag/oci-embedder.test.ts`            | OCI GenAI embedding, batch processing, dimension validation |
+| `mastra/rag/oracle-vector-store.test.ts`     | Vector store CRUD, cosine similarity search                 |
+| `mastra/storage/oracle-store.test.ts`        | OracleStore (MastraStorage), 20+ methods                    |
+| `mastra/storage/oracle-store-memory.test.ts` | MemoryOracle, conversation thread storage                   |
+| `mastra/storage/oracle-store-scores.test.ts` | ScoresOracle, evaluation metric storage                     |
+| `mastra/tools/registry.test.ts`              | Tool registry, 60+ tool definitions, category mapping       |
+| `mastra/workflows/executor.test.ts`          | Workflow executor, topological sort, cycle detection        |
 
 ## Coverage Matrix
 
-### Plugins (3 files, 54 tests)
+### Plugins (8 files)
 
-- **Oracle plugin**: Pool initialization, migration execution, graceful fallback on DB unavailability, decorator registration (`db`, `withConnection`), `SKIP_MIGRATIONS` env var
-- **Auth plugin**: Better Auth session resolution via `getSession()`, cookie-based auth, path exclusion patterns (`/healthz`, `/health`, `/api/metrics`), request context decoration (`user`, `permissions`)
+- **Oracle plugin**: Pool initialization, migration execution, graceful fallback on DB unavailability, decorator registration, `SKIP_MIGRATIONS` env var
+- **Auth plugin**: Better Auth session resolution via `getSession()`, cookie-based auth, path exclusion patterns, request context decoration (`user`, `permissions`)
 - **RBAC plugin**: `requirePermission` decorator, role-to-permission mapping (viewer/operator/admin), `admin:all` wildcard, `hasPermission` preHandler hook
+- **CORS plugin**: Origin validation, credentials configuration, dev vs production behavior
+- **Error handler**: PortalError mapping, unknown error wrapping, safe response shape
+- **Helmet**: CSP directives, HSTS, comprehensive security header verification
+- **Rate limit**: Configuration, skip-on-error behavior, per-endpoint limits
+- **Request logger**: Request/response logging, header redaction, timing
 
-### Routes (4 files, 70 tests)
+### Routes (5 files)
 
 - **Tools**: Tool registry listing, tool execution with OCI CLI, server-side approval token flow (`recordApproval`/`consumeApproval` with `orgId`), rate limit validation, auth guard (401/403), request tracing
 - **Sessions**: Create/list/get/delete sessions, search with LIKE escaping, org-scoped queries, `userId` ownership enforcement, enriched session listing (message count, last message)
 - **Activity**: Activity feed with pagination, Oracle query construction, fallback to empty on DB errors, timestamp filtering
+- **Chat**: AI chat streaming via SSE, session context, `streamText` integration
 - **Metrics**: Prometheus text exposition format, counter/gauge/histogram serialization, metrics endpoint skips auth
+
+### Mastra (9 files)
+
+- **CloudAdvisor agent**: Agent configuration, tool binding, system prompts
+- **Provider registry**: Model provider resolution, OCI GenAI + Azure fallback
+- **OCI embedder**: Embedding generation, batch processing, dimension validation
+- **Oracle vector store**: Vector CRUD, cosine similarity search, index management
+- **OracleStore**: MastraStorage implementation (20+ methods), thread/message/run storage
+- **MemoryOracle**: Conversation memory, thread management
+- **ScoresOracle**: Evaluation metrics storage (5 methods)
+- **Tool registry**: 60+ OCI tool definitions, category mapping, schema validation
+- **Workflow executor**: Topological sort, cycle detection, safe expression evaluation
 
 ### App Factory (1 file, 31 tests)
 

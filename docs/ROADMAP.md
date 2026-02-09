@@ -1,9 +1,9 @@
 # Self-Service Portal: MVP to Product Roadmap
 
-> **Status**: Phase 9 in progress (Fastify Backend Migration — 9.1-9.10 complete, 9.11+ remaining)
+> **Status**: Phase 9 in progress (Fastify Backend Migration — 9.1-9.14 complete, 9.15+ remaining)
 > **Standalone Repo**: [oci-self-service-portal](https://github.com/acedergren/oci-self-service-portal)
 > **Last Updated**: 2026-02-09
-> **Tests**: 1213 passing across 82 test files (frontend + API + shared)
+> **Tests**: 1213 passing across 83 test files (frontend + API + shared)
 
 ---
 
@@ -223,20 +223,20 @@
 - [x] 9.8 Migrate sessions API (`GET/POST/DELETE /api/sessions`)
 - [x] 9.9 Migrate activity API (`GET /api/activity`)
 - [x] 9.10 Migrate tools API (`POST /api/tools/execute`, `POST /api/tools/approve`)
-- [x] 9.4 Mastra integration — Oracle storage adapter (MastraStorage, 20+ methods), tool registry, Fastify plugin
-- [x] 9.5 Workflow engine migration — Workflow executor, graph-utils extraction to packages/shared
-- [x] 9.6 AI agent + memory — CloudAdvisor agent, chat route, MemoryOracle (12 methods), provider registry, 64 tests
-- [x] 9.7 RAG + MCP + ScoresOracle — Oracle vector store (MastraVector), OCI GenAI embedder, MCP server migration, ScoresOracle (5 methods), 59 tests
-- [ ] 9.11 Migrate AI chat streaming (`POST /api/chat` — AI SDK `streamText().toUIMessageStream()`)
-- [ ] 9.12 OpenAPI spec generation (`@fastify/swagger` + `@fastify/swagger-ui`, auto from Zod schemas)
-- [ ] 9.13 Update SvelteKit frontend (remove `+server.ts` routes, point fetches to Fastify via env var)
-- [ ] 9.14 Docker multi-service deployment (frontend + api containers, shared network)
-- [ ] 9.15 CI/CD updates (separate test/build/deploy jobs for frontend and api)
-- [ ] 9.16 Feature flag for phased rollout (proxy SvelteKit → Fastify per-route)
+- [x] 9.11 Mastra integration — Oracle storage adapter (MastraStorage, 20+ methods), tool registry, Fastify plugin
+- [x] 9.12 Workflow engine migration — Workflow executor, graph-utils extraction to packages/shared
+- [x] 9.13 AI agent + memory — CloudAdvisor agent, chat route, MemoryOracle (12 methods), provider registry, 64 tests
+- [x] 9.14 RAG + MCP + ScoresOracle — Oracle vector store (MastraVector), OCI GenAI embedder, MCP server migration, ScoresOracle (5 methods), 59 tests
+- [ ] 9.15 Migrate AI chat streaming (`POST /api/chat` — AI SDK `streamText().toUIMessageStream()`)
+- [ ] 9.16 OpenAPI spec generation (`@fastify/swagger` + `@fastify/swagger-ui`, auto from Zod schemas)
+- [ ] 9.17 Update SvelteKit frontend (remove `+server.ts` routes, point fetches to Fastify via env var)
+- [ ] 9.18 Docker multi-service deployment (frontend + api containers, shared network)
+- [ ] 9.19 CI/CD updates (separate test/build/deploy jobs for frontend and api)
+- [ ] 9.20 Feature flag for phased rollout (proxy SvelteKit → Fastify per-route)
 
 **Key dependencies**: `fastify@5`, `@fastify/swagger`, `@fastify/cors`, `@fastify/cookie`, `@fastify/rate-limit`, `fastify-type-provider-zod`
 
-**Verified**: ~600 Fastify API tests across 28 test files passing. All routes migrated (9.1-9.10 complete). Mastra framework integration complete (9.4-9.7). Build succeeds. SvelteKit routes removed.
+**Verified**: ~600 Fastify API tests across 28 test files passing. All routes migrated (9.1-9.10 complete). Mastra framework integration complete (9.11-9.14). Build succeeds. SvelteKit routes removed.
 
 ---
 

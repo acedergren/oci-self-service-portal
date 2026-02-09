@@ -13,17 +13,37 @@ oci-self-service-portal/
 │   │   └── src/
 │   │       ├── app.ts          # Factory: createApp(), startServer(), stopServer()
 │   │       ├── server.ts       # Entry point (creates app + listens)
+│   │       ├── config.ts       # Centralized env config with Zod validation
 │   │       ├── plugins/        # Fastify plugins (fp-wrapped)
 │   │       │   ├── oracle.ts   # Connection pool + migrations
 │   │       │   ├── auth.ts     # Better Auth session bridge
-│   │       │   └── rbac.ts     # Permission guards + org resolution
+│   │       │   ├── rbac.ts     # Permission guards + org resolution
+│   │       │   ├── mastra.ts   # Mastra framework (agents, RAG, MCP)
+│   │       │   ├── helmet.ts   # Security headers
+│   │       │   ├── cors.ts     # CORS configuration
+│   │       │   ├── rate-limit.ts       # Rate limiting
+│   │       │   ├── error-handler.ts    # Global error handler
+│   │       │   └── request-logger.ts   # Request logging
 │   │       ├── routes/         # HTTP route registrations
 │   │       │   ├── health.ts   # /healthz (liveness) + /health (deep)
 │   │       │   ├── sessions.ts # CRUD for chat sessions
 │   │       │   ├── activity.ts # Tool execution feed
-│   │       │   ├── tools.ts    # Tool execution + approval workflow
+│   │       │   ├── tools/      # Tool execution + approval workflow
+│   │       │   ├── chat.ts     # AI chat streaming (POST /api/chat)
+│   │       │   ├── search.ts   # Semantic search (GET /api/v1/search)
+│   │       │   ├── mcp.ts      # MCP server endpoints
+│   │       │   ├── workflows.ts # Workflow CRUD + execution
 │   │       │   └── metrics.ts  # Prometheus /api/metrics
-│   │       └── tests/          # 204 tests across 13 files
+│   │       ├── mastra/         # Mastra framework integration
+│   │       │   ├── agents/     # CloudAdvisor agent
+│   │       │   ├── models/     # Provider registry, model types
+│   │       │   ├── rag/        # OracleVectorStore, OCI embedder
+│   │       │   ├── mcp/        # MCP server (tool discovery + execution)
+│   │       │   ├── storage/    # OracleStore (MastraStorage impl)
+│   │       │   ├── tools/      # 60+ OCI tool wrappers for Mastra
+│   │       │   └── workflows/  # Workflow executor
+│   │       ├── services/       # approvals, tools adapter, workflow-repository
+│   │       └── tests/          # Integration tests
 │   └── frontend/               # SvelteKit app (existing)
 │       └── src/
 │           ├── hooks.server.ts # Feature-flag proxy to Fastify
@@ -42,17 +62,18 @@ oci-self-service-portal/
 
 ### 1. Package Boundaries
 
-| Package | Contains | Rule |
-|---------|----------|------|
-| `packages/shared` | Business logic, Oracle repositories, auth core, error hierarchy, metrics, logger | If both apps need it, it lives here |
-| `apps/api` | Fastify plugins + route handlers | Thin wrappers — no business logic beyond request/response mapping |
-| `apps/frontend` | SvelteKit UI + server routes | Proxies to Fastify when `FASTIFY_ENABLED=true` |
+| Package           | Contains                                                                         | Rule                                                              |
+| ----------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `packages/shared` | Business logic, Oracle repositories, auth core, error hierarchy, metrics, logger | If both apps need it, it lives here                               |
+| `apps/api`        | Fastify plugins + route handlers                                                 | Thin wrappers — no business logic beyond request/response mapping |
+| `apps/frontend`   | SvelteKit UI + server routes                                                     | Proxies to Fastify when `FASTIFY_ENABLED=true`                    |
 
 The key constraint: **route handlers are adapters, not implementations**. A Fastify route calls into `packages/shared` the same way a SvelteKit `+server.ts` does. Business logic is never duplicated.
 
 ### 2. Shared-First Extraction
 
 Before writing any Fastify code, we extracted business logic from SvelteKit into `packages/shared`:
+
 - Oracle connection pool, migrations, repositories
 - Better Auth configuration
 - RBAC permission definitions (`getPermissionsForRole`)
@@ -82,10 +103,11 @@ Browser → SvelteKit hooks.server.ts
 
 ## Plugin Architecture
 
-Fastify plugins are registered in strict dependency order:
+Fastify plugins are registered in strict dependency order (see `app.ts`):
 
 ```
-oracle → auth → rbac → routes
+error-handler → helmet → CORS → rate-limit → cookie → sensible
+  → oracle → auth → rbac → mastra → swagger (optional) → routes
 ```
 
 ### Oracle Plugin (`plugins/oracle.ts`)
@@ -94,10 +116,10 @@ oracle → auth → rbac → routes
 
 ```typescript
 // Decorations:
-fastify.oracle.withConnection(fn)   // Borrow connection, auto-release
-fastify.oracle.getPoolStats()       // Pool health stats
-fastify.oracle.isAvailable()        // Boolean availability check
-request.dbAvailable                 // Per-request flag (set via onRequest hook)
+fastify.oracle.withConnection(fn); // Borrow connection, auto-release
+fastify.oracle.getPoolStats(); // Pool health stats
+fastify.oracle.isAvailable(); // Boolean availability check
+request.dbAvailable; // Per-request flag (set via onRequest hook)
 ```
 
 - **Fallback-tolerant**: If Oracle is unreachable, `available = false` and routes degrade gracefully
@@ -111,10 +133,10 @@ request.dbAvailable                 // Per-request flag (set via onRequest hook)
 
 ```typescript
 // Decorations:
-request.user            // User | null
-request.session         // Session | null
-request.permissions     // string[] (from role-based lookup)
-request.apiKeyContext   // ApiKeyContext | null
+request.user; // User | null
+request.session; // Session | null
+request.permissions; // string[] (from role-based lookup)
+request.apiKeyContext; // ApiKeyContext | null
 ```
 
 - **Better Auth bridge**: `toWebRequest(request)` converts Fastify's `request.headers` into a `Web API Request` so Better Auth's `auth.api.getSession()` can extract the cookie
@@ -128,13 +150,14 @@ request.apiKeyContext   // ApiKeyContext | null
 
 Not a traditional plugin (registers no decorators). Exports standalone functions:
 
-| Function | Purpose |
-|----------|---------|
-| `requireAuth(permission)` | Checks session permissions OR API key permissions. Returns 401/403. |
-| `requireAuthenticated()` | Checks that _some_ auth exists (no permission check). |
-| `resolveOrgId(request)` | Extracts org from `apiKeyContext.orgId` or `session.activeOrganizationId`. |
+| Function                  | Purpose                                                                    |
+| ------------------------- | -------------------------------------------------------------------------- |
+| `requireAuth(permission)` | Checks session permissions OR API key permissions. Returns 401/403.        |
+| `requireAuthenticated()`  | Checks that _some_ auth exists (no permission check).                      |
+| `resolveOrgId(request)`   | Extracts org from `apiKeyContext.orgId` or `session.activeOrganizationId`. |
 
 **Dual auth flow** in `requireAuth`:
+
 1. Check `request.user` + `request.permissions` (session auth)
 2. Check `request.apiKeyContext` (if already resolved by auth plugin)
 3. Try extracting `portal_` prefixed key from `Authorization: Bearer` or `X-API-Key` header
@@ -147,36 +170,49 @@ Not a traditional plugin (registers no decorators). Exports standalone functions
 All routes follow a consistent pattern:
 
 ```typescript
-app.get('/api/resource', {
-  preHandler: requireAuth('resource:read'),    // RBAC guard
-  schema: { querystring: ZodSchema }           // Zod validation
-}, async (request, reply) => {
-  if (!request.dbAvailable) { /* graceful fallback */ }
-  // Call into packages/shared
-  // Return structured response
-});
+app.get(
+	'/api/resource',
+	{
+		preHandler: requireAuth('resource:read'), // RBAC guard
+		schema: { querystring: ZodSchema } // Zod validation
+	},
+	async (request, reply) => {
+		if (!request.dbAvailable) {
+			/* graceful fallback */
+		}
+		// Call into packages/shared
+		// Return structured response
+	}
+);
 ```
 
 ### Route Inventory
 
-| Route | Method | Auth | Description |
-|-------|--------|------|-------------|
-| `/healthz` | GET | None | Liveness probe (plain text "ok") |
-| `/health` | GET | None | Deep health check (3s timeout, subsystem statuses) |
-| `/api/metrics` | GET | None | Prometheus text format metrics |
-| `/api/sessions` | GET | `sessions:read` | List enriched sessions (with message count) |
-| `/api/sessions` | POST | `sessions:write` | Create new chat session |
-| `/api/sessions/:id` | DELETE | `sessions:write` | Delete session (user-scoped) |
-| `/api/activity` | GET | `tools:read` | Recent tool execution feed |
-| `/api/tools/execute` | GET | `tools:execute` | Approval requirements for a tool |
-| `/api/tools/execute` | POST | `tools:execute` | Execute a tool (checks approval) |
-| `/api/tools/approve` | GET | `tools:approve` | List pending approvals (org-scoped) |
-| `/api/tools/approve` | POST | `tools:approve` | Approve/reject a tool execution |
-| `/api/docs` | GET | `admin:all` | OpenAPI/Swagger UI (non-production default) |
+| Route                | Method | Auth              | Description                                        |
+| -------------------- | ------ | ----------------- | -------------------------------------------------- |
+| `/healthz`           | GET    | None              | Liveness probe (plain text "ok")                   |
+| `/health`            | GET    | None              | Deep health check (3s timeout, subsystem statuses) |
+| `/api/metrics`       | GET    | None              | Prometheus text format metrics                     |
+| `/api/sessions`      | GET    | `sessions:read`   | List enriched sessions (with message count)        |
+| `/api/sessions`      | POST   | `sessions:write`  | Create new chat session                            |
+| `/api/sessions/:id`  | DELETE | `sessions:write`  | Delete session (user-scoped)                       |
+| `/api/activity`      | GET    | `tools:read`      | Recent tool execution feed                         |
+| `/api/tools/execute` | GET    | `tools:execute`   | Approval requirements for a tool                   |
+| `/api/tools/execute` | POST   | `tools:execute`   | Execute a tool (checks approval)                   |
+| `/api/tools/approve` | GET    | `tools:approve`   | List pending approvals (org-scoped)                |
+| `/api/tools/approve` | POST   | `tools:approve`   | Approve/reject a tool execution                    |
+| `/api/chat`          | POST   | `sessions:write`  | AI chat streaming (SSE via `streamText`)           |
+| `/api/v1/search`     | GET    | `sessions:read`   | Semantic vector search                             |
+| `/api/mcp/*`         | \*     | `tools:execute`   | MCP server endpoints (tool discovery + execution)  |
+| `/api/workflows`     | GET    | `workflows:read`  | List workflow definitions                          |
+| `/api/workflows`     | POST   | `workflows:write` | Create workflow                                    |
+| `/api/workflows/:id` | \*     | `workflows:*`     | Workflow CRUD + execution                          |
+| `/api/docs`          | GET    | `admin:all`       | OpenAPI/Swagger UI (non-production default)        |
 
 ### Database Fallback Strategy
 
 Every route that queries Oracle checks `request.dbAvailable` first:
+
 - **GET routes**: Return empty arrays with a `message` field (200 OK)
 - **POST/DELETE**: Return 503 via `DatabaseError` + `errorResponse()`
 - **Exception**: Activity route returns 500 with `{ error: "..." }` on query failure
@@ -219,6 +255,7 @@ Request → Tracing (X-Request-Id) → CORS → Helmet (CSP/HSTS) → Cookie →
 ### Production Fail-Fast
 
 The app refuses to start in production without:
+
 - `BETTER_AUTH_SECRET` — fatal error
 - `CORS_ORIGIN` — fatal error (credentials:true forbids wildcard)
 
@@ -239,57 +276,66 @@ In development, `origin: true` reflects the request origin for local dev conveni
 
 ```typescript
 app.setErrorHandler((error, request, reply) => {
-  const portalError = isPortalError(error) ? error : toPortalError(error);
-  log.error({ err: portalError, requestId, method, url }, 'Request error');
-  const response = errorResponse(portalError);
-  reply.status(response.status).send(response);
+	const portalError = isPortalError(error) ? error : toPortalError(error);
+	log.error({ err: portalError, requestId, method, url }, 'Request error');
+	const response = errorResponse(portalError);
+	reply.status(response.status).send(response);
 });
 ```
 
 All unknown errors are wrapped via `toPortalError()` → `INTERNAL_ERROR(500)`. This ensures:
+
 - Consistent error response shape across all routes
 - No stack traces or internal details leaked to clients
 - Structured logging with request context
 
 ## Observability
 
-| Signal | Implementation | Endpoint |
-|--------|---------------|----------|
-| Logging | Pino with custom serializers, redacted auth headers | stdout (JSON) |
-| Metrics | Custom Prometheus registry (Counter, Gauge, Histogram) | `GET /api/metrics` |
-| Tracing | `X-Request-Id` header (generated or propagated) | Response header |
-| Health | Liveness + deep check with subsystem statuses | `/healthz`, `/health` |
-| Errors | Sentry (optional, no-op when DSN missing) | — |
+| Signal  | Implementation                                         | Endpoint              |
+| ------- | ------------------------------------------------------ | --------------------- |
+| Logging | Pino with custom serializers, redacted auth headers    | stdout (JSON)         |
+| Metrics | Custom Prometheus registry (Counter, Gauge, Histogram) | `GET /api/metrics`    |
+| Tracing | `X-Request-Id` header (generated or propagated)        | Response header       |
+| Health  | Liveness + deep check with subsystem statuses          | `/healthz`, `/health` |
+| Errors  | Sentry (optional, no-op when DSN missing)              | —                     |
 
 ## Testing Strategy
 
 ### Test Architecture
 
-- **204 tests** across **13 files** in `apps/api/src/tests/`
-- All tests use `app.inject()` (Fastify's built-in test helper — no HTTP server needed)
+- **28 test files** across `apps/api/src/` (tests/, plugins/, mastra/)
+- All route tests use `app.inject()` (Fastify's built-in test helper — no HTTP server needed)
 - Full mock isolation: Oracle, auth, logger, metrics, Sentry all mocked
 
 ### Test Categories
 
-| Category | Tests | Files |
-|----------|-------|-------|
-| App factory | 31 | `app-factory.test.ts` |
-| Server lifecycle | 5 | `server-lifecycle.test.ts` |
-| Auth middleware | 16 | `auth-middleware.test.ts` |
-| Oracle plugin | 13 | `oracle-plugin.test.ts` |
-| RBAC plugin | 19 | `plugins/rbac.test.ts` |
-| Auth plugin | 18 | `plugins/auth.test.ts` |
-| Oracle plugin (v2) | 11 | `plugins/oracle.test.ts` |
-| Health routes | 16 | `routes/health-endpoint.test.ts` |
-| Session routes | 22 | `routes/sessions.test.ts` |
-| Activity routes | 16 | `routes/activity.test.ts` |
-| Tool routes | 22 | `routes/tools.test.ts` |
-| Metrics routes | 4 | `routes/metrics.test.ts` |
-| OpenAPI docs | 11 | `routes/openapi-docs.test.ts` |
+| Category          | Files                                                                                                                                             |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| App factory       | `tests/app-factory.test.ts`                                                                                                                       |
+| Server lifecycle  | `tests/server-lifecycle.test.ts`                                                                                                                  |
+| Auth middleware   | `tests/auth-middleware.test.ts`                                                                                                                   |
+| Oracle plugin     | `tests/oracle-plugin.test.ts`, `tests/plugins/oracle.test.ts`                                                                                     |
+| Auth plugin       | `tests/plugins/auth.test.ts`                                                                                                                      |
+| RBAC plugin       | `tests/plugins/rbac.test.ts`                                                                                                                      |
+| Encryption        | `tests/webhook-secret-encryption.test.ts`                                                                                                         |
+| Health routes     | `tests/health-endpoint.test.ts`                                                                                                                   |
+| Session routes    | `tests/routes/sessions.test.ts`                                                                                                                   |
+| Activity routes   | `tests/routes/activity.test.ts`                                                                                                                   |
+| Tool routes       | `tests/routes/tools.test.ts`                                                                                                                      |
+| Chat routes       | `tests/routes/chat.test.ts`                                                                                                                       |
+| Metrics routes    | `tests/routes/metrics.test.ts`                                                                                                                    |
+| Plugin unit tests | `plugins/cors.test.ts`, `plugins/error-handler.test.ts`, `plugins/helmet.test.ts`, `plugins/rate-limit.test.ts`, `plugins/request-logger.test.ts` |
+| Mastra agents     | `mastra/agents/cloud-advisor.test.ts`                                                                                                             |
+| Mastra models     | `mastra/models/provider-registry.test.ts`                                                                                                         |
+| Mastra RAG        | `mastra/rag/oci-embedder.test.ts`, `mastra/rag/oracle-vector-store.test.ts`                                                                       |
+| Mastra storage    | `mastra/storage/oracle-store.test.ts`, `mastra/storage/oracle-store-memory.test.ts`, `mastra/storage/oracle-store-scores.test.ts`                 |
+| Mastra tools      | `mastra/tools/registry.test.ts`                                                                                                                   |
+| Mastra workflows  | `mastra/workflows/executor.test.ts`                                                                                                               |
 
 ### Coverage Contract
 
 Every API route tests:
+
 - **401**: Unauthenticated (no session, no API key)
 - **403**: Wrong permission
 - **400**: Zod schema validation failures
@@ -325,13 +371,13 @@ Every API route tests:
 
 ## Key Decisions
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Monorepo tool | pnpm workspaces | Already used; no new tooling |
-| API framework | Fastify 5 | Type-safe, plugin ecosystem, performance |
-| Validation | Zod via `fastify-type-provider-zod` | Type inference, shared with frontend |
-| Auth bridge | `toWebRequest()` conversion | Reuse Better Auth without reimplementing session logic |
-| Plugin wrapping | `fastify-plugin` (`fp()`) | Encapsulates decorators, declares dependencies |
-| Permissions model | Flat array checked by `hasPermission()` | Simple, testable, matches existing RBAC |
-| Feature flag | `FASTIFY_ENABLED` + `FASTIFY_PROXY_ROUTES` | Gradual migration without downtime |
-| Merge strategy | Squash merge to main | Clean history for large feature branch |
+| Decision          | Choice                                     | Rationale                                              |
+| ----------------- | ------------------------------------------ | ------------------------------------------------------ |
+| Monorepo tool     | pnpm workspaces                            | Already used; no new tooling                           |
+| API framework     | Fastify 5                                  | Type-safe, plugin ecosystem, performance               |
+| Validation        | Zod via `fastify-type-provider-zod`        | Type inference, shared with frontend                   |
+| Auth bridge       | `toWebRequest()` conversion                | Reuse Better Auth without reimplementing session logic |
+| Plugin wrapping   | `fastify-plugin` (`fp()`)                  | Encapsulates decorators, declares dependencies         |
+| Permissions model | Flat array checked by `hasPermission()`    | Simple, testable, matches existing RBAC                |
+| Feature flag      | `FASTIFY_ENABLED` + `FASTIFY_PROXY_ROUTES` | Gradual migration without downtime                     |
+| Merge strategy    | Squash merge to main                       | Clean history for large feature branch                 |

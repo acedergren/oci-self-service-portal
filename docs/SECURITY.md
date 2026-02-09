@@ -34,7 +34,7 @@ Primary authentication mechanism for browser-based access. Located in `apps/fron
 
 ### API Key Authentication
 
-Programmatic access for CI/CD pipelines, monitoring scripts, and external integrations. Located in `packages/shared/src/auth/api-keys.ts`.
+Programmatic access for CI/CD pipelines, monitoring scripts, and external integrations. Located in `packages/shared/src/server/auth/api-keys.ts`.
 
 **Key Format & Storage**:
 
