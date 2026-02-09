@@ -58,7 +58,7 @@ async function getEncryptionKey(): Promise<Buffer> {
 	}
 
 	// Derive key using HKDF-SHA256
-	cachedKey = await hkdfAsync(HKDF_DIGEST, secret, HKDF_SALT, HKDF_INFO, KEY_LENGTH);
+	cachedKey = Buffer.from(await hkdfAsync(HKDF_DIGEST, secret, HKDF_SALT, HKDF_INFO, KEY_LENGTH));
 
 	return cachedKey;
 }

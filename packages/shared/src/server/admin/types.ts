@@ -65,9 +65,9 @@ export const IdpProviderSchema = z.object({
 	adminGroups: z.string().max(2000).nullable().optional(),
 	operatorGroups: z.string().max(2000).nullable().optional(),
 	// JSON fields — parsed as objects
-	tenantOrgMap: z.record(z.string()).nullable().optional(),
+	tenantOrgMap: z.record(z.string(), z.string()).nullable().optional(),
 	defaultOrgId: z.string().max(36).nullable().optional(),
-	extraConfig: z.record(z.unknown()).nullable().optional(),
+	extraConfig: z.record(z.string(), z.unknown()).nullable().optional(),
 	createdAt: z.date(),
 	updatedAt: z.date()
 });
@@ -113,9 +113,9 @@ export const CreateIdpInputSchema = z
 		buttonLabel: z.string().max(255).nullable().optional(),
 		adminGroups: z.string().max(2000).nullable().optional(),
 		operatorGroups: z.string().max(2000).nullable().optional(),
-		tenantOrgMap: z.record(z.string()).nullable().optional(),
+		tenantOrgMap: z.record(z.string(), z.string()).nullable().optional(),
 		defaultOrgId: z.string().max(36).nullable().optional(),
-		extraConfig: z.record(z.unknown()).nullable().optional()
+		extraConfig: z.record(z.string(), z.unknown()).nullable().optional()
 	})
 	.refine((data) => data.discoveryUrl || (data.authorizationUrl && data.tokenUrl), {
 		message: 'Either discoveryUrl or both authorizationUrl and tokenUrl are required'
@@ -144,9 +144,9 @@ export const UpdateIdpInputSchema = z
 		buttonLabel: z.string().max(255).nullable().optional(),
 		adminGroups: z.string().max(2000).nullable().optional(),
 		operatorGroups: z.string().max(2000).nullable().optional(),
-		tenantOrgMap: z.record(z.string()).nullable().optional(),
+		tenantOrgMap: z.record(z.string(), z.string()).nullable().optional(),
 		defaultOrgId: z.string().max(36).nullable().optional(),
-		extraConfig: z.record(z.unknown()).nullable().optional()
+		extraConfig: z.record(z.string(), z.unknown()).nullable().optional()
 	})
 	.refine(
 		(data) => {
@@ -184,7 +184,7 @@ export const AiProviderSchema = z.object({
 	// JSON fields
 	modelAllowlist: z.array(z.string()).nullable().optional(),
 	defaultModel: z.string().max(255).nullable().optional(),
-	extraConfig: z.record(z.unknown()).nullable().optional(),
+	extraConfig: z.record(z.string(), z.unknown()).nullable().optional(),
 	createdAt: z.date(),
 	updatedAt: z.date()
 });
@@ -207,7 +207,7 @@ export const CreateAiProviderInputSchema = z.object({
 	sortOrder: z.number().int().default(0),
 	modelAllowlist: z.array(z.string()).nullable().optional(),
 	defaultModel: z.string().max(255).nullable().optional(),
-	extraConfig: z.record(z.unknown()).nullable().optional()
+	extraConfig: z.record(z.string(), z.unknown()).nullable().optional()
 });
 export type CreateAiProviderInput = z.infer<typeof CreateAiProviderInputSchema>;
 
@@ -242,7 +242,7 @@ export const SetSettingInputSchema = z.object({
 		.min(1)
 		.max(255)
 		.regex(/^[a-z0-9._-]+$/, 'Setting key must be lowercase alphanumeric with ._- separators'),
-	value: z.union([z.string(), z.number(), z.boolean(), z.record(z.unknown())]),
+	value: z.union([z.string(), z.number(), z.boolean(), z.record(z.string(), z.unknown())]),
 	valueType: SettingTypeSchema.optional(), // Auto-detect if not provided
 	description: z.string().max(2000).nullable().optional(),
 	category: z.string().max(100).nullable().optional(),
@@ -280,7 +280,7 @@ export type SetupStatus = z.infer<typeof SetupStatusSchema>;
 export const TestConnectionResultSchema = z.object({
 	success: z.boolean(),
 	message: z.string(),
-	details: z.record(z.unknown()).optional()
+	details: z.record(z.string(), z.unknown()).optional()
 });
 export type TestConnectionResult = z.infer<typeof TestConnectionResultSchema>;
 

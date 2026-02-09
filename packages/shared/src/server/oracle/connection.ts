@@ -22,12 +22,14 @@ export interface OracleConfig {
 }
 
 export interface OracleConnection {
+	/** oracledb OUT_FORMAT_OBJECT constant — use as outFormat option */
+	readonly OBJECT: number;
 	close(): Promise<void>;
 	execute<T = Record<string, unknown>>(
 		sql: string,
 		binds?: unknown,
 		options?: unknown
-	): Promise<{ rows?: T[] }>;
+	): Promise<{ rows?: T[]; rowsAffected?: number }>;
 	commit(): Promise<void>;
 	rollback(): Promise<void>;
 }
