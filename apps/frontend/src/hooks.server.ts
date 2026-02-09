@@ -20,6 +20,7 @@ import {
 import { httpRequestDuration } from '@portal/shared/server/metrics';
 import { initSentry, captureError, closeSentry } from '@portal/shared/server/sentry';
 import { validateApiKey } from '@portal/shared/server/auth/api-keys';
+import { shouldProxyToFastify, proxyToFastify } from '$lib/server/feature-flags.js';
 
 const log = createLogger('hooks');
 
@@ -242,6 +243,20 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const incomingId = event.request.headers.get(REQUEST_ID_HEADER);
 	const requestId = incomingId || generateRequestId();
 	event.locals.requestId = requestId;
+
+	// ── Fastify proxy (Phase 9.16) ──────────────────────────────────────────
+	if (shouldProxyToFastify(event.url.pathname)) {
+		const proxyResponse = await proxyToFastify(event.request, event.url.pathname);
+		proxyResponse.headers.set(REQUEST_ID_HEADER, requestId);
+		logRequest(
+			event.request.method,
+			event.url.pathname,
+			proxyResponse.status,
+			performance.now() - startTime,
+			requestId
+		);
+		return proxyResponse;
+	}
 
 	// Make DB status available to all routes
 	const isDbReady = await ensureDatabase();
