@@ -18,13 +18,14 @@ import type { FastifyPluginAsync } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { WorkflowStatusSchema } from '@portal/shared/workflows/types.js';
-import { ValidationError, NotFoundError, toPortalError } from '@portal/shared/errors.js';
+import { ValidationError, NotFoundError, toPortalError } from '@portal/shared/server/errors.js';
 import {
 	createWorkflowRepository,
 	createWorkflowRunRepository,
 	createWorkflowRunStepRepository
 } from '../services/workflow-repository.js';
 import { WorkflowExecutor, type EngineState } from '../mastra/workflows/executor.js';
+import { requireAuth, resolveOrgId } from '../plugins/rbac.js';
 
 // ── Zod schemas for route validation ────────────────────────────────────
 
@@ -75,13 +76,13 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 
 	// Create repositories lazily — oracle plugin may not be registered (tests)
 	function getRepos() {
-		if (!fastify.hasDecorator('withConnection')) {
+		if (!fastify.hasDecorator('oracle') || !fastify.oracle.isAvailable()) {
 			throw new Error('Database not available');
 		}
 		return {
-			workflows: createWorkflowRepository(fastify.withConnection),
-			runs: createWorkflowRunRepository(fastify.withConnection),
-			steps: createWorkflowRunStepRepository(fastify.withConnection)
+			workflows: createWorkflowRepository(fastify.oracle.withConnection),
+			runs: createWorkflowRunRepository(fastify.oracle.withConnection),
+			steps: createWorkflowRunStepRepository(fastify.oracle.withConnection)
 		};
 	}
 
@@ -91,12 +92,12 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 		'/api/v1/workflows',
 		{
 			schema: { querystring: ListQuerySchema },
-			preHandler: fastify.requirePermission('workflows:read')
+			preHandler: requireAuth('workflows:read')
 		},
 		async (request, reply) => {
 			const { workflows } = getRepos();
 			const { limit, offset, status, search } = request.query;
-			const orgId = request.user?.orgId;
+			const orgId = resolveOrgId(request);
 
 			if (!orgId) {
 				return reply.code(400).send({ error: 'Organization context required' });
@@ -104,7 +105,7 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 
 			const listOptions = {
 				orgId,
-				userId: request.user?.userId,
+				userId: request.user?.id,
 				limit,
 				offset,
 				search,
@@ -140,11 +141,11 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 		'/api/v1/workflows',
 		{
 			schema: { body: CreateWorkflowBodySchema },
-			preHandler: fastify.requirePermission('workflows:execute')
+			preHandler: requireAuth('workflows:execute')
 		},
 		async (request, reply) => {
 			const { workflows } = getRepos();
-			const orgId = request.user?.orgId;
+			const orgId = resolveOrgId(request);
 
 			if (!orgId) {
 				return reply.code(400).send({ error: 'Organization context required' });
@@ -152,7 +153,7 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 
 			const workflow = await workflows.create({
 				...request.body,
-				userId: request.user?.userId,
+				userId: request.user?.id,
 				orgId
 			});
 
@@ -166,17 +167,17 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 		'/api/v1/workflows/:id',
 		{
 			schema: { params: WorkflowIdParamsSchema },
-			preHandler: fastify.requirePermission('workflows:read')
+			preHandler: requireAuth('workflows:read')
 		},
 		async (request, reply) => {
 			const { workflows } = getRepos();
-			const orgId = request.user?.orgId;
+			const orgId = resolveOrgId(request);
 
 			if (!orgId) {
 				return reply.code(400).send({ error: 'Organization context required' });
 			}
 
-			const userId = request.user?.userId;
+			const userId = request.user?.id;
 			const workflow = userId
 				? await workflows.getByIdForUser(request.params.id, userId, orgId)
 				: await workflows.getByIdForOrg(request.params.id, orgId);
@@ -198,11 +199,11 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 				params: WorkflowIdParamsSchema,
 				body: UpdateWorkflowBodySchema
 			},
-			preHandler: fastify.requirePermission('workflows:execute')
+			preHandler: requireAuth('workflows:execute')
 		},
 		async (request, reply) => {
 			const { workflows } = getRepos();
-			const userId = request.user?.userId;
+			const userId = request.user?.id;
 
 			if (!userId) {
 				return reply.code(400).send({ error: 'User context required' });
@@ -224,11 +225,11 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 		'/api/v1/workflows/:id',
 		{
 			schema: { params: WorkflowIdParamsSchema },
-			preHandler: fastify.requirePermission('workflows:execute')
+			preHandler: requireAuth('workflows:execute')
 		},
 		async (request, reply) => {
 			const { workflows } = getRepos();
-			const orgId = request.user?.orgId;
+			const orgId = resolveOrgId(request);
 
 			if (!orgId) {
 				return reply.code(400).send({ error: 'Organization context required' });
@@ -236,7 +237,7 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 
 			const deleted = await workflows.delete(
 				request.params.id,
-				request.user?.userId ?? undefined,
+				request.user?.id ?? undefined,
 				orgId
 			);
 
@@ -257,18 +258,18 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 				params: WorkflowIdParamsSchema,
 				body: RunWorkflowBodySchema
 			},
-			preHandler: fastify.requirePermission('workflows:execute')
+			preHandler: requireAuth('workflows:execute')
 		},
 		async (request, reply) => {
 			const { workflows, runs } = getRepos();
-			const orgId = request.user?.orgId;
+			const orgId = resolveOrgId(request);
 
 			if (!orgId) {
 				return reply.code(400).send({ error: 'Organization context required' });
 			}
 
 			// Load with IDOR check
-			const userId = request.user?.userId;
+			const userId = request.user?.id;
 			const definition = userId
 				? await workflows.getByIdForUser(request.params.id, userId, orgId)
 				: await workflows.getByIdForOrg(request.params.id, orgId);
@@ -345,17 +346,17 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 		'/api/v1/workflows/:id/runs/:runId',
 		{
 			schema: { params: RunIdParamsSchema },
-			preHandler: fastify.requirePermission('workflows:read')
+			preHandler: requireAuth('workflows:read')
 		},
 		async (request, reply) => {
 			const { runs, steps } = getRepos();
-			const orgId = request.user?.orgId;
+			const orgId = resolveOrgId(request);
 
 			if (!orgId) {
 				return reply.code(400).send({ error: 'Organization context required' });
 			}
 
-			const userId = request.user?.userId;
+			const userId = request.user?.id;
 			const run = userId
 				? await runs.getByIdForUser(request.params.runId, userId, orgId)
 				: await runs.getByIdForOrg(request.params.runId, orgId);
@@ -400,11 +401,11 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 		'/api/v1/workflows/:id/runs/:runId/approve',
 		{
 			schema: { params: RunIdParamsSchema },
-			preHandler: fastify.requirePermission('workflows:execute')
+			preHandler: requireAuth('workflows:execute')
 		},
 		async (request, reply) => {
 			const { workflows, runs } = getRepos();
-			const userId = request.user?.userId;
+			const userId = request.user?.id;
 
 			if (!userId) {
 				return reply.code(400).send({ error: 'User context required' });

@@ -18,10 +18,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
-import {
-	serializerCompiler,
-	validatorCompiler
-} from 'fastify-type-provider-zod';
+import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -534,7 +531,7 @@ describe('POST /api/tools/execute', () => {
 			}
 		});
 
-		expect(mockConsumeApproval).toHaveBeenCalledWith('tc-check', 'terminate-instance', null);
+		expect(mockConsumeApproval).toHaveBeenCalledWith('tc-check', 'terminate-instance');
 	});
 
 	it('logs approval decision via audit for approval-required tool', async () => {
@@ -857,7 +854,7 @@ describe('POST /api/tools/approve', () => {
 		expect(body.message).toContain('approved');
 
 		// Should record server-side approval
-		expect(mockRecordApproval).toHaveBeenCalledWith('tc-approve-1', 'terminate-instance', null);
+		expect(mockRecordApproval).toHaveBeenCalledWith('tc-approve-1', 'terminate-instance');
 		// Should resolve the pending promise
 		expect(mockResolve).toHaveBeenCalledWith(true);
 		// Should remove from pending map

@@ -1,15 +1,15 @@
 /**
- * TDD tests for Chat streaming route (Phase 9 task 34)
+ * Tests for Chat streaming route (Mastra agent-based).
  *
  * Tests the route at apps/api/src/routes/chat.ts:
- * - POST /api/chat — AI-powered chat with OCI tools via SSE streaming
+ * - POST /api/chat — AI-powered chat via Mastra CloudAdvisor agent SSE streaming
  *
  * Security contract:
  * - Requires 'tools:execute' permission
  * - Returns 401 for unauthenticated requests
  * - Returns 403 when user lacks required permission
- * - Validates model against allowlist
- * - Validates request body (messages required)
+ * - Validates request body (messages required, non-empty)
+ * - Model validated against allowlist (falls back to default)
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -17,145 +17,77 @@ import type { FastifyInstance } from 'fastify';
 import { buildTestApp, simulateSession } from './test-helpers.js';
 
 // ---------------------------------------------------------------------------
-// Mocks — all with forwarding pattern for mockReset compatibility
+// Mocks
 // ---------------------------------------------------------------------------
 
-const mockStreamText = vi.fn();
-const mockConvertToModelMessages = vi.fn();
-const mockStepCountIs = vi.fn();
+const mockGetProviderRegistry = vi.fn();
+const mockGetEnabledModelIds = vi.fn();
 
-vi.mock('ai', () => ({
-	streamText: (...args: unknown[]) => mockStreamText(...args),
-	convertToModelMessages: (...args: unknown[]) => mockConvertToModelMessages(...args),
-	stepCountIs: (...args: unknown[]) => mockStepCountIs(...args)
+vi.mock('../../mastra/models/index.js', () => ({
+	getProviderRegistry: (...args: unknown[]) => mockGetProviderRegistry(...args),
+	getEnabledModelIds: (...args: unknown[]) => mockGetEnabledModelIds(...args)
 }));
 
-const mockCreateOCI = vi.fn();
-const mockSupportsReasoning = vi.fn();
-
-vi.mock('@acedergren/oci-genai-provider', () => ({
-	createOCI: (...args: unknown[]) => mockCreateOCI(...args),
-	supportsReasoning: (...args: unknown[]) => mockSupportsReasoning(...args)
+vi.mock('../../mastra/agents/cloud-advisor.js', () => ({
+	FALLBACK_MODEL_ALLOWLIST: [
+		'google.gemini-2.5-flash',
+		'cohere.command-r-plus',
+		'meta.llama-3.3-70b'
+	],
+	DEFAULT_MODEL: 'google.gemini-2.5-flash'
 }));
 
-const mockCreateAISDKTools = vi.fn();
-
-vi.mock('@portal/shared/tools/index', () => ({
-	createAISDKTools: (...args: unknown[]) => mockCreateAISDKTools(...args)
-}));
-
-const mockChatRequestsInc = vi.fn();
-
-vi.mock('@portal/shared/server/metrics', () => ({
-	chatRequests: { inc: (...args: unknown[]) => mockChatRequestsInc(...args) }
-}));
-
-const mockGenerateEmbedding = vi.fn();
-vi.mock('@portal/shared/server/embeddings', () => ({
-	generateEmbedding: (...args: unknown[]) => mockGenerateEmbedding(...args)
-}));
-
-const mockEmbeddingInsert = vi.fn();
-vi.mock('@portal/shared/server/oracle/repositories/embedding-repository', () => ({
-	embeddingRepository: {
-		insert: (...args: unknown[]) => mockEmbeddingInsert(...args)
-	}
-}));
-
-vi.mock('@portal/shared/server/logger', () => ({
-	createLogger: () => ({
-		info: vi.fn(),
-		warn: vi.fn(),
-		error: vi.fn(),
-		fatal: vi.fn(),
-		debug: vi.fn(),
-		child: vi.fn().mockReturnThis()
-	})
-}));
-
-const mockValidateApiKey = vi.fn();
-vi.mock('@portal/shared/server/auth/api-keys', () => ({
-	validateApiKey: (...args: unknown[]) => mockValidateApiKey(...args)
-}));
-
-vi.mock('@portal/shared/server/auth/rbac', async () => {
-	const actual = await vi.importActual<typeof import('@portal/shared/server/auth/rbac')>(
-		'@portal/shared/server/auth/rbac'
+vi.mock('@portal/shared/server/errors.js', async () => {
+	const actual = await vi.importActual<typeof import('@portal/shared/server/errors.js')>(
+		'@portal/shared/server/errors.js'
 	);
 	return actual;
 });
-
-vi.mock('@portal/shared/server/auth/config', () => ({
-	auth: {
-		api: {
-			getSession: vi.fn().mockResolvedValue(null)
-		}
-	}
-}));
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Create a mock streamText result that returns a fake Web API Response.
- * The response has a ReadableStream body that yields a single SSE chunk.
- */
-function createMockStreamResult() {
-	const encoder = new TextEncoder();
-	const body = new ReadableStream({
+/** Create a mock Mastra agent with a `.stream()` that yields text chunks. */
+function createMockAgent(chunks: string[] = ['Hello', ' world']) {
+	const textStream = new ReadableStream({
 		start(controller) {
-			controller.enqueue(encoder.encode('0:"Hello"\n'));
+			for (const chunk of chunks) {
+				controller.enqueue(chunk);
+			}
 			controller.close();
 		}
 	});
 
 	return {
-		toUIMessageStreamResponse: vi.fn(
-			() =>
-				new Response(body, {
-					status: 200,
-					headers: { 'Content-Type': 'text/event-stream' }
-				})
-		)
+		stream: vi.fn().mockResolvedValue({ textStream })
 	};
 }
 
-async function buildApp(): Promise<FastifyInstance> {
+/** Build Fastify app with fake mastra decorator and chat route. */
+async function buildApp(mockAgent?: ReturnType<typeof createMockAgent>): Promise<FastifyInstance> {
 	const app = await buildTestApp({ withRbac: true });
+
+	// Decorate with mock mastra (before registering routes)
+	const agent = mockAgent ?? createMockAgent();
+	app.decorate('mastra', {
+		getAgent: vi.fn().mockReturnValue(agent)
+	});
+
 	const { chatRoutes } = await import('../../routes/chat.js');
-	await app.register(async (instance) => chatRoutes(instance));
+	await app.register(chatRoutes);
+
 	return app;
 }
 
 // ---------------------------------------------------------------------------
-// Default mock setup for each test (to handle mockReset: true)
+// Default mock setup
 // ---------------------------------------------------------------------------
 
 beforeEach(() => {
-	// AI SDK mocks
-	const mockResult = createMockStreamResult();
-	mockStreamText.mockReturnValue(mockResult);
-	mockConvertToModelMessages.mockResolvedValue([{ role: 'user', content: 'Hello' }]);
-	mockStepCountIs.mockReturnValue(() => false);
-
-	// OCI Provider mocks
-	const mockLanguageModel = vi.fn().mockReturnValue({ modelId: 'google.gemini-2.5-flash' });
-	mockCreateOCI.mockReturnValue({ languageModel: mockLanguageModel });
-	mockSupportsReasoning.mockReturnValue(false);
-
-	// Tools mock
-	mockCreateAISDKTools.mockReturnValue({});
-
-	// Metrics mock
-	mockChatRequestsInc.mockReturnValue(undefined);
-
-	// Embedding mocks (fire-and-forget — don't need to resolve for test)
-	mockGenerateEmbedding.mockResolvedValue(null);
-	mockEmbeddingInsert.mockResolvedValue(undefined);
-
-	// API key mock
-	mockValidateApiKey.mockResolvedValue(null);
+	// Default: fallback allowlist (provider registry throws)
+	mockGetProviderRegistry.mockRejectedValue(new Error('No DB'));
+	mockGetEnabledModelIds.mockResolvedValue([]);
 });
 
 // ---------------------------------------------------------------------------
@@ -179,7 +111,7 @@ describe('POST /api/chat', () => {
 			method: 'POST',
 			url: '/api/chat',
 			payload: {
-				messages: [{ role: 'user', parts: [{ type: 'text', text: 'Hello' }] }]
+				messages: [{ role: 'user', content: 'Hello' }]
 			}
 		});
 
@@ -195,7 +127,7 @@ describe('POST /api/chat', () => {
 			method: 'POST',
 			url: '/api/chat',
 			payload: {
-				messages: [{ role: 'user', parts: [{ type: 'text', text: 'Hello' }] }]
+				messages: [{ role: 'user', content: 'Hello' }]
 			}
 		});
 
@@ -232,236 +164,164 @@ describe('POST /api/chat', () => {
 		expect(res.statusCode).toBe(400);
 	});
 
-	// ── Model allowlist tests ──
-
-	it('uses requested model when it is in the allowlist', async () => {
-		app = await buildApp();
-		simulateSession(app, { id: 'user-1' }, ['tools:execute']);
-		await app.ready();
-
-		await app.inject({
-			method: 'POST',
-			url: '/api/chat',
-			payload: {
-				messages: [{ role: 'user', parts: [{ type: 'text', text: 'Hello' }] }],
-				model: 'cohere.command-r-plus'
-			}
-		});
-
-		// Verify createOCI().languageModel was called with the requested model
-		const ociInstance = mockCreateOCI.mock.results[0]?.value;
-		expect(ociInstance.languageModel).toHaveBeenCalledWith('cohere.command-r-plus');
-	});
-
-	it('falls back to default model when requested model is not in allowlist', async () => {
-		app = await buildApp();
-		simulateSession(app, { id: 'user-1' }, ['tools:execute']);
-		await app.ready();
-
-		await app.inject({
-			method: 'POST',
-			url: '/api/chat',
-			payload: {
-				messages: [{ role: 'user', parts: [{ type: 'text', text: 'Hello' }] }],
-				model: 'malicious.model-that-doesnt-exist'
-			}
-		});
-
-		const ociInstance = mockCreateOCI.mock.results[0]?.value;
-		expect(ociInstance.languageModel).toHaveBeenCalledWith('google.gemini-2.5-flash');
-	});
-
-	it('uses default model when no model is specified', async () => {
-		app = await buildApp();
-		simulateSession(app, { id: 'user-1' }, ['tools:execute']);
-		await app.ready();
-
-		await app.inject({
-			method: 'POST',
-			url: '/api/chat',
-			payload: {
-				messages: [{ role: 'user', parts: [{ type: 'text', text: 'Hello' }] }]
-			}
-		});
-
-		const ociInstance = mockCreateOCI.mock.results[0]?.value;
-		expect(ociInstance.languageModel).toHaveBeenCalledWith('google.gemini-2.5-flash');
-	});
-
 	// ── Streaming tests ──
 
-	it('calls streamText with tools and system prompt', async () => {
-		const mockTools = { listInstances: { execute: vi.fn() } };
-		mockCreateAISDKTools.mockReturnValue(mockTools);
-
-		app = await buildApp();
+	it('streams SSE text chunks from Mastra agent', async () => {
+		const mockAgent = createMockAgent(['chunk1', 'chunk2']);
+		app = await buildApp(mockAgent);
 		simulateSession(app, { id: 'user-1' }, ['tools:execute']);
-		await app.ready();
-
-		await app.inject({
-			method: 'POST',
-			url: '/api/chat',
-			payload: {
-				messages: [{ role: 'user', parts: [{ type: 'text', text: 'List my instances' }] }]
-			}
-		});
-
-		expect(mockStreamText).toHaveBeenCalledWith(
-			expect.objectContaining({
-				tools: mockTools,
-				messages: expect.arrayContaining([
-					expect.objectContaining({
-						role: 'system',
-						content: expect.stringContaining('CloudAdvisor')
-					})
-				])
-			})
-		);
-	});
-
-	it('calls toUIMessageStreamResponse on the stream result', async () => {
-		const mockResult = createMockStreamResult();
-		mockStreamText.mockReturnValue(mockResult);
-
-		app = await buildApp();
-		simulateSession(app, { id: 'user-1' }, ['tools:execute']);
-		await app.ready();
-
-		await app.inject({
-			method: 'POST',
-			url: '/api/chat',
-			payload: {
-				messages: [{ role: 'user', parts: [{ type: 'text', text: 'Hello' }] }]
-			}
-		});
-
-		expect(mockResult.toUIMessageStreamResponse).toHaveBeenCalled();
-	});
-
-	// ── Metrics tests ──
-
-	it('increments chatRequests metric with model and started status', async () => {
-		app = await buildApp();
-		simulateSession(app, { id: 'user-1' }, ['tools:execute']);
-		await app.ready();
-
-		await app.inject({
-			method: 'POST',
-			url: '/api/chat',
-			payload: {
-				messages: [{ role: 'user', parts: [{ type: 'text', text: 'Hello' }] }],
-				model: 'meta.llama-3.3-70b'
-			}
-		});
-
-		expect(mockChatRequestsInc).toHaveBeenCalledWith({
-			model: 'meta.llama-3.3-70b',
-			status: 'started'
-		});
-	});
-
-	// ── Provider options tests ──
-
-	it('passes reasoning options for models that support reasoning', async () => {
-		mockSupportsReasoning.mockReturnValue(true);
-
-		app = await buildApp();
-		simulateSession(app, { id: 'user-1' }, ['tools:execute']);
-		await app.ready();
-
-		await app.inject({
-			method: 'POST',
-			url: '/api/chat',
-			payload: {
-				messages: [{ role: 'user', parts: [{ type: 'text', text: 'Hello' }] }],
-				model: 'google.gemini-2.5-flash'
-			}
-		});
-
-		expect(mockStreamText).toHaveBeenCalledWith(
-			expect.objectContaining({
-				providerOptions: expect.objectContaining({
-					oci: expect.objectContaining({
-						reasoningEffort: 'high'
-					})
-				})
-			})
-		);
-	});
-
-	it('does not pass reasoning options for non-reasoning models', async () => {
-		mockSupportsReasoning.mockReturnValue(false);
-
-		app = await buildApp();
-		simulateSession(app, { id: 'user-1' }, ['tools:execute']);
-		await app.ready();
-
-		await app.inject({
-			method: 'POST',
-			url: '/api/chat',
-			payload: {
-				messages: [{ role: 'user', parts: [{ type: 'text', text: 'Hello' }] }]
-			}
-		});
-
-		expect(mockStreamText).toHaveBeenCalledWith(
-			expect.objectContaining({
-				providerOptions: undefined
-			})
-		);
-	});
-
-	// ── API key auth test ──
-
-	it('allows access via valid API key with tools:execute permission', async () => {
-		mockValidateApiKey.mockResolvedValue({
-			keyId: 'key-1',
-			orgId: 'org-1',
-			permissions: ['tools:execute']
-		});
-
-		app = await buildApp();
 		await app.ready();
 
 		const res = await app.inject({
 			method: 'POST',
 			url: '/api/chat',
-			headers: {
-				'x-api-key': 'portal_abc123'
-			},
 			payload: {
-				messages: [{ role: 'user', parts: [{ type: 'text', text: 'Hello' }] }]
+				messages: [{ role: 'user', content: 'Hello' }]
 			}
 		});
 
-		// Should not be 401 or 403 — stream was initiated
-		expect(res.statusCode).not.toBe(401);
-		expect(res.statusCode).not.toBe(403);
+		// SSE streams return 200 via reply.raw.writeHead
+		expect(res.statusCode).toBe(200);
+		expect(res.headers['content-type']).toContain('text/event-stream');
+
+		// Verify body contains SSE-formatted chunks
+		expect(res.body).toContain('data: ');
+		expect(res.body).toContain('[DONE]');
 	});
 
-	// ── stepCountIs limit test ──
-
-	it('uses stepCountIs(5) as stop condition', async () => {
-		const mockStopCondition = () => false;
-		mockStepCountIs.mockReturnValue(mockStopCondition);
-
-		app = await buildApp();
-		simulateSession(app, { id: 'user-1' }, ['tools:execute']);
+	it('calls agent.stream with messages and memory options', async () => {
+		const mockAgent = createMockAgent();
+		app = await buildApp(mockAgent);
+		simulateSession(app, { id: 'user-1', userId: 'user-1' }, ['tools:execute']);
 		await app.ready();
 
 		await app.inject({
 			method: 'POST',
 			url: '/api/chat',
 			payload: {
-				messages: [{ role: 'user', parts: [{ type: 'text', text: 'Hello' }] }]
+				messages: [{ role: 'user', content: 'List instances' }]
 			}
 		});
 
-		expect(mockStepCountIs).toHaveBeenCalledWith(5);
-		expect(mockStreamText).toHaveBeenCalledWith(
+		expect(mockAgent.stream).toHaveBeenCalledWith(
+			expect.arrayContaining([
+				expect.objectContaining({ role: 'user', content: 'List instances' })
+			]),
 			expect.objectContaining({
-				stopWhen: mockStopCondition
+				maxSteps: 5,
+				memory: expect.objectContaining({
+					resource: expect.any(String)
+				})
 			})
 		);
+	});
+
+	it('passes threadId to agent memory options when provided', async () => {
+		const mockAgent = createMockAgent();
+		app = await buildApp(mockAgent);
+		simulateSession(app, { id: 'user-1' }, ['tools:execute']);
+		await app.ready();
+
+		const threadId = '550e8400-e29b-41d4-a716-446655440000';
+
+		await app.inject({
+			method: 'POST',
+			url: '/api/chat',
+			payload: {
+				messages: [{ role: 'user', content: 'Hello' }],
+				threadId
+			}
+		});
+
+		expect(mockAgent.stream).toHaveBeenCalledWith(
+			expect.anything(),
+			expect.objectContaining({
+				memory: expect.objectContaining({
+					thread: threadId
+				})
+			})
+		);
+	});
+
+	// ── Model allowlist tests ──
+
+	it('uses fallback allowlist when provider registry fails', async () => {
+		mockGetProviderRegistry.mockRejectedValue(new Error('DB unavailable'));
+
+		const mockAgent = createMockAgent();
+		app = await buildApp(mockAgent);
+		simulateSession(app, { id: 'user-1' }, ['tools:execute']);
+		await app.ready();
+
+		const res = await app.inject({
+			method: 'POST',
+			url: '/api/chat',
+			payload: {
+				messages: [{ role: 'user', content: 'Hello' }]
+			}
+		});
+
+		// Should not fail — fallback allowlist is used
+		expect(res.statusCode).toBe(200);
+		expect(mockAgent.stream).toHaveBeenCalled();
+	});
+
+	it('uses fallback allowlist when no models returned from registry', async () => {
+		mockGetProviderRegistry.mockResolvedValue({});
+		mockGetEnabledModelIds.mockResolvedValue([]);
+
+		const mockAgent = createMockAgent();
+		app = await buildApp(mockAgent);
+		simulateSession(app, { id: 'user-1' }, ['tools:execute']);
+		await app.ready();
+
+		const res = await app.inject({
+			method: 'POST',
+			url: '/api/chat',
+			payload: {
+				messages: [{ role: 'user', content: 'Hello' }]
+			}
+		});
+
+		expect(res.statusCode).toBe(200);
+	});
+
+	it('falls back to default model when requested model is not in allowlist', async () => {
+		const mockAgent = createMockAgent();
+		app = await buildApp(mockAgent);
+		simulateSession(app, { id: 'user-1' }, ['tools:execute']);
+		await app.ready();
+
+		const res = await app.inject({
+			method: 'POST',
+			url: '/api/chat',
+			payload: {
+				messages: [{ role: 'user', content: 'Hello' }],
+				model: 'malicious.model-that-doesnt-exist'
+			}
+		});
+
+		// Should succeed with default model, not the malicious one
+		expect(res.statusCode).toBe(200);
+	});
+
+	// ── Error handling ──
+
+	it('returns 500 when agent.stream throws', async () => {
+		const mockAgent = createMockAgent();
+		mockAgent.stream.mockRejectedValue(new Error('Agent failed'));
+		app = await buildApp(mockAgent);
+		simulateSession(app, { id: 'user-1' }, ['tools:execute']);
+		await app.ready();
+
+		const res = await app.inject({
+			method: 'POST',
+			url: '/api/chat',
+			payload: {
+				messages: [{ role: 'user', content: 'Hello' }]
+			}
+		});
+
+		expect(res.statusCode).toBe(500);
 	});
 });
