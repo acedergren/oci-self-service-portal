@@ -26,6 +26,10 @@ vi.mock('$lib/server/logger.js', () => ({
 	})
 }));
 
+// Stub env vars required by requireEnv() in auth/config.ts (called at module scope)
+vi.stubEnv('OCI_IAM_CLIENT_ID', 'test-client-id');
+vi.stubEnv('OCI_IAM_CLIENT_SECRET', 'test-client-secret');
+
 // ── Group-to-role mapping ──────────────────────────────────────────────────
 describe('mapIdcsGroupsToRole', () => {
 	let mapIdcsGroupsToRole: (groups: string[]) => 'admin' | 'operator' | 'viewer';
