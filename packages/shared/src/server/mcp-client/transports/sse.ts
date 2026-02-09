@@ -76,7 +76,7 @@ export class SSETransport extends EventEmitter implements MCPTransport {
 					}
 				};
 
-				es.onmessage = (event: MessageEvent) => {
+				es.onmessage = (event) => {
 					this.handleMessage(event.data);
 				};
 

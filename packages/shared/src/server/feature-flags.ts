@@ -70,7 +70,6 @@ export async function proxyToFastify(request: Request, pathname: string): Promis
 			headers: proxyHeaders,
 			// Forward body for non-GET/HEAD requests
 			body: request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined,
-			// @ts-expect-error -- Node 18+ supports duplex on ReadableStream bodies
 			duplex: request.body ? 'half' : undefined,
 			signal: AbortSignal.timeout(30_000)
 		};
@@ -86,7 +85,7 @@ export async function proxyToFastify(request: Request, pathname: string): Promis
 			status: upstream.status,
 			statusText: upstream.statusText,
 			headers: responseHeaders
-		});
+		}) as unknown as Response;
 	} catch (err) {
 		const isTimeout = err instanceof DOMException && err.name === 'TimeoutError';
 		const status = isTimeout ? 504 : 502;
@@ -95,7 +94,7 @@ export async function proxyToFastify(request: Request, pathname: string): Promis
 		return new Response(JSON.stringify({ error: message }), {
 			status,
 			headers: { 'Content-Type': 'application/json' }
-		});
+		}) as unknown as Response;
 	}
 }
 

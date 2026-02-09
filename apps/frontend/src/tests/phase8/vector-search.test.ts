@@ -248,7 +248,7 @@ describe('Embedding Repository (Phase 8.5)', () => {
 		it('deletes embeddings by reference type and id', async () => {
 			mockExecute.mockResolvedValueOnce({ rows: [] });
 
-			await embeddingRepository.deleteByRef('tool_execution', 'exec-123');
+			await embeddingRepository.deleteByRef('tool_execution', 'exec-123', 'org-1');
 
 			expect(mockExecute).toHaveBeenCalled();
 			const sql = (mockExecute.mock.calls[0][0] as string).toUpperCase();

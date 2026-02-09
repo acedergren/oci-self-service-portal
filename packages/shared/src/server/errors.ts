@@ -199,5 +199,5 @@ export function errorResponse(err: PortalError, requestId?: string): Response {
 			'Content-Type': 'application/json',
 			...(requestId ? { 'X-Request-Id': requestId } : {})
 		}
-	});
+	}) as unknown as Response;
 }
