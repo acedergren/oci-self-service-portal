@@ -2,6 +2,12 @@
 
 Monorepo for the OCI self-service portal: SvelteKit frontend + Fastify 5 API + shared packages.
 
+## Agent Behavior
+
+- **Stay focused**: Do not expand scope beyond what was requested. If you notice something interesting but out-of-scope, mention it briefly and move on.
+- **Verify before assuming**: Check actual file paths, package exports, and config before referencing them in code or docs.
+- **Fail fast on blockers**: If blocked by a hook, permission, or missing dependency, report it immediately rather than working around it silently.
+
 ## Quick Start
 
 ```bash
@@ -169,7 +175,7 @@ import { errorResponse } from '../errors.js';
 
 - Always use `.js` extensions in import paths (ESM requirement)
 - Use `type` keyword for type-only imports: `import type { SessionUser } from './session.js'`
-- Verify import paths against actual package exports before using them
+- Verify import paths against actual package exports before using them — check the package's `index.ts` or `exports` field in `package.json`. Common mistakes: importing from subpaths that don't exist (e.g., `@mastra/core/storage` vs `@mastra/core/memory`), missing shared package re-exports, assuming types are co-located with runtime code
 - Prefer dynamic imports for optional dependencies (e.g., `@ai-sdk/azure`)
 
 ### Git Commit Format
@@ -231,6 +237,10 @@ fastify.decorateRequest('permissions', {
 });
 ```
 
+- **`decorateRequest` semantics changed in Fastify 5**: Use function form, not `null`. Deny-by-default auth hooks run before test injection hooks — use `testUser` option or register test hooks before auth.
+- **Decorator collisions across tests**: Require proper teardown with `await fastify.close()` in `afterEach`.
+- **Always check Fastify 5 migration notes** before assuming Fastify 4 patterns work.
+
 ### Vitest 4
 
 - **`projects` replaces `workspace`**: Root config uses `defineConfig({ test: { projects: [...] } })`. Old `vitest.workspace.ts` is gone.
@@ -252,6 +262,12 @@ beforeEach(() => {
 });
 ```
 
+### Testing
+
+- **Always run the full test suite** (`vitest run`, not just new tests) after writing tests to catch regressions from mock interference, decorator collisions, or hook ordering issues.
+- **Use `vitest run`** (not `vitest` watch mode) in CI contexts and quality gate pipelines.
+- **Question the tests first**: When tests fail after a refactor, evaluate whether the tests are wrong before changing the code.
+
 ### SvelteKit / Build
 
 - **Non-HTTP exports in +server.ts**: Must prefix with `_` (e.g., `_MODEL_ALLOWLIST`) or build fails
@@ -269,6 +285,10 @@ The Mastra plugin (`apps/api/src/plugins/mastra.ts`) wires the RAG pipeline:
 - **Semantic Recall**: `semanticRecall: { topK: 3, messageRange: { before: 2, after: 1 }, scope: "resource" }`
 - **Search Route**: `GET /api/v1/search` — uses `embed({ model: fastify.ociEmbedder, value: text })` from `ai` package
 - **Key pattern**: Use `embed()` from `ai` package — NOT the old custom function signature
+
+## Writing Style
+
+For content writing tasks (LinkedIn posts, docs, communications): Use a direct, practical, humble tone. Avoid superlatives, self-congratulatory language, and AI-sounding polish. Write like a senior engineer talking to peers, not a marketing team. When in doubt, understate rather than overstate.
 
 ## Anti-Patterns & Gotchas
 
@@ -298,21 +318,25 @@ The Mastra plugin (`apps/api/src/plugins/mastra.ts`) wires the RAG pipeline:
 - **NEVER `git add -A` or `git add .`** — always stage specific files by name
 - **When tests fail after refactor**: Question whether the TESTS are wrong first, not just the code
 - **Commit early and often**: After each logical unit of work, not batched at the end
+- **Pre-validate before committing**: Run lint + typecheck + full test suite BEFORE staging and committing, not as part of the pre-commit hook discovery. If pre-commit hooks block due to pre-existing lint errors in files you didn't touch, fix them first or use `--no-verify` with a documented note. Never leave work uncommitted because of pre-commit hook failures.
 
 ## Claude Code Automations
 
 ### Hooks (`.claude/settings.json`)
 
-**PreToolUse (blockers)**:
+**PreToolUse — Bash matcher (blockers)**:
 
 - **Pre-commit**: Lint staged files + typecheck — blocks on failure
 - **Pre-push**: Semgrep security scan — blocks on findings
 - **Block bulk staging**: Rejects `git add -A` / `git add .`
 - **Doc drift warning**: On push, warns if architecture/security/migration files changed without doc updates
+
+**PreToolUse — Edit|Write matcher (blockers)**:
+
 - **Sensitive file blocker**: Blocks edits to `.env`, `.pem/.key`, wallet, credential files
 - **Migration validator**: Validates `NNN-name.sql` pattern, warns on version gaps
 
-**PostToolUse (auto-fixers)**:
+**PostToolUse — Edit|Write matcher (auto-fixers)**:
 
 - **Prettier**: Runs `prettier --write` after edits
 - **ESLint fix**: Runs `eslint --fix` on `.ts`/`.svelte`
@@ -325,18 +349,42 @@ The Mastra plugin (`apps/api/src/plugins/mastra.ts`) wires the RAG pipeline:
 - `/phase-kickoff <N> - <title>` — Create branch, test shells, roadmap entry
 - `/doc-sync [audit|fix]` — Audit/fix doc drift
 - `/quality-commit [--review]` — Full quality gate pipeline: lint + typecheck + Semgrep + tests + commit
+- `/linkedin-post` — Draft, humanize, preview, and publish LinkedIn posts via the LinkedIn API
 
 ### Subagents (`.claude/agents/`)
 
 - `security-reviewer` (Opus) — OWASP Top 10 + project-specific security review
 - `oracle-query-reviewer` (Opus) — Oracle-specific SQL pitfalls and patterns
 
-### MCP Servers (`.mcp.json`)
+### MCP Servers
+
+**Claude.ai plugins** (configured in Claude.ai settings):
 
 - `sentry` — Investigate production errors
 - `serena` — Semantic code intelligence (symbol-level navigation, refactoring)
 - `context7` — Up-to-date library documentation lookups
-- `oci-api` — OCI CLI command execution
+- `oci-api` — OCI CLI command execution (get help, run commands)
+- `oci-monitoring` — Read-only monitoring: logs, metrics, alarms
+- `oci-database` — Oracle DB operations (list, get, create, manage PDBs)
+- `oci-compute` — Compute instance management
+- `oci-networking` — VCN, subnet, security list operations
+- `oci-identity` — Tenancy, compartments, auth tokens
+- `deepwiki` — AI-powered documentation for GitHub repositories
+- `svelte` — Official Svelte MCP for docs, examples, code fixes
+
+**Local servers** (`~/.claude/mcp.json`):
+
+- `oracle-db-doc` — Oracle database documentation MCP server
+
+### Agent Team Protocol
+
+Agent teams follow the global protocol defined in `~/.claude/CLAUDE.md`:
+
+- **Model selection**: Sonnet for implementation, Opus for architecture/security, Haiku for docs/QA
+- **Commit discipline**: Stage specific files, commit after each logical unit, `type(scope): description` format
+- **Quality gates per commit**: Type check → lint → tests → Semgrep (security changes)
+- **Multi-agent rules**: Acknowledge before starting, no scope expansion, commit before reporting done, stop on shutdown
+- **Tool preferences**: `context7` for docs, `oci-api` MCP before raw CLI, `serena` for symbolic navigation
 
 ## Infrastructure & DevOps
 
