@@ -80,7 +80,26 @@ export function isValidWebhookUrl(url: string): boolean {
 		return false;
 	}
 
-	// Block private IP ranges
+	// Block IPv6 private/reserved ranges
+	// Strip brackets for IPv6 addresses (URL parser wraps them as [::1])
+	const bare = hostname.startsWith('[') ? hostname.slice(1, -1) : hostname;
+	if (bare.includes(':')) {
+		const lower = bare.toLowerCase();
+		// ::1 loopback
+		if (lower === '::1') return false;
+		// ::ffff:127.0.0.1 IPv4-mapped loopback
+		if (lower.startsWith('::ffff:')) return false;
+		// fc00::/7 — unique local addresses (fc00:: and fd00::)
+		if (lower.startsWith('fc') || lower.startsWith('fd')) return false;
+		// fe80::/10 — link-local
+		if (lower.startsWith('fe80')) return false;
+		// :: unspecified
+		if (lower === '::') return false;
+		// Block all other IPv6 (no legitimate reason for raw IPv6 webhook URLs)
+		return false;
+	}
+
+	// Block private IPv4 ranges
 	const ipMatch = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
 	if (ipMatch) {
 		const [, a, b] = ipMatch.map(Number);
@@ -186,7 +205,8 @@ async function deliverToWebhook(
 				method: 'POST',
 				headers,
 				body: payload,
-				signal: controller.signal
+				signal: controller.signal,
+				redirect: 'error'
 			});
 
 			clearTimeout(timeout);
@@ -220,7 +240,8 @@ async function deliverToWebhook(
 
 		// Wait before retry (unless last attempt)
 		if (attempt < MAX_RETRIES) {
-			await sleep(RETRY_INTERVALS[attempt]);
+			const interval = RETRY_INTERVALS[attempt] ?? RETRY_INTERVALS.at(-1) ?? 1000;
+			await sleep(interval);
 		}
 	}
 

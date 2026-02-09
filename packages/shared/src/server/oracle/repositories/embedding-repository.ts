@@ -72,6 +72,7 @@ export const embeddingRepository = {
 		orgId: string;
 		content: string;
 		embedding: Float32Array;
+		turnId?: string;
 	}): Promise<{ id: string }> {
 		const id = crypto.randomUUID();
 
@@ -83,12 +84,12 @@ export const embeddingRepository = {
 					`INSERT INTO conversation_embeddings
 					   (id, session_id, turn_id, content_type, text_content, embedding)
 					 VALUES
-					   (:id, :ref_id, :org_id, :ref_type, :textContent,
+					   (:id, :ref_id, :turn_id, :ref_type, :textContent,
 					    TO_VECTOR(:embedding, 1536, FLOAT32))`,
 					{
 						id,
 						ref_id: params.refId,
-						org_id: params.orgId,
+						turn_id: params.turnId ?? null,
 						ref_type: params.refType,
 						textContent: params.content,
 						embedding: vectorStr
@@ -131,7 +132,7 @@ export const embeddingRepository = {
 			return await withConnection(async (conn: OracleConnection) => {
 				const vectorStr = vectorToOracleString(params.embedding);
 
-				const conditions = ['e.turn_id = :org_id'];
+				const conditions = ['s.org_id = :org_id'];
 				const binds: Record<string, unknown> = {
 					queryVec: vectorStr,
 					org_id: params.orgId,
@@ -153,6 +154,7 @@ export const embeddingRepository = {
 					   e.text_content AS "CONTENT",
 					   (1 - VECTOR_DISTANCE(e.embedding, TO_VECTOR(:queryVec, 1536, FLOAT32), COSINE)) AS "SCORE"
 					 FROM conversation_embeddings e
+					 JOIN chat_sessions s ON s.id = e.session_id
 					 WHERE ${whereClause}
 					 ORDER BY VECTOR_DISTANCE(e.embedding, TO_VECTOR(:queryVec, 1536, FLOAT32), COSINE) ASC
 					 FETCH FIRST :maxRows ROWS ONLY`,
@@ -185,13 +187,17 @@ export const embeddingRepository = {
 	 * Delete embeddings by reference type and id.
 	 * Used for cleanup when source records are deleted.
 	 */
-	async deleteByRef(refType: string, refId: string): Promise<void> {
+	async deleteByRef(refType: string, refId: string, orgId: string): Promise<void> {
 		try {
 			await withConnection(async (conn: OracleConnection) => {
 				await conn.execute(
-					`DELETE FROM conversation_embeddings
-					 WHERE content_type = :ref_type AND session_id = :ref_id`,
-					{ ref_type: refType, ref_id: refId }
+					`DELETE FROM conversation_embeddings e
+					 WHERE e.content_type = :ref_type AND e.session_id = :ref_id
+					   AND EXISTS (
+					     SELECT 1 FROM chat_sessions s
+					     WHERE s.id = e.session_id AND s.org_id = :org_id
+					   )`,
+					{ ref_type: refType, ref_id: refId, org_id: orgId }
 				);
 			});
 		} catch (err) {

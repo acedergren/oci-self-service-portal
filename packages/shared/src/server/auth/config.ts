@@ -20,11 +20,7 @@ import { betterAuth } from 'better-auth';
 import { genericOAuth, organization } from 'better-auth/plugins';
 import { oracleAdapter } from './oracle-adapter';
 import { createLogger } from '../logger';
-import {
-	AUTH_COOKIE_ATTRIBUTES,
-	AUTH_COOKIE_SAME_SITE,
-	AUTH_USE_SECURE_COOKIES
-} from './cookies';
+import { AUTH_COOKIE_ATTRIBUTES, AUTH_COOKIE_SAME_SITE, AUTH_USE_SECURE_COOKIES } from './cookies';
 import {
 	stashIdcsProfile,
 	consumeIdcsProfile,
@@ -104,10 +100,26 @@ async function findOidcSub(userId: string): Promise<string | null> {
 			if (!result.rows?.length) return null;
 			return (result.rows[0] as Record<string, unknown>).ACCOUNT_ID as string;
 		});
-	} catch {
+	} catch (err) {
+		log.error({ err, userId }, 'Failed to look up OIDC sub for user');
 		return null;
 	}
 }
+
+function requireEnv(name: string): string {
+	const value = process.env[name];
+	if (!value) {
+		throw new Error(
+			`Missing required environment variable ${name}. ` +
+				'Ensure OCI IAM OIDC is configured correctly. ' +
+				'See docs/AUTH_PLUGIN_DESIGN.md for setup instructions.'
+		);
+	}
+	return value;
+}
+
+const OCI_IAM_CLIENT_ID = requireEnv('OCI_IAM_CLIENT_ID');
+const OCI_IAM_CLIENT_SECRET = requireEnv('OCI_IAM_CLIENT_SECRET');
 
 export const auth = betterAuth({
 	database: oracleAdapter(),
@@ -138,8 +150,8 @@ export const auth = betterAuth({
 			config: [
 				{
 					providerId: 'oci-iam',
-					clientId: process.env.OCI_IAM_CLIENT_ID!,
-					clientSecret: process.env.OCI_IAM_CLIENT_SECRET!,
+					clientId: OCI_IAM_CLIENT_ID,
+					clientSecret: OCI_IAM_CLIENT_SECRET,
 					discoveryUrl: process.env.OCI_IAM_DISCOVERY_URL,
 					// urn:opc:idm:__myscopes__ requests all IDCS app scopes,
 					// which includes group and app role claims in the token
