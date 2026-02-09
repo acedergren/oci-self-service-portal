@@ -28,7 +28,6 @@ set -euo pipefail
 # Configuration
 # ---------------------------------------------------------------------------
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
 ENV_FILE="${SCRIPT_DIR}/.env"
 BUILD_FLAG=""
@@ -141,21 +140,21 @@ check_health_endpoints() {
         exit 1
     fi
 
-    # Wait for frontend health endpoint over HTTPS
+    # Wait for API health endpoint (routed to Fastify) over HTTPS
     attempt=1
     while [[ $attempt -le $max_attempts ]]; do
         if curl -skf https://localhost/api/health > /dev/null 2>&1; then
-            log_success "Frontend health endpoint is reachable at https://localhost/api/health"
+            log_success "API health endpoint (Fastify) is reachable at https://localhost/api/health"
             break
         fi
-        log_info "Waiting for frontend health via nginx... (attempt $attempt/$max_attempts)"
+        log_info "Waiting for API health via nginx... (attempt $attempt/$max_attempts)"
         sleep 2
         ((attempt++))
     done
 
     if [[ $attempt -gt $max_attempts ]]; then
-        log_error "Frontend health endpoint failed after $max_attempts attempts"
-        docker compose -f "${SCRIPT_DIR}/docker-compose.yml" logs frontend
+        log_error "API health endpoint (Fastify) failed after $max_attempts attempts"
+        docker compose -f "${SCRIPT_DIR}/docker-compose.yml" logs api
         exit 1
     fi
 

@@ -71,7 +71,8 @@ export async function proxyToFastify(request: Request, pathname: string): Promis
 			// Forward body for non-GET/HEAD requests
 			body: request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined,
 			// @ts-expect-error -- Node 18+ supports duplex on ReadableStream bodies
-			duplex: request.body ? 'half' : undefined
+			duplex: request.body ? 'half' : undefined,
+			signal: AbortSignal.timeout(30_000)
 		};
 
 		const upstream = await fetch(targetUrl, fetchInit);
@@ -87,9 +88,12 @@ export async function proxyToFastify(request: Request, pathname: string): Promis
 			headers: responseHeaders
 		});
 	} catch (err) {
-		log.error({ err, targetUrl }, 'Fastify proxy error');
-		return new Response(JSON.stringify({ error: 'Backend unavailable' }), {
-			status: 502,
+		const isTimeout = err instanceof DOMException && err.name === 'TimeoutError';
+		const status = isTimeout ? 504 : 502;
+		const message = isTimeout ? 'Backend timeout' : 'Backend unavailable';
+		log.error({ err, targetUrl, isTimeout }, 'Fastify proxy error');
+		return new Response(JSON.stringify({ error: message }), {
+			status,
 			headers: { 'Content-Type': 'application/json' }
 		});
 	}

@@ -46,48 +46,54 @@ export interface SentryConfig {
 // Internal state
 // ---------------------------------------------------------------------------
 
-let initialized = false;
 let enabled = false;
 
 // We store the Sentry namespace dynamically to avoid hard-dep on @sentry/node
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let _sentry: any = null;
 
+// Promise-based singleton to prevent race conditions from concurrent init calls
+let _initPromise: Promise<void> | null = null;
+
 // ---------------------------------------------------------------------------
 // Init
 // ---------------------------------------------------------------------------
 
 /**
- * Initialise Sentry. Safe to call multiple times — subsequent calls are no-ops.
+ * Initialise Sentry. Safe to call multiple times — concurrent calls share
+ * the same init promise to prevent race conditions.
  *
  * If `dsn` is falsy, Sentry remains disabled and all helpers become no-ops.
  */
 export async function initSentry(config: SentryConfig = {}): Promise<void> {
-	if (initialized) return;
-	initialized = true;
+	if (_initPromise) return _initPromise;
 
-	const dsn = config.dsn || process.env.SENTRY_DSN;
-	if (!dsn) {
-		log.info('Sentry DSN not configured — error tracking disabled');
-		return;
-	}
+	_initPromise = (async () => {
+		const dsn = config.dsn || process.env.SENTRY_DSN;
+		if (!dsn) {
+			log.info('Sentry DSN not configured — error tracking disabled');
+			return;
+		}
 
-	try {
-		// Dynamic import so @sentry/node is not bundled when unused.
-		// @ts-expect-error @sentry/node is an optional dependency — installed in Phase 6
-		_sentry = await import('@sentry/node');
-		_sentry.init({
-			dsn,
-			environment: config.environment || process.env.NODE_ENV || 'development',
-			release: config.release || process.env.APP_VERSION || '0.0.0',
-			sampleRate: config.sampleRate ?? 1.0,
-			tracesSampleRate: config.tracesSampleRate ?? 0.1
-		});
-		enabled = true;
-		log.info({ environment: config.environment }, 'Sentry initialized');
-	} catch (err) {
-		log.warn({ err }, 'Failed to initialize Sentry — running without error tracking');
-	}
+		try {
+			// Dynamic import so @sentry/node is not bundled when unused.
+			// @ts-expect-error @sentry/node is an optional dependency — installed in Phase 6
+			_sentry = await import('@sentry/node');
+			_sentry.init({
+				dsn,
+				environment: config.environment || process.env.NODE_ENV || 'development',
+				release: config.release || process.env.APP_VERSION || '0.0.0',
+				sampleRate: config.sampleRate ?? 1.0,
+				tracesSampleRate: config.tracesSampleRate ?? 0.1
+			});
+			enabled = true;
+			log.info({ environment: config.environment }, 'Sentry initialized');
+		} catch (err) {
+			log.warn({ err }, 'Failed to initialize Sentry — running without error tracking');
+		}
+	})();
+
+	return _initPromise;
 }
 
 // ---------------------------------------------------------------------------

@@ -9,7 +9,8 @@ INPUT=$(cat)
 if command -v jq &>/dev/null; then
   COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null || echo "")
 else
-  COMMAND=""
+  echo "Error: jq is required for pre-commit checks" >&2
+  exit 1
 fi
 
 # Only run for git commit commands

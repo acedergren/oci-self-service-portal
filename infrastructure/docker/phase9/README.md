@@ -23,6 +23,7 @@ frontend:3000 (SvelteKit) -----> api:3001 (Fastify) -----> Oracle ADB
 ## Services
 
 ### 1. Nginx Reverse Proxy
+
 - Ports: `80` and `443`
 - Responsibilities:
   - TLS 1.2+/1.3 termination
@@ -31,10 +32,12 @@ frontend:3000 (SvelteKit) -----> api:3001 (Fastify) -----> Oracle ADB
   - ACME HTTP-01 challenge path for Let's Encrypt
 
 ### 2. Frontend (SvelteKit)
+
 - Internal port: `3000`
 - Browser traffic comes via nginx (`https://<host>/`)
 
 ### 3. API (Fastify)
+
 - Internal port: `3001`
 - Browser/API traffic comes via nginx (`https://<host>/api/*`)
 - Includes:
@@ -43,14 +46,17 @@ frontend:3000 (SvelteKit) -----> api:3001 (Fastify) -----> Oracle ADB
   - Secure cookie parsing aligned with Better Auth
 
 ### 4. Certbot (optional profile: `letsencrypt`)
+
 - Runs certificate renewal loop
 - Uses shared `certbot-www` webroot and `certs` storage path
 - Enabled with:
+
 ```bash
 docker compose --profile letsencrypt up -d certbot
 ```
 
 ### 5. Database (Oracle Autonomous Database)
+
 - **Type**: External managed service (not containerized)
 - **Connection**: Via wallet files mounted at `/wallets`
 
@@ -86,6 +92,7 @@ See [CERTIFICATES.md](CERTIFICATES.md) for production certificate options (Let's
 ## Usage
 
 ### Development
+
 ```bash
 # Start services with hot-reload
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up
@@ -96,6 +103,7 @@ docker compose logs -f frontend
 ```
 
 ### Production
+
 ```bash
 # Build and start (nginx + api + frontend)
 docker compose up -d
@@ -127,6 +135,7 @@ curl -k https://localhost/api/metrics
 ## Network
 
 Services communicate via a custom bridge network:
+
 - **Name**: `portal-network`
 - **Driver**: bridge
 - **Internal DNS**: Services accessible by service name (e.g., `http://api:3001`)
@@ -139,12 +148,12 @@ Services communicate via a custom bridge network:
 - Secure cookie policy aligned across Better Auth and Fastify
 - Webhook signing secrets encrypted at rest (`WEBHOOK_ENCRYPTION_KEY`)
 
-See `/Users/acedergr/Projects/oci-self-service-portal/infrastructure/docker/phase9/CERTIFICATES.md`
-for certificate provisioning and alerting policy.
+See [CERTIFICATES.md](CERTIFICATES.md) for certificate provisioning and alerting policy.
 
 ## Troubleshooting
 
 ### Nginx won't start
+
 ```bash
 # Validate nginx config
 docker compose exec nginx nginx -t
@@ -156,17 +165,20 @@ ls -l infrastructure/docker/phase9/certs/fullchain.pem \
 ```
 
 If `dhparam.pem` is missing, generate it:
+
 ```bash
 openssl dhparam -out infrastructure/docker/phase9/certs/dhparam.pem 2048
 ```
 
 ### Frontend can't reach API
+
 ```bash
 # Test internal network
 docker compose exec frontend sh -c 'curl http://api:3001/health'
 ```
 
 ### Certificate renewal issues
+
 ```bash
 # Run certbot manually
 docker compose --profile letsencrypt run --rm certbot renew --webroot -w /var/www/certbot

@@ -32,6 +32,7 @@ DIR=$(dirname "$FILE_PATH")
 COLOCATED="$DIR/$BASENAME.test.ts"
 if [ -f "$COLOCATED" ]; then
   echo "Running colocated test: $COLOCATED"
+  # Note: piping to tail discards exit status — this hook is informational-only, not a quality gate
   npx vitest run "$COLOCATED" --reporter=verbose 2>&1 | tail -20
   exit 0
 fi
@@ -41,6 +42,7 @@ if [ -n "$CLAUDE_PROJECT_DIR" ]; then
   FOUND=$(find "$CLAUDE_PROJECT_DIR" -name "$BASENAME.test.ts" -not -path "*/node_modules/*" 2>/dev/null | head -1)
   if [ -n "$FOUND" ]; then
     echo "Running related test: $FOUND"
+    # Note: piping to tail discards exit status — this hook is informational-only, not a quality gate
     npx vitest run "$FOUND" --reporter=verbose 2>&1 | tail -20
     exit 0
   fi

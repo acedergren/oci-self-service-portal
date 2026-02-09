@@ -118,6 +118,9 @@ jobs:
 
           SESSION_ID=$(echo "$SESSION_JSON" | jq -r '.data.id')
 
+          # Set up cleanup trap
+          trap 'oci bastion session delete --session-id "$SESSION_ID" --force 2>/dev/null || true' EXIT
+
           # Wait for session to be active
           oci bastion session wait-for-state \
             --session-id "$SESSION_ID" \
@@ -133,9 +136,6 @@ jobs:
               docker compose up -d --no-build
               docker compose ps
           EOF
-
-          # Clean up session
-          oci bastion session delete --session-id "$SESSION_ID" --force
 
       - name: Health check
         run: |
@@ -184,6 +184,7 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.BASTION_SSH_KEY }}" > ~/.ssh/bastion_key
           chmod 600 ~/.ssh/bastion_key
+          ssh-keygen -y -f ~/.ssh/bastion_key > ~/.ssh/bastion_key.pub
 
       - name: Deploy via OCI Bastion
         run: |
@@ -197,6 +198,9 @@ jobs:
             --display-name "deploy-production-${{ github.run_number }}")
 
           SESSION_ID=$(echo "$SESSION_JSON" | jq -r '.data.id')
+
+          # Set up cleanup trap
+          trap 'oci bastion session delete --session-id "$SESSION_ID" --force 2>/dev/null || true' EXIT
 
           # Wait for session to be active
           oci bastion session wait-for-state \
@@ -213,9 +217,6 @@ jobs:
               docker compose up -d --no-build
               docker compose ps
           EOF
-
-          # Clean up session
-          oci bastion session delete --session-id "$SESSION_ID" --force
 
       - name: Health check
         run: |

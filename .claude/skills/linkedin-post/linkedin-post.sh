@@ -14,13 +14,6 @@ check_token() {
   [[ -n "${LINKEDIN_ACCESS_TOKEN:-}" ]] || die "LINKEDIN_ACCESS_TOKEN not set. Run: /linkedin-post --setup"
 }
 
-api_headers() {
-  echo -H "Authorization: Bearer ${LINKEDIN_ACCESS_TOKEN}"
-  echo -H "LinkedIn-Version: ${LINKEDIN_VERSION}"
-  echo -H "X-Restli-Protocol-Version: 2.0.0"
-  echo -H "Content-Type: application/json"
-}
-
 get_person_id() {
   if [[ -n "${LINKEDIN_PERSON_ID:-}" ]]; then
     echo "${LINKEDIN_PERSON_ID}"

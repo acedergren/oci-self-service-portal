@@ -22,8 +22,18 @@ shift
 
 case "$COMMAND" in
   upload)
-    SECRET_NAME="${1:?Usage: $0 upload <secret-name> <secret-value>}"
-    SECRET_VALUE="${2:?Usage: $0 upload <secret-name> <secret-value>}"
+    SECRET_NAME="${1:?Usage: $0 upload <secret-name> [secret-value]}"
+    SECRET_VALUE="${2:-}"
+
+    # If secret value not provided as argument, read from stdin
+    if [ -z "$SECRET_VALUE" ]; then
+      read -r SECRET_VALUE || true
+      if [ -z "$SECRET_VALUE" ]; then
+        echo "Usage: $0 upload <secret-name> [secret-value]"
+        echo "  Provide secret as argument or via stdin (more secure)"
+        exit 1
+      fi
+    fi
 
     # Get master encryption key
     KEY_ID=$(oci --endpoint "$KMS_ENDPOINT" kms management key list \
@@ -118,8 +128,8 @@ case "$COMMAND" in
       exit 1
     fi
 
-    # Decode and output
-    echo -n "$SECRET_CONTENT" | base64 -d
+    # Decode and output (handle macOS and Linux base64 syntax)
+    echo -n "$SECRET_CONTENT" | base64 --decode 2>/dev/null || base64 -D
     ;;
 
   delete)
