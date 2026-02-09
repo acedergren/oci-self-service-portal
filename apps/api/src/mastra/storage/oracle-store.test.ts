@@ -5,7 +5,8 @@ import { WorkflowsOracle, MemoryOracle, ScoresOracle, OracleStore } from './orac
 
 function createMockConnection() {
 	return {
-		execute: vi.fn().mockResolvedValue({ rows: [] }),
+		OBJECT: 4003,
+	execute: vi.fn().mockResolvedValue({ rows: [] }),
 		commit: vi.fn().mockResolvedValue(undefined),
 		rollback: vi.fn().mockResolvedValue(undefined),
 		close: vi.fn().mockResolvedValue(undefined)
