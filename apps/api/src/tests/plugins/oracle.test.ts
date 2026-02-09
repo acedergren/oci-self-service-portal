@@ -36,7 +36,9 @@ const DEFAULT_POOL_STATS = {
 const mocks = {
 	initPool: vi.fn().mockResolvedValue(undefined),
 	closePool: vi.fn().mockResolvedValue(undefined),
-	withConnection: vi.fn(async <T>(fn: (conn: typeof mockConnection) => Promise<T>) => fn(mockConnection)),
+	withConnection: vi.fn(async <T>(fn: (conn: typeof mockConnection) => Promise<T>) =>
+		fn(mockConnection)
+	),
 	getPoolStats: vi.fn().mockResolvedValue(DEFAULT_POOL_STATS),
 	isPoolInitialized: vi.fn(() => true),
 	runMigrations: vi.fn().mockResolvedValue(undefined),
@@ -132,7 +134,9 @@ describe('Oracle Fastify plugin – registration & decoration', () => {
 	let app: FastifyInstance;
 
 	beforeEach(resetMocksToDefaults);
-	afterEach(async () => { await closeApp(app); });
+	afterEach(async () => {
+		await closeApp(app);
+	});
 
 	it('decorates fastify.oracle', async () => {
 		app = await buildApp();
@@ -165,7 +169,9 @@ describe('Oracle Fastify plugin – pool lifecycle', () => {
 	let app: FastifyInstance;
 
 	beforeEach(resetMocksToDefaults);
-	afterEach(async () => { await closeApp(app); });
+	afterEach(async () => {
+		await closeApp(app);
+	});
 
 	it('calls initPool during registration', async () => {
 		app = await buildApp();
@@ -206,7 +212,9 @@ describe('Oracle Fastify plugin – withConnection', () => {
 	let app: FastifyInstance;
 
 	beforeEach(resetMocksToDefaults);
-	afterEach(async () => { await closeApp(app); });
+	afterEach(async () => {
+		await closeApp(app);
+	});
 
 	it('executes queries through the borrowed connection', async () => {
 		app = await buildApp();
@@ -257,7 +265,9 @@ describe('Oracle Fastify plugin – request decorator', () => {
 	let app: FastifyInstance;
 
 	beforeEach(resetMocksToDefaults);
-	afterEach(async () => { await closeApp(app); });
+	afterEach(async () => {
+		await closeApp(app);
+	});
 
 	it('sets request.dbAvailable=true when pool is initialized', async () => {
 		app = await buildApp();
@@ -287,7 +297,9 @@ describe('Oracle Fastify plugin – pool statistics', () => {
 	let app: FastifyInstance;
 
 	beforeEach(resetMocksToDefaults);
-	afterEach(async () => { await closeApp(app); });
+	afterEach(async () => {
+		await closeApp(app);
+	});
 
 	it('returns pool statistics', async () => {
 		app = await buildApp();
@@ -315,7 +327,9 @@ describe('Oracle Fastify plugin – fallback mode', () => {
 		mocks.isPoolInitialized.mockReturnValue(false);
 	});
 
-	afterEach(async () => { await closeApp(app); });
+	afterEach(async () => {
+		await closeApp(app);
+	});
 
 	it('survives pool initialization failure', async () => {
 		mocks.initPool.mockRejectedValueOnce(new Error('Oracle unreachable'));
@@ -357,7 +371,9 @@ describe('Oracle Fastify plugin – concurrent requests', () => {
 	let app: FastifyInstance;
 
 	beforeEach(resetMocksToDefaults);
-	afterEach(async () => { await closeApp(app); });
+	afterEach(async () => {
+		await closeApp(app);
+	});
 
 	it('handles 10 concurrent requests without errors', async () => {
 		app = await buildApp();

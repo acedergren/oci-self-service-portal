@@ -69,12 +69,8 @@ describe('server lifecycle', () => {
 	// Note: module import test removed — app-factory.test.ts covers createApp() comprehensively
 
 	it('should handle Oracle pool initialization failure gracefully', async () => {
-		const { initPool } = await import(
-			'@portal/shared/server/oracle/connection'
-		);
-		(initPool as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-			new Error('Oracle not available')
-		);
+		const { initPool } = await import('@portal/shared/server/oracle/connection');
+		(initPool as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Oracle not available'));
 
 		// The server.ts main() should catch this and continue
 		// We test the pattern: try { initPool() } catch { warn and continue }
@@ -87,12 +83,8 @@ describe('server lifecycle', () => {
 	});
 
 	it('should call runMigrations after successful pool init', async () => {
-		const { initPool } = await import(
-			'@portal/shared/server/oracle/connection'
-		);
-		const { runMigrations } = await import(
-			'@portal/shared/server/oracle/migrations'
-		);
+		const { initPool } = await import('@portal/shared/server/oracle/connection');
+		const { runMigrations } = await import('@portal/shared/server/oracle/migrations');
 
 		await initPool();
 		await runMigrations();
@@ -165,9 +157,7 @@ describe('server lifecycle', () => {
 
 describe('graceful shutdown', () => {
 	it('should close Oracle pool during shutdown', async () => {
-		const { closePool } = await import(
-			'@portal/shared/server/oracle/connection'
-		);
+		const { closePool } = await import('@portal/shared/server/oracle/connection');
 
 		await closePool();
 		expect(closePool).toHaveBeenCalled();

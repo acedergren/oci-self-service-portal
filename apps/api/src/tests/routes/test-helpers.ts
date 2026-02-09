@@ -9,10 +9,7 @@
 import { vi } from 'vitest';
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
-import {
-	serializerCompiler,
-	validatorCompiler
-} from 'fastify-type-provider-zod';
+import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 
 // ---------------------------------------------------------------------------
 // Fake auth plugin

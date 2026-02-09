@@ -78,30 +78,22 @@ describe('Oracle connection module (shared package)', () => {
 	});
 
 	it('should export initPool function', async () => {
-		const { initPool } = await import(
-			'@portal/shared/server/oracle/connection'
-		);
+		const { initPool } = await import('@portal/shared/server/oracle/connection');
 		expect(typeof initPool).toBe('function');
 	});
 
 	it('should export closePool function', async () => {
-		const { closePool } = await import(
-			'@portal/shared/server/oracle/connection'
-		);
+		const { closePool } = await import('@portal/shared/server/oracle/connection');
 		expect(typeof closePool).toBe('function');
 	});
 
 	it('should export withConnection function', async () => {
-		const { withConnection } = await import(
-			'@portal/shared/server/oracle/connection'
-		);
+		const { withConnection } = await import('@portal/shared/server/oracle/connection');
 		expect(typeof withConnection).toBe('function');
 	});
 
 	it('withConnection should provide a connection and release it', async () => {
-		const { withConnection } = await import(
-			'@portal/shared/server/oracle/connection'
-		);
+		const { withConnection } = await import('@portal/shared/server/oracle/connection');
 
 		const result = await withConnection(async (conn) => {
 			const res = await conn.execute('SELECT 1 FROM DUAL');
@@ -112,9 +104,7 @@ describe('Oracle connection module (shared package)', () => {
 	});
 
 	it('should export getPoolStats function', async () => {
-		const { getPoolStats } = await import(
-			'@portal/shared/server/oracle/connection'
-		);
+		const { getPoolStats } = await import('@portal/shared/server/oracle/connection');
 		const stats = await getPoolStats();
 		expect(stats).toEqual({
 			connectionsOpen: 5,
@@ -125,9 +115,7 @@ describe('Oracle connection module (shared package)', () => {
 	});
 
 	it('should export isPoolInitialized function', async () => {
-		const { isPoolInitialized } = await import(
-			'@portal/shared/server/oracle/connection'
-		);
+		const { isPoolInitialized } = await import('@portal/shared/server/oracle/connection');
 		expect(isPoolInitialized()).toBe(true);
 	});
 });
@@ -182,14 +170,10 @@ describe('Oracle Fastify plugin (TDD contract)', () => {
 	});
 
 	it('should handle pool initialization failure gracefully', async () => {
-		const { initPool } = await import(
-			'@portal/shared/server/oracle/connection'
-		);
+		const { initPool } = await import('@portal/shared/server/oracle/connection');
 
 		// Simulate failure
-		(initPool as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-			new Error('Oracle not reachable')
-		);
+		(initPool as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Oracle not reachable'));
 
 		// The plugin should catch this and log a warning, not crash
 		try {

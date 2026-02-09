@@ -17,11 +17,13 @@ import Fastify, { type FastifyInstance } from 'fastify';
 // Mocks
 // ---------------------------------------------------------------------------
 
-const mockCollect = vi.fn().mockReturnValue(
-	'# HELP portal_http_requests_total Total HTTP requests\n' +
-		'# TYPE portal_http_requests_total counter\n' +
-		'portal_http_requests_total{method="GET",status="200"} 42\n'
-);
+const mockCollect = vi
+	.fn()
+	.mockReturnValue(
+		'# HELP portal_http_requests_total Total HTTP requests\n' +
+			'# TYPE portal_http_requests_total counter\n' +
+			'portal_http_requests_total{method="GET",status="200"} 42\n'
+	);
 
 vi.mock('@portal/shared/server/metrics', () => ({
 	registry: {

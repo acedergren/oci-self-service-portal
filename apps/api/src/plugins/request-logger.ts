@@ -3,12 +3,7 @@ import fp from 'fastify-plugin';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 /** Headers to redact from logged request objects. */
-const REDACTED_HEADERS = new Set([
-	'authorization',
-	'cookie',
-	'set-cookie',
-	'x-api-key'
-]);
+const REDACTED_HEADERS = new Set(['authorization', 'cookie', 'set-cookie', 'x-api-key']);
 
 /** Only allow safe characters in request IDs to prevent log injection. */
 export const VALID_REQUEST_ID = /^[a-zA-Z0-9._-]{1,128}$/;

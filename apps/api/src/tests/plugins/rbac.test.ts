@@ -56,21 +56,24 @@ async function buildApp(): Promise<FastifyInstance> {
 	// Simulate the auth plugin's decorators (the rbac plugin depends on these).
 	// Fastify 5 requires { getter, setter } for reference-type decorators (arrays).
 	const PERMS_KEY = Symbol('permissions');
-	const fakeAuthPlugin = fp(async (fastify) => {
-		fastify.decorateRequest('user', null);
-		fastify.decorateRequest('session', null);
-		fastify.decorateRequest('permissions', {
-			getter(this: FastifyRequest) {
-				const self = this as FastifyRequest & { [PERMS_KEY]?: string[] };
-				if (!self[PERMS_KEY]) self[PERMS_KEY] = [];
-				return self[PERMS_KEY];
-			},
-			setter(this: FastifyRequest, value: string[]) {
-				(this as FastifyRequest & { [PERMS_KEY]?: string[] })[PERMS_KEY] = value;
-			}
-		});
-		fastify.decorateRequest('apiKeyContext', null);
-	}, { name: 'auth', fastify: '5.x' });
+	const fakeAuthPlugin = fp(
+		async (fastify) => {
+			fastify.decorateRequest('user', null);
+			fastify.decorateRequest('session', null);
+			fastify.decorateRequest('permissions', {
+				getter(this: FastifyRequest) {
+					const self = this as FastifyRequest & { [PERMS_KEY]?: string[] };
+					if (!self[PERMS_KEY]) self[PERMS_KEY] = [];
+					return self[PERMS_KEY];
+				},
+				setter(this: FastifyRequest, value: string[]) {
+					(this as FastifyRequest & { [PERMS_KEY]?: string[] })[PERMS_KEY] = value;
+				}
+			});
+			fastify.decorateRequest('apiKeyContext', null);
+		},
+		{ name: 'auth', fastify: '5.x' }
+	);
 
 	await app.register(fakeAuthPlugin);
 

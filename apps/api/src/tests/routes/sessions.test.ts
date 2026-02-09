@@ -17,10 +17,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
-import {
-	serializerCompiler,
-	validatorCompiler
-} from 'fastify-type-provider-zod';
+import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -345,9 +342,7 @@ describe('POST /api/sessions', () => {
 			payload: { model: 'default' }
 		});
 
-		expect(mockCreate).toHaveBeenCalledWith(
-			expect.objectContaining({ userId: 'user-42' })
-		);
+		expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ userId: 'user-42' }));
 	});
 
 	it('returns 503 when DB is unavailable', async () => {

@@ -234,14 +234,11 @@ describe('Auth Fastify plugin – excluded paths', () => {
 	});
 
 	it('skips session resolution for excluded paths', async () => {
-		app = await buildApp(
-			{ excludePaths: ['/healthz', '/health', '/skip-me'] },
-			(a) => {
-				a.get('/skip-me', async (request) => {
-					return { permissions: request.permissions };
-				});
-			}
-		);
+		app = await buildApp({ excludePaths: ['/healthz', '/health', '/skip-me'] }, (a) => {
+			a.get('/skip-me', async (request) => {
+				return { permissions: request.permissions };
+			});
+		});
 
 		const res = await app.inject({ method: 'GET', url: '/skip-me' });
 
@@ -267,12 +264,9 @@ describe('Auth Fastify plugin – excluded paths', () => {
 	});
 
 	it('strips query params before matching excluded paths', async () => {
-		app = await buildApp(
-			{ excludePaths: ['/health'] },
-			(a) => {
-				a.get('/health', async () => ({ status: 'ok' }));
-			}
-		);
+		app = await buildApp({ excludePaths: ['/health'] }, (a) => {
+			a.get('/health', async () => ({ status: 'ok' }));
+		});
 
 		await app.inject({ method: 'GET', url: '/health?verbose=true' });
 

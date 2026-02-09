@@ -106,7 +106,9 @@ export async function activityRoutes(app: FastifyInstance): Promise<void> {
 				return reply.send({ items, total });
 			} catch (err) {
 				log.error({ err }, 'Failed to fetch activity');
-				return reply.status(500).send({ items: [], total: 0, error: 'Failed to retrieve activity' });
+				return reply
+					.status(500)
+					.send({ items: [], total: 0, error: 'Failed to retrieve activity' });
 			}
 		}
 	);

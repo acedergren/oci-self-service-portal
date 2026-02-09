@@ -38,14 +38,13 @@ export async function resetOracleMocks(): Promise<void> {
 
 	asMock(mod.initPool).mockResolvedValue(undefined);
 	asMock(mod.closePool).mockResolvedValue(undefined);
-	asMock(mod.withConnection).mockImplementation(
-		async (fn: (conn: unknown) => unknown) =>
-			fn({
-				execute: vi.fn().mockResolvedValue({ rows: [{ VAL: 1 }] }),
-				close: vi.fn().mockResolvedValue(undefined),
-				commit: vi.fn(),
-				rollback: vi.fn()
-			})
+	asMock(mod.withConnection).mockImplementation(async (fn: (conn: unknown) => unknown) =>
+		fn({
+			execute: vi.fn().mockResolvedValue({ rows: [{ VAL: 1 }] }),
+			close: vi.fn().mockResolvedValue(undefined),
+			commit: vi.fn(),
+			rollback: vi.fn()
+		})
 	);
 	asMock(mod.getPoolStats).mockResolvedValue({
 		connectionsOpen: 5,
@@ -83,9 +82,7 @@ export async function resetMigrationMocks(): Promise<void> {
 	const migrationMod = await import('@portal/shared/server/oracle/migrations');
 	asMock(migrationMod.runMigrations).mockResolvedValue(undefined);
 
-	const webhookMod = await import(
-		'@portal/shared/server/oracle/repositories/webhook-repository'
-	);
+	const webhookMod = await import('@portal/shared/server/oracle/repositories/webhook-repository');
 	asMock(webhookMod.webhookRepository.migratePlaintextSecrets).mockResolvedValue({
 		migrated: 0,
 		remaining: 0

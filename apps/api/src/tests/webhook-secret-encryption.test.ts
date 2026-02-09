@@ -39,9 +39,8 @@ describe('Webhook secret encryption at rest', () => {
 	});
 
 	it('encryptWebhookSecret/decryptWebhookSecret should roundtrip', async () => {
-		const { encryptWebhookSecret, decryptWebhookSecret } = await import(
-			'@portal/shared/server/crypto'
-		);
+		const { encryptWebhookSecret, decryptWebhookSecret } =
+			await import('@portal/shared/server/crypto');
 
 		const plaintext = 'whsec_roundtrip_secret';
 		const encrypted = encryptWebhookSecret(plaintext);
@@ -54,9 +53,8 @@ describe('Webhook secret encryption at rest', () => {
 	it('webhookRepository.create should persist encrypted secret + iv', async () => {
 		mockExecute.mockResolvedValueOnce({ rows: [] });
 
-		const { webhookRepository } = await import(
-			'@portal/shared/server/oracle/repositories/webhook-repository'
-		);
+		const { webhookRepository } =
+			await import('@portal/shared/server/oracle/repositories/webhook-repository');
 
 		await webhookRepository.create({
 			orgId: 'org-1',
@@ -89,9 +87,8 @@ describe('Webhook secret encryption at rest', () => {
 			]
 		});
 
-		const { webhookRepository } = await import(
-			'@portal/shared/server/oracle/repositories/webhook-repository'
-		);
+		const { webhookRepository } =
+			await import('@portal/shared/server/oracle/repositories/webhook-repository');
 		const rows = await webhookRepository.getActiveByEvent('org-1', 'tool.executed');
 
 		expect(rows).toHaveLength(1);
@@ -106,9 +103,8 @@ describe('Webhook secret encryption at rest', () => {
 			.mockResolvedValueOnce({ rows: [] })
 			.mockResolvedValueOnce({ rows: [{ COUNT: 0 }] });
 
-		const { webhookRepository } = await import(
-			'@portal/shared/server/oracle/repositories/webhook-repository'
-		);
+		const { webhookRepository } =
+			await import('@portal/shared/server/oracle/repositories/webhook-repository');
 
 		const result = await webhookRepository.migratePlaintextSecrets(10);
 		expect(result.migrated).toBe(1);
