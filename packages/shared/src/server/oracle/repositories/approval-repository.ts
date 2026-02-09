@@ -1,9 +1,5 @@
 import { withConnection } from '../connection';
-import {
-	PendingApprovalSchema,
-	type PendingApproval,
-	type InsertPendingApproval
-} from '../types';
+import { PendingApprovalSchema, type PendingApproval, type InsertPendingApproval } from '../types';
 
 /** Oracle row shape for pending_approvals (OUT_FORMAT_OBJECT, uppercase keys). */
 interface PendingApprovalRow {

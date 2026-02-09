@@ -278,7 +278,9 @@ export const webhookRepository = {
 	 * Encrypt legacy webhook secrets that were stored before task #30.
 	 * Safe to run repeatedly; only migrates rows missing secret_iv.
 	 */
-	async migratePlaintextSecrets(batchSize: number = 200): Promise<{ migrated: number; remaining: number }> {
+	async migratePlaintextSecrets(
+		batchSize: number = 200
+	): Promise<{ migrated: number; remaining: number }> {
 		if (!isWebhookEncryptionEnabled()) {
 			return { migrated: 0, remaining: 0 };
 		}

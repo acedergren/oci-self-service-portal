@@ -13,13 +13,13 @@ import { initializeSchema } from './schema';
  * connection initialization since all operations are blocking.
  */
 interface ConnectionState {
-  db: Database.Database | null;
-  path: string | null;
+	db: Database.Database | null;
+	path: string | null;
 }
 
 const state: ConnectionState = {
-  db: null,
-  path: null,
+	db: null,
+	path: null
 };
 
 const DEFAULT_DB_DIR = path.join(os.homedir(), '.oci-provider-examples');
@@ -29,17 +29,17 @@ const DEFAULT_DB_PATH = path.join(DEFAULT_DB_DIR, 'agent-state.db');
  * Get the database path from environment or default.
  */
 export function getDatabasePath(): string {
-  return process.env.AGENT_STATE_DB_PATH ?? DEFAULT_DB_PATH;
+	return process.env.AGENT_STATE_DB_PATH ?? DEFAULT_DB_PATH;
 }
 
 /**
  * Ensure the directory for the database file exists.
  */
 function ensureDirectory(dbPath: string): void {
-  const dir = path.dirname(dbPath);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
+	const dir = path.dirname(dbPath);
+	if (!fs.existsSync(dir)) {
+		fs.mkdirSync(dir, { recursive: true });
+	}
 }
 
 /**
@@ -53,35 +53,35 @@ function ensureDirectory(dbPath: string): void {
  * @throws Error if customPath differs from existing connection's path
  */
 export function getConnection(customPath?: string): Database.Database {
-  const requestedPath = customPath ?? getDatabasePath();
+	const requestedPath = customPath ?? getDatabasePath();
 
-  if (state.db) {
-    // Validate that the requested path matches the existing connection
-    if (state.path && requestedPath !== state.path) {
-      throw new Error(
-        `Connection already exists to "${state.path}". ` +
-          `Cannot connect to "${requestedPath}". ` +
-          `Call resetConnection() first to connect to a different database.`
-      );
-    }
-    return state.db;
-  }
+	if (state.db) {
+		// Validate that the requested path matches the existing connection
+		if (state.path && requestedPath !== state.path) {
+			throw new Error(
+				`Connection already exists to "${state.path}". ` +
+					`Cannot connect to "${requestedPath}". ` +
+					`Call resetConnection() first to connect to a different database.`
+			);
+		}
+		return state.db;
+	}
 
-  ensureDirectory(requestedPath);
+	ensureDirectory(requestedPath);
 
-  state.db = new Database(requestedPath);
-  state.path = requestedPath;
+	state.db = new Database(requestedPath);
+	state.path = requestedPath;
 
-  // Enable WAL mode for better concurrent access
-  state.db.pragma('journal_mode = WAL');
+	// Enable WAL mode for better concurrent access
+	state.db.pragma('journal_mode = WAL');
 
-  // Enable foreign keys
-  state.db.pragma('foreign_keys = ON');
+	// Enable foreign keys
+	state.db.pragma('foreign_keys = ON');
 
-  // Initialize schema
-  initializeSchema(state.db);
+	// Initialize schema
+	initializeSchema(state.db);
 
-  return state.db;
+	return state.db;
 }
 
 /**
@@ -90,10 +90,10 @@ export function getConnection(customPath?: string): Database.Database {
  * so subsequent getConnection() calls will fail until resetConnection() is called.
  */
 export function closeConnection(): void {
-  if (state.db) {
-    state.db.close();
-    state.db = null;
-  }
+	if (state.db) {
+		state.db.close();
+		state.db = null;
+	}
 }
 
 /**
@@ -105,8 +105,8 @@ export function closeConnection(): void {
  * - Switching databases at runtime
  */
 export function resetConnection(): void {
-  closeConnection();
-  state.path = null;
+	closeConnection();
+	state.path = null;
 }
 
 /**
@@ -114,5 +114,5 @@ export function resetConnection(): void {
  * Useful for debugging and testing.
  */
 export function getConnectionPath(): string | null {
-  return state.path;
+	return state.path;
 }

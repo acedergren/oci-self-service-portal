@@ -4,7 +4,7 @@ import Database from 'better-sqlite3';
 export const SCHEMA_VERSION = 1;
 
 export function initializeSchema(db: Database.Database): void {
-  db.exec(`
+	db.exec(`
     -- Schema version tracking
     CREATE TABLE IF NOT EXISTS schema_version (
       version INTEGER PRIMARY KEY
@@ -43,16 +43,16 @@ export function initializeSchema(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_sessions_status ON sessions(status);
   `);
 
-  // Insert or update schema version
-  const existing = db.prepare('SELECT version FROM schema_version').get();
-  if (!existing) {
-    db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(SCHEMA_VERSION);
-  }
+	// Insert or update schema version
+	const existing = db.prepare('SELECT version FROM schema_version').get();
+	if (!existing) {
+		db.prepare('INSERT INTO schema_version (version) VALUES (?)').run(SCHEMA_VERSION);
+	}
 }
 
 export function getSchemaVersion(db: Database.Database): number {
-  const row = db.prepare('SELECT version FROM schema_version').get() as
-    | { version: number }
-    | undefined;
-  return row?.version ?? 0;
+	const row = db.prepare('SELECT version FROM schema_version').get() as
+		| { version: number }
+		| undefined;
+	return row?.version ?? 0;
 }

@@ -5,7 +5,13 @@
  * This service runs server-side only in SvelteKit.
  */
 
-import { MCPManager, type MCPServerConfig, type MCPToolDefinition, type ToolResultContent, type ResourceContent } from './mcp-client';
+import {
+	MCPManager,
+	type MCPServerConfig,
+	type MCPToolDefinition,
+	type ToolResultContent,
+	type ResourceContent
+} from './mcp-client';
 import { tool } from 'ai';
 import { z } from 'zod';
 import { homedir } from 'os';
@@ -136,7 +142,9 @@ export async function callMCPTool(
 
 	// Extract text content
 	const textContents = result.content
-		.filter((c: ToolResultContent): c is Extract<ToolResultContent, { type: 'text' }> => c.type === 'text')
+		.filter(
+			(c: ToolResultContent): c is Extract<ToolResultContent, { type: 'text' }> => c.type === 'text'
+		)
 		.map((c) => c.text);
 
 	if (result.isError) {
@@ -174,11 +182,13 @@ export function getMCPServers(): Array<{ name: string; state: string; toolCount:
 		return [];
 	}
 
-	return manager.getServers().map((server: { name: string; state: string; client: { getTools(): unknown[] } }) => ({
-		name: server.name,
-		state: server.state,
-		toolCount: server.client.getTools().length
-	}));
+	return manager
+		.getServers()
+		.map((server: { name: string; state: string; client: { getTools(): unknown[] } }) => ({
+			name: server.name,
+			state: server.state,
+			toolCount: server.client.getTools().length
+		}));
 }
 
 /**

@@ -1,17 +1,12 @@
 import type { QueryKey } from '@tanstack/query-core';
 import { queryKeys } from './keys.js';
-import {
-  fetchModels,
-  fetchSessions,
-  fetchSessionDetail,
-  fetchSessionUsage,
-} from './fetchers.js';
+import { fetchModels, fetchSessions, fetchSessionDetail, fetchSessionUsage } from './fetchers.js';
 import type {
-  FetcherOptions,
-  ModelsResponse,
-  SessionsResponse,
-  SessionDetailResponse,
-  SessionUsage,
+	FetcherOptions,
+	ModelsResponse,
+	SessionsResponse,
+	SessionDetailResponse,
+	SessionUsage
 } from './types.js';
 
 /**
@@ -19,9 +14,9 @@ import type {
  * Framework adapters (react-query, svelte-query, etc.) accept this shape
  */
 export interface QueryOptionsBase<TData, TQueryKey extends QueryKey = QueryKey> {
-  queryKey: TQueryKey;
-  queryFn: (context: { queryKey: TQueryKey; signal: AbortSignal; meta: unknown }) => Promise<TData>;
-  staleTime?: number;
+	queryKey: TQueryKey;
+	queryFn: (context: { queryKey: TQueryKey; signal: AbortSignal; meta: unknown }) => Promise<TData>;
+	staleTime?: number;
 }
 
 /**
@@ -30,13 +25,13 @@ export interface QueryOptionsBase<TData, TQueryKey extends QueryKey = QueryKey> 
  * Models rarely change, so we use a long staleTime (10 minutes)
  */
 export function modelsQueryOptions(
-  options?: FetcherOptions
+	options?: FetcherOptions
 ): QueryOptionsBase<ModelsResponse, readonly ['models']> {
-  return {
-    queryKey: queryKeys.models(),
-    queryFn: () => fetchModels(options),
-    staleTime: 10 * 60 * 1000, // 10 minutes
-  };
+	return {
+		queryKey: queryKeys.models(),
+		queryFn: () => fetchModels(options),
+		staleTime: 10 * 60 * 1000 // 10 minutes
+	};
 }
 
 /**
@@ -46,13 +41,13 @@ export function modelsQueryOptions(
  * so we use a shorter staleTime (1 minute)
  */
 export function sessionsQueryOptions(
-  options?: FetcherOptions
+	options?: FetcherOptions
 ): QueryOptionsBase<SessionsResponse, readonly ['sessions']> {
-  return {
-    queryKey: queryKeys.sessions.all(),
-    queryFn: () => fetchSessions(options),
-    staleTime: 60 * 1000, // 1 minute
-  };
+	return {
+		queryKey: queryKeys.sessions.all(),
+		queryFn: () => fetchSessions(options),
+		staleTime: 60 * 1000 // 1 minute
+	};
 }
 
 /**
@@ -61,14 +56,14 @@ export function sessionsQueryOptions(
  * Includes messages and usage data
  */
 export function sessionDetailQueryOptions(
-  id: string,
-  options?: FetcherOptions
+	id: string,
+	options?: FetcherOptions
 ): QueryOptionsBase<SessionDetailResponse, readonly ['sessions', string]> {
-  return {
-    queryKey: queryKeys.sessions.detail(id),
-    queryFn: () => fetchSessionDetail(id, options),
-    staleTime: 30 * 1000, // 30 seconds
-  };
+	return {
+		queryKey: queryKeys.sessions.detail(id),
+		queryFn: () => fetchSessionDetail(id, options),
+		staleTime: 30 * 1000 // 30 seconds
+	};
 }
 
 /**
@@ -77,12 +72,12 @@ export function sessionDetailQueryOptions(
  * Usage changes with each message, so we use a short staleTime
  */
 export function sessionUsageQueryOptions(
-  id: string,
-  options?: FetcherOptions
+	id: string,
+	options?: FetcherOptions
 ): QueryOptionsBase<SessionUsage, readonly ['sessions', string, 'usage']> {
-  return {
-    queryKey: queryKeys.sessions.usage(id),
-    queryFn: () => fetchSessionUsage(id, options),
-    staleTime: 30 * 1000, // 30 seconds
-  };
+	return {
+		queryKey: queryKeys.sessions.usage(id),
+		queryFn: () => fetchSessionUsage(id, options),
+		staleTime: 30 * 1000 // 30 seconds
+	};
 }

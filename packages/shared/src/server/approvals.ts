@@ -28,7 +28,10 @@ export const pendingApprovals = new Map<string, PendingApprovalEntry>();
  * Used by the execute endpoint to verify approval without trusting client input.
  * Entries are auto-cleaned after 5 minutes.
  */
-export const approvedToolCalls = new Map<string, { toolName: string; approvedAt: number; orgId?: string | null }>();
+export const approvedToolCalls = new Map<
+	string,
+	{ toolName: string; approvedAt: number; orgId?: string | null }
+>();
 
 const APPROVAL_TTL_MS = 5 * 60 * 1000;
 
@@ -36,7 +39,11 @@ const APPROVAL_TTL_MS = 5 * 60 * 1000;
  * Record that a tool call has been approved server-side.
  * Tries Oracle DB first; falls back to in-memory Map.
  */
-export async function recordApproval(toolCallId: string, toolName: string, orgId?: string | null): Promise<void> {
+export async function recordApproval(
+	toolCallId: string,
+	toolName: string,
+	orgId?: string | null
+): Promise<void> {
 	try {
 		await withConnection(async (conn) => {
 			await conn.execute(
@@ -65,7 +72,11 @@ export async function recordApproval(toolCallId: string, toolName: string, orgId
  * The approval is consumed (deleted) to prevent replay.
  * Tries Oracle DB first; falls back to in-memory Map.
  */
-export async function consumeApproval(toolCallId: string, toolName: string, orgId?: string | null): Promise<boolean> {
+export async function consumeApproval(
+	toolCallId: string,
+	toolName: string,
+	orgId?: string | null
+): Promise<boolean> {
 	try {
 		return await withConnection(async (conn) => {
 			// Atomic DELETE — no TOCTOU race. Single statement checks tool_call_id,
@@ -87,7 +98,11 @@ export async function consumeApproval(toolCallId: string, toolName: string, orgI
 		const entry = approvedToolCalls.get(toolCallId);
 		if (!entry) return false;
 
-		if (entry.toolName !== toolName || (entry.orgId ?? null) !== (orgId ?? null) || Date.now() - entry.approvedAt > APPROVAL_TTL_MS) {
+		if (
+			entry.toolName !== toolName ||
+			(entry.orgId ?? null) !== (orgId ?? null) ||
+			Date.now() - entry.approvedAt > APPROVAL_TTL_MS
+		) {
 			approvedToolCalls.delete(toolCallId);
 			return false;
 		}

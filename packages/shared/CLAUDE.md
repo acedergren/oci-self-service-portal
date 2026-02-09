@@ -32,23 +32,25 @@ server/api → errors, logger, auth, workflows
 Most modules should work with any Node.js framework. Framework-specific code goes in apps/.
 
 **Good** (framework-agnostic):
+
 ```typescript
 // packages/shared/src/server/auth/rbac.ts
 export function requirePermission(userId: string, permission: Permission): void {
-  if (!hasPermission(userId, permission)) {
-    throw new AuthError('Insufficient permissions');
-  }
+	if (!hasPermission(userId, permission)) {
+		throw new AuthError('Insufficient permissions');
+	}
 }
 ```
 
 **Bad** (SvelteKit-specific):
+
 ```typescript
 // Don't do this in shared package
 import { error } from '@sveltejs/kit';
 export function requirePermission(userId: string, permission: Permission) {
-  if (!hasPermission(userId, permission)) {
-    throw error(403, 'Insufficient permissions');
-  }
+	if (!hasPermission(userId, permission)) {
+		throw error(403, 'Insufficient permissions');
+	}
 }
 ```
 
@@ -66,9 +68,9 @@ throw new DatabaseError('Connection failed');
 
 // Wrap unknown errors
 try {
-  await somethingRisky();
+	await somethingRisky();
 } catch (error) {
-  throw toPortalError(error); // Wraps as INTERNAL_ERROR
+	throw toPortalError(error); // Wraps as INTERNAL_ERROR
 }
 ```
 
@@ -96,15 +98,15 @@ All Oracle-dependent services must have fallbacks:
 import { withConnection } from '@portal/shared/server/oracle/connection';
 
 async function getData(id: string) {
-  try {
-    return await withConnection(async (conn) => {
-      const result = await conn.execute('SELECT * FROM data WHERE id = :id', [id]);
-      return result.rows[0];
-    });
-  } catch (error) {
-    log.warn({ error }, 'Oracle unavailable, using fallback');
-    return fallbackStorage.get(id); // SQLite, JSONL, in-memory, etc.
-  }
+	try {
+		return await withConnection(async (conn) => {
+			const result = await conn.execute('SELECT * FROM data WHERE id = :id', [id]);
+			return result.rows[0];
+		});
+	} catch (error) {
+		log.warn({ error }, 'Oracle unavailable, using fallback');
+		return fallbackStorage.get(id); // SQLite, JSONL, in-memory, etc.
+	}
 }
 ```
 
@@ -127,10 +129,10 @@ export * from './types.js';
 
 ```json
 {
-  "exports": {
-    "./server/*": "./src/server/*.js",
-    "./tools": "./src/tools/index.js"
-  }
+	"exports": {
+		"./server/*": "./src/server/*.js",
+		"./tools": "./src/tools/index.js"
+	}
 }
 ```
 
@@ -148,6 +150,7 @@ import { executeTool } from '@portal/shared/tools';
 Authentication and authorization services.
 
 **Key Files:**
+
 - `config.ts` - Better Auth configuration
 - `rbac.ts` - Role-based access control (3 roles, 13 permissions)
 - `tenancy.ts` - Multi-tenancy (org membership)
@@ -155,6 +158,7 @@ Authentication and authorization services.
 - `idcs-provisioning.ts` - OIDC → org provisioning
 
 **Critical Patterns:**
+
 - Always check BOTH role AND org membership
 - API keys use SHA-256 hashing (never store plaintext)
 - IDCS groups → roles via `provisionFromIdcsGroups()`
@@ -164,11 +168,13 @@ Authentication and authorization services.
 Oracle Database integration.
 
 **Key Files:**
+
 - `connection.ts` - Connection pool management
 - `migrations.ts` - Schema migrations (008_property_graph.sql)
 - `repositories/` - Data access layer
 
 **Critical Patterns:**
+
 - Always use `withConnection()` for queries
 - Migrations are idempotent (IF NOT EXISTS checks)
 - All tables have `created_at`/`updated_at` timestamps
@@ -179,11 +185,13 @@ Oracle Database integration.
 Workflow engine with topological execution.
 
 **Key Files:**
+
 - `executor.ts` - WorkflowExecutor (Kahn's algorithm)
 - `repository.ts` - CRUD for definitions and runs
 - `types.ts` - 8 node types + validation schemas
 
 **Critical Patterns:**
+
 - Cycle detection before execution
 - Safe expression evaluation (no eval)
 - Approval nodes require server-side token validation
@@ -194,11 +202,13 @@ Workflow engine with topological execution.
 OCI CLI tool wrappers for AI SDK.
 
 **Structure:**
+
 - `registry.ts` - Tool registry with 60+ tools
 - `categories/` - 11 categories (compute, networking, storage, etc.)
 - `types.ts` - ToolDefinition, ToolEntry, ApprovalLevel
 
 **Critical Patterns:**
+
 - All tools return `slimOCIResponse()` (filtered OCI output)
 - Never combine `--all` and `--limit` flags
 - Namespace is auto-fetched for bucket operations
@@ -209,19 +219,21 @@ OCI CLI tool wrappers for AI SDK.
 Cloud pricing comparison (OCI vs Azure).
 
 **Files:**
+
 - `service.ts` - Main pricing logic
 - `data/` - Pricing JSON files
 - `types.ts` - PricingComparison interface
 
 **Usage:**
+
 ```typescript
 import { compareCloudPricing } from '@portal/shared/pricing';
 
 const comparison = compareCloudPricing({
-  instanceType: 'VM.Standard.E4.Flex',
-  ocpus: 4,
-  memoryGB: 64,
-  region: 'eu-frankfurt-1'
+	instanceType: 'VM.Standard.E4.Flex',
+	ocpus: 4,
+	memoryGB: 64,
+	region: 'eu-frankfurt-1'
 });
 ```
 
@@ -230,10 +242,12 @@ const comparison = compareCloudPricing({
 Terraform HCL code generator.
 
 **Files:**
+
 - `generator.ts` - AST → HCL conversion
 - `types.ts` - TerraformConfig interface
 
 **Usage:**
+
 ```typescript
 import { generateTerraformHCL } from '@portal/shared/terraform';
 
@@ -257,11 +271,11 @@ import { describe, it, expect } from 'vitest';
 import { requirePermission } from '@portal/shared/server/auth/rbac';
 
 describe('requirePermission', () => {
-  it('throws AuthError for insufficient permissions', () => {
-    expect(() => {
-      requirePermission('viewer', 'workflows:execute');
-    }).toThrow(AuthError);
-  });
+	it('throws AuthError for insufficient permissions', () => {
+		expect(() => {
+			requirePermission('viewer', 'workflows:execute');
+		}).toThrow(AuthError);
+	});
 });
 ```
 
@@ -390,6 +404,7 @@ import { executeTool } from '@portal/shared/tools';
 ## Support
 
 For questions about this package:
+
 - Check README.md for API documentation
 - Review test files for usage examples
 - See `docs/ARCHITECTURE.md` at workspace root for system overview

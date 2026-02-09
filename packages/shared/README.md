@@ -57,7 +57,11 @@ import { provisionFromIdcsGroups } from '@portal/shared/server/auth/idcs-provisi
 // Oracle Database
 import { initPool, closePool, withConnection } from '@portal/shared/server/oracle/connection';
 import { runMigrations } from '@portal/shared/server/oracle/migrations';
-import { sessionRepository, orgRepository, auditRepository } from '@portal/shared/server/oracle/repositories';
+import {
+	sessionRepository,
+	orgRepository,
+	auditRepository
+} from '@portal/shared/server/oracle/repositories';
 
 // Rate Limiting
 import { checkRateLimit, RATE_LIMIT_CONFIG } from '@portal/shared/server/rate-limiter';
@@ -66,7 +70,10 @@ import { checkRateLimit, RATE_LIMIT_CONFIG } from '@portal/shared/server/rate-li
 import { recordApproval, consumeApproval } from '@portal/shared/server/approvals';
 
 // Workflows
-import { workflowRepository, workflowRunRepository } from '@portal/shared/server/workflows/repository';
+import {
+	workflowRepository,
+	workflowRunRepository
+} from '@portal/shared/server/workflows/repository';
 import { WorkflowExecutor } from '@portal/shared/server/workflows/executor';
 
 // Embeddings
@@ -107,12 +114,12 @@ import { generateTerraformHCL, type TerraformConfig } from '@portal/shared/terra
 
 ```typescript
 import type {
-  WorkflowDefinition,
-  WorkflowRun,
-  WorkflowNode,
-  ToolNode,
-  ConditionNode,
-  ApprovalNode
+	WorkflowDefinition,
+	WorkflowRun,
+	WorkflowNode,
+	ToolNode,
+	ConditionNode,
+	ApprovalNode
 } from '@portal/shared/workflows';
 ```
 
@@ -145,7 +152,7 @@ const sessions = await sessionRepository.listByUser(userId);
 
 // Custom query
 const result = await withConnection(async (conn) => {
-  return conn.execute('SELECT * FROM users WHERE id = :id', [userId]);
+	return conn.execute('SELECT * FROM users WHERE id = :id', [userId]);
 });
 ```
 
@@ -155,27 +162,32 @@ const result = await withConnection(async (conn) => {
 import { executeTool } from '@portal/shared/tools';
 
 const result = await executeTool({
-  name: 'list_compute_instances',
-  parameters: {
-    compartmentId: 'ocid1.compartment...'
-  },
-  userId: 'user123',
-  orgId: 'org456'
+	name: 'list_compute_instances',
+	parameters: {
+		compartmentId: 'ocid1.compartment...'
+	},
+	userId: 'user123',
+	orgId: 'org456'
 });
 ```
 
 ### Error Handling
 
 ```typescript
-import { PortalError, ValidationError, AuthError, errorResponse } from '@portal/shared/server/errors';
+import {
+	PortalError,
+	ValidationError,
+	AuthError,
+	errorResponse
+} from '@portal/shared/server/errors';
 
 try {
-  // ... operation
+	// ... operation
 } catch (error) {
-  if (error instanceof PortalError) {
-    return errorResponse(error);
-  }
-  throw new ValidationError('Invalid input', { field: 'email' });
+	if (error instanceof PortalError) {
+		return errorResponse(error);
+	}
+	throw new ValidationError('Invalid input', { field: 'email' });
 }
 ```
 

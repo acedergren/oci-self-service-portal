@@ -18,12 +18,7 @@ import crypto from 'crypto';
 import { withConnection } from '../oracle/connection';
 import { createLogger } from '../logger';
 import { ValidationError, DatabaseError } from '../errors';
-import type {
-	ApiKeyContext,
-	ApiKeyInfo,
-	CreateApiKeyResult,
-	ApiKeyRow
-} from '../api/types';
+import type { ApiKeyContext, ApiKeyInfo, CreateApiKeyResult, ApiKeyRow } from '../api/types';
 import { apiKeyRowToInfo, apiKeyRowToContext } from '../api/types';
 
 const log = createLogger('api-keys');

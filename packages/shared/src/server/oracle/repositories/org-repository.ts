@@ -1,10 +1,5 @@
 import { withConnection } from '../connection';
-import {
-	OrganizationSchema,
-	OrgMemberSchema,
-	type Organization,
-	type OrgMember
-} from '../types';
+import { OrganizationSchema, OrgMemberSchema, type Organization, type OrgMember } from '../types';
 
 // ============================================================================
 // Oracle row shapes (OUT_FORMAT_OBJECT, uppercase keys)
