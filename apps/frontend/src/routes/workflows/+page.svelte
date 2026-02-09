@@ -20,21 +20,6 @@
 	let searchQuery = $state('');
 	let statusFilter = $state<string>('');
 
-	const filteredWorkflows = $derived(
-		workflows.filter((w) => {
-			if (statusFilter && w.status !== statusFilter) return false;
-			if (searchQuery) {
-				const q = searchQuery.toLowerCase();
-				return (
-					w.name.toLowerCase().includes(q) ||
-					(w.description?.toLowerCase().includes(q) ?? false) ||
-					(w.tags?.some((t) => t.toLowerCase().includes(q)) ?? false)
-				);
-			}
-			return true;
-		})
-	);
-
 	async function fetchWorkflows() {
 		loading = true;
 		error = null;
@@ -55,6 +40,9 @@
 	}
 
 	$effect(() => {
+		// Reference reactive dependencies to trigger re-fetch
+		statusFilter;
+		searchQuery;
 		fetchWorkflows();
 	});
 
@@ -124,7 +112,7 @@
 			<p>{error}</p>
 			<button onclick={fetchWorkflows} class="retry-btn">Retry</button>
 		</div>
-	{:else if filteredWorkflows.length === 0}
+	{:else if workflows.length === 0}
 		<div class="empty-state">
 			{#if workflows.length === 0}
 				<div class="empty-icon">
@@ -151,7 +139,7 @@
 		</div>
 	{:else}
 		<div class="workflows-grid">
-			{#each filteredWorkflows as wf (wf.id)}
+			{#each workflows as wf (wf.id)}
 				<a href="/workflows/{wf.id}" class="workflow-card">
 					<div class="card-header">
 						<h3 class="card-name">{wf.name}</h3>

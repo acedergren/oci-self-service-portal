@@ -163,6 +163,13 @@
 		loadWorkflow();
 	});
 
+	// Cleanup saveTimer on destroy
+	$effect(() => {
+		return () => {
+			if (saveTimer) clearTimeout(saveTimer);
+		};
+	});
+
 	// Save workflow
 	let saveTimer: ReturnType<typeof setTimeout> | undefined;
 

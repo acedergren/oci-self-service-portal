@@ -53,6 +53,7 @@
 	}
 
 	$effect(() => {
+		runId; // Establish dependency on runId
 		loadRun();
 	});
 

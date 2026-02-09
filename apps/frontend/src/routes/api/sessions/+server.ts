@@ -1,5 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { z } from 'zod';
 import {
 	sessionRepository,
 	listSessionsEnriched
@@ -15,6 +16,12 @@ import {
 } from '@portal/shared/server/errors';
 
 const log = createLogger('sessions-api');
+
+const CreateSessionSchema = z.object({
+	model: z.string().optional(),
+	region: z.string().optional(),
+	title: z.string().optional()
+});
 
 export const GET: RequestHandler = async (event) => {
 	requirePermission(event, 'sessions:read');
@@ -85,11 +92,22 @@ export const POST: RequestHandler = async (event) => {
 		return errorResponse(new ValidationError('Invalid JSON in request body'), locals.requestId);
 	}
 
+	// Validate request body with Zod
+	const parseResult = CreateSessionSchema.safeParse(body);
+	if (!parseResult.success) {
+		return errorResponse(
+			new ValidationError('Invalid request body', { zodError: parseResult.error }),
+			locals.requestId
+		);
+	}
+
+	const validatedBody = parseResult.data;
+
 	try {
 		const session = await sessionRepository.create({
-			model: (body.model as string) || 'default',
-			region: (body.region as string) || 'eu-frankfurt-1',
-			title: body.title as string | undefined,
+			model: validatedBody.model || 'default',
+			region: validatedBody.region || 'eu-frankfurt-1',
+			title: validatedBody.title,
 			userId: locals.user?.id
 		});
 

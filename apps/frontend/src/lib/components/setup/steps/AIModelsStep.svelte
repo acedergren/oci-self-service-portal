@@ -98,6 +98,22 @@
 			return;
 		}
 
+		// Validate required fields for each enabled provider
+		for (const provider of enabledProviders) {
+			if (provider.type === 'oci') {
+				if (!provider.config.compartmentId) {
+					toast.error('OCI provider requires a Compartment OCID');
+					return;
+				}
+			} else {
+				// openai, anthropic, google
+				if (!provider.config.apiKey) {
+					toast.error(`${providerInfo[provider.type].name} requires an API Key`);
+					return;
+				}
+			}
+		}
+
 		saving = true;
 
 		try {
