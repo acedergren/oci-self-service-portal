@@ -7,3 +7,4 @@ export { default as searchRoutes } from './search.js';
 export { default as mcpRoutes } from './mcp.js';
 export { default as chatRoutes } from './chat.js';
 export { default as workflowRoutes } from './workflows.js';
+export { default as openApiRoute } from './openapi.js';

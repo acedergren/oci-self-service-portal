@@ -29,6 +29,7 @@ import chatRoutes from './routes/chat.js';
 import mcpRoutes from './routes/mcp.js';
 import searchRoutes from './routes/search.js';
 import { metricsRoutes } from './routes/metrics.js';
+import openApiRoute from './routes/openapi.js';
 
 const log = createLogger('app');
 
@@ -264,7 +265,14 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 		migrate: process.env.SKIP_MIGRATIONS !== 'true'
 	});
 	await app.register(authPlugin, {
-		excludePaths: ['/healthz', '/health', '/api/metrics', '/api/health', '/api/healthz']
+		excludePaths: [
+			'/healthz',
+			'/health',
+			'/api/metrics',
+			'/api/health',
+			'/api/healthz',
+			'/api/v1/openapi.json'
+		]
 	});
 	await app.register(rbacPlugin);
 
@@ -306,6 +314,7 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 	await app.register(mcpRoutes);
 	await app.register(searchRoutes);
 	await app.register(metricsRoutes);
+	await app.register(openApiRoute);
 
 	log.info('Fastify app created with plugins and routes');
 	return app;
