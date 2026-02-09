@@ -48,8 +48,8 @@ const searchRoutes: FastifyPluginAsync = async (fastify) => {
 					return reply.send({ results: [], query: q, total: 0 });
 				}
 				queryEmbedding = embedding;
-			} catch {
-				request.log.warn('Embedding generation failed, returning empty results');
+			} catch (err) {
+				request.log.warn({ err }, 'Embedding generation failed, returning empty results');
 				return reply.send({ results: [], query: q, total: 0 });
 			}
 

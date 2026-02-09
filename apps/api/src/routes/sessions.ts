@@ -48,6 +48,9 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
 
 			const { limit, offset, search } = request.query as z.infer<typeof ListSessionsQuerySchema>;
 			const userId = request.user?.id;
+			if (!userId) {
+				return reply.status(401).send({ error: 'Authentication required' });
+			}
 
 			try {
 				const { sessions, total } = await listSessionsEnriched({
@@ -100,6 +103,11 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
 				return reply.status(resp.status).send(resp);
 			}
 
+			const userId = request.user?.id;
+			if (!userId) {
+				return reply.status(401).send({ error: 'Authentication required' });
+			}
+
 			const body = request.body as z.infer<typeof CreateSessionBodySchema>;
 
 			try {
@@ -107,7 +115,7 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
 					model: body.model,
 					region: body.region,
 					title: body.title,
-					userId: request.user?.id
+					userId
 				});
 
 				return reply.status(201).send({ session });

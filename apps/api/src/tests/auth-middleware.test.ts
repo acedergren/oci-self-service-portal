@@ -152,7 +152,22 @@ describe('RBAC module (shared package)', () => {
 
 	it('should have exactly 13 permissions defined', async () => {
 		const { PERMISSIONS } = await import('@portal/shared/server/auth/rbac');
-		expect(Object.keys(PERMISSIONS).length).toBe(13);
+		const expectedPermissions = [
+			'tools:read',
+			'tools:execute',
+			'tools:approve',
+			'tools:danger',
+			'sessions:read',
+			'sessions:write',
+			'workflows:read',
+			'workflows:write',
+			'workflows:execute',
+			'admin:all',
+			'admin:users',
+			'admin:orgs',
+			'admin:audit'
+		];
+		expect(Object.keys(PERMISSIONS).sort()).toEqual(expectedPermissions.sort());
 	});
 });
 

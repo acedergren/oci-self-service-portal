@@ -18,12 +18,15 @@ export async function healthRoutes(app: FastifyInstance): Promise<void> {
 	// Deep health check with subsystem statuses
 	app.get('/health', async (_request, reply) => {
 		try {
-			const result = await Promise.race([
-				runHealthChecks(),
-				new Promise<never>((_, reject) =>
-					setTimeout(() => reject(new Error('Health check timeout')), HEALTH_CHECK_TIMEOUT_MS)
-				)
-			]);
+			let timeoutId: ReturnType<typeof setTimeout>;
+			const timeoutPromise = new Promise<never>((_, reject) => {
+				timeoutId = setTimeout(
+					() => reject(new Error('Health check timeout')),
+					HEALTH_CHECK_TIMEOUT_MS
+				);
+			});
+			const result = await Promise.race([runHealthChecks(), timeoutPromise]);
+			clearTimeout(timeoutId!);
 			const httpStatus = result.status === 'error' ? 503 : 200;
 			return reply.status(httpStatus).send(result);
 		} catch (err) {

@@ -18,6 +18,7 @@ interface PendingApproval {
 	toolName: string;
 	args: Record<string, unknown>;
 	sessionId?: string;
+	orgId?: string | null;
 	createdAt: number;
 	resolve: (approved: boolean) => void;
 }
@@ -29,6 +30,7 @@ export function addPendingApproval(
 	toolName: string,
 	args: Record<string, unknown>,
 	sessionId: string | undefined,
+	orgId: string | null | undefined,
 	resolve: (approved: boolean) => void
 ) {
 	// Evict stale entries before adding (R-6)
@@ -44,6 +46,7 @@ export function addPendingApproval(
 		toolName,
 		args,
 		sessionId,
+		orgId: orgId ?? null,
 		createdAt: Date.now(),
 		resolve
 	});
