@@ -5,7 +5,10 @@ export default defineConfig({
 	test: {
 		include: ['src/**/*.test.ts'],
 		alias: {
-			$lib: resolve(__dirname, './src/lib')
+			'$lib/server': resolve(__dirname, '../../packages/shared/src/server'),
+			'$lib/tools': resolve(__dirname, '../../packages/shared/src/tools'),
+			$lib: resolve(__dirname, './src/lib'),
+			'@portal/shared': resolve(__dirname, '../../packages/shared/src')
 		}
 	}
 });
