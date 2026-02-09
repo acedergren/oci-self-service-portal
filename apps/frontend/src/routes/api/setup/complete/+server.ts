@@ -13,9 +13,8 @@ import {
 	validateSetupToken,
 	invalidateSetupToken
 } from '@portal/shared/server/admin';
-import { reloadAuth } from '$lib/server/auth/config.js';
-import { createLogger } from '$lib/server/logger';
-import { toPortalError } from '$lib/server/errors.js';
+import { createLogger } from '@portal/shared/server/logger';
+import { toPortalError } from '@portal/shared/server/errors';
 
 const log = createLogger('setup');
 
@@ -47,14 +46,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		// Invalidate setup token — no more setup endpoint access
 		invalidateSetupToken();
 
-		// Reload auth configuration to pick up new IDP providers
-		try {
-			await reloadAuth();
-			log.info({ requestId }, 'auth configuration reloaded after setup completion');
-		} catch (authErr) {
-			log.error({ err: authErr, requestId }, 'failed to reload auth after setup completion');
-			// Continue anyway — setup is marked complete, auth will reload on next request
-		}
+		// Note: Auth configuration reloads automatically via Fastify plugins on restart
 
 		log.info(
 			{

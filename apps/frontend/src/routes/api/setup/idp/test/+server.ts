@@ -7,9 +7,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { validateSetupToken } from '@portal/shared/server/admin';
-import { createLogger } from '$lib/server/logger';
-import { isValidExternalUrl } from '$lib/server/url-validation';
-import { toPortalError } from '$lib/server/errors.js';
+import { createLogger } from '@portal/shared/server/logger';
+import { isValidExternalUrl } from '@portal/shared/server/url-validation';
+import { toPortalError } from '@portal/shared/server/errors';
 import { z } from 'zod';
 
 const log = createLogger('setup');

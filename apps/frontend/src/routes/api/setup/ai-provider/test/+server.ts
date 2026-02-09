@@ -7,8 +7,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { settingsRepository, AiProviderTypeSchema } from '@portal/shared/server/admin';
-import { createLogger } from '$lib/server/logger';
-import { toPortalError } from '$lib/server/errors.js';
+import { createLogger } from '@portal/shared/server/logger';
+import { toPortalError } from '@portal/shared/server/errors';
 import { z } from 'zod';
 
 const log = createLogger('setup');

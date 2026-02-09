@@ -45,7 +45,7 @@ function toWebRequest(request: FastifyRequest): Request {
 	return new Request(url, {
 		method: request.method,
 		headers
-	});
+	}) as Request;
 }
 
 const authPlugin: FastifyPluginAsync<AuthPluginOptions> = async (fastify, opts) => {
@@ -97,8 +97,7 @@ const authPlugin: FastifyPluginAsync<AuthPluginOptions> = async (fastify, opts) 
 				// Resolve role-based permissions.
 				// The org role comes from the session's activeOrganizationId membership.
 				// For simplicity, default to the session role or 'viewer'.
-				const role =
-					(sessionResult.session as Record<string, unknown>).role as string | undefined;
+				const role = (sessionResult.session as Record<string, unknown>).role as string | undefined;
 				request.permissions = getPermissionsForRole(role ?? 'viewer');
 			}
 		} catch (err) {

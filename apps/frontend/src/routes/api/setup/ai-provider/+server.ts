@@ -13,8 +13,8 @@ import {
 	validateSetupToken,
 	stripAiProviderSecrets
 } from '@portal/shared/server/admin';
-import { createLogger } from '$lib/server/logger';
-import { toPortalError } from '$lib/server/errors.js';
+import { createLogger } from '@portal/shared/server/logger';
+import { toPortalError } from '@portal/shared/server/errors';
 
 const log = createLogger('setup');
 
