@@ -49,7 +49,7 @@ function toWebRequest(request: FastifyRequest): Request {
 }
 
 const authPlugin: FastifyPluginAsync<AuthPluginOptions> = async (fastify, opts) => {
-	const { excludePaths = ['/healthz', '/health'] } = opts;
+	const { excludePaths = ['/healthz', '/health', '/api/auth'] } = opts;
 	const excludeSet = new Set(excludePaths);
 
 	// Decorate requests with auth fields
@@ -82,7 +82,10 @@ const authPlugin: FastifyPluginAsync<AuthPluginOptions> = async (fastify, opts) 
 		request.permissions = [];
 
 		const path = request.url.split('?')[0].replace(/\/+$/, '') || '/';
-		if (excludeSet.has(path)) {
+		const isExcluded =
+			excludeSet.has(path) ||
+			Array.from(excludeSet).some((prefix) => path.startsWith(`${prefix}/`));
+		if (isExcluded) {
 			return;
 		}
 

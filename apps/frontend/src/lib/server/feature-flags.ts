@@ -2,7 +2,7 @@
  * Phase 9.15: Feature flag module for Fastify backend proxy.
  *
  * Controls whether SvelteKit should forward API requests to the Fastify backend.
- * When enabled, proxies /api/* routes (except /api/auth/*) to Fastify.
+ * When enabled, proxies /api/* routes to Fastify.
  */
 
 // ── Environment Variables ─────────────────────────────────────────────────────
@@ -15,7 +15,7 @@ const FASTIFY_ENABLED = process.env.FASTIFY_ENABLED === 'true';
 
 /**
  * Comma-separated list of route prefixes to proxy (e.g., "/api/health,/api/sessions").
- * If empty and FASTIFY_ENABLED=true, all /api/* routes are proxied (except /api/auth/*).
+ * If empty and FASTIFY_ENABLED=true, all /api/* routes are proxied.
  * If populated, only specified prefixes are proxied.
  */
 export const FASTIFY_PROXY_ROUTES: string[] = (process.env.FASTIFY_PROXY_ROUTES || '')
@@ -30,7 +30,6 @@ export const FASTIFY_PROXY_ROUTES: string[] = (process.env.FASTIFY_PROXY_ROUTES 
  *
  * Rules:
  * - If FASTIFY_ENABLED !== 'true', returns false
- * - Never proxies /api/auth/* (Better Auth callbacks)
  * - If FASTIFY_PROXY_ROUTES is empty: proxies all /api/* routes
  * - If FASTIFY_PROXY_ROUTES is populated: only proxies matching prefixes
  *
@@ -43,12 +42,7 @@ export function shouldProxyToFastify(pathname: string): boolean {
 		return false;
 	}
 
-	// Never proxy Better Auth routes
-	if (pathname.startsWith('/api/auth/')) {
-		return false;
-	}
-
-	// Empty route list = proxy all /api/* (except /api/auth/*)
+	// Empty route list = proxy all /api/*
 	if (FASTIFY_PROXY_ROUTES.length === 0) {
 		return pathname.startsWith('/api/');
 	}

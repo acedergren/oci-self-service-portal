@@ -16,6 +16,7 @@ import { errorResponse, isPortalError, toPortalError } from '@portal/shared/serv
 import { RATE_LIMIT_CONFIG } from '@portal/shared/server/rate-limiter';
 import { generateRequestId } from '@portal/shared/server/tracing';
 import { getAuthCookieAttributes } from '@portal/shared/server/auth/cookies';
+import { initSetupToken } from '@portal/shared/server/admin';
 import oraclePlugin from './plugins/oracle.js';
 import authPlugin from './plugins/auth.js';
 import rbacPlugin, { requireAuth } from './plugins/rbac.js';
@@ -30,6 +31,12 @@ import mcpRoutes from './routes/mcp.js';
 import searchRoutes from './routes/search.js';
 import { metricsRoutes } from './routes/metrics.js';
 import openApiRoute from './routes/openapi.js';
+import { modelRoutes } from './routes/models.js';
+import { auditRoutes } from './routes/audit.js';
+import { graphRoutes } from './routes/graph.js';
+import { webhookRoutes } from './routes/webhooks.js';
+import { setupRoutes } from './routes/setup.js';
+import { authRoutes } from './routes/auth.js';
 
 const log = createLogger('app');
 
@@ -264,6 +271,7 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 	await app.register(oraclePlugin, {
 		migrate: process.env.SKIP_MIGRATIONS !== 'true'
 	});
+	await initSetupToken();
 	await app.register(authPlugin, {
 		excludePaths: [
 			'/healthz',
@@ -271,6 +279,7 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 			'/api/metrics',
 			'/api/health',
 			'/api/healthz',
+			'/api/auth',
 			'/api/v1/openapi.json'
 		]
 	});
@@ -315,6 +324,12 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 	await app.register(searchRoutes);
 	await app.register(metricsRoutes);
 	await app.register(openApiRoute);
+	await app.register(modelRoutes);
+	await app.register(auditRoutes);
+	await app.register(graphRoutes);
+	await app.register(webhookRoutes);
+	await app.register(setupRoutes);
+	await app.register(authRoutes);
 
 	log.info('Fastify app created with plugins and routes');
 	return app;

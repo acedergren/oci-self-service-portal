@@ -62,19 +62,19 @@ describe('Proxy Integration (Phase 9.17)', () => {
 		});
 	});
 
-	describe('Auth exclusion', () => {
+	describe('Auth proxying', () => {
 		beforeEach(() => {
 			process.env.FASTIFY_ENABLED = 'true';
 			process.env.FASTIFY_PROXY_ROUTES = '';
 		});
 
-		it('should never proxy /api/auth/* even when enabled', async () => {
+		it('should proxy /api/auth/* when enabled', async () => {
 			const { shouldProxyToFastify } = await import('$lib/server/feature-flags.js');
 
-			expect(shouldProxyToFastify('/api/auth/callback/oci-iam')).toBe(false);
-			expect(shouldProxyToFastify('/api/auth/session')).toBe(false);
-			expect(shouldProxyToFastify('/api/auth/signin')).toBe(false);
-			expect(shouldProxyToFastify('/api/auth/signout')).toBe(false);
+			expect(shouldProxyToFastify('/api/auth/callback/oci-iam')).toBe(true);
+			expect(shouldProxyToFastify('/api/auth/session')).toBe(true);
+			expect(shouldProxyToFastify('/api/auth/signin')).toBe(true);
+			expect(shouldProxyToFastify('/api/auth/signout')).toBe(true);
 		});
 
 		it('should still proxy other /api/* routes', async () => {
@@ -252,12 +252,12 @@ describe('Proxy Integration (Phase 9.17)', () => {
 			expect(shouldProxyToFastify('/api/metrics')).toBe(false);
 		});
 
-		it('should still exclude /api/auth/* even when listed', async () => {
+		it('should proxy /api/auth/* when listed', async () => {
 			process.env.FASTIFY_PROXY_ROUTES = '/api/auth/,/api/health';
 			const { shouldProxyToFastify } = await import('$lib/server/feature-flags.js');
 
-			expect(shouldProxyToFastify('/api/auth/callback/oci-iam')).toBe(false);
-			expect(shouldProxyToFastify('/api/auth/session')).toBe(false);
+			expect(shouldProxyToFastify('/api/auth/callback/oci-iam')).toBe(true);
+			expect(shouldProxyToFastify('/api/auth/session')).toBe(true);
 			expect(shouldProxyToFastify('/api/health')).toBe(true);
 		});
 	});

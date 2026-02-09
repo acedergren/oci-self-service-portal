@@ -27,17 +27,11 @@ export const FASTIFY_PROXY_ROUTES: string[] = (process.env.FASTIFY_PROXY_ROUTES 
 	.map((r) => r.trim())
 	.filter(Boolean);
 
-/** Paths that should NEVER be proxied (auth callbacks need SvelteKit) */
-const PROXY_EXCLUDED_PATHS = ['/api/auth/'];
-
 /**
  * Check if a given URL path should be proxied to Fastify.
  */
 export function shouldProxyToFastify(pathname: string): boolean {
 	if (!FASTIFY_ENABLED) return false;
-
-	// Never proxy auth callback routes — Better Auth needs SvelteKit
-	if (PROXY_EXCLUDED_PATHS.some((p) => pathname.startsWith(p))) return false;
 
 	// Only proxy /api/* routes
 	if (!pathname.startsWith('/api/')) return false;
@@ -47,7 +41,7 @@ export function shouldProxyToFastify(pathname: string): boolean {
 		return FASTIFY_PROXY_ROUTES.some((prefix) => pathname.startsWith(prefix));
 	}
 
-	// Default: proxy all /api/* routes (except excluded)
+	// Default: proxy all /api/* routes
 	return true;
 }
 

@@ -54,11 +54,11 @@ describe('Feature Flags (Phase 9.16)', () => {
 				expect(shouldProxyToFastify('/designer')).toBe(false);
 			});
 
-			it('should NEVER proxy /api/auth/* (Better Auth callbacks)', async () => {
+			it('should proxy /api/auth/* when Fastify handles auth routes', async () => {
 				const { shouldProxyToFastify } = await import('$lib/server/feature-flags.js');
-				expect(shouldProxyToFastify('/api/auth/callback/oci-iam')).toBe(false);
-				expect(shouldProxyToFastify('/api/auth/session')).toBe(false);
-				expect(shouldProxyToFastify('/api/auth/signin')).toBe(false);
+				expect(shouldProxyToFastify('/api/auth/callback/oci-iam')).toBe(true);
+				expect(shouldProxyToFastify('/api/auth/session')).toBe(true);
+				expect(shouldProxyToFastify('/api/auth/signin')).toBe(true);
 			});
 		});
 
@@ -85,10 +85,10 @@ describe('Feature Flags (Phase 9.16)', () => {
 				expect(shouldProxyToFastify('/api/metrics')).toBe(false);
 			});
 
-			it('should still exclude /api/auth/* even if listed', async () => {
+			it('should proxy /api/auth/* when explicitly listed', async () => {
 				process.env.FASTIFY_PROXY_ROUTES = '/api/auth/,/api/health';
 				const { shouldProxyToFastify } = await import('$lib/server/feature-flags.js');
-				expect(shouldProxyToFastify('/api/auth/callback/oci-iam')).toBe(false);
+				expect(shouldProxyToFastify('/api/auth/callback/oci-iam')).toBe(true);
 				expect(shouldProxyToFastify('/api/health')).toBe(true);
 			});
 		});

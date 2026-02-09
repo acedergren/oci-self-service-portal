@@ -207,6 +207,12 @@ app.get(
 | `/api/workflows`     | GET    | `workflows:read`  | List workflow definitions                          |
 | `/api/workflows`     | POST   | `workflows:write` | Create workflow                                    |
 | `/api/workflows/:id` | \*     | `workflows:*`     | Workflow CRUD + execution                          |
+| `/api/audit`         | GET    | `admin:audit`     | Blockchain audit verification                      |
+| `/api/graph`         | GET    | `admin:audit`     | Property graph analytics                           |
+| `/api/webhooks`      | \*     | `admin:all`       | Webhook CRUD + delivery                            |
+| `/api/models`        | \*     | `admin:all`       | AI model provider management                       |
+| `/api/setup`         | \*     | Setup token       | Portal setup wizard                                |
+| `/api/auth`          | \*     | None              | Better Auth session management                     |
 | `/api/docs`          | GET    | `admin:all`       | OpenAPI/Swagger UI (non-production default)        |
 
 ### Database Fallback Strategy
@@ -303,7 +309,7 @@ All unknown errors are wrapped via `toPortalError()` → `INTERNAL_ERROR(500)`. 
 
 ### Test Architecture
 
-- **28 test files** across `apps/api/src/` (tests/, plugins/, mastra/)
+- **38 test files** across `apps/api/src/` (tests/, plugins/, mastra/)
 - All route tests use `app.inject()` (Fastify's built-in test helper — no HTTP server needed)
 - Full mock isolation: Oracle, auth, logger, metrics, Sentry all mocked
 
@@ -324,6 +330,12 @@ All unknown errors are wrapped via `toPortalError()` → `INTERNAL_ERROR(500)`. 
 | Tool routes       | `tests/routes/tools.test.ts`                                                                                                                      |
 | Chat routes       | `tests/routes/chat.test.ts`                                                                                                                       |
 | Metrics routes    | `tests/routes/metrics.test.ts`                                                                                                                    |
+| Audit routes      | `tests/routes/audit.test.ts`                                                                                                                      |
+| Graph routes      | `tests/routes/graph.test.ts`                                                                                                                      |
+| Webhook routes    | `tests/routes/webhooks.test.ts`                                                                                                                   |
+| Model routes      | `tests/routes/models.test.ts`                                                                                                                     |
+| Setup routes      | `tests/routes/setup.test.ts`                                                                                                                      |
+| Auth routes       | `tests/routes/auth.test.ts`                                                                                                                       |
 | Plugin unit tests | `plugins/cors.test.ts`, `plugins/error-handler.test.ts`, `plugins/helmet.test.ts`, `plugins/rate-limit.test.ts`, `plugins/request-logger.test.ts` |
 | Mastra agents     | `mastra/agents/cloud-advisor.test.ts`                                                                                                             |
 | Mastra models     | `mastra/models/provider-registry.test.ts`                                                                                                         |

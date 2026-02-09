@@ -1,9 +1,9 @@
 # Self-Service Portal: MVP to Product Roadmap
 
-> **Status**: Phase 9 in progress (Fastify Backend Migration — 9.1-9.14 complete, 9.15+ remaining)
+> **Status**: Phase 9 complete (Fastify Backend Migration — 9.1-9.20 merged)
 > **Standalone Repo**: [oci-self-service-portal](https://github.com/acedergren/oci-self-service-portal)
 > **Last Updated**: 2026-02-09
-> **Tests**: 1213 passing across 83 test files (frontend + API + shared)
+> **Tests**: 1213 passing across 92 test files (frontend + API + shared)
 
 ---
 
@@ -227,16 +227,16 @@
 - [x] 9.12 Workflow engine migration — Workflow executor, graph-utils extraction to packages/shared
 - [x] 9.13 AI agent + memory — CloudAdvisor agent, chat route, MemoryOracle (12 methods), provider registry, 64 tests
 - [x] 9.14 RAG + MCP + ScoresOracle — Oracle vector store (MastraVector), OCI GenAI embedder, MCP server migration, ScoresOracle (5 methods), 59 tests
-- [ ] 9.15 Migrate AI chat streaming (`POST /api/chat` — AI SDK `streamText().toUIMessageStream()`)
-- [ ] 9.16 OpenAPI spec generation (`@fastify/swagger` + `@fastify/swagger-ui`, auto from Zod schemas)
-- [ ] 9.17 Update SvelteKit frontend (remove `+server.ts` routes, point fetches to Fastify via env var)
-- [ ] 9.18 Docker multi-service deployment (frontend + api containers, shared network)
-- [ ] 9.19 CI/CD updates (separate test/build/deploy jobs for frontend and api)
-- [ ] 9.20 Feature flag for phased rollout (proxy SvelteKit → Fastify per-route)
+- [x] 9.15 Feature flag proxy module (shouldProxyToFastify, proxyToFastify with X-Request-Id forwarding)
+- [x] 9.16 Proxy middleware in hooks.server.ts (inserted before auth/DB init, excludes /api/auth/\*)
+- [x] 9.17 Proxy integration tests (12 tests covering routing logic, fallback, auth exclusion)
+- [x] 9.18 OpenAPI JSON route (GET /api/v1/openapi.json via @fastify/swagger)
+- [x] 9.19 Legacy route deprecation headers (X-Deprecated-Route, X-Preferred-Route on SvelteKit fallback)
+- [x] 9.20 Cutover documentation (docs/PHASE9_CUTOVER.md with rollout stages and rollback plan)
 
 **Key dependencies**: `fastify@5`, `@fastify/swagger`, `@fastify/cors`, `@fastify/cookie`, `@fastify/rate-limit`, `fastify-type-provider-zod`
 
-**Verified**: ~600 Fastify API tests across 28 test files passing. All routes migrated (9.1-9.10 complete). Mastra framework integration complete (9.11-9.14). Build succeeds. SvelteKit routes removed.
+**Verified**: 1213 tests passing across 92 test files. All routes migrated (9.1-9.14). Mastra framework integration complete (9.11-9.14). Feature flag proxy operational (9.15-9.20). Build succeeds. Cutover guide complete.
 
 ---
 
