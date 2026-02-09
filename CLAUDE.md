@@ -36,14 +36,10 @@ oci-self-service-portal/
 │   ├── frontend/              # SvelteKit UI (adapter-node)
 │   │   └── src/
 │   │       ├── lib/
-│   │       │   ├── tools/             # 60+ OCI CLI tool wrappers for AI SDK
-│   │       │   ├── server/
-│   │       │   │   ├── oracle/        # Connection pool, migrations, repositories
-│   │       │   │   ├── auth/          # Better Auth, OIDC, RBAC, auth-factory
-│   │       │   │   ├── admin/         # Admin console repositories + crypto
-│   │       │   │   ├── workflows/     # Visual workflow executor + repository
-│   │       │   │   └── mcp/           # MCP portal server
-│   │       │   └── components/        # 51 Svelte components (portal, workflow, setup, mobile, UI)
+│   │       │   ├── auth-client.ts     # Better Auth client
+│   │       │   ├── components/        # 51 Svelte components (portal, workflow, setup, mobile, UI)
+│   │       │   ├── stores/            # Svelte stores
+│   │       │   └── utils/             # Client-side utilities
 │   │       └── routes/
 │   │           ├── api/               # SvelteKit API routes (chat, sessions, tools, v1, webhooks, admin, setup, workflows)
 │   │           ├── admin/             # Admin console UI (IDP, AI Models, Settings)
@@ -51,8 +47,8 @@ oci-self-service-portal/
 │   │
 │   └── api/                   # Fastify 5 backend
 │       └── src/
-│           ├── plugins/       # cors, error-handler, helmet, mastra, oracle, rate-limit, rbac, request-logger, session
-│           ├── routes/        # health, sessions, activity, chat, search, mcp, tools/, workflows
+│           ├── plugins/       # auth, cors, error-handler, helmet, mastra, oracle, rate-limit, rbac, request-logger
+│           ├── routes/        # activity, chat, health, mcp, metrics, schemas, search, sessions, tools/, tools, workflows
 │           ├── mastra/        # Mastra framework integration
 │           │   ├── agents/          # CloudAdvisor agent
 │           │   ├── models/          # Provider registry, model types
@@ -61,23 +57,29 @@ oci-self-service-portal/
 │           │   ├── storage/         # OracleStore (MastraStorage impl)
 │           │   ├── tools/           # 60+ OCI tool wrappers for Mastra
 │           │   └── workflows/       # Workflow executor
-│           ├── services/      # approvals, tools adapter, workflow-repository
-│           └── config.ts      # Centralized env config with Zod validation
+│           └── services/      # approvals, tools adapter, workflow-repository
 │
 └── packages/
-    └── shared/                # Shared types across frontend and API
+    └── shared/                # Shared business logic across frontend and API
         └── src/
             ├── errors.ts            # PortalError hierarchy
             ├── index.ts             # Re-exports
             ├── api/types.ts         # API response types
-            ├── server/auth/rbac.ts   # Roles, permissions, type guards
-            ├── tools/types.ts       # Tool definition types
+            ├── tools/               # 60+ OCI CLI tool wrappers, registry, types
             ├── workflows/           # graph-utils.ts, types.ts
             └── server/
+                ├── admin/           # IDP, AI provider, settings repositories, setup token, crypto
+                ├── agent-state/     # SQLite-based agent state management
+                ├── auth/            # auth-factory, Better Auth, RBAC, IDCS provisioning, API keys
+                ├── mcp/             # MCP portal server
+                ├── mcp-client/      # MCP client with stdio/SSE transports
                 ├── oracle/          # migrations/, connection pool, repositories
-                ├── auth/            # auth-factory, Better Auth core
                 ├── logger.ts        # Pino logger factory
-                └── metrics.ts       # Prometheus metrics
+                ├── metrics.ts       # Prometheus metrics
+                ├── crypto.ts        # AES-256-GCM encryption utilities
+                ├── feature-flags.ts # Feature flag evaluation
+                ├── approvals.ts     # Approval token management
+                └── embeddings.ts    # OCI GenAI embedding helpers
 ```
 
 ## Error Hierarchy
@@ -192,7 +194,7 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 ### Environment Variables
 
 - Always `UPPER_SNAKE_CASE`: `ORACLE_CONNECT_STRING`, `BETTER_AUTH_SECRET`, `CORS_ORIGIN`
-- Validate with Zod at startup via `loadConfig()` in `apps/api/src/config.ts`
+- Validate at plugin registration level (no centralized config file — env vars read via `process.env` in each plugin)
 - **Never store secrets in `.env` files** — use OCI Vault via `/manage-secrets`
 - `.env` files are for non-sensitive config only (region, endpoints, feature flags)
 

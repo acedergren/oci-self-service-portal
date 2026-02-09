@@ -4,6 +4,14 @@
 
 This package contains all business logic shared between frontend (SvelteKit) and backend (Fastify) applications. It's designed to be framework-agnostic where possible.
 
+## Quick Start
+
+```bash
+pnpm --filter @portal/shared build    # Build shared package (regenerates .d.ts)
+cd packages/shared && npx tsc --noEmit # Type check
+cd packages/shared && npx vitest run   # Run tests
+```
+
 ## Key Principles
 
 ### 1. Zero Circular Dependencies
@@ -170,7 +178,7 @@ Oracle Database integration.
 **Key Files:**
 
 - `connection.ts` - Connection pool management
-- `migrations.ts` - Schema migrations (008_property_graph.sql)
+- `migrations.ts` - Schema migrations (001-core.sql through 012-scores-extra-columns.sql)
 - `repositories/` - Data access layer
 
 **Critical Patterns:**
@@ -213,6 +221,38 @@ OCI CLI tool wrappers for AI SDK.
 - Never combine `--all` and `--limit` flags
 - Namespace is auto-fetched for bucket operations
 - Tools tagged with approval levels (auto/operator/admin)
+
+### server/admin/
+
+Admin console repositories and configuration management.
+
+**Key Files:**
+
+- `idp-repository.ts` - Identity Provider CRUD
+- `ai-provider-repository.ts` - AI model provider management
+- `settings-repository.ts` - Portal settings
+- `setup-token.ts` - First-run setup token validation
+- `strip-secrets.ts` - Redact secrets from API responses
+
+### server/agent-state/
+
+SQLite-based agent state persistence for AI chat sessions.
+
+**Key Files:**
+
+- `repository.ts` - Agent state CRUD with SQLite fallback
+- `connection.ts` - SQLite connection management
+- `schema.ts` - Table definitions
+
+### server/mcp-client/
+
+MCP (Model Context Protocol) client for connecting to external tool servers.
+
+**Key Files:**
+
+- `client.ts` - MCP client implementation
+- `manager.ts` - Client lifecycle management
+- `transports/` - stdio and SSE transport adapters
 
 ### pricing/
 
@@ -386,12 +426,12 @@ import { executeTool } from '@portal/shared/tools';
 
 ## Roadmap
 
-### Phase 9 (Current)
+### Phase 9 (Complete)
 
 - ✅ Monorepo restructure
 - ✅ Extract shared package
-- 🚧 Fastify backend migration
-- 🚧 REST API v1 endpoints
+- ✅ Fastify backend migration
+- ✅ REST API v1 endpoints
 
 ### Future Enhancements
 
