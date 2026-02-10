@@ -114,8 +114,12 @@ export function normalizeSDKResponse(response: unknown): { data: unknown } {
 		return { data: resp[dataKeys[0]] };
 	}
 
-	// Otherwise wrap the whole response
-	return { data: resp };
+	// Otherwise wrap only the non-meta keys
+	const filtered: Record<string, unknown> = {};
+	for (const k of dataKeys) {
+		filtered[k] = resp[k];
+	}
+	return { data: filtered };
 }
 
 /**
