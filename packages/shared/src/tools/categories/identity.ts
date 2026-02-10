@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { ToolEntry } from '../types.js';
-import { executeOCI, requireCompartmentId } from '../executor.js';
+import { executeOCISDK, normalizeSDKResponse, requireCompartmentId } from '../executor-sdk.js';
 
 const compartmentIdSchema = z
 	.string()
@@ -20,18 +20,13 @@ export const identityTools: ToolEntry[] = [
 			compartmentId: compartmentIdSchema,
 			accessLevel: z.enum(['ANY', 'ACCESSIBLE']).default('ACCESSIBLE')
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			return executeOCI([
-				'iam',
-				'compartment',
-				'list',
-				'--compartment-id',
+			const response = await executeOCISDK('identity', 'listCompartments', {
 				compartmentId,
-				'--access-level',
-				(args.accessLevel as string) || 'ACCESSIBLE',
-				'--all'
-			]);
+				accessLevel: (args.accessLevel as string) || 'ACCESSIBLE'
+			});
+			return normalizeSDKResponse(response);
 		}
 	},
 	{
@@ -43,9 +38,12 @@ export const identityTools: ToolEntry[] = [
 		parameters: z.object({
 			compartmentId: compartmentIdSchema
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			return executeOCI(['iam', 'policy', 'list', '--compartment-id', compartmentId, '--all']);
+			const response = await executeOCISDK('identity', 'listPolicies', {
+				compartmentId
+			});
+			return normalizeSDKResponse(response);
 		}
 	},
 	{
@@ -60,22 +58,17 @@ export const identityTools: ToolEntry[] = [
 			description: z.string(),
 			statements: z.array(z.string())
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			const statements = args.statements as string[];
-			return executeOCI([
-				'iam',
-				'policy',
-				'create',
-				'--compartment-id',
-				compartmentId,
-				'--name',
-				args.name as string,
-				'--description',
-				args.description as string,
-				'--statements',
-				JSON.stringify(statements)
-			]);
+			const response = await executeOCISDK('identity', 'createPolicy', {
+				createPolicyDetails: {
+					compartmentId,
+					name: args.name as string,
+					description: args.description as string,
+					statements: args.statements as string[]
+				}
+			});
+			return normalizeSDKResponse(response);
 		}
 	}
 ];

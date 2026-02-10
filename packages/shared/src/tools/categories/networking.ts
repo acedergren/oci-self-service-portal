@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { ToolEntry } from '../types.js';
-import { executeOCI, requireCompartmentId } from '../executor.js';
+import { executeOCISDK, requireCompartmentId } from '../executor-sdk.js';
 
 const compartmentIdSchema = z
 	.string()
@@ -20,11 +20,11 @@ export const networkingTools: ToolEntry[] = [
 			compartmentId: compartmentIdSchema,
 			displayName: z.string().optional()
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			const cliArgs = ['network', 'vcn', 'list', '--compartment-id', compartmentId, '--all'];
-			if (args.displayName) cliArgs.push('--display-name', args.displayName as string);
-			return executeOCI(cliArgs);
+			const request: Record<string, unknown> = { compartmentId };
+			if (args.displayName) request.displayName = args.displayName;
+			return executeOCISDK('virtualNetwork', 'listVcns', request);
 		}
 	},
 	{
@@ -38,19 +38,15 @@ export const networkingTools: ToolEntry[] = [
 			displayName: z.string().describe('Display name for the VCN'),
 			cidrBlock: z.string().describe('CIDR block (e.g., 10.0.0.0/16)')
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			return executeOCI([
-				'network',
-				'vcn',
-				'create',
-				'--compartment-id',
-				compartmentId,
-				'--display-name',
-				args.displayName as string,
-				'--cidr-block',
-				args.cidrBlock as string
-			]);
+			return executeOCISDK('virtualNetwork', 'createVcn', {
+				createVcnDetails: {
+					compartmentId,
+					displayName: args.displayName,
+					cidrBlock: args.cidrBlock
+				}
+			});
 		}
 	},
 	{
@@ -62,8 +58,8 @@ export const networkingTools: ToolEntry[] = [
 		parameters: z.object({
 			vcnId: z.string().describe('The OCID of the VCN')
 		}),
-		execute: (args) => {
-			return executeOCI(['network', 'vcn', 'delete', '--vcn-id', args.vcnId as string, '--force']);
+		executeAsync: async (args) => {
+			return executeOCISDK('virtualNetwork', 'deleteVcn', { vcnId: args.vcnId });
 		}
 	},
 	{
@@ -76,11 +72,11 @@ export const networkingTools: ToolEntry[] = [
 			compartmentId: compartmentIdSchema,
 			vcnId: z.string().optional().describe('Filter by VCN')
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			const cliArgs = ['network', 'subnet', 'list', '--compartment-id', compartmentId, '--all'];
-			if (args.vcnId) cliArgs.push('--vcn-id', args.vcnId as string);
-			return executeOCI(cliArgs);
+			const request: Record<string, unknown> = { compartmentId };
+			if (args.vcnId) request.vcnId = args.vcnId;
+			return executeOCISDK('virtualNetwork', 'listSubnets', request);
 		}
 	}
 ];
