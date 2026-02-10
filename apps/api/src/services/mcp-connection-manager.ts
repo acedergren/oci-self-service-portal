@@ -457,7 +457,7 @@ export class MCPConnectionManager {
 		credentials: DecryptedCredential[]
 	): Promise<string> {
 		// Validate image to prevent command injection
-		const imagePattern = /^[a-z0-9._\/-]+$/;
+		const imagePattern = /^[a-z0-9._/-]+$/;
 		if (!server.dockerImage || !imagePattern.test(server.dockerImage)) {
 			throw new Error(`Invalid Docker image name: ${server.dockerImage}`);
 		}
