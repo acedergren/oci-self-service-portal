@@ -2,7 +2,11 @@
  * MCP Client
  *
  * High-level client for connecting to MCP servers and managing tools/resources.
+ *
+ * @deprecated Use @modelcontextprotocol/sdk Client instead. Will be removed in Phase B.
  */
+
+// DEPRECATED: Use @modelcontextprotocol/sdk instead. Will be removed in Phase B.
 
 import { EventEmitter } from 'events';
 import { z } from 'zod';

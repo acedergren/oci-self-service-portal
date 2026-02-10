@@ -2,10 +2,20 @@
  * MCP Client Library
  *
  * Provides client functionality for connecting to MCP (Model Context Protocol) servers.
+ *
+ * @deprecated Use @modelcontextprotocol/sdk instead. Will be removed in Phase B.
  */
 
-// Main exports
+// DEPRECATED: Use @modelcontextprotocol/sdk instead. Will be removed in Phase B.
+
+/**
+ * @deprecated Use @modelcontextprotocol/sdk Client instead. Will be removed in Phase B.
+ */
 export { MCPClient } from './client';
+
+/**
+ * @deprecated Use @modelcontextprotocol/sdk instead. Will be removed in Phase B.
+ */
 export { MCPManager, type MCPServerEntry, type MCPManagerOptions } from './manager';
 
 // Transport exports

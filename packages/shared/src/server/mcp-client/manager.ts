@@ -2,7 +2,11 @@
  * MCP Manager
  *
  * Manages multiple MCP server connections and aggregates their tools/resources.
+ *
+ * @deprecated Use @modelcontextprotocol/sdk instead. Will be removed in Phase B.
  */
+
+// DEPRECATED: Use @modelcontextprotocol/sdk instead. Will be removed in Phase B.
 
 import { EventEmitter } from 'events';
 import { MCPClient } from './client';

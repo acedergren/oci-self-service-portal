@@ -5,7 +5,7 @@ import fastifyHelmet from '@fastify/helmet';
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifySensible from '@fastify/sensible';
 import fastifySwagger from '@fastify/swagger';
-import fastifySwaggerUi from '@fastify/swagger-ui';
+import scalarFastify from '@scalar/fastify-api-reference';
 import {
 	serializerCompiler,
 	validatorCompiler,
@@ -28,6 +28,7 @@ import oraclePlugin from './plugins/oracle.js';
 import authPlugin from './plugins/auth.js';
 import rbacPlugin, { requireAuth } from './plugins/rbac.js';
 import { rateLimiterOraclePlugin } from './plugins/rate-limiter-oracle.js';
+import schedulePlugin from './plugins/schedule.js';
 import mastraPlugin from './plugins/mastra.js';
 import { healthRoutes } from './routes/health.js';
 import { sessionRoutes } from './routes/sessions.js';
@@ -213,6 +214,20 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 		reply.status(response.status).send(response);
 	});
 
+	// ── OpenTelemetry (MUST be first plugin) ─────────────────────────────
+	// @fastify/otel must register before all other plugins to properly instrument
+	// the request lifecycle. No-op if OTEL_EXPORTER_OTLP_ENDPOINT is not configured.
+	const otelEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+	if (otelEndpoint) {
+		const serviceName = process.env.OTEL_SERVICE_NAME ?? 'oci-portal-api';
+		log.info({ serviceName, endpoint: otelEndpoint }, '[otel] Registering OpenTelemetry');
+		// @fastify/otel type definitions are incorrect - default export is a plugin function at runtime
+		const fastifyOtel = (await import('@fastify/otel')).default as any;
+		await app.register(fastifyOtel, { serviceName });
+	} else {
+		log.info('[otel] OTEL_EXPORTER_OTLP_ENDPOINT not set, skipping OpenTelemetry setup');
+	}
+
 	// Register Helmet.js — security headers matching SvelteKit hooks.server.ts
 	if (enableHelmet) {
 		await app.register(fastifyHelmet, {
@@ -339,6 +354,12 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 	// Must come after auth chain so request.user and request.apiKeyContext are populated.
 	await app.register(rateLimiterOraclePlugin);
 
+	// ── Background tasks (cron jobs) ───────────────────────────────────
+
+	// Schedule plugin: recurring background tasks (health checks, session cleanup).
+	// Registered after oracle plugin to ensure DB pool is available for cleanup jobs.
+	await app.register(schedulePlugin);
+
 	// ── Mastra framework (agents, workflows, MCP) ─────────────────────
 
 	await app.register(mastraPlugin);
@@ -356,10 +377,12 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 				}
 			}
 		});
-		await app.register(fastifySwaggerUi, {
+		await app.register(scalarFastify, {
 			routePrefix: '/api/docs',
-			uiConfig: { docExpansion: 'list' },
-			uiHooks: {
+			configuration: {
+				theme: 'purple'
+			},
+			hooks: {
 				onRequest: requireAuth('admin:all')
 			}
 		});
