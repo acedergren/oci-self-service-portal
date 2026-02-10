@@ -5,6 +5,18 @@ import { createLogger } from '@portal/shared/server/logger.js';
 
 const logger = createLogger('under-pressure-plugin');
 
+/**
+ * Default pressure thresholds for under-pressure plugin
+ */
+const PRESSURE_DEFAULTS = {
+	MAX_EVENT_LOOP_DELAY: 1000, // 1 second
+	MAX_HEAP_USED_BYTES: 700 * 1024 * 1024, // 700MB
+	MAX_RSS_BYTES: 1200 * 1024 * 1024, // 1200MB
+	HEALTH_CHECK_INTERVAL: 5000, // 5 seconds
+	SAMPLE_INTERVAL: 1000, // 1 second
+	RETRY_AFTER_SECONDS: 30 // 30 seconds
+} as const;
+
 export interface UnderPressurePluginOptions {
 	maxEventLoopDelay?: number; // default 1000ms
 	maxHeapUsedBytes?: number; // default 700MB
@@ -18,11 +30,11 @@ const underPressurePlugin: FastifyPluginAsync<UnderPressurePluginOptions> = asyn
 	opts
 ) => {
 	const {
-		maxEventLoopDelay = 1000,
-		maxHeapUsedBytes = 700 * 1024 * 1024, // 700MB
-		maxRssBytes = 1200 * 1024 * 1024, // 1200MB
-		healthCheckInterval = 5000,
-		sampleInterval = 1000
+		maxEventLoopDelay = PRESSURE_DEFAULTS.MAX_EVENT_LOOP_DELAY,
+		maxHeapUsedBytes = PRESSURE_DEFAULTS.MAX_HEAP_USED_BYTES,
+		maxRssBytes = PRESSURE_DEFAULTS.MAX_RSS_BYTES,
+		healthCheckInterval = PRESSURE_DEFAULTS.HEALTH_CHECK_INTERVAL,
+		sampleInterval = PRESSURE_DEFAULTS.SAMPLE_INTERVAL
 	} = opts;
 
 	// Custom health check that integrates with Oracle plugin if available
@@ -52,7 +64,7 @@ const underPressurePlugin: FastifyPluginAsync<UnderPressurePluginOptions> = asyn
 			};
 		}
 	) => {
-		reply.code(503).header('Retry-After', '30').send({
+		reply.code(503).header('Retry-After', String(PRESSURE_DEFAULTS.RETRY_AFTER_SECONDS)).send({
 			statusCode: 503,
 			error: 'Service Unavailable',
 			message: 'Server is under pressure'
