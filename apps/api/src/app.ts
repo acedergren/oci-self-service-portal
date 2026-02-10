@@ -12,7 +12,12 @@ import {
 	type ZodTypeProvider
 } from 'fastify-type-provider-zod';
 import { createLogger } from '@portal/shared/server/logger';
-import { errorResponse, isPortalError, toPortalError } from '@portal/shared/server/errors';
+import {
+	errorResponse,
+	isPortalError,
+	toPortalError,
+	ValidationError
+} from '@portal/shared/server/errors';
 import { RATE_LIMIT_CONFIG } from '@portal/shared/server/rate-limiter';
 import { generateRequestId } from '@portal/shared/server/tracing';
 import { getAuthCookieAttributes } from '@portal/shared/server/auth/cookies';
@@ -37,8 +42,19 @@ import { graphRoutes } from './routes/graph.js';
 import { webhookRoutes } from './routes/webhooks.js';
 import { setupRoutes } from './routes/setup.js';
 import { authRoutes } from './routes/auth.js';
+import { mcpAdminRoutes } from './routes/admin/mcp.js';
 
 const log = createLogger('app');
+
+function isFastifyValidationError(error: unknown): error is {
+	message?: string;
+	validation: Array<Record<string, unknown>>;
+	validationContext?: string;
+} {
+	if (!error || typeof error !== 'object') return false;
+	const maybeValidation = (error as { validation?: unknown }).validation;
+	return Array.isArray(maybeValidation);
+}
 
 export interface AppOptions {
 	/**
@@ -155,6 +171,26 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 
 	// Global error handler - maps PortalError to HTTP responses
 	app.setErrorHandler((error, request, reply) => {
+		const requestId =
+			typeof request.headers['x-request-id'] === 'string'
+				? request.headers['x-request-id']
+				: undefined;
+
+		if (isFastifyValidationError(error)) {
+			const validationError = new ValidationError(
+				error.message ?? 'Request validation failed',
+				{
+					requestId,
+					validationContext: error.validationContext,
+					validation: error.validation
+				},
+				error instanceof Error ? error : undefined
+			);
+			const response = errorResponse(validationError, requestId);
+			reply.status(response.status).send(response);
+			return;
+		}
+
 		// Convert unknown errors to PortalError
 		const portalError = isPortalError(error) ? error : toPortalError(error);
 
@@ -170,7 +206,7 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 		);
 
 		// Send error response
-		const response = errorResponse(portalError);
+		const response = errorResponse(portalError, requestId);
 		reply.status(response.status).send(response);
 	});
 
@@ -280,6 +316,7 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 			'/api/health',
 			'/api/healthz',
 			'/api/auth',
+			'/api/models',
 			'/api/v1/openapi.json'
 		]
 	});
@@ -330,6 +367,7 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 	await app.register(webhookRoutes);
 	await app.register(setupRoutes);
 	await app.register(authRoutes);
+	await app.register(mcpAdminRoutes);
 
 	log.info('Fastify app created with plugins and routes');
 	return app;
