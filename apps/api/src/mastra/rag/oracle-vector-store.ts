@@ -146,7 +146,7 @@ export class OracleVectorStore extends MastraVector {
 			// Create the vector index
 			await conn.execute(
 				`CREATE VECTOR INDEX idx_${tableName.toLowerCase()}_vec ON ${tableName}(embedding)
-           ORGANIZATION NEIGHBOR PARTITIONS
+           ORGANIZATION INMEMORY NEIGHBOR GRAPH
            DISTANCE ${metric}
            WITH TARGET ACCURACY 95`
 			);

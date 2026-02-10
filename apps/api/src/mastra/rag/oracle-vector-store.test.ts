@@ -55,9 +55,9 @@ describe('OracleVectorStore', () => {
 			expect(mockConn.execute).toHaveBeenCalledWith(
 				expect.stringContaining('CREATE TABLE MASTRA_VECTOR_TEST_EMBEDDINGS')
 			);
-			// Should create vector index
+			// Should create HNSW vector index (not IVF)
 			expect(mockConn.execute).toHaveBeenCalledWith(
-				expect.stringContaining('CREATE VECTOR INDEX idx_mastra_vector_test_embeddings_vec')
+				expect.stringContaining('ORGANIZATION INMEMORY NEIGHBOR GRAPH')
 			);
 			expect(mockConn.commit).toHaveBeenCalled();
 		});
