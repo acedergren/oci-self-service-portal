@@ -111,7 +111,64 @@ vitest                        apps/frontend    knip.config.ts  Remove from ignor
 ...8 more similar hints                                                                         
 src/index.ts                  apps/api         knip.config.ts  Refine entry pattern (no matches)
 vitest.config.ts              packages/shared  knip.config.ts  Refine entry pattern (no matches)
-src/hooks.server.ts           apps/frontend    knip.config.ts  Remove redundant entry pattern   
-vitest.config.ts              apps/frontend    knip.config.ts  Remove redundant entry pattern   
-svelte.config.js              apps/frontend    knip.config.ts  Remove redundant entry pattern   
-vitest.config.ts              apps/api         knip.config.ts  Remove redundant entry pattern   
+src/hooks.server.ts           apps/frontend    knip.config.ts  Remove redundant entry pattern
+vitest.config.ts              apps/frontend    knip.config.ts  Remove redundant entry pattern
+svelte.config.js              apps/frontend    knip.config.ts  Remove redundant entry pattern
+vitest.config.ts              apps/api         knip.config.ts  Remove redundant entry pattern
+
+================================================================================
+KNIP ANALYSIS - UNLISTED DEPENDENCIES REVIEW
+================================================================================
+Reviewed by: qa-1
+Date: 2026-02-10
+
+SUMMARY:
+- 1 dependency needs to be added to package.json (ACTION REQUIRED)
+- 4 dependencies are intentionally optional (OK - no action needed)
+
+DETAILED FINDINGS:
+
+1. @tanstack/query-core
+   Status: ❌ MISSING - ACTION REQUIRED
+   Location: packages/shared/src/query/options.ts:1:31
+   Analysis: Type-only import (QueryKey type). packages/shared does NOT declare
+            this dependency in package.json. Currently works due to pnpm hoisting
+            from apps/frontend/@tanstack/svelte-query transitive dependency.
+   Risk: Build may fail in strict dependency resolution environments.
+   Action: Add to packages/shared/package.json devDependencies:
+           "@tanstack/query-core": "^5.90.20"
+
+2. @ai-sdk/azure
+   Status: ✅ INTENTIONALLY OPTIONAL - OK
+   Location: apps/api/src/mastra/models/provider-registry.ts:135:32
+   Analysis: Dynamic import with try/catch. Code includes @ts-expect-error comment
+            acknowledging it's optional. Only loaded when Azure provider is configured.
+   Action: None. This is correct pattern for optional dependencies.
+
+3. pino-pretty
+   Status: ✅ INTENTIONALLY OPTIONAL - OK
+   Location: packages/shared/src/server/logger.ts:103:8
+   Analysis: Dev-only pretty-printer checked via require.resolve() with try/catch.
+            Falls back to JSON output if not available. Not needed in production.
+   Action: None. This is correct pattern for dev-only optional dependencies.
+
+4. eventsource
+   Status: ✅ INTENTIONALLY OPTIONAL - OK
+   Location: packages/shared/src/server/mcp-client/transports/sse.ts:51:22
+   Analysis: Node.js EventSource polyfill loaded via dynamic import. Code includes
+            @ts-expect-error comment noting no type declarations. Only used for
+            SSE transport (Server-Sent Events) in MCP client.
+   Action: None. This is correct pattern for polyfill dependencies.
+
+5. @sentry/node
+   Status: ✅ INTENTIONALLY OPTIONAL - OK
+   Location: packages/shared/src/server/sentry.ts:81:20
+   Analysis: Dynamic import with try/catch. Code includes @ts-expect-error comment
+            acknowledging it's optional (Phase 6). Only loaded when Sentry is enabled.
+   Action: None. Will be added as part of Phase A task #5 (@mastra/sentry integration).
+
+RECOMMENDED ACTIONS:
+[HIGH] Add @tanstack/query-core to packages/shared/package.json devDependencies
+[LOW] Consider documenting optional dependency pattern in CLAUDE.md
+
+================================================================================
