@@ -7,6 +7,8 @@
  * Uses Oracle 26AI VECTOR(dim, FLOAT32) columns with COSINE similarity search.
  */
 
+// @ts-expect-error oracledb ships no type declarations
+import oracledb from 'oracledb';
 import { MastraVector } from '@mastra/core/vector';
 import type {
 	QueryResult,
@@ -32,11 +34,6 @@ const LEGACY_TABLE = 'CONVERSATION_EMBEDDINGS';
 
 /** Only [A-Z0-9_] allowed in Oracle identifiers (SQL injection prevention) */
 const SAFE_IDENTIFIER = /^[A-Z0-9_]+$/;
-
-/** Convert a number[] to Oracle vector string literal: '[0.1,0.2,...]' */
-function vectorToOracleString(embedding: number[]): string {
-	return '[' + embedding.join(',') + ']';
-}
 
 /** Resolve an index name to an Oracle table name */
 function resolveTableName(indexName: string): string {
@@ -178,22 +175,21 @@ export class OracleVectorStore extends MastraVector {
 			}
 
 			for (let i = 0; i < vectors.length; i++) {
-				const vecStr = vectorToOracleString(vectors[i]);
+				const vecBuf = new Float32Array(vectors[i]);
 				const meta = metadata?.[i] ? JSON.stringify(metadata[i]) : null;
-				const dim = vectors[i].length;
 
 				await conn.execute(
 					`MERGE INTO ${tableName} t
            USING (SELECT :id AS id FROM DUAL) s
            ON (t.id = s.id)
            WHEN MATCHED THEN UPDATE SET
-             t.embedding = TO_VECTOR(:vec, ${dim}, FLOAT32),
+             t.embedding = :vec,
              t.metadata = :meta
            WHEN NOT MATCHED THEN INSERT (id, embedding, metadata, created_at)
-             VALUES (:id, TO_VECTOR(:vec, ${dim}, FLOAT32), :meta, SYSTIMESTAMP)`,
+             VALUES (:id, :vec, :meta, SYSTIMESTAMP)`,
 					{
 						id: generatedIds[i],
-						vec: vecStr,
+						vec: { val: vecBuf, type: oracledb.DB_TYPE_VECTOR },
 						meta
 					}
 				);
@@ -210,12 +206,11 @@ export class OracleVectorStore extends MastraVector {
 		validateTableName(tableName);
 
 		const topK = params.topK ?? 10;
-		const queryVecStr = vectorToOracleString(params.queryVector);
-		const dim = params.queryVector.length;
+		const queryVecBuf = new Float32Array(params.queryVector);
 
 		return this.withConnection(async (conn) => {
 			const binds: Record<string, unknown> = {
-				queryVec: queryVecStr,
+				queryVec: { val: queryVecBuf, type: oracledb.DB_TYPE_VECTOR },
 				topK
 			};
 
@@ -241,13 +236,13 @@ export class OracleVectorStore extends MastraVector {
 				EMBEDDING?: unknown;
 			}>(
 				`SELECT t.id AS "ID",
-                (1 - VECTOR_DISTANCE(t.embedding, TO_VECTOR(:queryVec, ${dim}, FLOAT32), COSINE)) AS "SCORE",
+                (1 - VECTOR_DISTANCE(t.embedding, :queryVec, COSINE)) AS "SCORE",
                 t.metadata AS "METADATA",
                 t.document AS "DOCUMENT"
                 ${includeVec ? `, t.embedding AS "EMBEDDING"` : ''}
          FROM ${tableName} t
          ${filterClause}
-         ORDER BY VECTOR_DISTANCE(t.embedding, TO_VECTOR(:queryVec, ${dim}, FLOAT32), COSINE) ASC
+         ORDER BY VECTOR_DISTANCE(t.embedding, :queryVec, COSINE) ASC
          FETCH FIRST :topK ROWS ONLY`,
 				binds
 			);
@@ -353,10 +348,9 @@ export class OracleVectorStore extends MastraVector {
 			const binds: Record<string, unknown> = {};
 
 			if (params.update.vector) {
-				const dim = params.update.vector.length;
-				const vecStr = vectorToOracleString(params.update.vector);
-				setClauses.push(`embedding = TO_VECTOR(:newVec, ${dim}, FLOAT32)`);
-				binds.newVec = vecStr;
+				const vecBuf = new Float32Array(params.update.vector);
+				setClauses.push(`embedding = :newVec`);
+				binds.newVec = { val: vecBuf, type: oracledb.DB_TYPE_VECTOR };
 			}
 
 			if (params.update.metadata) {

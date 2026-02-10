@@ -17,6 +17,8 @@
  *   - 'tool_execution'     : Standalone tool execution record
  */
 
+// @ts-expect-error oracledb ships no type declarations
+import oracledb from 'oracledb';
 import { withConnection, type OracleConnection } from '../connection';
 import { createLogger } from '../../logger';
 import { DatabaseError } from '../../errors';
@@ -51,14 +53,6 @@ interface EmbeddingRow {
 	CREATED_AT: Date;
 }
 
-/**
- * Convert a Float32Array to an Oracle-compatible vector string.
- * Oracle 26AI accepts vectors as '[0.1, 0.2, ...]' string literals.
- */
-function vectorToOracleString(embedding: Float32Array): string {
-	return '[' + Array.from(embedding).join(',') + ']';
-}
-
 export const embeddingRepository = {
 	/**
 	 * Insert an embedding with reference metadata.
@@ -78,21 +72,18 @@ export const embeddingRepository = {
 
 		try {
 			await withConnection(async (conn: OracleConnection) => {
-				const vectorStr = vectorToOracleString(params.embedding);
-
 				await conn.execute(
 					`INSERT INTO conversation_embeddings
 					   (id, session_id, turn_id, content_type, text_content, embedding)
 					 VALUES
-					   (:id, :ref_id, :turn_id, :ref_type, :textContent,
-					    TO_VECTOR(:embedding, 1536, FLOAT32))`,
+					   (:id, :ref_id, :turn_id, :ref_type, :textContent, :embedding)`,
 					{
 						id,
 						ref_id: params.refId,
 						turn_id: params.turnId ?? null,
 						ref_type: params.refType,
 						textContent: params.content,
-						embedding: vectorStr
+						embedding: { val: params.embedding, type: oracledb.DB_TYPE_VECTOR }
 					}
 				);
 			});
@@ -130,11 +121,9 @@ export const embeddingRepository = {
 
 		try {
 			return await withConnection(async (conn: OracleConnection) => {
-				const vectorStr = vectorToOracleString(params.embedding);
-
 				const conditions = ['s.org_id = :org_id'];
 				const binds: Record<string, unknown> = {
-					queryVec: vectorStr,
+					queryVec: { val: params.embedding, type: oracledb.DB_TYPE_VECTOR },
 					org_id: params.orgId,
 					maxRows: limit
 				};
@@ -152,11 +141,11 @@ export const embeddingRepository = {
 					   e.content_type AS "REF_TYPE",
 					   e.session_id AS "REF_ID",
 					   e.text_content AS "CONTENT",
-					   (1 - VECTOR_DISTANCE(e.embedding, TO_VECTOR(:queryVec, 1536, FLOAT32), COSINE)) AS "SCORE"
+					   (1 - VECTOR_DISTANCE(e.embedding, :queryVec, COSINE)) AS "SCORE"
 					 FROM conversation_embeddings e
 					 JOIN chat_sessions s ON s.id = e.session_id
 					 WHERE ${whereClause}
-					 ORDER BY VECTOR_DISTANCE(e.embedding, TO_VECTOR(:queryVec, 1536, FLOAT32), COSINE) ASC
+					 ORDER BY VECTOR_DISTANCE(e.embedding, :queryVec, COSINE) ASC
 					 FETCH FIRST :maxRows ROWS ONLY`,
 					binds
 				);

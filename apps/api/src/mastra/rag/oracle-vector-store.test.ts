@@ -1,4 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// ── Mock oracledb module ────────────────────────────────────────────────
+vi.mock('oracledb', () => ({
+	default: {
+		DB_TYPE_VECTOR: 2023 // Numeric constant representing VECTOR type
+	}
+}));
+
 import { OracleVectorStore } from './oracle-vector-store.js';
 
 // ── Mock Oracle connection ──────────────────────────────────────────────
@@ -122,7 +130,7 @@ describe('OracleVectorStore', () => {
 				expect.stringContaining('MERGE INTO MASTRA_VECTOR_TEST_EMBEDDINGS'),
 				expect.objectContaining({
 					id: ids[0],
-					vec: '[0.1,0.2,0.3]',
+					vec: { val: expect.any(Float32Array), type: expect.any(Number) },
 					meta: '{"key":"val"}'
 				})
 			);
@@ -210,7 +218,7 @@ describe('OracleVectorStore', () => {
 			expect(mockConn.execute).toHaveBeenCalledWith(
 				expect.stringContaining('VECTOR_DISTANCE'),
 				expect.objectContaining({
-					queryVec: '[0.1,0.2,0.3]',
+					queryVec: { val: expect.any(Float32Array), type: expect.any(Number) },
 					topK: 5
 				})
 			);
@@ -348,7 +356,7 @@ describe('OracleVectorStore', () => {
 				expect.stringContaining('UPDATE MASTRA_VECTOR_TEST_EMBEDDINGS SET'),
 				expect.objectContaining({
 					updateId: 'v1',
-					newVec: '[0.5,0.6,0.7]'
+					newVec: { val: expect.any(Float32Array), type: expect.any(Number) }
 				})
 			);
 		});
