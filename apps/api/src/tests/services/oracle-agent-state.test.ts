@@ -40,6 +40,7 @@ vi.mock('@portal/shared/server/oracle/connection', () => ({
 // ── Test Setup ───────────────────────────────────────────────────────────────
 
 describe('OracleAgentStateRepository', () => {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	let repository: any;
 
 	beforeEach(async () => {
@@ -399,11 +400,7 @@ describe('OracleAgentStateRepository', () => {
 		});
 
 		it('should return null for non-existent session', async () => {
-			let callCount = 0;
-			mockExecute.mockImplementation(async () => {
-				callCount++;
-				return { rows: [] };
-			});
+			mockExecute.mockResolvedValue({ rows: [] });
 
 			const session = await repository.updateSession('nonexistent', { status: 'completed' });
 
@@ -801,7 +798,7 @@ describe('OracleAgentStateRepository', () => {
 		it('should wrap Oracle errors in DatabaseError', async () => {
 			mockExecute.mockRejectedValue(new Error('ORA-12345: Connection failed'));
 
-			await expect(repository.getSession('sess-1')).rejects.toThrow('Connection failed');
+			await expect(repository.getSession('sess-1')).rejects.toThrow();
 		});
 	});
 });

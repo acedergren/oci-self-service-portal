@@ -157,11 +157,15 @@ describe('under-pressure plugin', () => {
 			await app.register(underPressurePlugin, {
 				maxEventLoopDelay: 1, // 1ms - will definitely trigger
 				maxHeapUsedBytes: 1, // 1 byte - will definitely trigger
-				maxRssBytes: 1 // 1 byte - will definitely trigger
+				maxRssBytes: 1, // 1 byte - will definitely trigger
+				sampleInterval: 10 // Sample every 10ms for faster testing
 			});
 
 			await app.get('/test', async () => ({ ok: true }));
 			await app.ready();
+
+			// Wait for sampling to occur
+			await new Promise((resolve) => setTimeout(resolve, 50));
 
 			// Make a request that should trigger overload
 			const response = await app.inject({
@@ -183,11 +187,15 @@ describe('under-pressure plugin', () => {
 			await app.register(underPressurePlugin, {
 				maxEventLoopDelay: 1,
 				maxHeapUsedBytes: 1,
-				maxRssBytes: 1
+				maxRssBytes: 1,
+				sampleInterval: 10 // Sample every 10ms for faster testing
 			});
 
 			await app.get('/test', async () => ({ ok: true }));
 			await app.ready();
+
+			// Wait for sampling to occur
+			await new Promise((resolve) => setTimeout(resolve, 50));
 
 			const response = await app.inject({
 				method: 'GET',
