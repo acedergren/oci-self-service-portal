@@ -16,10 +16,14 @@
 		"declarationMap": true,
 		"outDir": "./dist",
 		"paths": {
+			"@portal/server": ["../../packages/server/src/index"],
+			"@portal/server/*": ["../../packages/server/src/*"],
+			"@portal/types": ["../../packages/types/src/index"],
+			"@portal/types/*": ["../../packages/types/src/*"],
 			"@portal/shared": ["../../packages/shared/dist/index"],
 			"@portal/shared/*": ["../../packages/shared/dist/*"]
 		}
 	},
-	"include": ["src/**/*"],
+	"include": ["src/**/*", "../../packages/server/src/app.d.ts"],
 	"exclude": ["node_modules", "dist", "src/tests", "src/**/*.test.ts"]
 }
