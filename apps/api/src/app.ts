@@ -335,6 +335,20 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 	await app.register(oraclePlugin, {
 		migrate: process.env.SKIP_MIGRATIONS !== 'true'
 	});
+
+	// ── Graceful shutdown (after oracle + cache) ─────────────────────────
+	// Coordinates graceful drain of Oracle pool and Valkey cache on shutdown.
+	// Existing onClose hooks in oracle and cache plugins handle the actual cleanup.
+	const gracefulShutdown = (await import('fastify-graceful-shutdown')).default;
+	await app.register(gracefulShutdown, {
+		timeout: 30000 // 30s timeout for graceful drain
+	});
+
+	// Log when shutdown begins (onClose hooks fire in reverse registration order)
+	app.addHook('onClose', async () => {
+		log.info('Graceful shutdown initiated - draining Oracle pool and Valkey cache');
+	});
+
 	await initSetupToken();
 	await app.register(authPlugin, {
 		excludePaths: [
@@ -377,6 +391,9 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 				}
 			}
 		});
+
+		// Register Scalar UI at /api/docs — auto-discovers spec from @fastify/swagger.
+		// Also exposes /api/docs/openapi.json and /api/docs/openapi.yaml automatically.
 		await app.register(scalarFastify, {
 			routePrefix: '/api/docs',
 			configuration: {

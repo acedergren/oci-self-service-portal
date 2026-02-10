@@ -916,7 +916,7 @@ describe('createApp – OpenAPI docs', () => {
 
 		const response = await app.inject({
 			method: 'GET',
-			url: '/api/docs/json'
+			url: '/api/docs/openapi.json'
 		});
 
 		// Unauthenticated — should be 401 due to requireAuth('admin:all')
@@ -929,7 +929,7 @@ describe('createApp – OpenAPI docs', () => {
 
 		const response = await app.inject({
 			method: 'GET',
-			url: '/api/docs/json'
+			url: '/api/docs/openapi.json'
 		});
 
 		expect(response.statusCode).toBe(404);
@@ -941,7 +941,7 @@ describe('createApp – OpenAPI docs', () => {
 
 		const response = await app.inject({
 			method: 'GET',
-			url: '/api/docs/json'
+			url: '/api/docs/openapi.json'
 		});
 
 		// Should exist (not 404) — but 401 because no auth
