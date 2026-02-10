@@ -9,7 +9,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildTestApp, simulateSession } from './test-helpers.js';
 import { mcpAdminRoutes } from '../../routes/admin/mcp.js';
-import { NotFoundError, ValidationError } from '@portal/shared/server/errors.js';
+import { NotFoundError } from '@portal/shared/server/errors.js';
 import type {
 	McpCatalogItem,
 	McpServer,
@@ -315,8 +315,11 @@ describe('GET /api/admin/mcp/servers', () => {
 
 		const app = await buildTestApp();
 		app.addHook('onRequest', async (request) => {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(request as any).user = { id: 'user-1' };
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(request as any).permissions = ['admin:all'];
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(request as any).session = { activeOrganizationId: 'org-123' };
 		});
 		await app.register(mcpAdminRoutes);
@@ -335,8 +338,11 @@ describe('GET /api/admin/mcp/servers', () => {
 
 		const app = await buildTestApp();
 		app.addHook('onRequest', async (request) => {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(request as any).user = { id: 'user-1' };
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(request as any).permissions = ['admin:all'];
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(request as any).session = { activeOrganizationId: 'org-456' };
 		});
 		await app.register(mcpAdminRoutes);
@@ -391,8 +397,11 @@ describe('GET /api/admin/mcp/servers/:id', () => {
 
 		const app = await buildTestApp();
 		app.addHook('onRequest', async (request) => {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(request as any).user = { id: 'user-1' };
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(request as any).permissions = ['admin:all'];
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(request as any).session = { activeOrganizationId: 'org-123' }; // Different org!
 		});
 		await app.register(mcpAdminRoutes);
@@ -417,8 +426,11 @@ describe('POST /api/admin/mcp/servers', () => {
 
 		const app = await buildTestApp();
 		app.addHook('onRequest', async (request) => {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(request as any).user = { id: 'user-1' };
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(request as any).permissions = ['admin:all'];
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(request as any).session = { activeOrganizationId: 'org-123' };
 		});
 		await app.register(mcpAdminRoutes);
@@ -485,8 +497,11 @@ describe('POST /api/admin/mcp/servers/install', () => {
 
 		const app = await buildTestApp();
 		app.addHook('onRequest', async (request) => {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(request as any).user = { id: 'user-1' };
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(request as any).permissions = ['admin:all'];
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(request as any).session = { activeOrganizationId: 'org-123' };
 		});
 		await app.register(mcpAdminRoutes);
@@ -514,8 +529,11 @@ describe('POST /api/admin/mcp/servers/install', () => {
 
 		const app = await buildTestApp();
 		app.addHook('onRequest', async (request) => {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(request as any).user = { id: 'user-1' };
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(request as any).permissions = ['admin:all'];
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(request as any).session = { activeOrganizationId: 'org-123' };
 		});
 		await app.register(mcpAdminRoutes);
@@ -894,8 +912,11 @@ describe('GET /api/admin/mcp/servers/:id/health', () => {
 
 		const app = await buildTestApp();
 		app.addHook('onRequest', async (request) => {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(request as any).user = { id: 'user-1' };
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(request as any).permissions = ['admin:all'];
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			(request as any).session = { activeOrganizationId: 'org-123' };
 		});
 		await app.register(mcpAdminRoutes);

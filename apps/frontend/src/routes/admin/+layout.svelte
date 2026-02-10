@@ -21,6 +21,7 @@
 	const navItems = [
 		{ href: '/admin/idp', label: 'Identity Providers', icon: '🔐' },
 		{ href: '/admin/models', label: 'AI Models', icon: '🤖' },
+		{ href: '/admin/integrations', label: 'MCP Integrations', icon: '🔌' },
 		{ href: '/admin/settings', label: 'Portal Settings', icon: '⚙️' }
 	];
 
