@@ -173,3 +173,90 @@ export function getToolWarning(toolName: string): { warning: string; impact: str
 export function requiresApproval(approvalLevel: ApprovalLevel): boolean {
 	return approvalLevel === 'confirm' || approvalLevel === 'danger';
 }
+
+// ── Tool Progress Data Parts ────────────────────────────────────────────
+
+/**
+ * Stage of a tool's execution lifecycle.
+ * Sent as `data-tool-progress` stream chunks during chat streaming.
+ */
+export type ToolProgressStage = 'queued' | 'executing' | 'completed' | 'error';
+
+/**
+ * Tool progress event sent as a transient streaming data part.
+ * These are ephemeral — they update the UI but don't persist in message history.
+ */
+export interface ToolProgressEvent {
+	toolCallId: string;
+	toolName: string;
+	stage: ToolProgressStage;
+	message: string;
+	startedAt?: number;
+	completedAt?: number;
+}
+
+/**
+ * Human-friendly progress descriptions for OCI tool operations.
+ * Maps tool name → present-tense status message.
+ */
+const TOOL_PROGRESS_DESCRIPTIONS: Record<string, string> = {
+	// Compute
+	listInstances: 'Querying compute instances...',
+	getInstance: 'Fetching instance details...',
+	getInstanceVnics: 'Loading network interfaces...',
+	launchInstance: 'Launching compute instance...',
+	stopInstance: 'Stopping compute instance...',
+	terminateInstance: 'Terminating compute instance...',
+	listShapes: 'Loading compute shapes...',
+	listImages: 'Loading OS images...',
+	runInstanceCommand: 'Running instance command...',
+	getCommandExecution: 'Checking command status...',
+	// Networking
+	listVcns: 'Listing virtual cloud networks...',
+	createVcn: 'Creating virtual cloud network...',
+	deleteVcn: 'Deleting virtual cloud network...',
+	listSubnets: 'Loading subnets...',
+	// Storage
+	listBuckets: 'Listing storage buckets...',
+	createBucket: 'Creating storage bucket...',
+	deleteBucket: 'Deleting storage bucket...',
+	// Database
+	listAutonomousDatabases: 'Querying autonomous databases...',
+	createAutonomousDatabase: 'Provisioning autonomous database...',
+	terminateAutonomousDatabase: 'Terminating autonomous database...',
+	// Identity
+	listCompartments: 'Loading compartments...',
+	listPolicies: 'Fetching IAM policies...',
+	createPolicy: 'Creating IAM policy...',
+	// Observability
+	listAlarms: 'Loading monitoring alarms...',
+	summarizeMetrics: 'Summarizing metrics data...',
+	getComputeMetrics: 'Fetching compute metrics...',
+	// Search
+	searchResources: 'Searching OCI resources...',
+	searchResourcesByName: 'Searching resources by name...',
+	// Pricing
+	compareCloudCosts: 'Comparing cloud pricing...',
+	getOCIPricing: 'Fetching OCI pricing...',
+	getAzurePricing: 'Fetching Azure pricing...',
+	getAWSPricing: 'Fetching AWS pricing...',
+	getOCIFreeTier: 'Loading free tier details...',
+	estimateCloudCost: 'Estimating cloud costs...',
+	getUsageCost: 'Loading usage costs...',
+	// Infrastructure
+	generateTerraform: 'Generating Terraform code...',
+	searchLogs: 'Searching OCI logs...'
+};
+
+/**
+ * Get a human-friendly progress message for a tool execution stage.
+ */
+export function getToolProgressMessage(
+	toolName: string,
+	stage: ToolProgressStage = 'executing'
+): string {
+	if (stage === 'completed') return 'Completed';
+	if (stage === 'error') return 'Failed';
+	if (stage === 'queued') return `Preparing ${toolName}...`;
+	return TOOL_PROGRESS_DESCRIPTIONS[toolName] ?? `Executing ${toolName}...`;
+}

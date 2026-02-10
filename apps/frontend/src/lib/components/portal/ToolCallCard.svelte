@@ -1,14 +1,33 @@
 <script lang="ts">
 	import { getToolState, formatToolName } from '$lib/utils/message-parts.js';
+	import { getToolProgressMessage } from '@portal/shared/tools/types';
 	import type { ToolCallCardProps } from './types.js';
+	import type { ToolProgressEvent } from '@portal/shared/tools/types';
 
-	let { part, hideToolExecution = true }: ToolCallCardProps = $props();
+	interface Props extends ToolCallCardProps {
+		progress?: ToolProgressEvent;
+	}
+
+	let { part, hideToolExecution = true, progress }: Props = $props();
 
 	const uiState = $derived(getToolState(part.state));
+	const toolName = $derived(formatToolName(part.type));
 	const toolResult = $derived(
 		part.output as { success?: boolean; data?: unknown; error?: string } | undefined
 	);
 	const isComplete = $derived(toolResult !== undefined);
+
+	// Progress message: prefer server-sent progress, fall back to derived
+	const progressMessage = $derived(
+		progress?.message ?? getToolProgressMessage(toolName, isComplete ? 'completed' : 'executing')
+	);
+
+	// Elapsed time in seconds (from progress event or estimate)
+	const elapsedMs = $derived.by(() => {
+		if (!progress?.startedAt) return undefined;
+		if (progress.completedAt) return progress.completedAt - progress.startedAt;
+		return undefined;
+	});
 
 	/** Only render when: tool execution is shown, tool failed, or tool is still running */
 	const shouldRender = $derived(
@@ -19,7 +38,7 @@
 {#if shouldRender}
 	<div class="tool-card" data-state={uiState}>
 		<div class="tool-header">
-			<span class="tool-name">{formatToolName(part.type)}</span>
+			<span class="tool-name">{toolName}</span>
 			<span class="tool-status">
 				{#if isComplete}
 					{#if toolResult?.success === false}
@@ -28,10 +47,13 @@
 					{:else}
 						<span class="status-dot completed"></span>
 						Completed
+						{#if elapsedMs !== undefined}
+							<span class="elapsed">({(elapsedMs / 1000).toFixed(1)}s)</span>
+						{/if}
 					{/if}
 				{:else if uiState === 'running' || uiState === 'streaming'}
 					<span class="status-dot running"></span>
-					Executing...
+					{progressMessage}
 				{:else}
 					<span class="status-dot pending"></span>
 					Pending
@@ -144,5 +166,11 @@
 	.result-error {
 		font-size: 0.8125rem;
 		color: var(--portal-error, #ef4444);
+	}
+
+	.elapsed {
+		font-size: 0.6875rem;
+		color: var(--portal-gray, #94a3b8);
+		margin-left: 0.125rem;
 	}
 </style>

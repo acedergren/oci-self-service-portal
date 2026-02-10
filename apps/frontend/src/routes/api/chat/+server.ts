@@ -1,13 +1,21 @@
-import { streamText, type UIMessage, convertToModelMessages, stepCountIs } from 'ai';
+import {
+	streamText,
+	createUIMessageStreamResponse,
+	type UIMessage,
+	convertToModelMessages,
+	stepCountIs
+} from 'ai';
 import { createOCI, supportsReasoning } from '@acedergren/oci-genai-provider';
 import { env } from '$env/dynamic/private';
 import { createAISDKTools } from '@portal/shared/tools/index';
+import { getToolProgressMessage } from '@portal/shared/tools/types';
 import { createLogger } from '@portal/server/logger';
 import { requirePermission } from '@portal/server/auth/rbac';
 import { chatRequests } from '@portal/server/metrics';
 import { generateEmbedding } from '@portal/server/embeddings';
 import { embeddingRepository } from '@portal/server/oracle/repositories/embedding-repository';
 import type { RequestHandler } from './$types';
+import { createToolProgressTransform } from '$lib/utils/tool-progress-stream.js';
 
 const log = createLogger('chat');
 
@@ -310,5 +318,9 @@ export const POST: RequestHandler = async (event) => {
 		}
 	}
 
-	return result.toUIMessageStreamResponse();
+	// Pipe through progress transform to inject data-tool-progress parts
+	const uiStream = result.toUIMessageStream();
+	const enrichedStream = uiStream.pipeThrough(createToolProgressTransform());
+
+	return createUIMessageStreamResponse({ stream: enrichedStream });
 };

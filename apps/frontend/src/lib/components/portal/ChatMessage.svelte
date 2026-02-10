@@ -1,6 +1,7 @@
 <script lang="ts">
 	import MarkdownRenderer from '$lib/components/ui/MarkdownRenderer.svelte';
 	import { extractToolParts } from '$lib/utils/message-parts.js';
+	import { tryGetChatContext } from '$lib/components/chat/ai-context.svelte.js';
 	import ToolCallCard from './ToolCallCard.svelte';
 	import TypingIndicator from './TypingIndicator.svelte';
 	import type { ChatMessageProps, ChatToolPart } from './types.js';
@@ -11,6 +12,9 @@
 		isStreaming,
 		hideToolExecution = true
 	}: ChatMessageProps = $props();
+
+	// Safely access ChatContext for tool progress (undefined if not in provider tree)
+	const chatCtx = tryGetChatContext();
 
 	function getMessageText(msg: typeof message): string {
 		if (!msg.parts) return '';
@@ -52,7 +56,11 @@
 		</div>
 		<div class="message-content">
 			{#each toolParts as part (part.toolCallId)}
-				<ToolCallCard {part} {hideToolExecution} />
+				<ToolCallCard
+					{part}
+					{hideToolExecution}
+					progress={chatCtx?.getToolProgress(part.toolCallId)}
+				/>
 			{/each}
 
 			{#if text}
