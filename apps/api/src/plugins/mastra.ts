@@ -16,6 +16,8 @@ import { Mastra } from '@mastra/core';
 import { MastraServer } from '@mastra/fastify';
 import { Memory } from '@mastra/memory';
 import { createOCI } from '@acedergren/oci-genai-provider';
+import { SentryExporter } from '@mastra/sentry';
+import { Observability } from '@mastra/observability';
 import { OracleStore } from '../mastra/storage/oracle-store.js';
 import { OracleVectorStore } from '../mastra/rag/oracle-vector-store.js';
 import { buildMastraTools } from '../mastra/tools/registry.js';
@@ -83,12 +85,33 @@ const mastraPlugin: FastifyPluginAsync = async (fastify) => {
 		compartmentId
 	});
 
+	// ── Configure Sentry observability (A-2.06) ────────────────────────
+	// Sentry AI spans: AGENT_RUN, MODEL_GENERATION, TOOL_CALL with OpenTelemetry semantic conventions.
+	// Sample rate: 10% in production (controlled via SENTRY_TRACE_SAMPLE_RATE env var).
+	const observability = process.env.SENTRY_DSN
+		? new Observability({
+				configs: {
+					sentry: {
+						serviceName: 'oci-portal-mastra',
+						exporters: [
+							new SentryExporter({
+								dsn: process.env.SENTRY_DSN,
+								environment: process.env.NODE_ENV || 'production',
+								tracesSampleRate: Number(process.env.SENTRY_TRACE_SAMPLE_RATE) || 0.1 // 10% sampling
+							})
+						]
+					}
+				}
+			})
+		: undefined;
+
 	// ── Create Mastra instance ─────────────────────────────────────────
 	const mastra = new Mastra({
 		agents: { 'cloud-advisor': cloudAdvisor },
 		tools,
 		storage,
-		memory: { 'cloud-advisor': memory }
+		memory: { 'cloud-advisor': memory },
+		observability
 	});
 
 	fastify.decorate('mastra', mastra);

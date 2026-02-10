@@ -10,6 +10,11 @@
  */
 import { Agent } from '@mastra/core/agent';
 import type { Memory } from '@mastra/memory';
+import type { MastraModelConfig } from '@mastra/core/llm';
+import {
+	createFaithfulnessScorer,
+	createAnswerRelevancyScorer
+} from '@mastra/evals/scorers/prebuilt';
 import { buildMastraTools } from '../tools/registry.js';
 
 // ── System Prompt ─────────────────────────────────────────────────────────
@@ -235,12 +240,38 @@ export interface CloudAdvisorConfig {
 export function createCloudAdvisorAgent(config: CloudAdvisorConfig): Agent {
 	const tools = buildMastraTools();
 
+	// ── Configure eval scorers (A-2.07) ────────────────────────────────
+	// Evaluates agent responses for quality: faithfulness (accuracy vs context) and relevance (answer quality).
+	// Sample rate: 10% in production (controlled via MASTRA_EVAL_SAMPLE_RATE env var).
+	const evalSampleRate = Number(process.env.MASTRA_EVAL_SAMPLE_RATE) || 0.1; // 10% sampling
+	const enableEvals = process.env.MASTRA_ENABLE_EVALS !== 'false'; // Default: enabled
+
+	const scorers = enableEvals
+		? {
+				faithfulness: {
+					scorer: createFaithfulnessScorer({
+						model: config.model as MastraModelConfig,
+						options: { scale: 10 } // 0-10 scale
+					}),
+					sampling: { type: 'ratio' as const, rate: evalSampleRate }
+				},
+				'answer-relevancy': {
+					scorer: createAnswerRelevancyScorer({
+						model: config.model as MastraModelConfig,
+						options: { scale: 10, uncertaintyWeight: 0.5 }
+					}),
+					sampling: { type: 'ratio' as const, rate: evalSampleRate }
+				}
+			}
+		: undefined;
+
 	return new Agent({
 		id: 'cloud-advisor',
 		name: 'CloudAdvisor',
 		instructions: getSystemPrompt(config.compartmentId),
 		model: config.model,
 		tools,
-		memory: config.memory
+		memory: config.memory,
+		scorers
 	});
 }

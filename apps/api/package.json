@@ -35,6 +35,7 @@
 		"@mastra/fastify": "^1.1.1",
 		"@mastra/mcp": "^1.0.0",
 		"@mastra/memory": "^1.1.0",
+		"@mastra/observability": "^1.2.0",
 		"@mastra/rag": "2.1.0",
 		"@mastra/sentry": "^1.0.2",
 		"@portal/shared": "workspace:*",
@@ -47,6 +48,7 @@
 		"fastify-type-provider-zod": "^6.1.0",
 		"iovalkey": "^0.3.3",
 		"rate-limiter-flexible": "^9.1.1",
+		"toad-scheduler": "^3.1.0",
 		"zod": "^4.3.6",
 		"zod-validation-error": "^5.0.0"
 	},
