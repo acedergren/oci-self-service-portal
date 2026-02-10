@@ -1,9 +1,9 @@
 # Self-Service Portal: MVP to Product Roadmap
 
-> **Status**: Phase 9 complete (Fastify Backend Migration — 9.1-9.20 merged)
+> **Status**: Phase 9 complete, Phase 10 PRD v6 finalized (107 agent tasks planned)
 > **Standalone Repo**: [oci-self-service-portal](https://github.com/acedergren/oci-self-service-portal)
-> **Last Updated**: 2026-02-09
-> **Tests**: 1213 passing across 92 test files (frontend + API + shared)
+> **Last Updated**: 2026-02-10
+> **Tests**: 1213+ passing across 100 test files (frontend + API + shared)
 
 ---
 
@@ -236,7 +236,7 @@
 
 **Key dependencies**: `fastify@5`, `@fastify/swagger`, `@fastify/cors`, `@fastify/cookie`, `@fastify/rate-limit`, `fastify-type-provider-zod`
 
-**Verified**: 1213 tests passing across 92 test files. All routes migrated (9.1-9.14). Mastra framework integration complete (9.11-9.14). Feature flag proxy operational (9.15-9.20). Build succeeds. Cutover guide complete.
+**Verified**: 1213+ tests passing across 100 test files. All routes migrated (9.1-9.14). Mastra framework integration complete (9.11-9.14). Feature flag proxy operational (9.15-9.20). Build succeeds. Cutover guide complete.
 
 ---
 
@@ -348,20 +348,73 @@
 
 ---
 
-## Phase 10: ITSM Completeness & MCP Integrations
+## Phase 10: Foundation Rewrite, Workflow Designer & Oracle 26AI Modernization
 
-**Goal**: Complete ITSM platform with incident/change management and external system integrations.
+**Goal**: Unify API boundary (Fastify-first), split shared package, migrate to OCI SDK, complete workflow designer, and modernize Oracle 26AI integration. 107 agent tasks across 6 sub-phases. See `docs/plans/phase-10-agent-task-plan.md` for full atomic breakdown and `.claude/reference/PRD.md` (v6) for requirements.
 
-- [ ] 10.1 MCP client integration (PagerDuty, Jira, Slack, GitHub)
-- [ ] 10.2 Incident management tools
-- [ ] 10.3 Change management workflow
-- [ ] 10.4 Knowledge base (vector RAG with ADB 26AI)
-- [ ] 10.5 Asset inventory enrichment
-- [ ] 10.6 SLA tracking
-- [ ] 10.7 Slack notifications
-- [ ] 10.8 ITSM dashboard
+### Phase A: Dependency Updates + Fastify Hardening (1-2 weeks, 22 tasks)
 
-**Verify**: Create incident via chat -> PagerDuty. Submit change request -> Jira. Search KB -> semantic results.
+- [x] 10A.1 Patch/minor dependency updates (ai, svelte, sentry, pino, swagger)
+- [x] 10A.2 Add oci-sdk, @modelcontextprotocol/sdk, syncpack, zod-validation-error
+- [x] 10A.3 Add Fastify plugins (@fastify/under-pressure, graceful-shutdown, @fastify/otel)
+- [x] 10A.4 Add @mastra/sentry, @mastra/evals, iovalkey cache module (AD-39)
+- [ ] 10A.5 Replace zodToJsonSchema() with z.toJSONSchema() (Zod 4)
+- [ ] 10A.6 Switch @fastify/swagger-ui → @scalar/fastify-api-reference (AD-42)
+- [x] 10A.7 Deprecate custom MCPClient, keep Mastra MCPConnectionManager (AD-44)
+- [x] 10A.8 Migrate agent_state SQLite → Oracle OracleStore (AD-47)
+- [ ] 10A.9 Set up Grafana + Tempo observability stack (AD-48)
+- [x] 10A.10 Configure rate-limiter-flexible with Oracle adapter (AD-49)
+- [ ] 10A.11 Configure @fastify/schedule + Oracle queue table (AD-50)
+
+### Phase B: Package Split + Frontend Libraries (2 weeks, 27 tasks)
+
+- [ ] 10B.1 Create @portal/types (extract Zod schemas + TS types + error hierarchy)
+- [ ] 10B.2 Create @portal/server (extract server modules)
+- [ ] 10B.3 Create @portal/ui (extract Svelte components)
+- [ ] 10B.4 Rewrite imports across all workspaces (AD-51)
+- [ ] 10B.5 Add sveltekit-superforms, formsnap, layerchart, fuse.js, @tanstack/table-core
+- [ ] 10B.6 Add paneforge, svelte-dnd-action, @formkit/auto-animate
+- [ ] 10B.7 Build all 8 Generative UI components (AD-46): InstanceTable, CostChart, MetricsChart, BucketGrid, TerraformViewer, AlarmPanel, ResourceList, ApprovalCard
+- [ ] 10B.8 Migrate admin forms to Superforms + adopt createAIContext()
+
+### Phase C: Fastify-First Migration + Mastra Studio (2-3 weeks, 19 tasks)
+
+- [ ] 10C.1 Move Better Auth to Fastify (catch-all route, toWebRequest pattern)
+- [ ] 10C.2 Migrate all 37 SvelteKit +server.ts routes to Fastify (batch by group)
+- [ ] 10C.3 Update SvelteKit hooks to cookie-forwarding only
+- [ ] 10C.4 Configure Mastra Studio at /admin/studio with RBAC auth gating
+- [ ] 10C.5 Add AWS + Azure MCP servers to catalog (AD-45)
+- [ ] 10C.6 Remove feature flags, proxy middleware, update nginx config
+- [ ] 10C.7 Test OIDC flow end-to-end with OCI IDCS
+
+### Phase D: OCI SDK Migration (3-4 weeks, 14 tasks)
+
+- [x] 10D.1 Configure oci-sdk auth provider (config file + instance principal)
+- [x] 10D.2 Create executor-sdk.ts adapter with OCIError wrapping
+- [x] 10D.3 Migrate compute, networking, storage, database, IAM tools
+- [ ] 10D.4 Migrate monitoring, container, load balancer, remaining tools
+- [ ] 10D.5 Benchmark: SDK < 500ms p95 vs CLI 2-5s
+
+### Phase E: Workflow Designer Completion + AI Hardening (2-3 weeks, 17 tasks)
+
+- [ ] 10E.1 Implement ai-step, loop, parallel workflow nodes
+- [ ] 10E.2 Add retry policies, compensation/saga, streaming, lifecycle callbacks
+- [ ] 10E.3 Add Agent Guardrails (PromptInjectionDetector, PIIDetector, TokenLimiter)
+- [ ] 10E.4 Configure @mastra/evals scorers on CloudAdvisor (10% sampling)
+- [ ] 10E.5 Update workflow editor for new node types
+- [ ] 10E.6 A2A Agent Card DEFERRED to post-Phase E (AD-43)
+
+### Phase F: Oracle 26AI Modernization (1-2 weeks, 8 tasks) — AD-52: all parallel
+
+- [x] 10F.1 Migration 015: HNSW DML vector indexes
+- [x] 10F.2 Migration 016: JSON Relational Duality Views
+- [x] 10F.3 Migration 017: VPD tenant isolation policies
+- [x] 10F.4 Replace vectorToOracleString with Float32Array + DB_TYPE_VECTOR
+- [x] 10F.5 Benchmark vector search (3x target), test VPD isolation
+
+**Key decisions**: 52 architecture decisions (AD-1 through AD-52). See PRD v6.
+
+**Verify**: Zero +server.ts API routes. SDK p95 < 500ms. All 8 workflow nodes functional. Vector 3x improvement. VPD isolation verified. 100% test pass rate.
 
 ---
 
@@ -382,4 +435,4 @@
 
 ---
 
-Last updated: February 9, 2026
+Last updated: February 10, 2026
