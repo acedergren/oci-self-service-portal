@@ -16,7 +16,7 @@ import { getAllToolDefinitions, executeTool } from '../../tools/registry';
 import type { ToolDefinition } from '../../tools/types';
 import { createLogger } from '../logger';
 import { NotFoundError } from '../errors';
-import type { z } from 'zod';
+import { z } from 'zod';
 
 const log = createLogger('mcp-server');
 
@@ -49,95 +49,20 @@ export interface MCPToolResult {
 }
 
 /**
- * Convert a Zod schema to a JSON Schema object.
+ * Convert a Zod schema to JSON Schema using Zod 4's built-in converter.
  *
- * Handles the common Zod types used in tool definitions:
- * ZodObject, ZodString, ZodNumber, ZodBoolean, ZodEnum, ZodOptional, ZodDefault, ZodArray.
- *
- * Uses `unknown` casts for Zod internal _def properties since the exact
- * internal type varies between Zod 3/4 and is not part of the public API.
+ * Removes the $schema key since MCP embeds schemas inline rather than
+ * referencing external schema definitions.
  */
 function zodToJsonSchema(schema: z.ZodTypeAny): Record<string, unknown> {
-	const def = schema._def as unknown as Record<string, unknown>;
-	const typeName = (def?.typeName ?? '') as string;
-
-	switch (typeName) {
-		case 'ZodObject': {
-			const shape = (schema as z.ZodObject<z.ZodRawShape>).shape;
-			const properties: Record<string, unknown> = {};
-			const required: string[] = [];
-
-			for (const [key, value] of Object.entries(shape)) {
-				const fieldSchema = value as z.ZodTypeAny;
-				properties[key] = zodToJsonSchema(fieldSchema);
-
-				// Field is required if not optional/default
-				const fieldDef = fieldSchema._def as unknown as Record<string, unknown>;
-				const fieldTypeName = (fieldDef?.typeName ?? '') as string;
-				if (fieldTypeName !== 'ZodOptional' && fieldTypeName !== 'ZodDefault') {
-					required.push(key);
-				}
-			}
-
-			return {
-				type: 'object',
-				properties,
-				...(required.length > 0 ? { required } : {})
-			};
-		}
-
-		case 'ZodString': {
-			const result: Record<string, unknown> = { type: 'string' };
-			if (def.description) result.description = def.description;
-			if (def.checks && Array.isArray(def.checks)) {
-				for (const check of def.checks as unknown as Array<{ kind: string; value?: unknown }>) {
-					if (check.kind === 'min') result.minLength = check.value;
-					if (check.kind === 'max') result.maxLength = check.value;
-				}
-			}
-			return result;
-		}
-
-		case 'ZodNumber': {
-			const result: Record<string, unknown> = { type: 'number' };
-			if (def.description) result.description = def.description;
-			return result;
-		}
-
-		case 'ZodBoolean':
-			return { type: 'boolean', ...(def.description ? { description: def.description } : {}) };
-
-		case 'ZodEnum':
-			return {
-				type: 'string',
-				enum: def.values as string[],
-				...(def.description ? { description: def.description } : {})
-			};
-
-		case 'ZodOptional':
-			return zodToJsonSchema(def.innerType as z.ZodTypeAny);
-
-		case 'ZodDefault':
-			return {
-				...zodToJsonSchema(def.innerType as z.ZodTypeAny),
-				default:
-					typeof def.defaultValue === 'function'
-						? (def.defaultValue as () => unknown)()
-						: def.defaultValue
-			};
-
-		case 'ZodArray':
-			return {
-				type: 'array',
-				items: zodToJsonSchema(def.type as z.ZodTypeAny)
-			};
-
-		case 'ZodLiteral':
-			return { const: def.value };
-
-		default:
-			// Fallback: generic object
-			return { type: 'object' };
+	try {
+		const jsonSchema = z.toJSONSchema(schema);
+		// Remove the $schema key since MCP embeds schemas inline
+		const { $schema: _$schema, ...rest } = jsonSchema as Record<string, unknown>;
+		return rest;
+	} catch (_err) {
+		log.warn({ err: _err }, 'Failed to convert Zod schema to JSON Schema');
+		return { type: 'object', additionalProperties: true };
 	}
 }
 
