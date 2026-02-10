@@ -1,6 +1,6 @@
-# PRD: Premium MCP Server Management System
+# PRD: Phase 10 — Foundation Rewrite, Workflow Designer & Oracle 26AI Modernization
 
-> **Status**: Approved
+> **Status**: Draft v5
 > **Author**: Claude Opus 4.6 + acedergr
 > **Created**: 2026-02-10
 > **Last Updated**: 2026-02-10
@@ -8,8 +8,6 @@
 ---
 
 ## Validation Checklist
-
-Run `/prd --validate` to check these gates. All Critical gates must pass before approval.
 
 | #   | Gate                                                    | Severity | Status |
 | --- | ------------------------------------------------------- | -------- | ------ |
@@ -26,1133 +24,2146 @@ Run `/prd --validate` to check these gates. All Critical gates must pass before 
 
 ---
 
-## 1. Product Overview
-
-### Vision
-
-Transform the OCI Self-Service Portal from a closed-tool system into an extensible AI platform where administrators can install, manage, and monitor MCP (Model Context Protocol) servers from a visual marketplace. Connected servers dynamically inject tools into CloudAdvisor at runtime, enabling the AI agent to interact with any external system (Slack, GitHub, PagerDuty, Jira, etc.) without code changes.
+## 1. Executive Summary
 
 ### Problem Statement
 
-CloudAdvisor currently has 60+ hard-coded OCI CLI tools. Integrating external systems (Slack, GitHub, ITSM platforms) requires writing custom tool wrappers, deploying code changes, and restarting the API server. This creates a bottleneck where every new integration is a multi-day engineering effort — even when mature MCP servers already exist for these services.
+The OCI Self-Service Portal has accumulated architectural debt across 9 phases of rapid development:
 
-**Who experiences this**: Platform administrators who need their AI agent to interact with their existing tool ecosystem. Operations teams who want incident management, change tracking, or ChatOps capabilities without waiting for custom development.
+1. **Dual API boundary**: SvelteKit serves as both UI layer and API gateway via 37 `+server.ts` routes, while Fastify handles the "real" API — creating split auth, duplicated middleware, and confused request routing
+2. **Split authentication**: Better Auth lives in SvelteKit hooks while Fastify validates sessions separately — two codepaths for one concern
+3. **Monolithic shared package**: `@portal/shared` (25+ modules) mixes types, server logic, and UI utilities — Svelte deps leak into API builds, Oracle deps leak into frontend
+4. **CLI subprocess overhead**: 60+ OCI tools spawn `oci` CLI processes (2-5s each) instead of using the native TypeScript SDK (<500ms)
+5. **Incomplete workflow designer**: 3 of 8 node types (ai-step, loop, parallel) unimplemented; no retry policies, no compensation, no execution streaming
+6. **Legacy vector indexing**: IVF indexes require full rebuilds after DML; Oracle 26AI HNSW indexes support real-time DML
+7. **String-based vector conversion**: `vectorToOracleString()` converts Float32Arrays to strings when node-oracledb 6.5+ supports direct TypedArray binding
 
-**Frequency**: Every time a new external tool integration is requested (estimated 2-4 requests per month post-launch).
+### Proposed Solution
 
-### Value Proposition
+A phased foundation rewrite that:
 
-- **Admins install MCP servers in minutes** instead of waiting for engineering sprints
-- **60+ community MCP servers** become instantly available (Slack, GitHub, PagerDuty, Jira, Brave Search, filesystem, databases, etc.)
-- **Dynamic tool injection** means CloudAdvisor gains new capabilities at runtime without restarts
-- **Custom servers** supported for proprietary/internal tools via SSE or HTTP transports
-- **Docker orchestration** sandboxes catalog servers with security constraints (512MB memory, cap-drop ALL)
-- **Encrypted credential management** protects API keys/tokens at rest (AES-256-GCM)
+1. **Unifies the API boundary**: Fastify owns ALL API logic — auth, RBAC, routes, middleware. SvelteKit becomes a pure SSR/UI layer with zero `+server.ts` files
+2. **Consolidates authentication**: Better Auth moves entirely to Fastify. SvelteKit forwards cookies for SSR hydration only
+3. **Splits the shared package**: `@portal/types` (schemas, zero deps), `@portal/server` (business logic), `@portal/ui` (Svelte components)
+4. **Adopts OCI TypeScript SDK**: Replace CLI subprocess calls with `oci-sdk` v2.125.0 native API calls for 3-5x latency improvement
+5. **Completes the workflow designer**: Implement remaining node types using Mastra workflow primitives (`.then()`, `.parallel()`, `.branch()`, `.foreach()`, suspend/resume)
+6. **Modernizes Oracle integration**: HNSW DML indexes, direct Float32Array vector binding, JSON Relational Duality Views, VPD tenant isolation
+7. **Replaces custom code with packages**: `@modelcontextprotocol/sdk` replaces 750 LOC MCP client, `terraform-generator` replaces 577 LOC string concatenation
 
-**Cost of not building**: Every external integration remains a custom engineering task. The portal stays siloed to OCI-only operations, missing the "single pane of glass" value proposition for operations teams.
+### Success Criteria
 
----
-
-## 2. User Personas
-
-### Persona: Platform Administrator
-
-| Attribute    | Detail                                                           |
-| ------------ | ---------------------------------------------------------------- |
-| Role         | Admin user with `admin:all` permission in the portal             |
-| Goal         | Extend CloudAdvisor's capabilities by connecting external tools  |
-| Pain Point   | Each new integration requires code changes and deployment cycles |
-| Tech Comfort | High — comfortable with API keys, Docker, MCP protocol concepts  |
-
-### Persona: Operations Engineer
-
-| Attribute    | Detail                                                                               |
-| ------------ | ------------------------------------------------------------------------------------ |
-| Role         | Daily user of CloudAdvisor for infrastructure tasks                                  |
-| Goal         | Ask CloudAdvisor to interact with Slack, GitHub, PagerDuty without context-switching |
-| Pain Point   | Must switch between CloudAdvisor and 3-5 other tools during incidents                |
-| Tech Comfort | Medium — uses tools but doesn't configure them                                       |
-
-### Persona: Security Reviewer
-
-| Attribute    | Detail                                                                      |
-| ------------ | --------------------------------------------------------------------------- |
-| Role         | Responsible for auditing tool access and credential management              |
-| Goal         | Verify that MCP servers are sandboxed, credentials encrypted, access logged |
-| Pain Point   | Shadow integrations created outside governed processes                      |
-| Tech Comfort | High — reviews Docker configs, encryption implementations, audit logs       |
+| Metric                            | Target         | Measurement                                      |
+| --------------------------------- | -------------- | ------------------------------------------------ |
+| SvelteKit API routes eliminated   | 37 → 0         | Zero `+server.ts` files proxying to Fastify      |
+| OCI tool call latency (p95)       | < 500ms        | SDK API call vs 2-5s CLI subprocess              |
+| Shared package compile time       | < 3s           | `tsc --noEmit` on split packages                 |
+| Workflow node types implemented   | 8/8            | All node types functional in designer + executor |
+| Oracle query performance (vector) | 3x improvement | HNSW DML index vs IVF rebuild                    |
+| Test suite pass rate              | 100%           | `npx vitest run` on all workspaces               |
+| Deprecated dependencies           | 0              | `pnpm outdated` shows no deprecated              |
+| Custom LOC replaced by packages   | ~1,300 LOC     | MCP client + Terraform generator                 |
+| Auth codepaths                    | 1              | Single Fastify auth plugin, zero SvelteKit auth  |
 
 ---
 
-## 3. User Journey Maps
+## 2. User Experience & Functionality
 
-### Journey: Platform Administrator — Install Slack MCP Server from Catalog
+### User Personas
 
-```
-Admin Console → Integrations Tab → Catalog Grid → Click "Install" on Slack
-    → Modal: Enter Bot Token → "Install & Connect"
-        → Backend: create DB record → encrypt token → start Docker container
-            → MCPClient connects → discover tools → cache in DB
-                ├── Success → Toast "Connected", server in Connected tab (green badge)
-                └── Failure → Toast error, server status "error" with last_error
-```
+| Persona                 | Role                                       | Key Concern                                          |
+| ----------------------- | ------------------------------------------ | ---------------------------------------------------- |
+| **Platform Admin**      | Configures portal, manages MCP servers     | Workflow reliability, auth consistency               |
+| **Operations Engineer** | Daily CloudAdvisor user                    | Tool response speed, workflow execution feedback     |
+| **Workflow Designer**   | Builds automation DAGs in visual editor    | All node types working, retry/compensation support   |
+| **Security Reviewer**   | Audits auth, RBAC, encryption              | Single auth boundary, tenant isolation, audit trails |
+| **Developer**           | Extends portal, writes new tools/workflows | Clean package boundaries, fast builds, good DX       |
 
-**Touchpoints**: Admin UI (catalog grid, modal, toast), Fastify API (5 endpoints), Oracle DB (3 tables), Docker (container lifecycle), Mastra MCPClient (protocol)
-**Handoffs**: Frontend → API → MCPConnectionManager → Docker/MCPClient → DB
+### User Stories
 
-### Journey: Operations Engineer — Use MCP Tool via CloudAdvisor
+#### US-1: Fastify-First API (Admin, Engineer, Security Reviewer)
 
-```
-AI Chat → Ask "List my Slack channels"
-    → chat.ts loads MCP toolsets for org → passes to agent.stream()
-        → CloudAdvisor selects Slack tool → MCPClient executes → returns result
-            ├── Success → Agent presents formatted channel list
-            └── Failure → Agent falls back to built-in tools, logs warning
-```
+As a **Security Reviewer**, I want all API authentication handled in a single Fastify boundary so that I can audit one auth implementation instead of two.
 
-**Touchpoints**: Chat UI, Fastify chat route, Mastra agent, MCPClient, external Slack API
-**Handoffs**: Frontend → API → Agent → MCPClient → External MCP Server → Agent → Frontend
+**Acceptance Criteria**:
 
-### Journey: Platform Administrator — Add Custom Remote MCP Server
+```gherkin
+Given the SvelteKit frontend makes an API request
+When the request hits /api/v1/*
+Then it is handled directly by Fastify (no SvelteKit proxy)
+And authentication is validated by Fastify's auth plugin
+And RBAC permissions are enforced by Fastify's rbac plugin
 
-```
-Admin Console → Integrations Tab → "+ Add Custom" button
-    → Modal: Select SSE transport → Enter URL + auth headers
-        → "Test Connection" → temporary MCPClient → list tools → disconnect
-            ├── Success → Show tool count → "Save & Connect"
-            └── Failure → Show error → allow retry or cancel
-```
+Given SvelteKit previously handled /api/auth/* routes
+When Better Auth is migrated to Fastify
+Then OIDC callbacks, session management, and CSRF protection work from Fastify
+And SvelteKit hooks only forward the session cookie (no auth logic)
 
-**Touchpoints**: Admin UI (modal, form), Fastify API (create + connect endpoints), MCPClient (SSE transport)
-**Handoffs**: Frontend → API → MCPConnectionManager → Remote MCP Server
-
-### Journey: Platform Administrator — Tool Playground Testing
-
-```
-Admin Console → Integrations Tab → Tool Playground Tab
-    → Filter tools by server → Expand tool card
-        → Fill dynamic form (from JSON Schema) → "Execute"
-            → Backend proxies through MCPClient → returns result
-                ├── Success → Display formatted JSON result
-                └── Failure → Display error message
+Given the FASTIFY_PROXY_ROUTES feature flag in SvelteKit
+When Phase 10 is complete
+Then the proxy code and feature flag are removed
+And SvelteKit serves only SSR pages and static assets
 ```
 
-**Touchpoints**: Admin UI (tool cards, dynamic forms), Fastify API (tool test endpoint), MCPClient
-**Handoffs**: Frontend → API → MCPConnectionManager → MCPClient → External Server
+**Affected Files**: `apps/frontend/src/hooks.server.ts`, `apps/api/src/plugins/auth.ts`, `apps/api/src/routes/auth.ts` (new)
+**Test File**: `apps/api/src/tests/routes/auth-routes.test.ts`
+
+#### US-2: OCI SDK Migration (Engineer, Developer)
+
+As an **Operations Engineer**, I want OCI tool calls to respond in under 500ms so that CloudAdvisor conversations feel interactive.
+
+**Acceptance Criteria**:
+
+```gherkin
+Given the portal uses 60+ OCI CLI tool wrappers
+When a tool is called via CloudAdvisor
+Then it uses the official oci-sdk TypeScript API (not CLI subprocess)
+And the response time is < 500ms p95 (vs 2-5s CLI)
+And the response is natively typed (no CLI output parsing)
+
+Given the oci-sdk is used for API calls
+When authentication is configured
+Then it uses OCI config file (~/.oci/config) or instance principal
+And connection pooling and automatic retries are enabled
+
+Given a tool call fails
+When the SDK throws a structured exception
+Then the error includes service name, status code, and opc-request-id
+And the error is wrapped as OCIError (not raw Error)
+```
+
+**Affected Files**: `packages/shared/src/tools/executor-sdk.ts` (new), `packages/shared/src/tools/categories/*.ts`
+**Test File**: `apps/api/src/tests/tools/oci-sdk-executor.test.ts`
+
+#### US-3: Visual Workflow Designer Completion (Workflow Designer, Admin)
+
+As a **Workflow Designer**, I want all 8 node types functional in the visual editor so that I can build complete automation workflows without workarounds.
+
+**Acceptance Criteria**:
+
+```gherkin
+Given the workflow editor canvas
+When I add an AI Step node
+Then I can configure the model, prompt template, and output schema
+And the executor sends the prompt to the selected AI model
+And the response is available as step output for downstream nodes
+
+Given the workflow editor canvas
+When I add a Loop node with a collection input
+Then the executor iterates over each item with configurable concurrency
+And executes the loop body for each item
+And aggregates results into an array output
+
+Given the workflow editor canvas
+When I add a Parallel node with multiple branches
+Then the executor runs all branches concurrently (Promise.all)
+And waits for all branches to complete before continuing
+And each branch result is available by branch name
+
+Given a tool node with retry configuration
+When the tool call fails
+Then the executor retries with exponential backoff (base * 2^attempt)
+And respects maxRetries (default 3) and maxDelay (default 30s)
+And logs each retry attempt
+
+Given a workflow with compensation steps
+When a node fails after previous nodes succeeded
+Then the executor runs compensation handlers in reverse order
+And records compensation results in the run audit trail
+```
+
+**Affected Files**: `packages/shared/src/server/workflows/executor.ts`, `apps/frontend/src/lib/components/workflow/*.svelte`
+**Test File**: `apps/api/src/tests/workflows/executor.test.ts`
+
+#### US-4: Package Split (Developer)
+
+As a **Developer**, I want the shared package split into focused packages so that builds are fast and import boundaries are clear.
+
+**Acceptance Criteria**:
+
+```gherkin
+Given the current @portal/shared monolith (25+ modules)
+When Phase 10 is complete
+Then three packages exist:
+  - @portal/types: Zod schemas, TypeScript types, error hierarchy (no runtime deps)
+  - @portal/server: Oracle, auth, workflows, admin repositories (server-only deps)
+  - @portal/ui: Svelte components, stores, client utilities (Svelte deps)
+
+Given @portal/types
+When imported by any package
+Then it has zero runtime dependencies (types + Zod only)
+And compile time is < 1s
+
+Given @portal/server
+When imported by apps/api
+Then it does NOT pull in Svelte or SvelteKit dependencies
+And it does NOT re-export @portal/ui modules
+```
+
+**Affected Files**: `packages/types/package.json` (new), `packages/server/package.json` (new), `packages/ui/package.json` (new)
+**Test File**: `packages/server/src/tests/**/*.test.ts`, build validation scripts
+
+#### US-5: Oracle 26AI Modernization (Developer, Admin)
+
+As a **Developer**, I want Oracle vector indexes to support real-time DML so that embeddings are searchable immediately after insertion.
+
+**Acceptance Criteria**:
+
+```gherkin
+Given conversation embeddings are inserted
+When using HNSW DML vector indexes
+Then the embedding is searchable within 1 second (no index rebuild)
+And index accuracy remains >= 95% at topK=10
+
+Given vector data is bound to Oracle queries
+When using node-oracledb 6.10
+Then Float32Array values are bound directly (no vectorToOracleString conversion)
+And oracledb.DB_TYPE_VECTOR is used for flexible vector columns
+
+Given multi-tenant vector search
+When using VPD (Virtual Private Database) policies
+Then queries automatically filter by org_id
+And no application code can bypass tenant isolation
+```
+
+**Affected Files**: `apps/api/src/mastra/rag/oracle-vector-store.ts`, `packages/shared/src/server/oracle/migrations/015-26ai.sql` (new)
+**Test File**: `apps/api/src/tests/rag/oracle-vector-store.test.ts`
+
+### Non-Goals
+
+- **Kubernetes migration**: Stay on single OCI instance with Docker Compose
+- **GraphQL API**: REST + SSE is sufficient; GraphQL adds complexity without clear benefit
+- **Mobile app**: Responsive web only; native apps are out of scope
+- **Multi-region deployment**: Single region with DR as a future phase
+- **Mastra Studio in production**: Dev-only tool for agent/workflow testing
+- **Real-time collaboration**: No WebSocket-based multi-user workflow editing
+- **Full SvelteKit removal**: SvelteKit stays for SSR/UI — we remove its API role, not the framework
 
 ---
 
-## 4. Feature Requirements
+## 3. Separation of Concerns
 
-### Must Have (P0)
+### Current State (Problematic)
 
-#### M1: MCP Server Catalog with Visual Marketplace
+```
+Request → Nginx → SvelteKit hooks.server.ts
+                      ├── Auth check (Better Auth)
+                      ├── Request tracing (X-Request-Id)
+                      ├── Feature flag check (FASTIFY_ENABLED?)
+                      │   ├── YES → Proxy to Fastify (re-auth, re-trace)
+                      │   └── NO → Handle in SvelteKit +server.ts
+                      └── SSR page rendering
 
-**User Story**: As a Platform Administrator, I want to browse a catalog of pre-configured MCP servers so that I can install integrations without manual configuration.
-
-**Acceptance Criteria**:
-
-```gherkin
-Given the admin navigates to /admin/integrations
-When the Catalog tab is active
-Then a grid of catalog cards is displayed with icon, name, description, category, and "Install" button
-
-Given catalog items are seeded in the database (Slack, GitHub, PagerDuty, Jira, Filesystem, Brave Search)
-When the admin filters by category "Communication"
-Then only Slack is shown
-
-Given the admin clicks "Install" on a catalog item
-When the install modal opens
-Then the required credential fields match the catalog item's required_credentials JSON
+Result: Two auth implementations, duplicated middleware, confused routing
 ```
 
-**Affected Files**: `packages/shared/src/server/oracle/migrations/013-mcp-servers.sql`, `packages/shared/src/server/admin/mcp-repository.ts`, `apps/api/src/routes/admin/mcp.ts`, `apps/frontend/src/routes/admin/integrations/+page.svelte`, `apps/frontend/src/lib/components/admin/IntegrationCatalogCard.svelte`
-**Test File**: `apps/api/src/tests/admin/mcp-repository.test.ts` (catalog CRUD), `apps/api/src/tests/routes/mcp-admin-routes.test.ts` (catalog API)
+### Target State (Clean Layers)
 
-#### M2: MCP Server Lifecycle Management (Connect/Disconnect/Restart)
+```
+Layer 1: Edge (Nginx)
+├── TLS termination (TLS 1.2 + 1.3)
+├── Rate limiting (defence-in-depth)
+├── H2C smuggling prevention (Upgrade "" header)
+├── Static asset serving
+├── Route splitting:
+│   ├── /api/* → Fastify :3001 (all API traffic)
+│   └── /* → SvelteKit :3000 (all page traffic)
+└── SSE buffering disabled for /api/
 
-**User Story**: As a Platform Administrator, I want to connect, disconnect, and restart MCP servers so that I can manage their lifecycle without touching infrastructure.
+Layer 2: API (Fastify 5)
+├── Plugin pipeline (18 steps, order is load-bearing):
+│   1. Zod type provider
+│   2. Request tracing (X-Request-Id)
+│   3. Error handler (PortalError → HTTP)
+│   4. Helmet (security headers)
+│   5. CORS (credentials: true, trusted origins)
+│   6. Rate limit (@fastify/rate-limit)
+│   7. Cookie parser
+│   8. Sensible defaults
+│   9. Oracle connection pool
+│   10. Setup detection
+│   11. Auth (Better Auth — sessions, OIDC, API keys)
+│   12. RBAC (deny-by-default, 13 permissions)
+│   13. Mastra (agent, RAG, MCP, workflows)
+│   14. Swagger + Swagger UI
+│   15-18. Route modules (grouped)
+├── Request decorators: user, session, permissions (Symbol-keyed), apiKeyContext
+├── Deny-by-default auth gate: onRequest hook rejects unauthenticated
+└── Route handlers: chat, workflows, admin, tools, search, sessions, etc.
 
-**Acceptance Criteria**:
+Layer 3: UI (SvelteKit)
+├── SSR page rendering only
+├── +layout.server.ts: reads session cookie, passes auth data to client
+├── +page.server.ts: server-side data loading via Fastify API calls
+├── Zero +server.ts API routes
+├── No auth logic (cookie forwarding only)
+├── 54 Svelte 5 components (fully migrated to runes)
+└── TanStack Query for server state management
 
-```gherkin
-Given an MCP server record exists with status "disconnected"
-When the admin clicks "Connect"
-Then the backend creates a Mastra MCPClient with the server's transport config
-And the server status changes to "connected"
-And discovered tools are cached in mcp_tool_cache
+Layer 4: Business Logic (@portal/server)
+├── Oracle repositories (connection pool, migrations)
+├── Auth configuration (Better Auth setup, IDCS, API keys)
+├── Admin repositories (IDP, AI providers, settings, MCP)
+├── Workflow executor and repository
+├── Crypto (AES-256-GCM), logger (Pino), metrics (Prometheus)
+└── Zero framework dependencies (no Fastify, no SvelteKit)
 
-Given an MCP server with status "connected"
-When the admin clicks "Disconnect"
-Then the MCPClient is disconnected and removed from memory
-And any Docker container is stopped
-And the server status changes to "disconnected"
+Layer 5: Types (@portal/types)
+├── Zod schemas (API request/response, tools, workflows)
+├── TypeScript types
+├── PortalError hierarchy + type guards
+└── Zero runtime dependencies (Zod only)
 
-Given an MCP server with status "error"
-When the admin clicks "Restart"
-Then the server is disconnected then reconnected
-And the last_error is cleared on success
+Layer 6: Data (Oracle Database 26AI)
+├── HNSW DML vector indexes (real-time searchable embeddings)
+├── JSON Relational Duality Views (workflow definitions)
+├── VPD tenant isolation (database-level org_id filtering)
+├── Blockchain audit tables (immutable audit trail)
+└── AES-256-GCM encrypted secrets at rest
 ```
 
-**Affected Files**: `apps/api/src/services/mcp-connection-manager.ts`, `apps/api/src/routes/admin/mcp.ts`, `apps/frontend/src/lib/components/admin/IntegrationServerCard.svelte`
-**Test File**: `apps/api/src/tests/mcp-connection-manager.test.ts` (23 tests), `apps/api/src/tests/routes/mcp-admin-routes.test.ts` (connect/disconnect/restart routes)
-
-#### M3: Encrypted Credential Management
-
-**User Story**: As a Platform Administrator, I want MCP server credentials (API keys, tokens) encrypted at rest so that secrets are never stored in plaintext.
-
-**Acceptance Criteria**:
-
-```gherkin
-Given the admin sets a credential for an MCP server
-When the credential is stored in mcp_server_credentials
-Then the value is encrypted with AES-256-GCM
-And stored as three columns: value_enc (BLOB), value_iv (RAW(16)), value_tag (RAW(16))
-
-Given a credential is stored encrypted
-When the MCPConnectionManager needs the credential for connection
-Then it decrypts using decryptSecret() from crypto.ts
-And the decrypted value is never persisted or logged
-
-Given the admin views server details via the API
-When credentials are returned
-Then the response includes credential metadata but NOT the decrypted value
-```
-
-**Affected Files**: `packages/shared/src/server/admin/mcp-repository.ts` (setCredential, getDecryptedCredentials), `packages/shared/src/server/auth/crypto.ts` (reused)
-**Test File**: `apps/api/src/tests/admin/mcp-repository.test.ts` (credential encryption tests)
-
-#### M4: Dynamic MCP Tool Injection into CloudAdvisor
-
-**User Story**: As an Operations Engineer, I want CloudAdvisor to automatically have access to all connected MCP server tools so that I can interact with external systems through natural language.
-
-**Acceptance Criteria**:
-
-```gherkin
-Given a Slack MCP server is connected for the user's organization
-When the user sends a chat message
-Then the chat route calls mcpConnectionManager.getToolsets(orgId)
-And passes the result as toolsets to agent.stream()
-
-Given MCP toolsets are loaded
-When CloudAdvisor determines a Slack tool is relevant
-Then the agent calls the tool via the MCPClient
-And the result is presented to the user
-
-Given no MCP servers are connected for the org
-When the user sends a chat message
-Then CloudAdvisor uses only built-in OCI tools
-And no error is thrown
-
-Given the MCP toolset loading fails
-When the user sends a chat message
-Then the failure is logged as a warning
-And CloudAdvisor continues with built-in tools only (non-blocking)
-```
-
-**Affected Files**: `apps/api/src/routes/chat.ts` (modified), `apps/api/src/plugins/mastra.ts` (modified), `apps/api/src/services/mcp-connection-manager.ts`
-**Test File**: `apps/api/src/tests/mcp-connection-manager.test.ts` (getToolsets tests)
-
-#### M5: Custom MCP Server Support (SSE/HTTP)
-
-**User Story**: As a Platform Administrator, I want to add custom MCP servers via SSE or HTTP URL so that I can connect proprietary or internal MCP servers not in the catalog.
-
-**Acceptance Criteria**:
-
-```gherkin
-Given the admin clicks "+ Add Custom"
-When the modal opens
-Then transport type options include "stdio", "sse", and "http"
-
-Given the admin selects SSE transport and enters a URL
-When the admin clicks "Test Connection"
-Then a temporary MCPClient connects, lists tools, and disconnects
-And the discovered tool count is shown
-
-Given the admin saves a custom SSE server
-When the server is created in the database
-Then server_type is "custom" and transport_type is "sse"
-And the config JSON contains the URL and optional auth headers
-```
-
-**Affected Files**: `apps/api/src/routes/admin/mcp.ts` (create custom endpoint), `apps/frontend/src/lib/components/admin/MCPServerModal.svelte` (custom mode)
-**Test File**: `apps/api/src/tests/routes/mcp-admin-routes.test.ts` (custom server creation)
-
-#### M6: Docker Orchestration for Catalog Servers
-
-**User Story**: As a Platform Administrator, I want catalog servers to run in Docker containers so that they are isolated and sandboxed with security constraints.
-
-**Acceptance Criteria**:
-
-```gherkin
-Given a catalog item has a docker_image configured
-When the admin installs and connects it
-Then a Docker container is started with the specified image and tag
-And the container has 512MB memory limit, 1 CPU, cap-drop ALL, no-new-privileges
-
-Given a Docker container is running for an MCP server
-When the admin disconnects the server
-Then the Docker container is stopped and removed
-And the container_id is cleared from the database
-
-Given a Docker image name is provided
-When the image name is validated
-Then it must match the pattern /^[a-z0-9._\/-]+$/ to prevent command injection
-```
-
-**Affected Files**: `apps/api/src/services/mcp-connection-manager.ts` (DockerManager section), `apps/api/package.json` (dockerode dependency)
-**Test File**: `apps/api/src/tests/mcp-connection-manager.test.ts` (Docker lifecycle tests)
-
-#### M7: Admin Integrations UI (3-Tab Layout)
-
-**User Story**: As a Platform Administrator, I want a single admin page with Catalog, Connected Servers, and Tool Playground tabs so that I can manage all MCP integrations from one place.
-
-**Acceptance Criteria**:
-
-```gherkin
-Given the admin navigates to /admin/integrations
-When the page loads
-Then three tabs are displayed: "Catalog", "Connected Servers", "Tool Playground"
-And the catalog data is prefetched via SSR
-
-Given the "Connected Servers" tab is active
-When a server's status changes
-Then the status badge updates within 5 seconds (polling interval)
-And status badges use color coding: green (connected), red (error), gray (disconnected), yellow (connecting)
-
-Given the "Tool Playground" tab is active
-When the admin expands a tool card
-Then a dynamic form is rendered from the tool's JSON Schema input
-And an "Execute" button proxies the call through the backend
-```
-
-**Affected Files**: `apps/frontend/src/routes/admin/integrations/+page.svelte`, `apps/frontend/src/routes/admin/integrations/+page.server.ts`, all 4 component files
-**Test File**: `apps/api/src/tests/routes/mcp-admin-routes.test.ts` (API layer backing the UI)
-
-#### M8: Fix Catalog Seed Data
-
-**User Story**: As a Platform Administrator, I want catalog servers to actually work when installed so that I can connect to external services without manual configuration.
-
-**Acceptance Criteria**:
-
-```gherkin
-Given the mcp_catalog table is seeded
-When a catalog item's default_config is used to start an MCP server
-Then the config contains a valid npx command and args for the @modelcontextprotocol/server-* package
-And the Docker image field is empty or references a real, pullable image
-
-Given the Slack catalog item is installed
-When the MCPConnectionManager builds the stdio config
-Then the command is "npx" with args ["-y", "@modelcontextprotocol/server-slack"]
-And the SLACK_BOT_TOKEN env var is passed from credentials
-
-Given the GitHub catalog item's required_credentials
-When the admin provides a GitHub PAT
-Then the credential key is "GITHUB_PERSONAL_ACCESS_TOKEN" (not "GITHUB_TOKEN")
-And it matches the env var expected by @modelcontextprotocol/server-github
-
-Given the Jira catalog item's required_credentials
-When the admin provides Jira connection details
-Then the credential key for the instance URL is "JIRA_DOMAIN" (not "JIRA_URL")
-And it matches the env var expected by @modelcontextprotocol/server-jira
-```
-
-**Affected Files**: `packages/shared/src/server/oracle/migrations/014-fix-catalog-seeds.sql` (new), `packages/shared/src/server/admin/mcp-repository.ts`
-**Test File**: `apps/api/src/tests/admin/mcp-repository.test.ts` (updated seed data validation)
-
-#### M9: Fix Docker Orchestration for Production Scale
-
-**User Story**: As a Platform Administrator, I want Docker containers for catalog servers to have proper port mapping and SSE endpoints so that the MCPClient can connect to containerized MCP servers.
-
-**Acceptance Criteria**:
-
-```gherkin
-Given a catalog server is configured for Docker transport
-When the Docker container is started
-Then the image tag comes from docker_tag column (not transport type)
-And a host port is mapped to the container's SSE port (default 3000)
-And the MCPClient connection URL is derived from the container's mapped port
-
-Given a catalog server has both stdio and Docker configs
-When the Docker container is started with SSE transport
-Then the MCPClient connects via HTTP/SSE URL (not stdio)
-And credentials are passed as environment variables to the container
-
-Given the Docker image name is validated
-When the tag is constructed
-Then it uses the format "${docker_image}:${docker_tag}" (e.g., "mcp/server-slack:latest")
-And never uses the transport type as a tag
-```
-
-**Affected Files**: `apps/api/src/services/mcp-connection-manager.ts` (startDockerContainer, buildMCPClientConfig)
-**Test File**: `apps/api/src/tests/mcp-connection-manager.test.ts` (Docker port mapping, URL derivation)
-
-#### M10: Auto-Connect After Catalog Install
-
-**User Story**: As a Platform Administrator, I want the server to automatically connect after I install a catalog item with all required credentials so that I don't have to manually click "Connect" as a separate step.
-
-**Acceptance Criteria**:
-
-```gherkin
-Given the admin installs a catalog item
-When all required credentials are provided during installation
-Then the backend automatically calls connectServer() after creating the DB record
-And the install endpoint response includes connection status and tool count
-
-Given the admin installs a catalog item
-When some required credentials are missing
-Then the server is created with status "disconnected"
-And the response indicates which credentials are still needed
-
-Given auto-connect fails during install
-When the connection error occurs
-Then the server is still created in the database with status "error"
-And the error message is returned in the install response
-And the admin can retry connection manually
-```
-
-**Affected Files**: `apps/api/src/routes/admin/mcp.ts` (install-from-catalog endpoint), `apps/api/src/services/mcp-connection-manager.ts`
-**Test File**: `apps/api/src/tests/routes/mcp-admin-routes.test.ts` (install returns connection status)
-
-#### M11: Implement Lazy Reconnect on Startup
-
-**User Story**: As an Operations Engineer, I want MCP servers to automatically reconnect after an API restart so that CloudAdvisor retains access to external tools without admin intervention.
-
-**Acceptance Criteria**:
-
-```gherkin
-Given the API server restarts
-When initialize() is called
-Then it queries all servers with status='connected' across all orgs
-And stores their IDs in a pendingReconnect set (grouped by orgId)
-And does NOT immediately connect any of them
-
-Given an org has servers in pendingReconnect
-When the first getToolsets(orgId) call is made for that org
-Then the pending servers for that org are reconnected
-And subsequent getToolsets(orgId) calls do not re-trigger reconnection
-
-Given a pending server fails to reconnect
-When the reconnection attempt errors
-Then the server status is updated to 'error' with the error message
-And other pending servers for the same org are still attempted
-And getToolsets() returns tools from successfully reconnected servers only
-```
-
-**Affected Files**: `apps/api/src/services/mcp-connection-manager.ts` (initialize, getToolsets)
-**Test File**: `apps/api/src/tests/mcp-connection-manager.test.ts` (lazy reconnect tests)
-
-#### M12: Credential Key Alignment Validation
-
-**User Story**: As a Platform Administrator, I want credential keys in the catalog to exactly match what the MCP server package expects so that servers authenticate correctly on first attempt.
-
-**Acceptance Criteria**:
-
-```gherkin
-Given the mcp_catalog seed data
-When migration 014 runs
-Then credential keys are updated to match upstream package env vars:
-  | Catalog    | Old Key         | New Key                        | Package                              |
-  | Slack      | SLACK_BOT_TOKEN | SLACK_BOT_TOKEN                | @modelcontextprotocol/server-slack   |
-  | GitHub     | GITHUB_TOKEN    | GITHUB_PERSONAL_ACCESS_TOKEN   | @modelcontextprotocol/server-github  |
-  | PagerDuty  | PAGERDUTY_API_KEY | PAGERDUTY_API_KEY            | @modelcontextprotocol/server-pagerduty |
-  | Jira       | JIRA_URL        | JIRA_DOMAIN                    | @modelcontextprotocol/server-jira    |
-
-Given an installed server has credentials with old keys
-When migration 014 runs
-Then existing mcp_server_credentials rows are updated to new key names
-And the server can be reconnected without re-entering credentials
-```
-
-**Affected Files**: `packages/shared/src/server/oracle/migrations/014-fix-catalog-seeds.sql` (new), `packages/shared/src/server/admin/mcp-repository.ts`
-**Test File**: `apps/api/src/tests/admin/mcp-repository.test.ts` (credential key validation)
-
-#### M13: Transport Selection for Catalog Servers
-
-**User Story**: As a Platform Administrator, I want to choose between stdio (dev) and Docker (production) transport when installing a catalog server so that I can match the transport to my deployment environment.
-
-**Acceptance Criteria**:
-
-```gherkin
-Given the admin installs a catalog item
-When the install modal loads
-Then transport options are shown: "Stdio (npx)" and "Docker (container)"
-And the default is "Stdio" if Docker daemon is not detected
-
-Given the admin selects stdio transport
-When the server is created
-Then config uses the catalog's default_config_stdio (npx command + args)
-And no Docker container is started
-
-Given the admin selects Docker transport
-When the server is created
-Then config uses the catalog's default_config_docker (image + tag + port)
-And a Docker container is started with SSE endpoint
-And the MCPClient connects via the container's SSE URL
-
-Given Docker is not available
-When the admin tries to select Docker transport
-Then the Docker option is disabled with tooltip "Docker daemon not detected"
-And only stdio is available
-```
-
-**Affected Files**: `apps/api/src/services/mcp-connection-manager.ts`, `apps/api/src/routes/admin/mcp.ts`, `apps/frontend/src/lib/components/admin/MCPServerModal.svelte`
-**Test File**: `apps/api/src/tests/mcp-connection-manager.test.ts` (transport selection tests)
-
-#### M14: End-to-End Integration Tests for Catalog Servers
-
-**User Story**: As a developer, I want automated integration tests for all 4 primary catalog integrations so that regressions in the install-connect-discover flow are caught before release.
-
-**Acceptance Criteria**:
-
-```gherkin
-Given each catalog server (Slack, GitHub, PagerDuty, Jira)
-When the integration test runs
-Then it:
-  1. Installs the server from catalog via API
-  2. Sets required credentials with correct keys
-  3. Connects the server (mocked MCP protocol, not real external API)
-  4. Verifies tools are discovered (>0 tools in cache)
-  5. Verifies getToolsets(orgId) includes the server's tools
-  6. Disconnects the server
-  7. Verifies cleanup (client removed, status updated)
-
-Given an integration test with invalid credentials
-When connection is attempted
-Then the server status is 'error'
-And the error message indicates authentication failure
-And other servers are not affected
-```
-
-**Affected Files**: `apps/api/src/tests/mcp-integration.test.ts` (new)
-**Test File**: `apps/api/src/tests/mcp-integration.test.ts` (self — this IS the test file)
-
-### Should Have (P1)
-
-#### S1: Tool Call Metrics and Performance Monitoring
-
-**User Story**: As a Platform Administrator, I want to see tool call metrics (count, success rate, average duration) so that I can monitor MCP server health.
-
-**Acceptance Criteria**:
-
-```gherkin
-Given tools are called through MCP servers
-When a tool call completes
-Then a record is inserted into mcp_server_metrics with server_id, tool_name, duration_ms, success flag
-
-Given the admin views server metrics
-When the API returns aggregated metrics
-Then total calls, success rate percentage, and average duration are shown
-And per-tool breakdown is included
-```
-
-**Affected Files**: `packages/shared/src/server/admin/mcp-repository.ts` (recordToolCall, getMetrics), `apps/api/src/routes/admin/mcp.ts` (metrics endpoint)
-**Test File**: `apps/api/src/tests/admin/mcp-repository.test.ts` (metrics tests)
-
-#### S2: Server Health Monitoring
-
-**User Story**: As a Platform Administrator, I want real-time health status for each connected MCP server so that I can detect and respond to outages.
-
-**Acceptance Criteria**:
-
-```gherkin
-Given an MCP server is connected
-When the admin views the server card
-Then a health status indicator shows the connection state
-
-Given an MCP server connection drops
-When the health check detects the failure
-Then the server status updates to "error" with the error message
-And the last_error column is populated
-```
-
-**Affected Files**: `apps/api/src/services/mcp-connection-manager.ts` (getServerHealth), `apps/api/src/routes/admin/mcp.ts` (health endpoint)
-**Test File**: `apps/api/src/tests/mcp-connection-manager.test.ts` (health check tests)
-
-#### S3: Server Log Capture
-
-**User Story**: As a Platform Administrator, I want to view recent logs from MCP servers so that I can debug integration issues.
-
-**Acceptance Criteria**:
-
-```gherkin
-Given an MCP server produces log output
-When the log is captured
-Then it is stored in mcp_server_logs with level and timestamp
-
-Given the admin views server details
-When logs are requested
-Then the most recent logs are displayed in reverse chronological order
-```
-
-**Affected Files**: `packages/shared/src/server/oracle/migrations/013-mcp-servers.sql` (mcp_server_logs table), `packages/shared/src/server/admin/mcp-repository.ts`
-**Test File**: `apps/api/src/tests/admin/mcp-repository.test.ts`
-
-#### S4: Health Check Polling
-
-**User Story**: As a Platform Administrator, I want connected MCP servers to be automatically health-checked so that I'm alerted to failures without manually checking each server.
-
-**Acceptance Criteria**:
-
-```gherkin
-Given an MCP server is connected
-When the health check polling loop runs (60-second interval)
-Then it calls getServerHealth() for each connected server
-
-Given a connected server fails 3 consecutive health checks
-When the third failure is detected
-Then the server status is updated to 'error'
-And the last_error is populated with the failure reason
-And a warning is logged
-
-Given the health check polling is running
-When the MCPConnectionManager is shut down
-Then the polling interval is cleared
-And no more health checks are scheduled
-
-Given MCPConnectionManager constructor options
-When healthCheckIntervalMs is provided
-Then the polling uses the specified interval instead of the default 60s
-```
-
-**Affected Files**: `apps/api/src/services/mcp-connection-manager.ts` (startHealthCheckPolling, stopHealthCheckPolling)
-**Test File**: `apps/api/src/tests/mcp-connection-manager.test.ts` (vi.useFakeTimers for polling tests)
-
-#### S5: Missing Config Tests (Slack + GitHub)
-
-**User Story**: As a developer, I want test coverage for all 4 static MCP config factories so that credential key correctness is verified automatically.
-
-**Acceptance Criteria**:
-
-```gherkin
-Given the Slack config factory
-When createSlackConfig() is called with a valid botToken
-Then the config uses command "npx" with args ["-y", "@modelcontextprotocol/server-slack"]
-And env contains SLACK_BOT_TOKEN with the provided value
-
-Given the GitHub config factory
-When createGitHubConfig() is called with a valid token
-Then the config uses command "npx" with args ["-y", "@modelcontextprotocol/server-github"]
-And env contains GITHUB_PERSONAL_ACCESS_TOKEN with the provided value
-
-Given any config factory
-When called with empty/missing required credentials
-Then it throws an Error with a descriptive message
-```
-
-**Affected Files**: `packages/shared/src/server/mcp-client/configs/slack.test.ts` (new), `packages/shared/src/server/mcp-client/configs/github.test.ts` (new)
-**Test File**: Self (these ARE the test files)
-
-#### S6: Connection Audit Logging
-
-**User Story**: As a Security Reviewer, I want connect/disconnect/error events recorded in the audit log so that I can review MCP server lifecycle changes.
-
-**Acceptance Criteria**:
-
-```gherkin
-Given an MCP server is connected
-When connectServer() succeeds
-Then a log entry is inserted into mcp_server_logs with level 'info' and message containing server name and 'connected'
-
-Given an MCP server is disconnected
-When disconnectServer() completes
-Then a log entry is inserted into mcp_server_logs with level 'info' and message containing server name and 'disconnected'
-
-Given an MCP server connection fails
-When connectServer() catches an error
-Then a log entry is inserted into mcp_server_logs with level 'error' and message containing the error details
-```
-
-**Affected Files**: `apps/api/src/services/mcp-connection-manager.ts` (connectServer, disconnectServer), `packages/shared/src/server/admin/mcp-repository.ts` (insertLog method)
-**Test File**: `apps/api/src/tests/admin/mcp-repository.test.ts` (audit log tests)
-
-### Could Have (P2)
-
-#### C1: Catalog Item Search and Category Filtering
-
-**User Story**: As a Platform Administrator, I want to search and filter catalog items by category so that I can quickly find relevant integrations in a growing catalog.
-
-**Affected Files**: `apps/frontend/src/routes/admin/integrations/+page.svelte` (search input, category filter)
-
-#### C2: Resource Discovery and Caching
-
-**User Story**: As a Platform Administrator, I want to see MCP server resources (not just tools) so that I can understand the full capabilities of connected servers.
-
-**Affected Files**: `packages/shared/src/server/admin/mcp-repository.ts` (cacheResources, getCachedResources), `packages/shared/src/server/oracle/migrations/013-mcp-servers.sql` (mcp_resource_cache table)
-
-#### C3: Bulk Server Operations
-
-**User Story**: As a Platform Administrator, I want to connect/disconnect multiple servers at once so that I can manage integrations efficiently during maintenance windows.
-
-### Won't Do (Explicit Exclusions)
-
-- **W1**: ITSM features (incidents, change management, SLA tracking) — deferred to a future ITSM-specific phase
-- **W2**: Knowledge base with vector RAG — separate feature requiring dedicated embedding pipeline design
-- **W3**: Workflow nodes for MCP tool execution — requires workflow engine extension (Phase 7 successor)
-- **W4**: Public MCP server endpoint — portal doesn't expose its own tools as an MCP server to external consumers yet
-- **W5**: MCP OAuth flow — Mastra supports it but admin UI doesn't expose it; use API key/token auth instead
-- **W6**: Resource subscriptions — MCP protocol supports subscriptions but not needed for initial release
-- **W7**: Prompt support — MCP protocol supports prompts but not needed for tool-focused first release
-- **W8**: Mastra registry support (Smithery, Ampersand) — Deferred to Phase 10.2. Requires separate architecture decisions for SSE-based registry servers and marketplace UI
+### Boundary Rules
+
+| Boundary                   | Rule                                                        | Enforcement                    |
+| -------------------------- | ----------------------------------------------------------- | ------------------------------ |
+| SvelteKit → Fastify        | SvelteKit NEVER handles API logic                           | Remove all +server.ts files    |
+| Fastify → @portal/server   | Fastify routes call server functions, not Oracle directly   | Lint rule: no oracledb imports |
+| @portal/server → Oracle    | All DB access through repositories with bind parameters     | Code review                    |
+| @portal/types → anything   | Types package has zero runtime deps (Zod only)              | Package.json validation        |
+| @portal/ui → @portal/types | UI may import types, never server                           | TypeScript path restrictions   |
+| Frontend → API             | All data fetching via HTTP to Fastify (no direct DB access) | SvelteKit server/client split  |
 
 ---
 
-## 5. Architecture Decisions
+## 4. Authentication Architecture
 
-### AD-1: Replace Custom MCP Client with @mastra/mcp MCPClient
-
-| Aspect        | Detail                                                                                                                                                                                                                                               |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Context**   | The portal has a custom MCP client (1,400+ LOC across 6 files) supporting stdio and SSE transports. Mastra's `@mastra/mcp` package provides a production-ready MCPClient with the same transports plus HTTP, tool conversion, and agent integration. |
-| **Decision**  | Use `@mastra/mcp` MCPClient as the protocol layer, deprecate custom client.                                                                                                                                                                          |
-| **Rationale** | Eliminates 1,400+ LOC of maintenance burden, gains HTTP transport and `listToolsets()` for per-request dynamic tool injection — the critical feature for multi-tenant MCP.                                                                           |
-
-**Alternatives Evaluated**:
-
-| Option                          | Pros                                                                      | Cons                                               | Rejected Because                            |
-| ------------------------------- | ------------------------------------------------------------------------- | -------------------------------------------------- | ------------------------------------------- |
-| Keep custom MCP client          | No new dependency, full control                                           | 1,400+ LOC to maintain, no listToolsets(), no HTTP | High maintenance, missing critical features |
-| Use `@modelcontextprotocol/sdk` | Official MCP SDK, widely adopted                                          | No Mastra tool conversion, no agent integration    | Requires additional bridge code             |
-| **Use `@mastra/mcp` MCPClient** | Tool conversion built-in, `listToolsets()` for multi-tenant, agent-native | Adds Mastra dependency, API may evolve             | **Selected**                                |
-
-**Consequences**: Portal depends on Mastra's MCP API stability. If Mastra breaks the MCPClient API, we must update MCPConnectionManager. Mitigated by pinning version and wrapping MCPClient in our own service layer.
-
-### AD-2: Docker Orchestration via dockerode
-
-| Aspect        | Detail                                                                                                                                                                                        |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Context**   | Catalog MCP servers need to run as isolated processes. Options: direct process spawn, Docker containers, Kubernetes pods.                                                                     |
-| **Decision**  | Use `dockerode` to manage Docker containers on the API server host.                                                                                                                           |
-| **Rationale** | Docker provides process isolation, resource limits, and network sandboxing without requiring a Kubernetes cluster. dockerode is the mature Node.js Docker API client (11M+ weekly downloads). |
-
-**Alternatives Evaluated**:
-
-| Option                       | Pros                                         | Cons                                                     | Rejected Because                              |
-| ---------------------------- | -------------------------------------------- | -------------------------------------------------------- | --------------------------------------------- |
-| Direct process spawn (stdio) | Simple, no Docker dependency                 | No resource limits, no network isolation, no security    | Insufficient sandboxing for untrusted servers |
-| **dockerode + Docker**       | Resource limits, cap-drop, process isolation | Requires Docker on host, container management complexity | **Selected**                                  |
-| Kubernetes pods              | Best isolation, auto-scaling                 | Requires K8s cluster, heavy for single-server deployment | Over-engineered for current scale             |
-
-**Consequences**: API server host must have Docker installed. Container lifecycle management adds complexity. Failed containers need cleanup. Mitigated by DockerManager wrapper with health checks and automatic cleanup on disconnect.
-
-### AD-3: AES-256-GCM Credential Encryption (Reuse Existing crypto.ts)
-
-| Aspect        | Detail                                                                                                                                                                                    |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Context**   | MCP servers require API keys/tokens. These must be encrypted at rest in Oracle DB.                                                                                                        |
-| **Decision**  | Reuse existing `encryptSecret()`/`decryptSecret()` from `packages/shared/src/server/auth/crypto.ts`. Store as 3 columns: `value_enc` (BLOB), `value_iv` (RAW(16)), `value_tag` (RAW(16)). |
-| **Rationale** | Same pattern already proven for IDP and AI provider secrets. Consistent encryption approach across the portal. Key derived from `BETTER_AUTH_SECRET`.                                     |
-
-**Alternatives Evaluated**:
-
-| Option                        | Pros                            | Cons                                      | Rejected Because                        |
-| ----------------------------- | ------------------------------- | ----------------------------------------- | --------------------------------------- |
-| OCI Vault (KMS)               | HSM-backed, key rotation        | Network call per encrypt/decrypt, latency | Too slow for per-request credential use |
-| **AES-256-GCM via crypto.ts** | Already proven, no network call | Key in memory, no HSM                     | **Selected**                            |
-| Environment variables only    | Simple, no encryption needed    | Doesn't scale to N servers, no DB storage | Can't manage per-server credentials     |
-
-**Consequences**: Encryption key derived from `BETTER_AUTH_SECRET` env var. If that key rotates, all stored credentials become unreadable. Mitigation: document key rotation procedure.
-
-### AD-4: Oracle DB Schema (7 Tables) for MCP Management
-
-| Aspect        | Detail                                                                                                                                                    |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Context**   | MCP server configs, credentials, tool caches, metrics, and logs need persistent storage.                                                                  |
-| **Decision**  | 7 new tables in migration 013: mcp_catalog, mcp_servers, mcp_server_credentials, mcp_tool_cache, mcp_resource_cache, mcp_server_metrics, mcp_server_logs. |
-| **Rationale** | Follows existing migration pattern (001-012). Org-scoped with FK to organizations. MERGE INTO for credential upserts. JSON columns for flexible config.   |
-
-**Alternatives Evaluated**:
-
-| Option                   | Pros                            | Cons                                              | Rejected Because                          |
-| ------------------------ | ------------------------------- | ------------------------------------------------- | ----------------------------------------- |
-| **Oracle DB (7 tables)** | Consistent with existing schema | More tables to maintain                           | **Selected**                              |
-| SQLite sidecar           | No Oracle dependency            | No org isolation, no shared state across replicas | Doesn't work in multi-instance deployment |
-| Config files (YAML/JSON) | Simple, no DB needed            | No CRUD API, no encryption, no audit trail        | Too primitive for admin-managed servers   |
-
-**Consequences**: Migration 013 adds 7 tables and 6 seed rows. Indexes on org_id, status, and timestamp columns for query performance.
-
-### AD-5: Frontend Architecture (TanStack Query + Svelte 5 Runes)
-
-| Aspect        | Detail                                                                                                                                                    |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Context**   | Admin integrations page needs real-time status updates, optimistic mutations, and SSR prefetch.                                                           |
-| **Decision**  | Follow existing admin page pattern: TanStack Query for data fetching, Svelte 5 runes ($state, $derived) for local state, svelte-sonner for notifications. |
-| **Rationale** | Consistent with `/admin/idp/` and `/admin/settings/` pages. 5-second polling for server status. SSR prefetch for catalog data.                            |
-
-**Alternatives Evaluated**:
-
-| Option                              | Pros                                 | Cons                                         | Rejected Because                    |
-| ----------------------------------- | ------------------------------------ | -------------------------------------------- | ----------------------------------- |
-| **TanStack Query + Svelte 5 runes** | Consistent with existing admin pages | Polling (not real-time WebSocket)            | **Selected**                        |
-| WebSocket for real-time updates     | True real-time                       | New infrastructure, connection management    | Over-engineered for admin-only page |
-| SvelteKit load() only               | Simple, built-in                     | No optimistic updates, no background refetch | Poor UX for status monitoring       |
-
-**Consequences**: 5-second polling on Connected Servers tab. Acceptable latency for admin monitoring use case. WebSocket can be added later if needed.
-
-### AD-6: Dual Transport Support (Stdio + Docker/SSE)
-
-| Aspect        | Detail                                                                                                                                                                                            |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Context**   | Catalog servers currently reference fake Docker images. Real MCP servers are npm packages run via `npx`. Production needs Docker isolation; dev needs fast stdio.                                 |
-| **Decision**  | Catalog items carry both `default_config_stdio` (npx-based) and `default_config_docker` (container with SSE). Admin selects transport at install time. Default to stdio if Docker is unavailable. |
-| **Rationale** | Supports both dev (fast iteration, no Docker) and production (isolation, survives restarts). Avoids forcing Docker on deployments that don't have it.                                             |
-
-**Alternatives Evaluated**:
-
-| Option                            | Pros                                          | Cons                                                       | Rejected Because                                   |
-| --------------------------------- | --------------------------------------------- | ---------------------------------------------------------- | -------------------------------------------------- |
-| Stdio only (remove Docker)        | Simplest, no container management             | No isolation, no resource limits, doesn't survive restarts | Insufficient for production multi-tenant           |
-| Docker only                       | Best isolation, consistent environment        | Requires Docker everywhere, slow cold start                | Too restrictive for dev and non-Docker deployments |
-| **Dual transport (stdio+Docker)** | Best of both worlds, admin controls trade-off | Two code paths to maintain, more testing surface           | **Selected**                                       |
-
-**Consequences**: Catalog seed migration (014) must include both config shapes. MCPConnectionManager must handle transport selection during install. Integration tests must cover both transport paths.
-
-### AD-7: Lazy Reconnect over Eager Reconnect
-
-| Aspect        | Detail                                                                                                                                                                                        |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Context**   | `initialize()` is currently a stub. On API restart, all previously connected servers are disconnected. Need a reconnect strategy that doesn't cause a thundering herd on startup.             |
-| **Decision**  | Lazy reconnect: `initialize()` queries all servers with `status='connected'`, stores IDs in `pendingReconnect` set. On first `getToolsets(orgId)` call, reconnect that org's pending servers. |
-| **Rationale** | Avoids thundering herd (reconnecting N servers simultaneously on startup). Spreads load across time as orgs make their first requests. Keeps startup fast.                                    |
-
-**Alternatives Evaluated**:
-
-| Option                     | Pros                                         | Cons                                                     | Rejected Because                               |
-| -------------------------- | -------------------------------------------- | -------------------------------------------------------- | ---------------------------------------------- |
-| Eager reconnect on startup | All servers immediately available            | Thundering herd, slow startup, Docker pull storms        | Blocks API startup, poor for large deployments |
-| **Lazy reconnect per-org** | Fast startup, load spread, per-org isolation | First request per org has latency penalty                | **Selected**                                   |
-| No reconnect (manual only) | Simplest, no complexity                      | Admin must manually reconnect every server after restart | Unacceptable UX                                |
-
-**Consequences**: First chat request after restart may be slower (reconnect latency). Mitigated by showing "reconnecting" status in UI and non-blocking fallback to built-in tools.
-
-### AD-8: Credential Key Alignment Strategy
-
-| Aspect        | Detail                                                                                                                                                                                                                                     |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Context**   | Catalog seed `required_credentials[].key` values don't match the env vars that upstream npm packages actually expect. E.g., catalog seeds `GITHUB_TOKEN` but `@modelcontextprotocol/server-github` expects `GITHUB_PERSONAL_ACCESS_TOKEN`. |
-| **Decision**  | Catalog seed `required_credentials[].key` must exactly match the upstream npm package's expected env var name. Verified against `@modelcontextprotocol/server-*` source code.                                                              |
-| **Rationale** | MCPConnectionManager passes credential keys as env var names to the MCP server process. If they don't match, the server silently fails to authenticate. Exact match eliminates this failure mode.                                          |
-
-**Alternatives Evaluated**:
-
-| Option                              | Pros                                 | Cons                                               | Rejected Because                                 |
-| ----------------------------------- | ------------------------------------ | -------------------------------------------------- | ------------------------------------------------ |
-| **Exact match with upstream**       | Zero translation errors, transparent | Must track upstream changes                        | **Selected**                                     |
-| Mapping layer (our key → their key) | Freedom to name our keys nicely      | Hidden translation, bugs when mapping changes      | Adds indirection that causes silent failures     |
-| Convention-based (UPPER_SNAKE)      | Consistent naming across all servers | Upstream packages don't follow a single convention | Different packages use different naming patterns |
-
-**Consequences**: Migration 014 must update credential keys. Existing installed servers with old keys need migration handling. Integration tests (M14) verify correct key names per upstream package. Credential key mapping for all 4 catalog servers documented in migration comments.
-
----
-
-## 6. Dependency Analysis
-
-### Current State (In-Scope Packages)
-
-| Package           | Current | Latest | Status       | Notes                  |
-| ----------------- | ------- | ------ | ------------ | ---------------------- |
-| @mastra/core      | 0.10.1  | 0.10.1 | Up to date   | Mastra framework core  |
-| @mastra/memory    | 0.10.1  | 0.10.1 | Up to date   | Agent memory           |
-| fastify           | 5.3.3   | 5.3.3  | Up to date   | API framework          |
-| @ai-sdk/anthropic | 3.0.39  | 3.0.40 | Patch behind | Minor update available |
-| @ai-sdk/google    | 3.0.22  | 3.0.23 | Patch behind | Minor update available |
-| ai                | 6.0.73  | 6.0.78 | Patch behind | AI SDK core            |
-| @fastify/swagger  | 9.6.1   | 9.7.0  | Minor behind | Non-breaking update    |
-| oracledb          | 6.10.0  | 6.10.0 | Up to date   | Oracle DB driver       |
-
-### New Dependencies
-
-| Package          | Version | Purpose                              | License    | Size   | Alternatives Considered                  |
-| ---------------- | ------- | ------------------------------------ | ---------- | ------ | ---------------------------------------- |
-| @mastra/mcp      | ^1.0.0  | MCP protocol client (stdio/SSE/HTTP) | Apache-2.0 | ~150KB | @modelcontextprotocol/sdk, custom client |
-| dockerode        | ^4.0.9  | Docker API client for container mgmt | Apache-2.0 | ~80KB  | docker-compose CLI, child_process        |
-| @types/dockerode | ^4.0.1  | TypeScript types for dockerode       | MIT        | ~20KB  | N/A (type definitions)                   |
-
-### Deprecation Warnings
-
-- Custom MCP client (`packages/shared/src/server/mcp-client/`) — 6 files, 1,400+ LOC. Superseded by `@mastra/mcp`. Files remain in codebase but are no longer used by the new system.
-
-### CVE Check
-
-- `pnpm audit`: 1 low-severity advisory (`cookie` package via `@sveltejs/kit`). Not in MCP feature scope. Patched version available via SvelteKit update.
-
----
-
-## 7. Phasing & Dependencies
-
-### Phase Overview
+### Current Auth Flow
 
 ```
-Phase 1: Foundation             Phase 2: Repository        Phase 3: Services
-├── @mastra/mcp install         ├── mcp-repository.ts      ├── MCPConnectionManager
-├── dockerode install           │   (blocked by P1)        │   (blocked by P1, P2)
-├── migration 013               ├── credential encryption  └── Docker orchestration
-└── mcp-types.ts                └── row converters
+SvelteKit hooks.server.ts:
+  ├── Reads session cookie → Better Auth validateSession()
+  ├── OIDC callbacks handled by SvelteKit /api/auth/*
+  ├── Sets event.locals.user, event.locals.session
+  └── Proxies /api/* to Fastify (with cookie forwarded)
 
-Phase 4: API Routes             Phase 5: Agent Bridge      Phase 6: Frontend
-├── admin/mcp.ts                ├── chat.ts modification   ├── integrations/+page.svelte
-│   (blocked by P2, P3)        │   (blocked by P3)        │   (blocked by P2, P4)
-├── Zod validation              └── mastra plugin update   ├── 4 components
-└── RBAC gating                                            └── TanStack Query wiring
-
-Phase 7: Tests
-├── mcp-repository.test.ts (blocked by P2)
-├── mcp-connection-manager.test.ts (blocked by P3)
-└── mcp-admin-routes.test.ts (blocked by P4)
+Fastify auth plugin:
+  ├── Reads same session cookie → validates via Oracle session table
+  ├── OR reads X-API-Key header → validates via Oracle api_keys table
+  ├── Sets request.user, request.session, request.permissions
+  └── Deny-by-default: rejects unauthed requests not in PUBLIC_ROUTES
 ```
 
-### Phase 1: Foundation (Dependencies + Schema + Types)
+**Problem**: Two separate auth validations for the same request. Session created by SvelteKit, re-validated by Fastify. OIDC callbacks split across runtimes.
 
-**Goal**: Install packages, create DB schema, define TypeScript types.
-**Prerequisites**: None
-**Delivers**: M1 (partial — catalog tables), M3 (partial — credential table), M6 (partial — Docker package)
-**Estimated scope**: 3 files created, 1 file modified (package.json)
-**Parallelizable with**: Nothing (foundation phase)
-**Status**: Complete (commits c77b9d00, b3ce83b3, bd88ef5b)
-
-### Phase 2: Repository Layer
-
-**Goal**: Oracle CRUD with encrypted credentials, catalog operations, tool caching.
-**Prerequisites**: Phase 1 complete (tables exist, types defined)
-**Delivers**: M1 (catalog CRUD), M3 (credential encryption), S1 (metrics recording)
-**Estimated scope**: 1 file (740 LOC), 18 repository methods
-**Parallelizable with**: Nothing (repository feeds all downstream phases)
-**Status**: Complete (commit 1132452d)
-
-### Phase 3: MCPConnectionManager + Docker
-
-**Goal**: Mastra MCPClient lifecycle, Docker container orchestration, toolset aggregation.
-**Prerequisites**: Phase 1 (packages), Phase 2 (repository for config/credentials)
-**Delivers**: M2 (lifecycle), M4 (getToolsets), M6 (Docker), S2 (health)
-**Estimated scope**: 1 file (633 LOC), 10+ methods
-**Parallelizable with**: Nothing (service feeds API routes and agent bridge)
-**Status**: Complete (commit 11dcd3b1)
-
-### Phase 4: API Routes
-
-**Goal**: REST API for admin console (17 endpoints).
-**Prerequisites**: Phase 2 (repository), Phase 3 (MCPConnectionManager)
-**Delivers**: M1 (catalog API), M2 (connect API), M3 (credential API), M5 (custom server API), S1 (metrics API)
-**Estimated scope**: 1 file (832 LOC), 17 endpoints
-**Parallelizable with**: Phase 5 (agent bridge) — independent of API routes
-**Status**: Complete (commit d59370ac)
-
-### Phase 5: Agent Bridge
-
-**Goal**: MCP tools available to CloudAdvisor at runtime.
-**Prerequisites**: Phase 3 (MCPConnectionManager with getToolsets)
-**Delivers**: M4 (dynamic tool injection)
-**Estimated scope**: 2 files modified (chat.ts, mastra.ts)
-**Parallelizable with**: Phase 4 (API routes), Phase 6 (frontend)
-**Status**: Complete (commit c869b59a)
-
-### Phase 6: Frontend
-
-**Goal**: Admin integrations page with 3 tabs and 4 components.
-**Prerequisites**: Phase 2 (types), Phase 4 (API endpoints to call)
-**Delivers**: M1 (catalog UI), M7 (3-tab layout), C1 (search/filter)
-**Estimated scope**: 6 files (2,202 LOC total)
-**Parallelizable with**: Phase 5 (agent bridge)
-**Status**: Complete (commit 8bb8bc0b)
-
-### Phase 7: Tests
-
-**Goal**: Comprehensive test coverage for repository, services, and routes.
-**Prerequisites**: Phase 2 (repository), Phase 3 (services), Phase 4 (routes)
-**Delivers**: Quality assurance for M1-M7
-**Estimated scope**: 3 files (2,801 LOC), 75+ tests
-**Parallelizable with**: Internal parallelism (3 test files are independent)
-**Status**: Complete (commits ae5ce1de, 6f62d839, f47510ba)
-
-### Phase 10.1 Overview: External MCP Integrations
-
-**Problem**: Phase 7 delivered management infrastructure, but catalog servers are partially non-functional. Docker images are fake, credential keys don't match upstream npm packages, `initialize()` is a stub, and there's no auto-connect or health polling. Custom stdio servers work end-to-end — the gap is specifically in the catalog install flow and Docker orchestration.
-
-**Strategy**: Fix Docker properly for scale (not remove it). Three transport tiers:
-
-- **Stdio (npx)**: Dev/testing — fast, no Docker dependency
-- **Docker containers with SSE/HTTP**: Production — isolation, survives restarts
-- **Remote SSE/HTTP**: External servers — horizontal scaling
+### Target Auth Flow
 
 ```
-Phase 10.1a: Catalog Fix (foundation)
-├── M8 (seed data fix)
-├── M12 (credential alignment)
-├── S5 (missing config tests)
-└── Migration 014
+Fastify (single auth boundary):
+  ├── /api/auth/* → Better Auth handler (OIDC, sessions, CSRF)
+  │   ├── Catch-all route: ["GET", "POST"] /api/auth/*
+  │   ├── Convert Fastify request to Fetch API Request (toWebRequest)
+  │   ├── Call auth.handler(request)
+  │   └── trustedOrigins: [FRONTEND_URL]
+  │
+  ├── Session auth (cookie-based):
+  │   ├── Read session cookie from request
+  │   ├── Validate via Better Auth session store (Oracle adapter)
+  │   ├── Decorate: request.user, request.session
+  │   └── Load permissions from user role → request.permissions
+  │
+  ├── API key auth (header-based):
+  │   ├── Read X-API-Key header
+  │   ├── SHA-256 hash → lookup in Oracle api_keys table
+  │   ├── Decorate: request.apiKeyContext { orgId, permissions }
+  │   └── request.permissions from API key scope
+  │
+  └── RBAC enforcement:
+      ├── Deny-by-default onRequest hook
+      ├── PUBLIC_ROUTES exempted (health, openapi, setup)
+      ├── Permission check against route requirements
+      └── 401 (no session) or 403 (insufficient permissions)
 
-Phase 10.1b: Manager Fix (needs 10.1a)
-├── M9 (Docker orchestration fix)
-├── M11 (lazy reconnect)
-├── M13 (transport selection)
-└── AD-6, AD-7
-
-Phase 10.1c: Integration (needs 10.1b)
-├── M10 (auto-connect after install)
-├── M14 (e2e integration tests)
-├── S4 (health check polling)
-└── S6 (connection audit logging)
+SvelteKit (cookie forwarding only):
+  ├── +layout.server.ts: reads session cookie, calls Fastify /api/auth/session
+  ├── Passes { user, session } to client via page data
+  └── No auth logic — just HTTP fetch to Fastify for session info
 ```
 
-### Phase 10.1a: Catalog Fix (Foundation)
+### Better Auth Configuration
 
-**Goal**: Fix catalog seed data so installed servers can actually connect via stdio (npx).
-**Prerequisites**: Phase 7 complete (all existing tests passing)
-**Delivers**: M8, M12, S5
-
-**Scope**:
-
-- Migration 014: Fix all 6 catalog seed entries with correct `default_config` (npx commands), fix credential key mismatches
-- Validate credential keys match upstream `@modelcontextprotocol/server-*` packages
-- Add missing test files for Slack and GitHub static configs
-
-**Parallelizable with**: Nothing (foundation for 10.1b)
-
-### Phase 10.1b: Manager Fix (Docker + Reconnect + Transport)
-
-**Goal**: Fix Docker orchestration bugs and implement lazy reconnect and transport selection.
-**Prerequisites**: Phase 10.1a complete (correct seed data to test against)
-**Delivers**: M9, M11, M13
-
-**Scope**:
-
-- Fix Docker tag bug (line 480 of `mcp-connection-manager.ts`)
-- Add port mapping and SSE endpoint exposure for Docker containers
-- Derive MCPClient connection URL from Docker container info
-- Implement lazy reconnect in `initialize()` — store pending server IDs, reconnect per-org on first `getToolsets()`
-- Add transport selection: catalog items carry both `default_config_stdio` and `default_config_docker`
-- AD-6 (dual transport), AD-7 (lazy reconnect)
-
-**Parallelizable with**: Nothing (service layer feeds 10.1c)
-
-### Phase 10.1c: Integration (Auto-Connect + Tests + Monitoring)
-
-**Goal**: Complete the install flow with auto-connect, verify all integrations end-to-end, add monitoring.
-**Prerequisites**: Phase 10.1b complete (working Docker + reconnect)
-**Delivers**: M10, M14, S4, S6
-
-**Scope**:
-
-- Auto-connect after catalog install when all credentials provided
-- End-to-end integration tests for all 4 catalog servers (Slack, GitHub, PagerDuty, Jira)
-- Health check polling (60s interval, 3 consecutive failures → error)
-- Connection audit logging to `mcp_server_logs`
-
-**Parallelizable with**: M14 and S4/S6 are independent (can run in parallel)
-
----
-
-## 8. TDD Protocol
-
-### Test File Mapping
-
-| Requirement    | Test File                                                                             | Test Type   | Vitest Gotchas                                            |
-| -------------- | ------------------------------------------------------------------------------------- | ----------- | --------------------------------------------------------- |
-| M1, M3, S1     | `apps/api/src/tests/admin/mcp-repository.test.ts`                                     | Unit        | globalThis registry for vi.mock() TDZ, mockReset          |
-| M2, M4, M6, S2 | `apps/api/src/tests/mcp-connection-manager.test.ts`                                   | Unit        | Mock @mastra/mcp MCPClient, mock dockerode                |
-| M1, M2, M3, M5 | `apps/api/src/tests/routes/mcp-admin-routes.test.ts`                                  | Integration | Fastify inject(), Zod type provider, skipAuth             |
-| M7             | (Frontend — visual verification)                                                      | Manual      | Svelte 5 component testing deferred                       |
-| M8, M12        | `apps/api/src/tests/admin/mcp-repository.test.ts`                                     | Unit        | Verify corrected seed data and credential key alignment   |
-| M9, M11, M13   | `apps/api/src/tests/mcp-connection-manager.test.ts`                                   | Unit        | Docker port mapping, lazy reconnect, transport selection  |
-| M10            | `apps/api/src/tests/routes/mcp-admin-routes.test.ts`                                  | Integration | Install endpoint returns connection status                |
-| M14            | `apps/api/src/tests/mcp-integration.test.ts` (new)                                    | Integration | End-to-end: install → connect → discover tools per server |
-| S4             | `apps/api/src/tests/mcp-connection-manager.test.ts`                                   | Unit        | `vi.useFakeTimers()` for 60s polling interval             |
-| S5             | `packages/shared/src/server/mcp-client/configs/slack.test.ts`, `github.test.ts` (new) | Unit        | Config factory validation, env var correctness            |
-| S6             | `apps/api/src/tests/admin/mcp-repository.test.ts`                                     | Unit        | Connection audit log insertion and retrieval              |
-
-### Testing Strategy
-
-- **Unit tests (repository)**: Mock `withConnection()` and Oracle execute results. Test all 18 repository methods including credential encryption round-trip.
-- **Unit tests (services)**: Mock MCPClient constructor, listTools(), listToolsets(), connect(), disconnect(). Mock dockerode container lifecycle.
-- **Integration tests (routes)**: Fastify `app.inject()` with `skipAuth: true`. Test all 17 endpoints with Zod schema validation.
-- **Manual verification**: Admin UI tested via dev server. E2E with real MCP server (Brave Search) for tool discovery flow.
-
-### Known Vitest Patterns Applied
-
-- `mockReset: true` — all test files use `beforeEach` re-configuration of mock implementations
-- `vi.mock()` TDZ — repository test uses `globalThis.__testMocks` registry pattern
-- Fastify 5 — `app.inject()` returns JSON body; always `await fastify.close()` in `afterEach`
-
----
-
-## 9. Risks & Mitigations
-
-| #   | Risk                                               | Probability | Impact | Mitigation                                                                                                                 |
-| --- | -------------------------------------------------- | ----------- | ------ | -------------------------------------------------------------------------------------------------------------------------- |
-| R1  | @mastra/mcp API breaking changes                   | Medium      | High   | Pin to `^1.0.0`, wrap MCPClient in MCPConnectionManager service layer, test against embedded docs                          |
-| R2  | Docker not available on production host            | Low         | High   | Docker is optional — custom remote servers (SSE/HTTP) work without Docker. Catalog items degrade to "install instructions" |
-| R3  | MCP server container escape or resource exhaustion | Low         | High   | 512MB memory limit, 1 CPU, cap-drop ALL, no-new-privileges, bridge network, image allowlist regex                          |
-| R4  | Credential encryption key rotation breaks secrets  | Low         | High   | Document key rotation procedure. Future: add key versioning to credential records                                          |
-| R5  | MCP tool execution latency affects chat UX         | Medium      | Medium | Non-blocking: getToolsets() failure falls back to built-in tools. Tool timeouts in MCPClient config                        |
-| R6  | Community MCP servers unreliable or abandoned      | Medium      | Low    | Catalog is curated with tested images. Status monitoring detects failures. Admins can disconnect                           |
-| R7  | Cross-org tool leakage via MCPConnectionManager    | Low         | High   | All queries filter by org_id. getToolsets(orgId) only returns servers for the requesting org                               |
-| R8  | npx cold-start latency (10-30s first connect)      | High        | Medium | Pre-install packages with `--prefer-offline` or Docker prebuilt images. Show "connecting" spinner in UI                    |
-| R9  | Upstream MCP server credential env var changes     | Low         | Medium | Integration tests verify exact env var names. Track upstream changelogs for `@modelcontextprotocol/server-*` packages      |
-| R10 | Docker host unavailable in some deployments        | Medium      | Medium | Stdio (npx) fallback always available. Transport selection (M13) lets admin choose. Docker is optional, not required       |
-
----
-
-## 10. Success Metrics
-
-| Metric                        | Target              | Measurement Method                                                       | Timeframe           |
-| ----------------------------- | ------------------- | ------------------------------------------------------------------------ | ------------------- |
-| MCP servers installed         | >= 3 per org        | `SELECT COUNT(*) FROM mcp_servers GROUP BY org_id`                       | 30 days post-launch |
-| Tool call success rate        | >= 95%              | `mcp_server_metrics.success` aggregate                                   | Rolling 7 days      |
-| Average tool call latency     | < 5 seconds         | `AVG(duration_ms)` from mcp_server_metrics                               | Rolling 7 days      |
-| Admin install completion rate | >= 80%              | Catalog install starts vs. connected status                              | 30 days post-launch |
-| Agent MCP tool usage          | >= 10 calls/day     | mcp_server_metrics records per day                                       | 14 days post-launch |
-| Test coverage                 | >= 75 tests passing | `npx vitest run` test count for MCP files                                | At release          |
-| Catalog install success       | 100% for 4 servers  | Install + connect for Slack/GitHub/PagerDuty/Jira with valid credentials | Phase 10.1 release  |
-| Tool discovery                | >0 tools/server     | `mcp_tool_cache` rows per installed catalog server                       | Phase 10.1 release  |
-| CloudAdvisor tool invocation  | >= 1 call/server    | Successful tool call via agent for each integration                      | Phase 10.1 release  |
-| Health check detection        | < 120 seconds       | Time from server failure to status='error' update                        | Phase 10.1 release  |
-| Admin install time            | < 5 minutes e2e     | Time from catalog "Install" click to first tool call                     | Phase 10.1 release  |
-
----
-
-## 11. Verification
-
-### Automated Verification
-
-```bash
-# All MCP tests pass (75+ tests across 3 files)
-npx vitest run apps/api/src/tests/admin/mcp-repository.test.ts
-npx vitest run apps/api/src/tests/mcp-connection-manager.test.ts
-npx vitest run apps/api/src/tests/routes/mcp-admin-routes.test.ts
-
-# Full test suite passes
-npx vitest run
-
-# Lint clean
-pnpm lint
-
-# Type check
-cd apps/api && npx tsc --noEmit
-cd apps/frontend && npx svelte-check
-cd packages/shared && npx tsc --noEmit
+```typescript
+// Fastify catch-all route (from Better Auth Fastify docs)
+fastify.route({
+	method: ['GET', 'POST'],
+	url: '/api/auth/*',
+	handler: async (request, reply) => {
+		const headers = new Headers();
+		for (const [key, value] of Object.entries(request.headers)) {
+			if (value) headers.append(key, String(value));
+		}
+		const req = new Request(new URL(request.url, `${request.protocol}://${request.hostname}`), {
+			method: request.method,
+			headers,
+			body: request.body ? JSON.stringify(request.body) : undefined
+		});
+		const response = await auth.handler(req);
+		// Forward response back through Fastify reply
+	}
+});
 ```
 
-### Manual Verification
+### Auth Components
 
-- [x] Install Slack from catalog → enters connected state with green badge
-- [x] Add custom SSE server → test connection discovers tools → save connects
-- [x] Ask CloudAdvisor to use an MCP tool → agent calls tool via MCPClient
-- [x] Disconnect server → Docker container stops, status goes gray
-- [x] Tool Playground → expand tool, fill form, execute → result displayed
-- [x] Credentials encrypted in DB → value_enc is BLOB, not plaintext
-- [x] Non-admin user cannot access /admin/integrations or /api/admin/mcp/\* (401/403)
+| Component             | Location                                    | Purpose                                      |
+| --------------------- | ------------------------------------------- | -------------------------------------------- |
+| Better Auth config    | `@portal/server/auth/auth-factory.ts`       | Creates auth instance with Oracle adapter    |
+| OIDC/IDCS integration | `@portal/server/auth/idcs-provisioning.ts`  | OCI Identity Cloud Service via genericOAuth  |
+| Session store         | Oracle `sessions` table                     | Cookie-based sessions with configurable TTL  |
+| API key store         | Oracle `api_keys` table                     | SHA-256 hashed keys with per-key permissions |
+| Organization plugin   | Better Auth `organization()` plugin         | Multi-org support, member roles, invitations |
+| Fastify auth plugin   | `apps/api/src/plugins/auth.ts`              | Validates session/API key, decorates request |
+| RBAC plugin           | `apps/api/src/plugins/rbac.ts`              | Deny-by-default permission enforcement       |
+| CSRF protection       | Better Auth built-in (double-submit cookie) | Automatic with Better Auth handler           |
+
+### 37 SvelteKit API Routes to Migrate
+
+These `+server.ts` files must be replaced by Fastify routes:
+
+**Auth & Sessions (3 routes)**:
+
+- `/api/auth/[...all]/+server.ts` — Better Auth catch-all (OIDC callbacks, session mgmt)
+- `/api/sessions/+server.ts` — Session list/management
+- `/api/sessions/[id]/+server.ts` — Individual session operations
+
+**Chat & AI (6 routes)**:
+
+- `/api/chat/+server.ts` — Chat message handling
+- `/api/chat/approve/+server.ts` — Tool approval
+- `/api/chat/reject/+server.ts` — Tool rejection
+- `/api/chat/sessions/+server.ts` — Chat session list
+- `/api/chat/sessions/[id]/+server.ts` — Chat session details
+- `/api/chat/sessions/[id]/fork/+server.ts` — Fork a chat session
+
+**Tools (4 routes)**:
+
+- `/api/tools/+server.ts` — Tool listing
+- `/api/tools/execute/+server.ts` — Tool execution
+- `/api/v1/tools/+server.ts` — V1 tool listing
+- `/api/v1/tools/[name]/+server.ts` — V1 tool details
+
+**Workflows (5 routes)**:
+
+- `/api/workflows/+server.ts` — Workflow CRUD
+- `/api/workflows/[id]/+server.ts` — Workflow details
+- `/api/workflows/[id]/run/+server.ts` — Execute workflow
+- `/api/workflows/[id]/runs/+server.ts` — List workflow runs
+- `/api/workflows/[id]/runs/[runId]/+server.ts` — Run details
+
+**Admin (10 routes)**:
+
+- `/api/admin/setup/+server.ts` — Initial setup
+- `/api/admin/settings/+server.ts` — Portal settings
+- `/api/admin/idp/+server.ts` — Identity provider config
+- `/api/admin/models/+server.ts` — AI model management
+- `/api/admin/models/test/+server.ts` — Model connection test
+- `/api/admin/models/import/+server.ts` — Model import
+- `/api/admin/mcp/+server.ts` — MCP server management
+- `/api/admin/mcp/[id]/+server.ts` — Individual MCP server
+- `/api/admin/mcp/catalog/+server.ts` — MCP server catalog
+- `/api/admin/integrations/+server.ts` — Admin integrations
+
+**Webhooks & Misc (9 routes)**:
+
+- `/api/webhooks/+server.ts` — Webhook management
+- `/api/webhooks/test/+server.ts` — Webhook test
+- `/api/webhooks/[id]/+server.ts` — Individual webhook
+- `/api/v1/webhooks/[name]/+server.ts` — V1 webhook trigger
+- `/api/setup/+server.ts` — Setup wizard
+- `/api/setup/test-connection/+server.ts` — DB connection test
+- `/api/setup/create-admin/+server.ts` — First admin creation
+- `/api/setup/test-oci/+server.ts` — OCI config test
+- `/api/setup/configure-oci/+server.ts` — OCI configuration
 
 ---
 
-## 12. Open Questions
+## 5. Authorization Architecture
 
-_All resolved during implementation._
+### Role Model
+
+| Role       | Level    | Permissions                                                                                     |
+| ---------- | -------- | ----------------------------------------------------------------------------------------------- |
+| `viewer`   | Org-wide | `chat:read`, `tools:read`, `workflows:read`, `sessions:read`                                    |
+| `operator` | Org-wide | All viewer + `chat:write`, `tools:execute`, `workflows:execute`, `sessions:write`               |
+| `admin`    | Org-wide | All operator + `admin:all`, `tools:manage`, `workflows:manage`, `webhooks:manage`, `mcp:manage` |
+
+### 13 Permissions
+
+| Permission          | Description                            | Roles                   |
+| ------------------- | -------------------------------------- | ----------------------- |
+| `chat:read`         | View chat history                      | viewer, operator, admin |
+| `chat:write`        | Send messages to CloudAdvisor          | operator, admin         |
+| `tools:read`        | View tool definitions                  | viewer, operator, admin |
+| `tools:execute`     | Execute OCI tools                      | operator, admin         |
+| `tools:manage`      | Create/modify tool configurations      | admin                   |
+| `workflows:read`    | View workflow definitions              | viewer, operator, admin |
+| `workflows:execute` | Run workflows                          | operator, admin         |
+| `workflows:manage`  | Create/modify workflow definitions     | admin                   |
+| `sessions:read`     | View session history                   | viewer, operator, admin |
+| `sessions:write`    | Create/delete sessions                 | operator, admin         |
+| `webhooks:manage`   | Create/modify webhooks                 | admin                   |
+| `mcp:manage`        | Manage MCP server connections          | admin                   |
+| `admin:all`         | Full admin access (settings, IDP, etc) | admin                   |
+
+### RBAC Enforcement
+
+```
+Request → auth plugin (validates identity)
+        → rbac plugin (checks permissions)
+           ├── Route has @requirePermission('tools:execute')?
+           │   ├── request.permissions includes it? → Allow
+           │   └── Missing? → 403 Forbidden
+           └── Route in PUBLIC_ROUTES? → Skip check
+```
+
+**Implementation**:
+
+- Deny-by-default `onRequest` hook runs on every request
+- `PUBLIC_ROUTES` set exempts health, openapi spec, setup endpoints
+- Permissions loaded from role mapping at auth time (not per-request DB lookup)
+- API keys carry their own permission scope (can be more restrictive than role)
+
+### Multi-Org Isolation
+
+- Better Auth `organization()` plugin manages org membership
+- `resolveOrgId(request)` extracts org from session or API key context
+- All repository methods accept `orgId` parameter — no global state
+- VPD policies (Phase 10) add database-level enforcement as defence-in-depth
 
 ---
 
-## 13. Changelog
+## 6. Backend Architecture (Fastify 5)
 
-| Date       | Change Type | Description                                                                           |
-| ---------- | ----------- | ------------------------------------------------------------------------------------- |
-| 2026-02-10 | Created     | Initial PRD based on implemented Premium MCP Server Management                        |
-| 2026-02-10 | Updated     | Phase 10.1 external integrations requirements added (M8-M14, S4-S6, AD-6/7/8, R8-R10) |
+### Plugin Registration Order
+
+The order is **load-bearing** — changing it breaks the auth pipeline.
+
+```
+1.  Zod type provider (validatorCompiler, serializerCompiler)
+2.  Request tracing (X-Request-Id generation/forwarding)
+3.  Error handler (PortalError → structured HTTP responses)
+4.  Helmet (security headers via @fastify/helmet)
+5.  CORS (credentials: true, trusted origins via @fastify/cors)
+6.  Rate limit (configurable per-route via @fastify/rate-limit)
+7.  Cookie parser (@fastify/cookie)
+8.  Sensible defaults (@fastify/sensible — httpErrors helpers)
+9.  Oracle connection pool (withConnection decorator)
+10. Setup detection (portal setup state check)
+11. Auth plugin (Better Auth handler + session/API key validation)
+12. RBAC plugin (deny-by-default permission enforcement)
+13. Mastra plugin (agent, RAG, MCP, tool discovery, workflows)
+14. Swagger + Swagger UI (OpenAPI spec generation, auth-gated UI)
+15. Route modules: health, auth, chat, tools, search, sessions
+16. Route modules: workflows, webhooks, admin, metrics, setup
+17. Route modules: activity, audit, graph, models, schemas, openapi
+18. Mastra routes (@mastra/fastify auto-registered)
+```
+
+### Request Decorators
+
+| Decorator        | Type                    | Set By        | Notes                                        |
+| ---------------- | ----------------------- | ------------- | -------------------------------------------- |
+| `user`           | `User \| null`          | Auth plugin   | Session user object                          |
+| `session`        | `Session \| null`       | Auth plugin   | Session metadata                             |
+| `permissions`    | `string[]`              | Auth plugin   | Symbol-keyed (Fastify 5 reference-type)      |
+| `apiKeyContext`  | `ApiKeyContext \| null` | Auth plugin   | API key org/permissions when using X-API-Key |
+| `withConnection` | `<T>(fn) => Promise<T>` | Oracle plugin | Leases Oracle connection from pool           |
+
+### Route Module Structure
+
+Each route module follows:
+
+```typescript
+export default async function routes(fastify: FastifyInstance) {
+  const app = fastify.withTypeProvider<ZodTypeProvider>();
+
+  app.get('/api/v1/resource', {
+    schema: {
+      querystring: z.object({ ... }),
+      response: { 200: z.object({ ... }) }
+    },
+    preHandler: [requirePermission('resource:read')]
+  }, async (request, reply) => {
+    const orgId = resolveOrgId(request);
+    const result = await fastify.withConnection(async (conn) => {
+      return repository.list(conn, orgId);
+    });
+    return reply.send(result);
+  });
+}
+```
+
+### Error Handling
+
+```
+Fastify error handler plugin:
+  ├── PortalError? → toResponseBody() (structured, never exposes internals)
+  ├── Fastify validation error? → 400 with Zod error details
+  ├── Unknown error? → toPortalError(err) wraps as INTERNAL_ERROR(500)
+  └── All errors: Pino structured log + Sentry capture (if configured)
+```
+
+---
+
+## 7. Frontend Architecture (SvelteKit)
+
+### Current State
+
+- **14 page routes** across 4 layouts (root, admin, self-service, workflows)
+- **37 `+server.ts` API routes** (all to be migrated to Fastify — see Section 4)
+- **54 Svelte components** in 7 groups:
+  - `admin/` — Admin console (IDP, AI models, settings, MCP)
+  - `mobile/` — Responsive adaptations
+  - `panels/` — Info, help, settings panels
+  - `portal/` — Main portal UI (sidebar, header, overlay)
+  - `setup/` — First-run setup wizard
+  - `ui/` — Base UI components (buttons, dialogs, tooltips)
+  - `workflows/` — Workflow designer (canvas, node editors)
+
+### Svelte 5 Migration Status
+
+Fully migrated. Zero legacy patterns remain in components:
+
+| Pattern     | Count | Legacy Remaining |
+| ----------- | ----- | ---------------- |
+| `$props()`  | 62    | 0 `export let`   |
+| `$state()`  | 55+   | 0 `let x = ...`  |
+| `$derived`  | 65+   | 0 `$: x = ...`   |
+| `$effect()` | 14    | 0 `$: { ... }`   |
+
+**Remaining legacy**: 3 `writable` stores in `stores/ui.ts` (sidebar state, theme). These can remain — Svelte 5 runes and stores coexist. Migration to `$state` is optional.
+
+### State Management Strategy
+
+| State Type      | Tool                     | Example                                |
+| --------------- | ------------------------ | -------------------------------------- |
+| Server state    | TanStack Query           | Chat sessions, tool results, workflows |
+| Component state | Svelte 5 runes ($state)  | Form inputs, toggles, local UI state   |
+| Global UI       | Svelte stores (writable) | Sidebar open/closed, theme preference  |
+| Auth state      | Page data (SSR)          | User, session from +layout.server.ts   |
+| Workflow canvas | $state.raw()             | XY Flow nodes/edges (xyflow mutates)   |
+
+### Layout Hierarchy
+
+```
++layout.svelte (root)
+├── QueryClientProvider (TanStack)
+├── Toaster (svelte-sonner)
+├── Auth data from +layout.server.ts
+│
+├── / → Main portal (CloudAdvisor chat)
+├── /self-service → Overlay chat interface
+│
+├── /admin/ → +layout.svelte (admin)
+│   ├── Auth gate: requires admin:all
+│   ├── Sidebar navigation
+│   ├── /admin/settings
+│   ├── /admin/models
+│   ├── /admin/idp
+│   └── /admin/integrations
+│
+└── /workflows/ → +layout.svelte (workflows)
+    ├── /workflows → List view
+    └── /workflows/[id] → Visual editor (XY Flow canvas)
+```
+
+### Post-Migration Frontend
+
+After all 37 `+server.ts` routes are removed:
+
+```
+apps/frontend/src/routes/
+├── +layout.server.ts         ← Fetches session from Fastify /api/auth/session
+├── +layout.svelte            ← Root layout (QueryClient, Toaster)
+├── +page.svelte              ← Main chat interface
+├── admin/
+│   ├── +layout.server.ts     ← Auth gate via Fastify API
+│   ├── +layout.svelte        ← Admin sidebar
+│   ├── settings/+page.svelte
+│   ├── models/+page.svelte
+│   ├── idp/+page.svelte
+│   └── integrations/+page.svelte
+├── self-service/+page.svelte ← Overlay chat
+├── setup/+page.svelte        ← First-run wizard
+└── workflows/
+    ├── +page.svelte           ← Workflow list
+    └── [id]/+page.svelte      ← Visual editor
+```
+
+All data fetching via TanStack Query → Fastify API. Zero `+server.ts` files.
+
+---
+
+## 8. Middleware & Infrastructure
+
+### Nginx (Edge Layer)
+
+**Config**: `infrastructure/docker/phase9/nginx.conf`
+
+```
+TLS: 1.2 + 1.3 (ECDHE + AES-GCM ciphers)
+Certificates: ${TLS_CERTS_DIR}/fullchain.pem, privkey.pem, dhparam.pem
+
+Rate limiting:
+  - /api/auth/*: 10 req/s (auth abuse prevention)
+  - /api/*: 30 req/s (general API)
+  - Static assets: no limit
+
+Route splitting (Phase 10 target):
+  location /api/ {
+    proxy_pass http://api:3001;
+    proxy_buffering off;           # SSE/streaming support
+    proxy_set_header Upgrade "";   # H2C smuggling prevention
+  }
+  location / {
+    proxy_pass http://frontend:3000;
+  }
+
+Security headers (server-level):
+  - X-Frame-Options: DENY
+  - X-Content-Type-Options: nosniff
+  - Referrer-Policy: strict-origin-when-cross-origin
+  - CSP: script-src 'nonce-...'
+```
+
+### Docker Compose
+
+```yaml
+services:
+  nginx: # TLS termination, reverse proxy
+  api: # Fastify 5 (expose: 3001, not ports:)
+  frontend: # SvelteKit SSR (expose: 3000, not ports:)
+  certbot: # Let's Encrypt renewal (profile: letsencrypt)
+```
+
+All containers: `read_only: true`, `no-new-privileges: true`, `tmpfs` for writable dirs.
+
+### Container Hardening
+
+| Container | Memory Limit               | CPU Limit               | Health Check                  |
+| --------- | -------------------------- | ----------------------- | ----------------------------- |
+| nginx     | Fixed (not configurable)   | Fixed                   | `wget --spider /nginx-health` |
+| api       | `${API_MEMORY_LIMIT}`      | `${API_CPU_LIMIT}`      | `curl -f /health`             |
+| frontend  | `${FRONTEND_MEMORY_LIMIT}` | `${FRONTEND_CPU_LIMIT}` | `curl -f /health`             |
+
+---
+
+## 9. Package Architecture
+
+### Current: @portal/shared (Monolith)
+
+```
+packages/shared/src/           # 25+ modules, mixed concerns
+├── errors.ts                  # PortalError hierarchy (should be in types)
+├── index.ts                   # Re-exports everything
+├── api/types.ts               # API types (should be in types)
+├── tools/                     # Tool types + executor (mixed)
+├── workflows/                 # Workflow types + utils (mixed)
+└── server/                    # Server-only code
+    ├── admin/                 # IDP, AI providers, settings repos
+    ├── agent-state/           # SQLite chat state
+    ├── auth/                  # Better Auth config, RBAC, IDCS, API keys
+    ├── mcp/                   # MCP portal server
+    ├── mcp-client/            # Custom MCP client (750 LOC — to be replaced)
+    ├── oracle/                # Connections, migrations, repositories
+    ├── logger.ts              # Pino factory
+    ├── metrics.ts             # Prometheus
+    ├── crypto.ts              # AES-256-GCM
+    ├── feature-flags.ts       # Feature flag evaluation
+    ├── approvals.ts           # Approval token management
+    └── embeddings.ts          # OCI GenAI helpers
+```
+
+### Target: Three Focused Packages
+
+#### @portal/types
+
+Zero runtime dependencies. Pure types and Zod schemas.
+
+```
+packages/types/
+├── src/
+│   ├── api/          # API request/response types
+│   ├── errors.ts     # PortalError hierarchy + type guards
+│   ├── tools/        # ToolDefinition, ApprovalLevel, tool schemas
+│   ├── workflows/    # WorkflowNode, WorkflowEdge, WorkflowRun
+│   ├── pricing/      # PricingComparison, WorkloadRequirements
+│   └── index.ts
+├── package.json      # deps: { zod: "^4.3.6" }
+└── tsconfig.json
+```
+
+#### @portal/server
+
+Server-only business logic. No Svelte/SvelteKit deps.
+
+```
+packages/server/
+├── src/
+│   ├── oracle/       # connection pool, migrations, repositories
+│   ├── auth/         # Better Auth config, RBAC, API keys, IDCS provisioning
+│   ├── admin/        # IDP, AI provider, settings, MCP repositories
+│   ├── workflows/    # executor, repository
+│   ├── agent-state/  # SQLite session management
+│   ├── mcp/          # MCP portal server (uses @modelcontextprotocol/sdk)
+│   ├── crypto.ts     # AES-256-GCM encryption
+│   ├── logger.ts     # Pino factory
+│   ├── metrics.ts    # Prometheus registry
+│   ├── feature-flags.ts
+│   ├── approvals.ts
+│   ├── embeddings.ts
+│   └── index.ts
+├── package.json      # deps: { oracledb, better-auth, pino, @portal/types }
+└── tsconfig.json
+```
+
+#### @portal/ui
+
+Svelte components, stores, and client utilities.
+
+```
+packages/ui/
+├── src/
+│   ├── components/   # 54 Svelte 5 components
+│   ├── stores/       # Svelte stores (ui.ts)
+│   ├── utils/        # Client-side utilities
+│   └── index.ts
+├── package.json      # deps: { svelte, @portal/types }
+└── tsconfig.json
+```
+
+### Dependency Graph
+
+```
+@portal/types (zero deps, Zod only)
+    ▲
+    │
+    ├── @portal/server (oracledb, better-auth, pino, prom-client)
+    │       ▲
+    │       └── apps/api (fastify, @mastra/*, oci-sdk)
+    │
+    └── @portal/ui (svelte, @xyflow/svelte, @tanstack/svelte-query)
+            ▲
+            └── apps/frontend (@sveltejs/kit)
+```
+
+**Rule**: No upward arrows. No cross-arrows between @portal/server and @portal/ui.
+
+---
+
+## 10. AI System Requirements
+
+### Mastra Integration
+
+| Component       | Current                                   | Phase 10 Target                         |
+| --------------- | ----------------------------------------- | --------------------------------------- |
+| Agent framework | @mastra/core 1.2.0                        | Keep current (stable)                   |
+| RAG pipeline    | @mastra/rag 2.1.0                         | Keep current + HNSW DML indexes         |
+| MCP integration | Custom client (750 LOC)                   | @modelcontextprotocol/sdk v1.26.0       |
+| Fastify adapter | @mastra/fastify 1.1.1                     | Keep current (stable)                   |
+| Memory          | @mastra/memory 1.1.0                      | Keep current (stable)                   |
+| Tool discovery  | ToolSearchProcessor (94% token reduction) | Keep + extend for SDK-based tools       |
+| Workflows       | Custom executor (500 LOC)                 | Enhance with Mastra workflow primitives |
+
+### Mastra Workflow API (from Latest Docs)
+
+The Mastra workflow system provides primitives that map to our remaining node types:
+
+```typescript
+import { createWorkflow, createStep } from '@mastra/core/workflows';
+
+// Sequential execution (.then)
+const workflow = createWorkflow({ id: 'my-workflow' })
+  .then(stepA)
+  .then(stepB)
+  .commit();
+
+// Parallel execution (.parallel)
+workflow.then(createStep(...))
+  .parallel([branchA, branchB, branchC])  // All run concurrently
+  .then(mergeStep)
+  .commit();
+
+// Conditional branching (.branch)
+workflow.then(inputStep)
+  .branch([
+    [async ({ inputData }) => inputData.type === 'compute', computeStep],
+    [async ({ inputData }) => inputData.type === 'network', networkStep],
+    [async () => true, defaultStep],  // Default branch
+  ])
+  .commit();
+
+// Loop over collection (.foreach)
+workflow.then(listStep)
+  .foreach(processItem, { concurrency: 5 })  // Process items with concurrency
+  .then(aggregateStep)
+  .commit();
+
+// Loop until condition (.dountil / .dowhile)
+workflow.then(initStep)
+  .dountil(retryStep, async ({ inputData }) => inputData.success === true)
+  .commit();
+```
+
+### Suspend/Resume (Human-in-the-Loop)
+
+```typescript
+const approvalStep = createStep({
+  id: 'get-approval',
+  inputSchema: z.object({ action: z.string() }),
+  outputSchema: z.object({ approved: z.boolean() }),
+  resumeSchema: z.object({ decision: z.enum(['approve', 'reject']) }),
+  execute: async ({ inputData, suspend, resumeData }) => {
+    if (!resumeData) {
+      // First execution: suspend and wait for human input
+      await suspend({ action: inputData.action });
+      return undefined;
+    }
+    // Resumed with human decision
+    return { approved: resumeData.decision === 'approve' };
+  }
+});
+
+// Resume a suspended workflow
+const run = workflow.createRun();
+const result = await run.start({ inputData: { ... } });
+if (result.status === 'suspended') {
+  // Later, when human approves:
+  await run.resume({
+    stepId: 'get-approval',
+    resumeData: { decision: 'approve' }
+  });
+}
+```
+
+### Workflow Streaming
+
+```typescript
+const run = workflow.createRun();
+const stream = run.stream({ inputData: { ... } });
+for await (const event of stream.fullStream) {
+  // event: { type: 'step-start' | 'step-complete' | 'step-error', stepId, data }
+}
+```
+
+### ToolSearchProcessor
+
+Already integrated in Phase 9. Reduces context tokens by 94% when agent has 60+ tools. No changes needed — continues to work with SDK-based tools since the tool interface is unchanged.
+
+### Mastra Studio (Admin & Development Tool)
+
+Mastra Studio is elevated to a **first-class admin/development tool** — not just a dev footnote. It replaces the need for several bespoke admin pages and provides capabilities that don't exist in the portal today.
+
+**Architecture Decision**: AD-14 — Adopt Mastra Studio as primary agent/workflow debugging UI.
+
+#### Capabilities
+
+| Feature                          | What It Provides                                                            | Replaces/Augments                                           |
+| -------------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| **Agent Chat Playground**        | Interactive agent testing with model switching, temperature/top-p tuning    | New capability — no equivalent today                        |
+| **Workflow Graph Visualization** | Real-time DAG rendering with step execution state, active path highlighting | Augments existing @xyflow/svelte designer with runtime view |
+| **Tool Playground**              | Run any tool in isolation, inspect inputs/outputs                           | New capability — currently must test via chat               |
+| **MCP Explorer**                 | Browse all connected MCP servers and their available tools                  | Augments admin MCP integrations page                        |
+| **Observability Traces**         | AI-focused traces: model calls, tool executions, workflow steps             | Augments Sentry with AI-specific trace visualization        |
+| **Eval Scorers**                 | Display @mastra/evals scorer results per agent interaction                  | New capability — requires @mastra/evals (AD-16)             |
+| **REST API Explorer**            | OpenAPI + Swagger equivalent at `/mastra/studio`                            | Augments @fastify/swagger-ui, may replace @scalar           |
+
+#### Access Control
+
+```
+Environment    Access                          Gating
+─────────────────────────────────────────────────────────────
+Development    Full access, no auth required    NODE_ENV === 'development'
+Staging        Admin role required              Fastify RBAC + Better Auth session
+Production     Disabled by default              MASTRA_STUDIO_ENABLED=true + admin auth
+```
+
+Studio routes are exposed via `@mastra/fastify` at the `studioBase` path (default: `/mastra`). In non-development environments, wrap with Fastify `onRequest` hook requiring `admin` role via RBAC plugin.
+
+#### Configuration
+
+```typescript
+// apps/api/src/plugins/mastra.ts
+const mastra = new Mastra({
+	server: {
+		port: 4111,
+		studioBase: '/admin/studio', // Custom path under admin namespace
+		build: {
+			openAPIDocs: true, // Expose OpenAPI spec via Studio
+			swaggerUI: process.env.NODE_ENV !== 'production'
+		}
+	}
+});
+```
+
+#### Integration with Existing Admin Console
+
+Studio **augments** (not replaces) the existing admin console:
+
+- Admin console (`/admin/*`) remains the primary UI for IDP, AI Providers, Settings, MCP server management
+- Studio (`/admin/studio`) provides the AI debugging/testing layer
+- Navigation sidebar links to Studio from admin console
+- Studio uses the same Better Auth session for authenticated access
+
+### New Mastra Packages
+
+#### @mastra/sentry — AI Observability (AD-15)
+
+Bridges Mastra's internal tracing to Sentry with AI-specific span mapping:
+
+```typescript
+import { SentryExporter } from '@mastra/sentry';
+
+const mastra = new Mastra({
+	telemetry: {
+		export: {
+			type: 'custom',
+			exporter: new SentryExporter({ debug: false })
+		}
+	}
+});
+```
+
+| Mastra Span        | Sentry Operation      | Attributes                         |
+| ------------------ | --------------------- | ---------------------------------- |
+| `AGENT_RUN`        | `gen_ai.invoke_agent` | agent.name, resourceId, threadId   |
+| `TOOL_CALL`        | `gen_ai.execute_tool` | tool.name, connectionId            |
+| `MODEL_GENERATION` | `gen_ai.chat`         | gen_ai.request.model, token counts |
+| `WORKFLOW_RUN`     | `workflow.run`        | workflow.name, trigger.type        |
+
+**Benefit**: Sentry dashboard shows AI-specific performance — model latency, tool success rates, agent cost breakdown — alongside existing error tracking.
+
+#### @mastra/evals — Agent Quality Scoring (AD-16)
+
+Scorer framework for measuring agent output quality:
+
+```typescript
+import { createAnswerRelevancyScorer, createToxicityScorer } from '@mastra/evals';
+
+const cloudAdvisor = new Agent({
+	id: 'cloud-advisor',
+	evals: {
+		scorers: [
+			createAnswerRelevancyScorer({ model: 'openai/gpt-4o-mini' }),
+			createToxicityScorer({ model: 'openai/gpt-4o-mini' })
+		],
+		sampling: { rate: 0.1 } // Score 10% of production interactions
+	}
+});
+```
+
+Scores persist to `mastra_scorers` table (auto-created by Mastra storage). Studio's Scorers tab displays results over time.
+
+**Use cases**: Detect prompt injection success rate, track relevancy degradation after model updates, compare scoring across providers.
+
+#### Agent Guardrails — Security Processors (AD-17)
+
+Input/output processors that protect the agent pipeline:
+
+| Processor                 | Type   | Strategy  | Purpose                                                    |
+| ------------------------- | ------ | --------- | ---------------------------------------------------------- |
+| `PromptInjectionDetector` | Input  | `block`   | Detect and reject injection attempts before reaching model |
+| `PIIDetector`             | Hybrid | `redact`  | Strip PII from inputs/outputs (emails, SSNs, credit cards) |
+| `ModerationProcessor`     | Output | `warn`    | Flag inappropriate content, log but don't block            |
+| `TokenLimiterProcessor`   | Output | `block`   | Prevent runaway responses exceeding token budget           |
+| `SystemPromptScrubber`    | Output | `rewrite` | Remove system prompt leakage from responses                |
+
+```typescript
+const cloudAdvisor = new Agent({
+	id: 'cloud-advisor',
+	inputProcessors: [
+		new PromptInjectionDetector({ strategy: 'block', model: 'openai/gpt-4o-mini' }),
+		new PIIDetector({ strategy: 'redact', patterns: ['email', 'ssn'] })
+	],
+	outputProcessors: [
+		new TokenLimiterProcessor({ maxTokens: 4000 }),
+		new ModerationProcessor({ strategy: 'warn' })
+	]
+});
+```
+
+### Mastra Workflow Enhancements
+
+#### Lifecycle Callbacks (AD-18)
+
+```typescript
+const workflow = createWorkflow({
+	id: 'provision-infra',
+	onFinish: async ({ runId, result }) => {
+		await auditLog.record({ runId, status: result.status });
+		if (result.status === 'success') await notifySlack(runId);
+	},
+	onError: async ({ runId, error, step }) => {
+		await sentry.captureException(error, { extra: { runId, step } });
+		await notifyAdmin({ runId, step, error: error.message });
+	},
+	retryConfig: { attempts: 3, delay: 'exponential' }
+});
+```
+
+#### Typed Snapshots with suspendSchema/resumeSchema (AD-19)
+
+Already shown in Section 11 (Suspend/Resume). Adds type safety to human-in-the-loop workflows — `suspend()` and `resume()` payloads are validated against Zod schemas at runtime.
+
+#### Workflow Streaming via writer Argument (AD-20)
+
+```typescript
+const streamStep = createStep({
+	id: 'stream-analysis',
+	execute: async ({ inputData, mastra }, { writer }) => {
+		const agent = mastra.getAgent('cloud-advisor');
+		const { textStream } = await agent.stream(inputData.prompt);
+		// Pipe agent stream directly to workflow stream
+		await textStream.pipeTo(writer);
+		return { complete: true };
+	}
+});
+
+// Client-side consumption
+const stream = run.stream({ inputData: { prompt: 'Analyze my VCN' } });
+for await (const event of stream.fullStream) {
+	// Real-time step progress + streamed agent output
+	updateUI(event);
+}
+```
+
+---
+
+## 11. Workflow Designer Completion
+
+### Node Type Implementation Map
+
+| Node Type    | Status   | Mastra Primitive            | Implementation                                   |
+| ------------ | -------- | --------------------------- | ------------------------------------------------ |
+| input        | Done     | `createStep` inputSchema    | —                                                |
+| tool         | Done     | `createStep` + tool call    | —                                                |
+| condition    | Done     | `.branch()`                 | —                                                |
+| approval     | Done     | `suspend()` / `resume()`    | —                                                |
+| output       | Done     | `createStep` outputSchema   | —                                                |
+| **ai-step**  | **TODO** | `createStep` + agent call   | Prompt template → AI model → parsed response     |
+| **loop**     | **TODO** | `.foreach({ concurrency })` | Iterate collection with configurable concurrency |
+| **parallel** | **TODO** | `.parallel([...])`          | Run branches concurrently, merge results         |
+
+### AI Step Node
+
+```typescript
+const aiStep = createStep({
+	id: 'ai-analysis',
+	inputSchema: z.object({
+		prompt: z.string(),
+		model: z.string(),
+		outputSchema: z.record(z.unknown()).optional()
+	}),
+	outputSchema: z.object({ response: z.string(), structured: z.unknown().optional() }),
+	execute: async ({ inputData, mastra }) => {
+		const agent = mastra.getAgent('cloud-advisor');
+		const result = await agent.generate(inputData.prompt, {
+			model: inputData.model,
+			output: inputData.outputSchema ? z.object(inputData.outputSchema) : undefined
+		});
+		return { response: result.text, structured: result.object };
+	}
+});
+```
+
+### Loop Node
+
+```typescript
+// Maps to Mastra .foreach() with concurrency control
+workflow
+	.then(getItemsStep) // Returns { items: [...] }
+	.foreach(processItemStep, {
+		concurrency: 5 // Process up to 5 items in parallel
+	})
+	.then(aggregateResultsStep) // Receives array of results
+	.commit();
+```
+
+### Parallel Node
+
+```typescript
+// Maps to Mastra .parallel()
+workflow
+	.then(inputStep)
+	.parallel([
+		checkCompute, // Branch 1: check compute resources
+		checkNetwork, // Branch 2: check networking
+		checkStorage // Branch 3: check storage
+	])
+	.then(mergeResultsStep) // Receives results from all branches
+	.commit();
+```
+
+### Retry Policy
+
+```typescript
+interface RetryPolicy {
+	maxRetries: number; // Default: 3
+	baseDelayMs: number; // Default: 1000
+	maxDelayMs: number; // Default: 30000
+	backoffMultiplier: number; // Default: 2 (exponential)
+}
+// Delay = min(baseDelay * multiplier^attempt, maxDelay)
+```
+
+### Compensation / Saga Pattern
+
+When a node fails after previous nodes succeeded:
+
+1. Executor marks failed node
+2. Walks backward through completed nodes
+3. Executes each node's `compensationHandler` if defined
+4. Records compensation results in run audit trail
+5. Final run status: `compensated` or `compensation_failed`
+
+### SSE Streaming for Execution Progress
+
+Powered by Mastra's `run.stream()` API:
+
+```typescript
+// Server: Fastify SSE endpoint
+fastify.get('/api/v1/workflows/runs/:runId/stream', async (request, reply) => {
+	reply.raw.writeHead(200, {
+		'Content-Type': 'text/event-stream',
+		'Cache-Control': 'no-cache',
+		Connection: 'keep-alive'
+	});
+
+	const run = workflow.createRun();
+	const stream = run.stream({ inputData: runInput });
+	for await (const event of stream.fullStream) {
+		reply.raw.write(`data: ${JSON.stringify(event)}\n\n`);
+	}
+	reply.raw.end();
+});
+
+// Client: EventSource
+const events = new EventSource(`/api/v1/workflows/runs/${runId}/stream`);
+events.onmessage = (e) => {
+	const update = JSON.parse(e.data);
+	// { type, stepId, status, result?, error?, timestamp }
+};
+```
+
+### Crash Recovery
+
+Mastra provides `restartAllActiveWorkflowRuns()` for resuming workflows after process restart. Workflow snapshots are stored in the configured storage provider (Oracle via OracleStore).
+
+---
+
+## 12. Oracle 26AI Modernization
+
+### HNSW DML Indexes (Replaces IVF)
+
+```sql
+-- Before (IVF — requires rebuild after inserts)
+CREATE VECTOR INDEX idx_conv_embed
+  ON CONVERSATION_EMBEDDINGS(embedding)
+  ORGANIZATION NEIGHBOR PARTITIONS
+  DISTANCE COSINE
+  WITH TARGET ACCURACY 95;
+
+-- After (HNSW — supports real-time DML)
+CREATE VECTOR INDEX idx_conv_embed_hnsw
+  ON CONVERSATION_EMBEDDINGS(embedding)
+  ORGANIZATION INMEMORY NEIGHBOR GRAPH
+  DISTANCE COSINE
+  WITH TARGET ACCURACY 95
+  PARAMETERS (type HNSW, neighbors 16, efConstruction 200);
+```
+
+**Benefit**: Embeddings are searchable within 1 second of insertion (no index rebuild). HNSW `neighbors 16` balances accuracy with memory on small instances.
+
+### Direct Float32Array Vector Binding
+
+```typescript
+// Before (string conversion — unnecessary overhead)
+const vectorString = vectorToOracleString(embedding);
+await conn.execute(`INSERT INTO embeddings (id, embedding) VALUES (:id, :vec)`, {
+	id,
+	vec: vectorString
+});
+
+// After (direct TypedArray binding — node-oracledb 6.5+)
+await conn.execute(`INSERT INTO embeddings (id, embedding) VALUES (:id, :vec)`, {
+	id,
+	vec: new Float32Array(embedding)
+});
+
+// For queries, bind DB_TYPE_VECTOR for flexible columns:
+const result = await conn.execute(
+	`SELECT id, embedding FROM embeddings
+   WHERE VECTOR_DISTANCE(embedding, :query, COSINE) < :threshold`,
+	{
+		query: { val: new Float32Array(queryVector), type: oracledb.DB_TYPE_VECTOR },
+		threshold: 0.3
+	}
+);
+// result.rows[0].embedding is already a Float32Array
+```
+
+**Benefit**: Eliminates string serialization/deserialization overhead for every vector operation.
+
+### JSON Relational Duality Views
+
+```sql
+CREATE JSON RELATIONAL DUALITY VIEW workflow_definitions_dv AS
+  SELECT JSON {
+    'id': d.id,
+    'name': d.name,
+    'version': d.version,
+    'nodes': (SELECT JSON_ARRAYAGG(JSON {
+      'id': n.id,
+      'type': n.node_type,
+      'config': n.config
+    }) FROM workflow_nodes n WHERE n.definition_id = d.id)
+  }
+  FROM workflow_definitions d WITH INSERT UPDATE DELETE;
+```
+
+**Benefit**: Workflow definitions stored relationally but queried as JSON documents. Updates through either view are consistent.
+
+### Hybrid Vector Index
+
+```sql
+CREATE HYBRID VECTOR INDEX idx_docs_hybrid
+  ON documents(content, embedding)
+  PARAMETERS (
+    text_index_type CONTEXT,
+    vector_distance COSINE,
+    text_weight 0.3,
+    vector_weight 0.7
+  );
+```
+
+**Benefit**: Single query combines keyword search with semantic similarity. Improves RAG relevance for technical documentation.
+
+### VPD Tenant Isolation
+
+```sql
+CREATE OR REPLACE FUNCTION portal_vpd_policy(
+  p_schema VARCHAR2, p_table VARCHAR2
+) RETURN VARCHAR2 AS
+BEGIN
+  RETURN 'org_id = SYS_CONTEXT(''PORTAL_CTX'', ''ORG_ID'')';
+END;
+
+BEGIN
+  DBMS_RLS.ADD_POLICY(
+    object_name   => 'workflow_definitions',
+    policy_name   => 'portal_tenant_isolation',
+    function_schema => USER,
+    policy_function => 'portal_vpd_policy',
+    statement_types => 'SELECT,INSERT,UPDATE,DELETE'
+  );
+END;
+```
+
+**Benefit**: Database-level tenant isolation. Even if application code misses an `org_id` filter, VPD prevents cross-tenant data access. Admin role gets VPD exemption via application context variable.
+
+---
+
+## 13. Observability
+
+### Prometheus Metrics
+
+8 custom metrics registered in `@portal/server/metrics.ts`:
+
+| Metric                           | Type      | Labels                | Purpose                       |
+| -------------------------------- | --------- | --------------------- | ----------------------------- |
+| `portal_http_request_duration`   | Histogram | method, route, status | API latency by endpoint       |
+| `portal_http_requests_total`     | Counter   | method, route, status | Request volume                |
+| `portal_oracle_query_duration`   | Histogram | operation             | DB query performance          |
+| `portal_oracle_pool_active`      | Gauge     | —                     | Active Oracle connections     |
+| `portal_tool_execution_duration` | Histogram | tool_name, status     | OCI tool call latency         |
+| `portal_chat_messages_total`     | Counter   | model, role           | Chat usage by model           |
+| `portal_workflow_runs_total`     | Counter   | status                | Workflow execution outcomes   |
+| `portal_mcp_server_connections`  | Gauge     | server_name           | Active MCP server connections |
+
+**Endpoint**: `GET /api/metrics` (Prometheus scrape target, auth-gated)
+
+### Structured Logging (Pino)
+
+```typescript
+const logger = createLogger('module-name');
+// Output: { level: 30, time: ..., module: 'module-name', msg: '...' }
+```
+
+- **Redaction**: Auth headers, cookie values, API keys automatically redacted
+- **Serializers**: Custom serializers for request/response objects
+- **Request context**: `X-Request-Id` propagated through logger child instances
+- **Level**: Configurable via `LOG_LEVEL` env var (default: `info`)
+
+### Error Tracking (Sentry)
+
+- **Dynamic import**: `@sentry/sveltekit` loaded only when `SENTRY_DSN` is set
+- **Breadcrumbs**: HTTP requests, Oracle queries, tool executions
+- **Context**: User ID, org ID, permissions (via `toSentryExtras()`)
+- **Source maps**: Uploaded during build for production stack traces
+- **Performance**: Transaction sampling configurable via `SENTRY_TRACES_SAMPLE_RATE`
+- **AI Tracing** (Phase 10): `@mastra/sentry` SentryExporter maps Mastra spans → Sentry AI operations (see Section 10, AD-15)
+- **Upgrade**: `@sentry/sveltekit` 10.32.1 → 10.38.0 (6 patch versions behind)
+
+### OpenTelemetry (Phase 10)
+
+```typescript
+// apps/api/src/plugins/otel.ts — must register FIRST in plugin chain
+import otelPlugin from '@fastify/otel';
+
+app.register(otelPlugin, {
+	wrapRoutes: true,
+	exposeApi: true
+});
+```
+
+`@fastify/otel` replaces the deprecated `@opentelemetry/instrumentation-fastify` (deprecated June 2025). Emits standard W3C trace context headers, integrates with Sentry's OpenTelemetry SDK mode.
+
+### Request Tracing
+
+```
+Client → Nginx → Fastify (X-Request-Id generated if missing)
+                    ├── @fastify/otel W3C trace context (Phase 10)
+                    ├── @mastra/sentry AI span mapping (Phase 10)
+                    ├── Logged in every Pino entry
+                    ├── Forwarded to Oracle queries (comment-tagged)
+                    ├── Forwarded to OCI SDK calls
+                    └── Returned in response header
+```
+
+### Health Checks
+
+| Endpoint        | Type          | Timeout | Content                              |
+| --------------- | ------------- | ------- | ------------------------------------ |
+| `/healthz`      | Liveness      | —       | Plain text "ok"                      |
+| `/health`       | Readiness     | 3s      | JSON: Oracle pool, memory, uptime    |
+| `/nginx-health` | Load balancer | —       | HTTP 200 from nginx (access_log off) |
+
+---
+
+## 14. Testing Strategy
+
+### Vitest Configuration
+
+```typescript
+// vitest.config.ts (root)
+export default defineConfig({
+	test: {
+		projects: ['apps/api', 'apps/frontend'],
+		mockReset: true // Clears ALL mock implementations between tests
+	}
+});
+```
+
+### Test Structure
+
+| Location                     | Count | Focus                                      |
+| ---------------------------- | ----- | ------------------------------------------ |
+| `apps/api/src/tests/`        | 32+   | Route handlers, plugins, services          |
+| `apps/frontend/src/tests/`   | TBD   | Component tests, store tests               |
+| `packages/server/src/tests/` | TBD   | Repository tests, auth tests (after split) |
+
+### Testing Patterns
+
+**buildTestApp pattern** (Fastify integration tests):
+
+```typescript
+function buildTestApp(options?: { skipAuth?: boolean; testUser?: TestUser }) {
+	const app = Fastify();
+	// Register plugins in correct order
+	// skipAuth: bypasses Oracle/session/RBAC
+	// testUser: injects mock user/session/permissions
+	return app;
+}
+```
+
+**mockReset: true gotcha** — Every test must re-configure mocks in `beforeEach`:
+
+```typescript
+const mockFn = vi.fn();
+vi.mock('module', () => ({ fn: (...args) => mockFn(...args) }));
+
+beforeEach(() => {
+	mockFn.mockResolvedValue({ data: 'test' }); // Re-configure after reset
+});
+```
+
+**vi.mock() TDZ pattern** — Use `globalThis` registry for mock references:
+
+```typescript
+vi.mock('module', () => {
+	if (!(globalThis as any).__testMocks) (globalThis as any).__testMocks = {};
+	const mocks = { list: vi.fn(), get: vi.fn() };
+	(globalThis as any).__testMocks.repo = mocks;
+	return { repository: new Proxy({}, { get: (_, p) => mocks[p] }) };
+});
+```
+
+### Coverage Targets
+
+| Area              | Target | Notes                               |
+| ----------------- | ------ | ----------------------------------- |
+| Route handlers    | 80%    | All CRUD operations, error paths    |
+| Auth plugin       | 90%    | Critical security boundary          |
+| Workflow executor | 85%    | All node types, retry, compensation |
+| Oracle repos      | 75%    | CRUD + edge cases (empty, null)     |
+| Svelte components | 60%    | Key interactions, not every variant |
+
+---
+
+## 15. CI/CD & Deployment
+
+### GitHub Actions Workflows
+
+| Workflow     | Trigger    | Steps                                     |
+| ------------ | ---------- | ----------------------------------------- |
+| `ci.yml`     | PR, push   | Install → lint → typecheck → test → build |
+| `deploy.yml` | Tag/manual | Build → Docker push → SSH deploy → health |
+| `docker.yml` | Release    | Multi-stage Docker build → registry push  |
+
+### Git Hooks
+
+**Pre-commit** (`.githooks/pre-commit`):
+
+- ESLint on staged files (workspace-scoped)
+- TypeScript type check (workspace-scoped)
+- Prettier format check
+
+**Pre-push** (`.githooks/pre-push`):
+
+- Semgrep security scan
+- CodeQL analysis
+- Trufflehog secret detection
+- Spectral + OWASP API lint (requires OpenAPI export)
+- Cherrybomb API security scan
+- Full test suite (`vitest run`)
+
+### Deployment Pipeline
+
+```
+Developer → git push → pre-push hooks (6 scanners + tests)
+         → GitHub Actions CI (lint, typecheck, test, build)
+         → Tag release → deploy.yml
+         → Docker build (multi-stage, hardened)
+         → Push to registry
+         → SSH to OCI instance
+         → docker compose pull && docker compose up -d
+         → Health check verification
+```
+
+### Feature Flags
+
+| Flag                   | Purpose                           | Phase 10 Action         |
+| ---------------------- | --------------------------------- | ----------------------- |
+| `FASTIFY_ENABLED`      | Enable Fastify proxy in SvelteKit | Remove (always on)      |
+| `FASTIFY_URL`          | Fastify backend URL               | Keep for deployment     |
+| `FASTIFY_PROXY_ROUTES` | Which routes to proxy             | Remove (all in Fastify) |
+
+---
+
+## 16. Security
+
+| Area                  | Mechanism                                                              |
+| --------------------- | ---------------------------------------------------------------------- |
+| Auth boundary         | Single Fastify auth plugin (deny-by-default)                           |
+| Tenant isolation      | VPD policies at database level + org_id in all queries                 |
+| Credential encryption | AES-256-GCM (existing crypto.ts)                                       |
+| API key hashing       | SHA-256 (existing api-keys.ts)                                         |
+| SSRF prevention       | `isValidWebhookUrl()` blocks private IPs                               |
+| SQL injection         | Bind parameters + `validateColumnName()`                               |
+| XSS                   | DOMPurify for markdown rendering                                       |
+| CSRF                  | Better Auth built-in (double-submit cookie)                            |
+| CSP                   | `crypto.randomUUID()` nonce per request                                |
+| MCP sandboxing        | Docker containers (512MB, cap-drop ALL)                                |
+| Webhook signatures    | HMAC-SHA256 via `X-Webhook-Signature`                                  |
+| Rate limiting         | Dual: nginx `limit_req` + Fastify `@fastify/rate-limit`                |
+| AI guardrails         | PromptInjectionDetector, PIIDetector, ModerationProcessor (see AD-17)  |
+| Load shedding         | `@fastify/under-pressure` — 503 before OOM/event loop stall (Phase 10) |
+| TLS                   | 1.2 + 1.3, ECDHE ciphers, HSTS                                         |
+| Container hardening   | read_only, no-new-privileges, tmpfs                                    |
+| Circuit breaking      | `@fastify/circuit-breaker` for OCI SDK calls (Phase 10, P2)            |
+| Graceful shutdown     | `fastify-graceful-shutdown` — drain connections, flush Pino (Phase 10) |
+
+---
+
+## 17. Dependency Inventory
+
+### Current Dependencies (All Workspaces)
+
+#### Runtime — Core Framework
+
+| Package                | Version | Latest | Status       | Notes          |
+| ---------------------- | ------- | ------ | ------------ | -------------- |
+| fastify                | 5.7.4   | 5.7.4  | Current      |                |
+| @sveltejs/kit          | 2.50.2  | 2.50.2 | Current      |                |
+| @sveltejs/adapter-node | 5.5.2   | 5.5.2  | Current      |                |
+| svelte                 | 5.49.2  | 5.50.1 | Minor behind | Safe to update |
+| zod                    | 4.3.6   | 4.3.6  | Current      | v4 stable      |
+| typescript             | 5.9.3   | 5.9.3  | Current      |                |
+
+#### Runtime — Fastify Plugins
+
+| Package                   | Version | Latest | Status       | Notes          |
+| ------------------------- | ------- | ------ | ------------ | -------------- |
+| @fastify/cookie           | 11.0.2  | 11.0.2 | Current      |                |
+| @fastify/cors             | 11.2.0  | 11.2.0 | Current      |                |
+| @fastify/helmet           | 13.0.2  | 13.0.2 | Current      |                |
+| @fastify/rate-limit       | 10.3.0  | 10.3.0 | Current      |                |
+| @fastify/sensible         | 6.0.4   | 6.0.4  | Current      |                |
+| @fastify/swagger          | 9.6.1   | 9.7.0  | Minor behind | Safe to update |
+| @fastify/swagger-ui       | 5.2.5   | 5.2.5  | Current      |                |
+| fastify-plugin            | 5.1.0   | 5.1.0  | Current      |                |
+| fastify-type-provider-zod | 6.1.0   | 6.1.0  | Current      |                |
+
+#### Runtime — AI / Mastra
+
+| Package                        | Version | Latest | Status       | Notes                                   |
+| ------------------------------ | ------- | ------ | ------------ | --------------------------------------- |
+| ai                             | 6.0.73  | 6.0.78 | Patch behind | Safe to update                          |
+| @ai-sdk/anthropic              | 3.0.39  | 3.0.40 | Patch behind | Safe to update                          |
+| @ai-sdk/google                 | 3.0.22  | 3.0.23 | Patch behind | Safe to update                          |
+| @ai-sdk/openai                 | 3.0.26  | 3.0.26 | Current      |                                         |
+| @ai-sdk/svelte                 | 4.0.73  | 4.0.78 | Patch behind | Safe to update                          |
+| @acedergren/oci-genai-provider | 0.2.0   | 0.2.0  | Current      | Private package                         |
+| @mastra/core                   | 1.2.0   | 1.2.0  | Current      |                                         |
+| @mastra/fastify                | 1.1.1   | 1.1.1  | Current      |                                         |
+| @mastra/mcp                    | 1.0.0   | 1.0.0  | Current      | Replace custom client with official SDK |
+| @mastra/memory                 | 1.1.0   | 1.1.0  | Current      |                                         |
+| @mastra/rag                    | 2.1.0   | 2.1.0  | Current      |                                         |
+| @mastra/sentry                 | —       | latest | **NEW**      | AI span → Sentry mapping (AD-15)        |
+| @mastra/evals                  | —       | latest | **NEW**      | Agent quality scoring (AD-16)           |
+
+#### Runtime — Auth & Database
+
+| Package        | Version | Latest | Status  | Notes                               |
+| -------------- | ------- | ------ | ------- | ----------------------------------- |
+| better-auth    | 1.4.18  | 1.4.18 | Current |                                     |
+| oracledb       | 6.10.0  | 6.10.0 | Current | Native vector support since 6.5     |
+| better-sqlite3 | 12.6.2  | 12.6.2 | Current | Still best-in-class for sync SQLite |
+
+#### Runtime — UI & Utilities
+
+| Package                | Version | Latest  | Status       | Notes                                 |
+| ---------------------- | ------- | ------- | ------------ | ------------------------------------- |
+| @tanstack/svelte-query | 6.0.18  | 6.0.18  | Current      |                                       |
+| @xyflow/svelte         | 1.5.0   | 1.5.0   | Current      | Workflow designer canvas              |
+| @sentry/sveltekit      | 10.32.1 | 10.38.0 | Minor behind | 6 versions behind, update recommended |
+| marked                 | 17.0.1  | 17.0.1  | Current      |                                       |
+| dompurify              | 3.3.1   | 3.3.1   | Current      |                                       |
+| dockerode              | 4.0.9   | 4.0.9   | Current      |                                       |
+| clsx                   | 2.1.1   | 2.1.1   | Current      |                                       |
+| svelte-sonner          | 1.0.7   | 1.0.7   | Current      |                                       |
+| tailwind-merge         | 3.4.0   | 3.4.0   | Current      |                                       |
+| uuid                   | 13.0.0  | 13.0.0  | Current      |                                       |
+| pino                   | 10.3.0  | 10.3.1  | Patch behind | Safe to update                        |
+
+#### Dev Dependencies
+
+| Package                      | Version | Latest     | Status           | Notes                                      |
+| ---------------------------- | ------- | ---------- | ---------------- | ------------------------------------------ |
+| vitest                       | 4.0.18  | 4.0.18     | Current          |                                            |
+| vite                         | 6.4.1   | **7.3.1**  | **Major behind** | Vite 7: new plugin API, evaluate carefully |
+| eslint                       | 9.39.2  | **10.0.0** | **Major behind** | ESLint 10: flat config only, no legacy     |
+| @eslint/js                   | 9.39.2  | **10.0.1** | **Major behind** | Must pair with eslint 10                   |
+| @sveltejs/vite-plugin-svelte | 5.1.1   | **6.2.4**  | **Major behind** | Requires Vite 7                            |
+| typescript-eslint            | 8.54.0  | 8.55.0     | Minor behind     | Safe to update                             |
+| tailwindcss                  | 4.1.18  | 4.1.18     | Current          | v4 stable                                  |
+| postcss                      | 8.5.6   | 8.5.6      | Current          |                                            |
+| bits-ui                      | 2.15.5  | 2.15.5     | Current          |                                            |
+| tailwind-variants            | 3.2.2   | 3.2.2      | Current          |                                            |
+| tsx                          | 4.21.0  | 4.21.0     | Current          |                                            |
+| svelte-check                 | 4.3.6   | 4.3.6      | Current          |                                            |
+| @tailwindcss/typography      | 0.5.19  | 0.5.19     | Current          |                                            |
+| @tailwindcss/vite            | 4.1.18  | 4.1.18     | Current          |                                            |
+
+#### Deprecated (Must Remove)
+
+| Package          | Reason                        | Action                      |
+| ---------------- | ----------------------------- | --------------------------- |
+| @types/dompurify | DOMPurify 3.x ships own types | Remove from devDependencies |
+
+#### New Dependencies
+
+##### Core (Phase A)
+
+| Package                   | Version | Purpose                                 | License    | Weekly DL |
+| ------------------------- | ------- | --------------------------------------- | ---------- | --------- |
+| oci-sdk                   | 2.125.0 | Official Oracle Cloud TypeScript SDK    | UPL/Apache | 15K+      |
+| @modelcontextprotocol/sdk | ^1.26.0 | Official MCP TypeScript SDK             | MIT        | 24K+      |
+| terraform-generator       | latest  | Programmatic HCL generation (AST-based) | MIT        | 50K+      |
+
+##### Fastify Plugins — P0 (Phase A)
+
+| Package                       | Version | Purpose                                                          | License | Weekly DL |
+| ----------------------------- | ------- | ---------------------------------------------------------------- | ------- | --------- |
+| @fastify/under-pressure       | latest  | Load shedding (maxEventLoopDelay, maxHeapUsedBytes, maxRssBytes) | MIT     | 150K+     |
+| fastify-graceful-shutdown     | latest  | Zero-downtime deploys — drain connections, flush Pino            | MIT     | 20K+      |
+| @fastify/otel                 | latest  | OpenTelemetry (replaces deprecated instrumentation-fastify)      | MIT     | 10K+      |
+| iovalkey                      | latest  | Valkey/Redis client for OCI Cache (ioredis fork, TypeScript)     | MIT     | 50K+      |
+| @scalar/fastify-api-reference | latest  | Modern API docs (AD-42: replaces @fastify/swagger-ui)            | MIT     | 100K+     |
+
+##### Fastify Plugins — P1 (Phase B-C)
+
+| Package           | Version | Purpose                                              | License | Weekly DL |
+| ----------------- | ------- | ---------------------------------------------------- | ------- | --------- |
+| @fastify/sse      | latest  | SSE for workflow progress, agent streaming (AD-40)   | MIT     | 15K+      |
+| @fastify/compress | latest  | Gzip/Brotli response compression (~60-70% reduction) | MIT     | 200K+     |
+| @fastify/schedule | latest  | Lightweight cron (cleanup jobs, metric aggregation)  | MIT     | 30K+      |
+
+##### Fastify Plugins — P2 (Evaluate Phase D+)
+
+| Package                  | Version | Purpose                                                             | License | Weekly DL |
+| ------------------------ | ------- | ------------------------------------------------------------------- | ------- | --------- |
+| @fastify/websocket       | latest  | Bidirectional comms — only if collaborative features needed (AD-40) | MIT     | 200K+     |
+| @fastify/request-context | latest  | AsyncLocalStorage for org/user context                              | MIT     | 50K+      |
+| @fastify/circuit-breaker | latest  | Circuit breaker for OCI SDK calls                                   | MIT     | 10K+      |
+| @fastify/multipart       | latest  | File upload for workflow import/export                              | MIT     | 200K+     |
+
+##### Frontend Libraries (Phase B-E)
+
+| Package               | Version | Purpose                                                             | License    | Weekly DL |
+| --------------------- | ------- | ------------------------------------------------------------------- | ---------- | --------- |
+| sveltekit-superforms  | latest  | Form validation for admin, setup wizard, workflow config            | MIT        | 52K+      |
+| layerchart            | latest  | Charting on D3 — admin metrics, cost comparison, workflow analytics | MIT        | 8K+       |
+| fuse.js               | latest  | Client-side fuzzy search for tool palette, MCP catalog              | Apache-2.0 | 1.2M+     |
+| formsnap              | latest  | Superforms companion — accessible form controls, error handling     | MIT        | 12K+      |
+| @tanstack/table-core  | latest  | Headless table for admin listings (tools, servers, audit log)       | MIT        | 800K+     |
+| paneforge             | latest  | Resizable panel layouts for workflow designer split views           | MIT        | 6K+       |
+| svelte-dnd-action     | latest  | Drag-and-drop for kanban boards, workflow node palettes             | MIT        | 15K+      |
+| @formkit/auto-animate | latest  | List animations for dynamic admin tables, kanban transitions        | MIT        | 200K+     |
+
+##### DX / Quality (Phase A)
+
+| Package              | Version | Purpose                                             | License | Weekly DL |
+| -------------------- | ------- | --------------------------------------------------- | ------- | --------- |
+| syncpack             | latest  | Dependency version sync across monorepo workspaces  | MIT     | 100K+     |
+| zod-validation-error | latest  | Human-readable Zod error messages for API responses | MIT     | 500K+     |
+
+##### Mastra Packages (Phase B-E)
+
+| Package        | Version | Purpose                                 | License | Weekly DL |
+| -------------- | ------- | --------------------------------------- | ------- | --------- |
+| @mastra/sentry | latest  | AI-specific Sentry span mapping (AD-15) | MIT     | 5K+       |
+| @mastra/evals  | latest  | Agent quality scoring framework (AD-16) | MIT     | 3K+       |
+
+### Build vs Buy Decisions
+
+#### REPLACE: Custom MCP Client → @modelcontextprotocol/sdk
+
+| Aspect          | Detail                                                                                         |
+| --------------- | ---------------------------------------------------------------------------------------------- |
+| **Current**     | 750 LOC custom client in `packages/shared/src/server/mcp-client/` (7 files)                    |
+| **Replacement** | `@modelcontextprotocol/sdk` v1.26.0 — official TypeScript SDK                                  |
+| **Rationale**   | Official SDK gets automatic protocol updates, better community support, 24K+ projects using it |
+| **Migration**   | 2-3 days. Replace MCPClient class, rebuild MCPManager on top of SDK Client, update transports  |
+| **Risk**        | Low — well-documented SDK with clear API                                                       |
+
+#### REPLACE: Custom Terraform Generator → terraform-generator
+
+| Aspect          | Detail                                                                                                       |
+| --------------- | ------------------------------------------------------------------------------------------------------------ |
+| **Current**     | 577 LOC string-concatenation HCL generator                                                                   |
+| **Replacement** | `terraform-generator` — AST-based HCL generation with JSON output option                                     |
+| **Rationale**   | String concatenation is fragile. AST-based generation prevents syntax errors. CDKTF was deprecated Dec 2025. |
+| **Migration**   | 2-3 days. Rewrite generator functions to use TerraformGenerator API, preserve public API                     |
+| **Risk**        | Low — well-documented, 50K+ weekly downloads                                                                 |
+
+#### WRAP: OCI CLI Tools → oci-sdk (Gradual)
+
+| Aspect        | Detail                                                                           |
+| ------------- | -------------------------------------------------------------------------------- |
+| **Current**   | 60+ CLI wrappers (~4,000 LOC) using `child_process.execFileSync('oci', args)`    |
+| **Target**    | Hybrid: SDK for high-frequency tools, keep CLI for edge cases                    |
+| **Rationale** | SDK calls are 3-5x faster (no subprocess), natively typed, better error handling |
+| **Migration** | 4-6 weeks incremental. Start with compute/networking (highest frequency)         |
+| **Risk**      | Medium — large surface area but low per-tool risk                                |
+
+**OCI SDK v2.125.0** (`npm install oci-sdk`):
+
+- Per-service client packages (e.g., `core.ComputeClient`, `objectstorage.ObjectStorageClient`)
+- Config file authentication (`~/.oci/config`) or instance principal
+- Dual-licensed UPL/Apache-2.0, Node.js only
+
+```typescript
+// Before (CLI wrapper — 2-5s per call)
+const result = executeOCI(['compute', 'instance', 'list', '--compartment-id', compartmentId]);
+const parsed = JSON.parse(result.stdout);
+
+// After (SDK — <500ms per call)
+import * as core from 'oci-sdk/lib/core';
+const computeClient = new core.ComputeClient({ authenticationDetailsProvider });
+const response = await computeClient.listInstances({ compartmentId });
+// response.items is already typed as Instance[]
+```
+
+#### KEEP: Custom Implementations (No Packaged Alternative)
+
+| Implementation       | LOC | Why Keep                                                                                         |
+| -------------------- | --- | ------------------------------------------------------------------------------------------------ |
+| OracleVectorStore    | 437 | No Oracle vector store exists in any framework. Already implements MastraVector interface.       |
+| Agent State (Oracle) | 400 | Migrated to OracleStore (MastraStorage impl). VPD tenant isolation. thread_id for Mastra memory. |
+| Auth (Better Auth)   | 150 | Already external package. Custom parts are OCI-specific business logic (IDCS, Oracle adapter).   |
+| Pricing Comparison   | 500 | No multi-cloud pricing npm package exists. Static OCI data + Azure API is the right approach.    |
+
+---
+
+## 18. Risks & Roadmap
+
+### Phased Rollout
+
+```
+Phase A: Dependency Updates + Fastify Hardening (1-2 weeks)
+├── Patch/minor updates (ai, svelte, sentry, pino, swagger)
+├── Remove @types/dompurify
+├── Add oci-sdk v2.125.0, @modelcontextprotocol/sdk v1.26.0
+├── Add P0 Fastify plugins: @fastify/under-pressure,
+│   fastify-graceful-shutdown, @fastify/otel (AD-40: websocket deferred)
+├── Add @mastra/sentry, @mastra/evals
+├── Add DX: syncpack, zod-validation-error
+├── Replace zodToJsonSchema() with z.toJSONSchema() (Zod 4 built-in)
+├── Run knip in CI (already installed)
+├── Add iovalkey + cache module (AD-39: Valkey caching layer)
+├── Switch @fastify/swagger-ui → @scalar/fastify-api-reference (AD-42)
+├── DEFERRED: Vite 7 + ESLint 10 (AD-41: blocked by typescript-eslint)
+└── Run syncpack to align dependency versions
+
+Phase B: Package Split + Frontend Libraries (2 weeks)
+├── Create @portal/types (extract types + Zod schemas)
+├── Create @portal/server (extract server modules)
+├── Create @portal/ui (extract Svelte components)
+├── Update all imports across monorepo
+├── Add sveltekit-superforms for admin/setup/workflow forms
+├── Add LayerChart for dashboard metrics and cost comparison
+├── Add fuse.js for fuzzy search in tool palette/MCP catalog
+└── Validate build + test suite passes
+
+Phase C: Fastify-First Migration + Mastra Studio (2-3 weeks)
+├── Move Better Auth to Fastify (catch-all route, toWebRequest pattern)
+├── Migrate all 37 SvelteKit +server.ts routes to Fastify
+├── Update SvelteKit to cookie-forwarding only
+├── Add P1 Fastify plugins: @fastify/sse, cache-manager, @fastify/compress, @fastify/schedule
+├── Configure Mastra Studio at /admin/studio with RBAC auth gating
+├── Remove FASTIFY_PROXY_ROUTES feature flag
+├── Remove SvelteKit proxy middleware
+├── Update nginx config (all /api/* direct to Fastify)
+└── Test OIDC flow end-to-end with OCI IDCS
+
+Phase D: OCI SDK Migration (3-4 weeks)
+├── Add oci-sdk auth provider (config file + instance principal)
+├── Create executor-sdk.ts adapter
+├── Migrate top-10 tools by call frequency
+├── Benchmark: CLI exec vs SDK API call latency
+├── Gradually migrate remaining tools
+└── Keep CLI fallback for unmigrated tools
+
+Phase E: Workflow Designer Completion + AI Hardening (2-3 weeks)
+├── Implement ai-step node (Mastra agent.generate())
+├── Implement loop node (Mastra .foreach() with concurrency)
+├── Implement parallel node (Mastra .parallel())
+├── Add retry policies with exponential backoff
+├── Add compensation/saga pattern
+├── Add workflow streaming via Mastra writer argument
+├── Add workflow lifecycle callbacks (onFinish, onError)
+├── Add typed suspendSchema/resumeSchema for approval nodes
+├── Add Agent Guardrails (PromptInjectionDetector, PIIDetector, TokenLimiter)
+├── Configure @mastra/evals scorers on CloudAdvisor agent
+├── Add crash recovery via restartAllActiveWorkflowRuns()
+└── Update frontend editor components for new node types
+
+Phase F: Oracle 26AI Modernization (1-2 weeks)
+├── Migration 015: HNSW DML vector indexes
+├── Migration 016: JSON Relational Duality Views
+├── Migration 017: VPD tenant isolation policies
+├── Replace vectorToOracleString with direct Float32Array binding
+├── Update OracleVectorStore for HNSW + DB_TYPE_VECTOR
+├── Optional: Hybrid Vector Index for RAG
+└── Benchmark vector query performance (3x target)
+```
+
+### Phase Dependencies
+
+```
+A (deps+hardening) ──► B (split+frontend) ──► C (fastify-first+studio)
+                                                  │
+A (deps+hardening) ──────────────────────────► D (oci-sdk) [independent of B/C]
+                                                  │
+B (split+frontend) ──► E (workflows+AI) [needs @portal/types + @portal/server]
+                                                  │
+A (deps+hardening) ──────────────────────────► F (oracle) [independent, needs only A]
+```
+
+**Parallelizable**: D and F can run in parallel with B/C/E.
+
+### Completed Work (Pre-Phase A) [DRIFT DETECTED]
+
+The following was implemented on `main` before Phase A kickoff (11 commits, 2026-02-09 to 2026-02-10):
+
+**Premium MCP Server Management (Phase 10.0)**
+
+| Component                                                                               | Status | Commit Range                 |
+| --------------------------------------------------------------------------------------- | ------ | ---------------------------- |
+| Migration 013: `mcp_servers`, `mcp_credentials`, `mcp_tool_cache`, `mcp_resource_cache` | Done   | b3ce83b3                     |
+| MCP types + Zod schemas (12+ types)                                                     | Done   | bd88ef5b                     |
+| MCP server repository (CRUD, encrypted credentials, AES-256-GCM)                        | Done   | 1132452d                     |
+| MCPConnectionManager (Mastra client lifecycle)                                          | Done   | 11dcd3b1                     |
+| Admin MCP API routes (7 endpoints: CRUD, catalog install, metrics)                      | Done   | d59370ac                     |
+| Dynamic MCP toolset integration into CloudAdvisor                                       | Done   | c869b59a                     |
+| Frontend admin/integrations page (4 new components)                                     | Done   | 8bb8bc0b                     |
+| Dependencies added: `@mastra/mcp` v1.0.0, `dockerode` v4.0.9                            | Done   | c77b9d00                     |
+| Unit tests: repository, routes, connection manager (3 test suites)                      | Done   | ae5ce1de, f47510ba, 6f62d839 |
+| PRD documentation (Phase 10.1 external integrations planned)                            | Done   | 665b185c, ce3539a7           |
+
+**New Routes** (not in original PRD scope — landed on `main`):
+
+- `POST /api/v1/admin/mcp/servers` — Create MCP server
+- `GET /api/v1/admin/mcp/servers` — List with filtering
+- `GET /api/v1/admin/mcp/servers/:id` — Get with decrypted credentials
+- `PUT /api/v1/admin/mcp/servers/:id` — Update server config
+- `DELETE /api/v1/admin/mcp/servers/:id` — Remove server
+- `POST /api/v1/admin/mcp/catalog/install` — Install from catalog
+- `GET /api/v1/admin/mcp/metrics` — Tool call metrics + cache stats
+
+**New Frontend Components**:
+
+- `IntegrationCatalogCard.svelte` — Displays available MCP servers from catalog
+- `IntegrationServerCard.svelte` — Shows connected servers with status + actions
+- `MCPServerModal.svelte` — Create/edit server configuration modal
+- `ToolPlaygroundCard.svelte` — Test tools from a connected server
+
+### Technical Risks
+
+| #   | Risk                                                 | Probability | Impact | Mitigation                                                                                          |
+| --- | ---------------------------------------------------- | ----------- | ------ | --------------------------------------------------------------------------------------------------- |
+| R1  | Vite 7 breaks SvelteKit build                        | Medium      | High   | Test in branch first. Pin Vite 6 if Svelte adapter isn't ready.                                     |
+| R2  | ESLint 10 flat config migration                      | Medium      | Medium | Already using flat config (eslint.config.js). Test plugin compatibility.                            |
+| R3  | Better Auth Fastify migration breaks OIDC            | Medium      | High   | Keep callback path identical (/api/auth/\*). Test with OCI IDCS before cutover.                     |
+| R4  | oci-sdk missing functionality vs CLI                 | Low         | Medium | Hybrid approach: SDK for supported operations, CLI fallback for gaps.                               |
+| R5  | Package split breaks import paths                    | High        | Medium | Automated import rewriting via `jscodeshift`. Run full test suite.                                  |
+| R6  | VPD policies conflict with admin queries             | Low         | High   | Admin role gets VPD exemption via application context variable.                                     |
+| R7  | HNSW index memory pressure on small instances        | Medium      | Medium | Configure HNSW neighbors=16 (not 64). Monitor memory via OCI metrics.                               |
+| R8  | @modelcontextprotocol/sdk v2 breaking changes        | Low         | Medium | Pin to ^1.26.0. MCPConnectionManager wraps SDK (buffer layer).                                      |
+| R9  | 37 route migration introduces regressions            | High        | High   | Migrate routes in batches. Keep proxy fallback during transition.                                   |
+| R10 | OCI SDK auth config differs from CLI                 | Medium      | Medium | Document both auth methods. Instance principal for prod, config file for dev.                       |
+| R11 | Float32Array vector binding breaks legacy queries    | Low         | Medium | Test with existing data first. Fallback to string conversion if needed.                             |
+| R12 | Mastra Studio auth bypass in staging/prod            | Medium      | High   | Gate behind RBAC admin role. Disable by default in production (MASTRA_STUDIO_ENABLED).              |
+| R13 | @mastra/evals scorer costs (LLM calls for scoring)   | Medium      | Medium | Use 10% sampling rate. Use gpt-4o-mini (cheapest). Disable in test environments.                    |
+| R14 | Agent Guardrails false positives block legit queries | Medium      | Medium | Start with `warn` strategy, switch to `block` after tuning. Log all detections.                     |
+| R15 | New Fastify plugins increase startup time            | Low         | Low    | Benchmark cold start. Lazy-load non-critical plugins (schedule, compress).                          |
+| R16 | MCP consolidation breaks custom client consumers     | Low         | Low    | Custom client is unused in production. Deprecate with README notice. Keep for reference.            |
+| R17 | A2A protocol instability (pre-1.0)                   | Medium      | Medium | Defer to post-Phase E. Mastra A2A has known bugs. Production-ready A2A planned late 2026.           |
+| R18 | Cross-CSP MCP servers require customer credentials   | Medium      | High   | Reuse MCPConnectionManager's AES-256-GCM credential encryption. Admin-only installation.            |
+| R19 | OCI Cache (Valkey) adds infrastructure dependency    | Low         | Medium | Graceful degradation: fall back to direct Oracle queries if Valkey unavailable. ~$28/mo minimum.    |
+| R20 | Vite 7/ESLint 10 ecosystem lag                       | Medium      | Low    | DEFERRED (AD-41). No security impact from staying on Vite 6/ESLint 9. Monitor typescript-eslint v9. |
+
+---
+
+## 19. Decision Log
+
+| ID    | Decision                                                     | Date       | Rationale                                                                                                                         |
+| ----- | ------------------------------------------------------------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| AD-1  | Replace custom MCP client with @modelcontextprotocol/sdk     | 2026-02-10 | Official SDK, automatic protocol updates, 24K+ users                                                                              |
+| AD-2  | Replace Terraform generator with terraform-generator         | 2026-02-10 | AST-based > string concat, CDKTF deprecated                                                                                       |
+| AD-3  | Gradual oci-sdk migration (hybrid CLI+SDK)                   | 2026-02-10 | 3-5x faster, typed, but 60+ tools need incremental migration                                                                      |
+| AD-4  | Keep OracleVectorStore (no alternative)                      | 2026-02-10 | No Oracle vector store exists in any framework                                                                                    |
+| AD-5  | Keep Better Auth (already external)                          | 2026-02-10 | No Fastify-native auth matches feature set                                                                                        |
+| AD-6  | Keep pricing service (no alternative)                        | 2026-02-10 | No multi-cloud pricing npm package exists                                                                                         |
+| AD-7  | Use Mastra workflow primitives for remaining node types      | 2026-02-10 | .then(), .parallel(), .foreach() map to designer node types                                                                       |
+| AD-8  | Split @portal/shared into 3 packages                         | 2026-02-10 | Faster builds, cleaner boundaries, framework isolation                                                                            |
+| AD-9  | Move Better Auth entirely to Fastify                         | 2026-02-10 | Single auth boundary, eliminates dual-runtime auth                                                                                |
+| AD-10 | VPD for tenant isolation                                     | 2026-02-10 | Database-level security, defense-in-depth                                                                                         |
+| AD-11 | Direct Float32Array vector binding                           | 2026-02-10 | node-oracledb 6.5+ supports native TypedArrays                                                                                    |
+| AD-12 | Remove Inngest (use Mastra suspend/resume instead)           | 2026-02-10 | Mastra provides built-in durability, crash recovery, sleep                                                                        |
+| AD-13 | Better Auth Fastify via toWebRequest pattern                 | 2026-02-10 | Official integration pattern from Better Auth docs                                                                                |
+| AD-14 | Adopt Mastra Studio as primary agent/workflow debugging UI   | 2026-02-10 | Replaces need for bespoke admin AI testing pages; admin-gated in staging/prod                                                     |
+| AD-15 | Add @mastra/sentry for AI-specific observability             | 2026-02-10 | Maps Mastra spans → Sentry AI operations (gen_ai.invoke_agent, etc.)                                                              |
+| AD-16 | Add @mastra/evals for agent quality scoring                  | 2026-02-10 | Scorer framework with 10% production sampling, results visible in Studio                                                          |
+| AD-17 | Add Mastra Agent Guardrails (input/output processors)        | 2026-02-10 | PromptInjectionDetector, PIIDetector, ModerationProcessor for AI defense-in-depth                                                 |
+| AD-18 | Adopt Mastra workflow lifecycle callbacks                    | 2026-02-10 | onFinish/onError for audit logging, Sentry integration, admin notifications                                                       |
+| AD-19 | Use typed suspendSchema/resumeSchema for approvals           | 2026-02-10 | Runtime validation of suspend/resume payloads via Zod schemas                                                                     |
+| AD-20 | Adopt Mastra workflow streaming (writer argument)            | 2026-02-10 | Real-time step progress + agent stream piping to client                                                                           |
+| AD-21 | Add @fastify/websocket for real-time updates                 | 2026-02-10 | Workflow execution live updates, agent streaming, admin notifications                                                             |
+| AD-22 | Add @fastify/under-pressure for load shedding                | 2026-02-10 | Auto-503 on event loop delay/heap pressure — prevents OOM crashes                                                                 |
+| AD-23 | Add @fastify/otel (replace deprecated OTel instrumentation)  | 2026-02-10 | Official Fastify OpenTelemetry plugin, W3C trace context                                                                          |
+| AD-24 | Add sveltekit-superforms for admin/workflow forms            | 2026-02-10 | Type-safe form validation, 52K weekly DL, Svelte 5 compatible, Zod integration                                                    |
+| AD-25 | Add LayerChart for admin dashboard visualization             | 2026-02-10 | D3-based charting, shadcn-svelte integration, cost comparison + workflow analytics                                                |
+| AD-26 | Skip Felte (prefer Superforms for forms)                     | 2026-02-10 | Superforms has 10x adoption, better Svelte 5 support, built-in Zod integration                                                    |
+| AD-27 | Skip SVAR DataGrid (evaluate later)                          | 2026-02-10 | Commercial licensing, limited Svelte 5 runes support. Revisit when enterprise tables needed                                       |
+| AD-28 | Use z.toJSONSchema() (Zod 4 built-in)                        | 2026-02-10 | Replace hand-rolled zodToJsonSchema() in portal-mcp-server.ts (~80 LOC savings)                                                   |
+| AD-29 | Consolidate MCP implementations (deprecate custom client)    | 2026-02-10 | Custom MCPClient/MCPManager unused. Mastra MCPConnectionManager is production. Deduplicate PortalMCPServer.                       |
+| AD-30 | Add cross-CSP MCP catalog entries (AWS, Azure, GCP)          | 2026-02-10 | Official MCP servers: awslabs/mcp (AWS), @azure/mcp, GCP managed. Add as admin catalog entries.                                   |
+| AD-31 | Adopt Generative UI (AI SDK tool → Svelte component)         | 2026-02-10 | Map tool results to rich components: InstanceTable, CostChart, TerraformViewer, ApprovalCard.                                     |
+| AD-32 | Defer A2A Agent Card to post-Phase E                         | 2026-02-10 | Mastra A2A has bugs (#8411). IBM ACP merged into A2A (dead). Oracle AgentSpec Python-only. Wait.                                  |
+| AD-33 | Skip IBM ACP (merged into A2A)                               | 2026-02-10 | ACP merged with A2A under Linux Foundation (Sep 2025). No independent implementation needed.                                      |
+| AD-34 | Skip Oracle Agent Spec (Python-only, no TS SDK)              | 2026-02-10 | WayFlow runtime Python-only. Monitor for TypeScript SDK. Mastra's programmatic approach preferred.                                |
+| AD-35 | Migrate agent_state from SQLite to Oracle (OracleStore)      | 2026-02-10 | Add org_id (VPD) + thread_id. Implement MastraStorage backed by Oracle. Drop SQLite dependency.                                   |
+| AD-36 | Adopt formsnap + @tanstack/table-core for admin views        | 2026-02-10 | formsnap: accessible Superforms companion (12K DL). @tanstack/table-core: headless table for data-heavy admin pages (800K DL).    |
+| AD-37 | Use paneforge for resizable panels in workflow designer      | 2026-02-10 | Split-view layout: canvas + inspector panel. Svelte 5 compatible, 6K DL. Better than custom CSS resize.                           |
+| AD-38 | Use svelte-dnd-action for drag-and-drop interactions         | 2026-02-10 | Kanban boards, node palette drag-to-canvas. 15K DL, Svelte 5 runes support, lightweight.                                          |
+| AD-39 | OCI Cache with Valkey for app-level caching (defer DBIM)     | 2026-02-10 | Valkey: MCP tool cache, OCI API responses, settings, agent context. ~$28-85/mo. DBIM deferred to 16+ ECPU phase. iovalkey client. |
+| AD-40 | SSE as primary streaming transport (defer WebSocket)         | 2026-02-10 | 95% of real-time needs are server→client. AI SDK + Mastra use SSE natively. Drop @fastify/websocket from Phase A scope.           |
+| AD-41 | Defer Vite 7 + ESLint 10 to post-Phase 10                    | 2026-02-10 | ESLint 10 BLOCKED: typescript-eslint 8.x has no ESLint 10 support. Vite 7 low-priority, monorepo risks. Wait for ecosystem.       |
+| AD-42 | Switch to @scalar/fastify-api-reference (replace Swagger UI) | 2026-02-10 | Modern API docs, dark mode, interactive playground, code generation. Drop-in replacement, 10 LOC change. Phase A.                 |
+
+---
+
+## 20. Migration Checklist
+
+### Pre-Migration
+
+- [ ] Branch from main: `phase-10/foundation-rewrite`
+- [ ] Run full test suite — baseline: all passing (1213+ tests)
+- [ ] Export current OpenAPI spec for comparison
+- [ ] Document current IDP callback URLs
+- [ ] Backup Oracle schema (datapump export)
+
+### Phase A: Dependency Updates + Fastify Hardening
+
+- [ ] `pnpm update ai @ai-sdk/anthropic @ai-sdk/google @ai-sdk/svelte pino @fastify/swagger @sentry/sveltekit svelte typescript-eslint`
+- [ ] Remove `@types/dompurify` from `apps/frontend/package.json`
+- [ ] `pnpm add oci-sdk` to `packages/shared` (or `packages/server` after split)
+- [ ] `pnpm add @modelcontextprotocol/sdk` to `packages/shared`
+- [ ] `pnpm add -D syncpack` to root
+- [ ] `npx syncpack fix-mismatches` — align dependency versions across workspaces
+- [ ] Add `knip` to CI pipeline (already installed, not running in CI)
+- [ ] `pnpm add @fastify/under-pressure fastify-graceful-shutdown @fastify/otel` to `apps/api` (AD-40: @fastify/websocket deferred — SSE covers 95% of use cases)
+- [ ] Register `@fastify/otel` FIRST in Fastify plugin chain
+- [ ] Configure `@fastify/under-pressure` thresholds (maxEventLoopDelay: 1000, maxHeapUsedBytes: 80%)
+- [ ] Wire `fastify-graceful-shutdown` with Pino flush + Oracle pool drain
+- [ ] `pnpm add @mastra/sentry @mastra/evals` to `apps/api`
+- [ ] Configure `SentryExporter` in Mastra telemetry config
+- [ ] `pnpm add zod-validation-error` to `packages/shared`
+- [ ] Replace `zodToJsonSchema()` with `z.toJSONSchema()` in `portal-mcp-server.ts`
+- [ ] ~~Evaluate Vite 7 in separate branch~~ **DEFERRED** (AD-41: ESLint 10 blocked by typescript-eslint, Vite 7 monorepo risks — defer to post-Phase 10)
+- [ ] `pnpm add iovalkey` to `apps/api` (AD-39) — Valkey cache client (ioredis-compatible)
+- [ ] Create `packages/shared/src/server/cache/` module (connection factory, key namespaces, Fastify plugin)
+- [ ] Add cache-aside pattern to MCP tool discovery, OCI API responses, admin settings
+- [ ] `pnpm remove @fastify/swagger-ui && pnpm add @scalar/fastify-api-reference` to `apps/api` (AD-42)
+- [ ] Update `apps/api/src/app.ts` Swagger UI registration → Scalar (~10 LOC)
+- [ ] Deprecate custom MCPClient/MCPManager (AD-29) — add README notice, keep as reference
+- [ ] Deduplicate PortalMCPServer (remove packages/shared version, keep apps/api version with auth)
+- [ ] Migrate agent_state from SQLite to Oracle (AD-35) — add org_id, thread_id columns
+- [ ] Implement OracleStore (MastraStorage interface) for agent state persistence
+- [ ] Run full test suite — verify no regressions
+
+### Phase B: Package Split + Frontend Libraries
+
+- [ ] Create `packages/types/` with Zod schemas and TypeScript types
+- [ ] Create `packages/server/` with server-only modules
+- [ ] Create `packages/ui/` with Svelte components
+- [ ] Update `pnpm-workspace.yaml` to include new packages
+- [ ] Rewrite imports across all workspaces
+- [ ] `pnpm add sveltekit-superforms` to `apps/frontend`
+- [ ] Migrate admin forms (IDP, AI Provider, Settings) to Superforms
+- [ ] Migrate setup wizard forms to Superforms
+- [ ] `pnpm add layerchart` to `apps/frontend`
+- [ ] Create admin dashboard metrics charts (tool usage, workflow runs, cost comparison)
+- [ ] `pnpm add fuse.js` to `apps/frontend`
+- [ ] Add fuzzy search to tool palette, MCP catalog, workflow list
+- [ ] `pnpm add formsnap` to `apps/frontend` (AD-36) — pair with Superforms for accessible form controls
+- [ ] `pnpm add @tanstack/table-core` to `apps/frontend` (AD-36) — headless tables for admin tool/server/audit listings
+- [ ] `pnpm add paneforge` to `apps/frontend` (AD-37) — resizable split-view panels for workflow designer
+- [ ] `pnpm add svelte-dnd-action` to `apps/frontend` (AD-38) — drag-and-drop for kanban boards, node palettes
+- [ ] `pnpm add @formkit/auto-animate` to `apps/frontend` — smooth list animations for dynamic admin tables
+- [ ] Build Generative UI components (AD-31): InstanceTable, CostChart, MetricsChart, TerraformViewer
+- [ ] Build ApprovalCard using AI SDK built-in tool approval flow (needsApproval + addToolApprovalResponse)
+- [ ] Adopt `createAIContext()` for shared Chat state (replace prop drilling)
+- [ ] Add streaming data parts for real-time progress during tool execution
+- [ ] Run `madge --circular` — verify no new circular deps
+- [ ] Run full test suite and type checks across all packages
+
+### Phase C: Fastify-First + Mastra Studio
+
+- [ ] Implement Better Auth catch-all route in Fastify (toWebRequest pattern)
+- [ ] Configure `trustedOrigins` for cross-origin support
+- [ ] Register CORS before Better Auth handler
+- [ ] Migrate all 37 SvelteKit +server.ts routes to Fastify (batch by group)
+- [ ] Update SvelteKit hooks to cookie-forwarding only
+- [ ] Update +layout.server.ts to fetch session from Fastify /api/auth/session
+- [ ] `pnpm add @fastify/sse cache-manager @fastify/compress @fastify/schedule` to `apps/api`
+- [ ] Configure SSE endpoint for workflow progress streaming
+- [ ] Configure cache-manager for OCI API response caching (TTL-based)
+- [ ] Configure @fastify/compress (gzip + brotli, threshold: 1024 bytes)
+- [ ] Configure Mastra Studio at `/admin/studio` with `studioBase` config
+- [ ] Gate Studio routes behind RBAC admin role check in staging/production
+- [ ] Add Studio navigation link to admin console sidebar
+- [ ] Test OIDC flow end-to-end with OCI IDCS
+- [ ] Remove `FASTIFY_PROXY_ROUTES` and `FASTIFY_ENABLED` feature flags
+- [ ] Remove SvelteKit proxy middleware code
+- [ ] Update nginx config — all /api/\* routes direct to Fastify
+- [ ] Add AWS MCP server to catalog (awslabs/mcp CloudControl) (AD-30)
+- [ ] Add Azure MCP server to catalog (@azure/mcp) (AD-30)
+- [ ] Add GCP MCP server to catalog (managed endpoint or community) (AD-30)
+- [ ] Verify all 37 routes function correctly
+
+### Phase D: OCI SDK
+
+- [ ] Configure oci-sdk auth provider (config file + instance principal)
+- [ ] Create `executor-sdk.ts` adapter with error wrapping as OCIError
+- [ ] Migrate top-10 tools by call frequency, benchmark latency
+- [ ] Run tool-specific tests with SDK executor
+- [ ] Gradually migrate remaining tools
+
+### Phase E: Workflow Designer + AI Hardening
+
+- [ ] Implement ai-step node: Mastra agent.generate() + output schema
+- [ ] Implement loop node: Mastra .foreach() with concurrency config
+- [ ] Implement parallel node: Mastra .parallel() with merge step
+- [ ] Add retry policy to tool/ai-step nodes (exponential backoff)
+- [ ] Add compensation handlers (reverse execution on failure)
+- [ ] Add workflow streaming via Mastra writer argument + @fastify/sse
+- [ ] Add workflow lifecycle callbacks (onFinish → audit log, onError → Sentry)
+- [ ] Add typed suspendSchema/resumeSchema for approval nodes
+- [ ] Add PromptInjectionDetector as inputProcessor on CloudAdvisor
+- [ ] Add PIIDetector (redact strategy) as hybrid processor
+- [ ] Add TokenLimiterProcessor (4000 tokens) as outputProcessor
+- [ ] Configure @mastra/evals scorers: relevancy + toxicity with 10% sampling
+- [ ] Verify scorer results appear in Mastra Studio Scorers tab
+- [ ] Add crash recovery via restartAllActiveWorkflowRuns()
+- [ ] Update workflow definition schema (new node configs)
+- [ ] Update frontend editor components for new node types
+- [ ] (Post-E) Evaluate Mastra A2A stability; if stable, expose CloudAdvisor Agent Card (AD-32)
+
+### Phase F: Oracle 26AI
+
+- [ ] Migration 015: HNSW DML indexes (neighbors=16, efConstruction=200)
+- [ ] Migration 016: JSON Duality Views for workflow definitions
+- [ ] Migration 017: VPD policies for tenant isolation
+- [ ] Replace vectorToOracleString() with direct Float32Array binding
+- [ ] Update OracleVectorStore to use DB_TYPE_VECTOR
+- [ ] Benchmark vector search performance (3x target)
+- [ ] Test VPD with admin and non-admin roles
+
+### Post-Migration
+
+- [ ] Run full test suite — all passing
+- [ ] Run Semgrep security scan
+- [ ] Run `pnpm outdated` — zero deprecated, zero major gaps
+- [ ] Run `knip` — zero unused exports or dependencies
+- [ ] Run `syncpack lint` — zero version mismatches
+- [ ] Compare OpenAPI spec — no unintended changes
+- [ ] Verify Mastra Studio accessible at /admin/studio with admin auth
+- [ ] Verify Agent Guardrails block prompt injection attempts
+- [ ] Verify @mastra/evals scorers recording to database
+- [ ] Update CLAUDE.md with new package structure
+- [ ] Update `.claude/reference/` docs
+- [ ] Verify zero +server.ts files remain in SvelteKit
+
+---
+
+## 21. Changelog
+
+| Date       | Change Type | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| ---------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 2026-02-10 | Created     | Comprehensive Phase 10 PRD with dependency audit, build-vs-buy analysis, 6-phase roadmap                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 2026-02-10 | Updated v2  | Full foundation rewrite coverage: separation of concerns, authn/authz, backend/frontend/middleware architecture, observability, testing, CI/CD, Mastra workflow API patterns, Oracle Float32Array binding, all 37 SvelteKit API routes enumerated                                                                                                                                                                                                                                                                        |
+| 2026-02-10 | Updated v3  | Ecosystem expansion: Mastra Studio elevated to admin tool (AD-14), @mastra/sentry (AD-15), @mastra/evals (AD-16), Agent Guardrails (AD-17), workflow lifecycle/streaming/snapshots (AD-18-20). Fastify plugins: websocket, under-pressure, otel, sse, compress, schedule, graceful-shutdown (AD-21-23). Frontend: sveltekit-superforms (AD-24), LayerChart (AD-25), fuse.js. DX: syncpack, z.toJSONSchema(), knip CI, zod-validation-error. Decisions AD-14 through AD-28. Updated all 6 phases and migration checklist. |
+| 2026-02-10 | Updated v4  | Agent interoperability: MCP consolidation (AD-29), cross-CSP MCP catalog (AD-30), Generative UI with AI SDK (AD-31), A2A deferred (AD-32), IBM ACP skip (AD-33), Oracle AgentSpec skip (AD-34), agent_state SQLite→Oracle migration (AD-35). Risks R16-R18. Updated Phase A (MCP dedup, OracleStore), Phase B (Generative UI components), Phase C (cross-CSP catalog), Phase E (A2A evaluation).                                                                                                                         |
+| 2026-02-10 | Updated v5  | [DRIFT DETECTED] MCP Server Management (11 commits) landed on main pre-Phase A — documented as Completed Work. [ADDED] Frontend libraries from Svelte 5 ecosystem research: formsnap (AD-36), @tanstack/table-core (AD-36), paneforge (AD-37), svelte-dnd-action (AD-38), @formkit/auto-animate. [ADDED] Decisions AD-36 through AD-38. [CHANGED] Phase B migration checklist expanded with 5 new dependency install steps. Header updated to Draft v5.                                                                  |
+| 2026-02-10 | Updated v5a | Architecture decisions from debated topics: OCI Cache with Valkey (AD-39), SSE primary transport (AD-40), Vite 7/ESLint 10 deferred (AD-41), Scalar API docs (AD-42). [CHANGED] @fastify/websocket demoted P0→P2, @fastify/sse elevated to primary. cache-manager removed (iovalkey direct). Scalar promoted P2→P0. Risks R19-R20. Phase A checklist updated with Valkey + Scalar + deferred Vite 7. Dependency inventory reorganized.                                                                                   |
