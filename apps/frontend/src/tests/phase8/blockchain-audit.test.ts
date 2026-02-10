@@ -45,7 +45,7 @@ vi.mock('$lib/server/sentry.js', () => ({
 	captureError: vi.fn()
 }));
 
-import { blockchainAuditRepository } from '@portal/shared/server/oracle/repositories/blockchain-audit-repository';
+import { blockchainAuditRepository } from '@portal/server/oracle/repositories/blockchain-audit-repository';
 import type { BlockchainAuditEntry } from '@portal/shared/server/api/types';
 
 beforeEach(() => {

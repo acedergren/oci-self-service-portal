@@ -13,7 +13,7 @@ import {
 	stripIdpSecretsArray,
 	stripAiProviderSecrets,
 	stripAiProviderSecretsArray
-} from '@portal/shared/server/admin/strip-secrets.js';
+} from '@portal/server/admin/strip-secrets.js';
 
 describe('stripIdpSecrets', () => {
 	it('removes clientSecret and sets hasClientSecret: true', () => {

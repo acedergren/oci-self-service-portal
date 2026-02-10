@@ -11,10 +11,10 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { requireApiAuth, resolveOrgId } from '@portal/shared/server/api/require-auth';
-import { generateEmbedding } from '@portal/shared/server/embeddings';
-import { embeddingRepository } from '@portal/shared/server/oracle/repositories/embedding-repository';
-import { createLogger } from '@portal/shared/server/logger';
-import { toPortalError, errorResponse } from '@portal/shared/server/errors';
+import { generateEmbedding } from '@portal/server/embeddings';
+import { embeddingRepository } from '@portal/server/oracle/repositories/embedding-repository';
+import { createLogger } from '@portal/server/logger';
+import { toPortalError, errorResponse } from '@portal/server/errors';
 
 const log = createLogger('search-api');
 

@@ -5,15 +5,15 @@ import {
 	workflowRunRepository
 } from '@portal/shared/server/workflows/repository';
 import { WorkflowExecutor } from '@portal/shared/server/workflows/executor';
-import { requirePermission } from '@portal/shared/server/auth/rbac';
-import { createLogger } from '@portal/shared/server/logger';
+import { requirePermission } from '@portal/server/auth/rbac';
+import { createLogger } from '@portal/server/logger';
 import {
 	ValidationError,
 	NotFoundError,
 	DatabaseError,
 	errorResponse,
 	toPortalError
-} from '@portal/shared/server/errors';
+} from '@portal/server/errors';
 import { addDeprecationHeaders } from '$lib/server/deprecation.js';
 
 const log = createLogger('workflow-run-api');

@@ -7,9 +7,9 @@ import {
 	getToolWarning,
 	executeTool
 } from '@portal/shared/tools/index';
-import { createLogger } from '@portal/shared/server/logger';
-import { requirePermission } from '@portal/shared/server/auth/rbac';
-import { consumeApproval } from '@portal/shared/server/approvals';
+import { createLogger } from '@portal/server/logger';
+import { requirePermission } from '@portal/server/auth/rbac';
+import { consumeApproval } from '@portal/server/approvals';
 import {
 	ValidationError,
 	NotFoundError,
@@ -18,9 +18,9 @@ import {
 	toPortalError,
 	errorResponse,
 	isPortalError
-} from '@portal/shared/server/errors';
-import { captureError } from '@portal/shared/server/sentry';
-import { toolExecutions, toolDuration } from '@portal/shared/server/metrics';
+} from '@portal/server/errors';
+import { captureError } from '@portal/server/sentry';
+import { toolExecutions, toolDuration } from '@portal/server/metrics';
 
 const log = createLogger('execute');
 

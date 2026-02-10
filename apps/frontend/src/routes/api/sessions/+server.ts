@@ -4,16 +4,16 @@ import { z } from 'zod';
 import {
 	sessionRepository,
 	listSessionsEnriched
-} from '@portal/shared/server/oracle/repositories/session-repository';
+} from '@portal/server/oracle/repositories/session-repository';
 import { getCurrentSessionId } from '@portal/shared/server/session';
-import { createLogger } from '@portal/shared/server/logger';
-import { requirePermission } from '@portal/shared/server/auth/rbac';
+import { createLogger } from '@portal/server/logger';
+import { requirePermission } from '@portal/server/auth/rbac';
 import {
 	ValidationError,
 	DatabaseError,
 	toPortalError,
 	errorResponse
-} from '@portal/shared/server/errors';
+} from '@portal/server/errors';
 
 const log = createLogger('sessions-api');
 

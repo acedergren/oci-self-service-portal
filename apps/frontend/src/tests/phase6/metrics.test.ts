@@ -28,7 +28,7 @@ import {
 	dbPoolIdle,
 	authLogins,
 	httpRequestDuration
-} from '@portal/shared/server/metrics';
+} from '@portal/server/metrics';
 
 describe('Prometheus Metrics (Phase 6)', () => {
 	beforeEach(() => {

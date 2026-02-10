@@ -9,7 +9,7 @@ import {
 	decryptSecret,
 	_clearKeyCache,
 	type EncryptedSecret
-} from '@portal/shared/server/auth/crypto.js';
+} from '@portal/server/auth/crypto.js';
 
 describe('crypto.ts - AES-256-GCM Encryption', () => {
 	const originalSecret = process.env.BETTER_AUTH_SECRET;

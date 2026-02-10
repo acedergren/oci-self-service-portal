@@ -8,11 +8,11 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
 import { requireApiAuth, resolveOrgId } from '@portal/shared/server/api/require-auth';
-import { webhookRepository } from '@portal/shared/server/oracle/repositories/webhook-repository';
+import { webhookRepository } from '@portal/server/oracle/repositories/webhook-repository';
 import { isValidWebhookUrl } from '@portal/shared/server/webhooks';
-import { isWebhookEncryptionEnabled } from '@portal/shared/server/crypto';
+import { isWebhookEncryptionEnabled } from '@portal/server/crypto';
 import { CreateWebhookInputSchema } from '@portal/shared/server/api/types';
-import { createLogger } from '@portal/shared/server/logger';
+import { createLogger } from '@portal/server/logger';
 
 const log = createLogger('api:webhooks');
 

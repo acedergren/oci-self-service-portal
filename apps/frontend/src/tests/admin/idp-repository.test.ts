@@ -39,7 +39,7 @@ vi.mock('@portal/shared/server/logger.js', () => ({
 }));
 
 // Static import after mocks are set up (vitest hoists vi.mock calls)
-import { idpRepository } from '@portal/shared/server/admin/idp-repository.js';
+import { idpRepository } from '@portal/server/admin/idp-repository.js';
 
 describe('idp-repository.ts', () => {
 	function createMockIdpRow(overrides: Partial<Record<string, unknown>> = {}) {

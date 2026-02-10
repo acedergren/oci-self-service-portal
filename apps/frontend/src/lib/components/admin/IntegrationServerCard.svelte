@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { McpServer } from '@portal/shared/server/admin/mcp-types';
+	import type { McpServer } from '@portal/server/admin/mcp-types';
 	import Badge from '$lib/components/ui/Badge.svelte';
 
 	interface Props {

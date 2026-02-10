@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { deleteSession } from '@portal/shared/server/oracle/repositories/session-repository';
-import { createLogger } from '@portal/shared/server/logger';
-import { requirePermission } from '@portal/shared/server/auth/rbac';
+import { deleteSession } from '@portal/server/oracle/repositories/session-repository';
+import { createLogger } from '@portal/server/logger';
+import { requirePermission } from '@portal/server/auth/rbac';
 
 const log = createLogger('sessions-api');
 

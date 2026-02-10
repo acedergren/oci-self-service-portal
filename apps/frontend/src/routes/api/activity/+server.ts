@@ -1,8 +1,8 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { withConnection } from '@portal/shared/server/oracle/connection';
-import { createLogger } from '@portal/shared/server/logger';
-import { requirePermission } from '@portal/shared/server/auth/rbac';
+import { withConnection } from '@portal/server/oracle/connection';
+import { createLogger } from '@portal/server/logger';
+import { requirePermission } from '@portal/server/auth/rbac';
 import type { ActivityItem } from '$lib/components/portal/types.js';
 
 const log = createLogger('activity-api');

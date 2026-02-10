@@ -45,7 +45,7 @@ import {
 	getUserActivity,
 	getToolAffinity,
 	getOrgImpact
-} from '@portal/shared/server/oracle/graph-analytics';
+} from '@portal/server/oracle/graph-analytics';
 
 beforeEach(() => {
 	vi.clearAllMocks();

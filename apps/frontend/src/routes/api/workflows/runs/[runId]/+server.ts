@@ -4,9 +4,9 @@ import {
 	workflowRunRepository,
 	workflowRunStepRepository
 } from '@portal/shared/server/workflows/repository';
-import { requirePermission } from '@portal/shared/server/auth/rbac';
-import { createLogger } from '@portal/shared/server/logger';
-import { NotFoundError, DatabaseError, errorResponse } from '@portal/shared/server/errors';
+import { requirePermission } from '@portal/server/auth/rbac';
+import { createLogger } from '@portal/server/logger';
+import { NotFoundError, DatabaseError, errorResponse } from '@portal/server/errors';
 
 const log = createLogger('workflow-run-detail-api');
 

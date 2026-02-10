@@ -2,24 +2,24 @@ import type { Handle, RequestEvent } from '@sveltejs/kit';
 import { dev } from '$app/environment';
 import { redirect } from '@sveltejs/kit';
 import crypto from 'crypto';
-import { createLogger } from '@portal/shared/server/logger';
-import { initPool, closePool } from '@portal/shared/server/oracle/connection';
-import { runMigrations } from '@portal/shared/server/oracle/migrations';
-import { webhookRepository } from '@portal/shared/server/oracle/repositories/webhook-repository';
-import { auth } from '@portal/shared/server/auth/config';
-import { getPermissionsForRole, type Permission } from '@portal/shared/server/auth/rbac';
-import { getOrgRole } from '@portal/shared/server/auth/tenancy';
-import { checkRateLimit, RATE_LIMIT_CONFIG } from '@portal/shared/server/rate-limiter';
-import { generateRequestId, REQUEST_ID_HEADER } from '@portal/shared/server/tracing';
+import { createLogger } from '@portal/server/logger';
+import { initPool, closePool } from '@portal/server/oracle/connection';
+import { runMigrations } from '@portal/server/oracle/migrations';
+import { webhookRepository } from '@portal/server/oracle/repositories/webhook-repository';
+import { auth } from '@portal/server/auth/config';
+import { getPermissionsForRole, type Permission } from '@portal/server/auth/rbac';
+import { getOrgRole } from '@portal/server/auth/tenancy';
+import { checkRateLimit, RATE_LIMIT_CONFIG } from '@portal/server/rate-limiter';
+import { generateRequestId, REQUEST_ID_HEADER } from '@portal/server/tracing';
 import {
 	RateLimitError,
 	AuthError,
 	PortalError,
 	errorResponse
-} from '@portal/shared/server/errors';
-import { httpRequestDuration } from '@portal/shared/server/metrics';
-import { initSentry, captureError, closeSentry } from '@portal/shared/server/sentry';
-import { validateApiKey } from '@portal/shared/server/auth/api-keys';
+} from '@portal/server/errors';
+import { httpRequestDuration } from '@portal/server/metrics';
+import { initSentry, captureError, closeSentry } from '@portal/server/sentry';
+import { validateApiKey } from '@portal/server/auth/api-keys';
 import { shouldProxyToFastify, proxyToFastify } from '$lib/server/feature-flags.js';
 
 const log = createLogger('hooks');

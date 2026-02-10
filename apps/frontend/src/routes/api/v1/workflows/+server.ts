@@ -8,8 +8,8 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { workflowRepository } from '@portal/shared/server/workflows/repository';
 import { requireApiAuth, resolveOrgId } from '@portal/shared/server/api/require-auth';
-import { createLogger } from '@portal/shared/server/logger';
-import { DatabaseError, errorResponse } from '@portal/shared/server/errors';
+import { createLogger } from '@portal/server/logger';
+import { DatabaseError, errorResponse } from '@portal/server/errors';
 
 const log = createLogger('v1-workflows');
 

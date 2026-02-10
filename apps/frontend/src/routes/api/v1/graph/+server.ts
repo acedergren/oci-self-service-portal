@@ -13,8 +13,8 @@ import {
 	getUserActivity,
 	getToolAffinity,
 	getOrgImpact
-} from '@portal/shared/server/oracle/graph-analytics';
-import { createLogger } from '@portal/shared/server/logger';
+} from '@portal/server/oracle/graph-analytics';
+import { createLogger } from '@portal/server/logger';
 
 const log = createLogger('api:graph');
 

@@ -11,10 +11,10 @@ import {
 	AuthError,
 	toPortalError,
 	errorResponse
-} from '@portal/shared/server/errors';
-import { createLogger } from '@portal/shared/server/logger';
-import { captureError } from '@portal/shared/server/sentry';
-import { toolExecutions, toolDuration } from '@portal/shared/server/metrics';
+} from '@portal/server/errors';
+import { createLogger } from '@portal/server/logger';
+import { captureError } from '@portal/server/sentry';
+import { toolExecutions, toolDuration } from '@portal/server/metrics';
 
 const log = createLogger('api-v1-tools');
 

@@ -12,14 +12,14 @@ import {
 } from '@portal/shared/server/workflows/repository';
 import { WorkflowExecutor } from '@portal/shared/server/workflows/executor';
 import { requireApiAuth, resolveOrgId } from '@portal/shared/server/api/require-auth';
-import { createLogger } from '@portal/shared/server/logger';
+import { createLogger } from '@portal/server/logger';
 import {
 	ValidationError,
 	NotFoundError,
 	DatabaseError,
 	errorResponse,
 	toPortalError
-} from '@portal/shared/server/errors';
+} from '@portal/server/errors';
 
 const log = createLogger('v1-workflow-run');
 

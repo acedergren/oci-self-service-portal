@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { CachedTool } from '@portal/shared/server/admin/mcp-types';
+	import type { CachedTool } from '@portal/server/admin/mcp-types';
 	import Collapsible from '$lib/components/ui/Collapsible.svelte';
 
 	interface Props {

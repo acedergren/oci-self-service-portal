@@ -11,8 +11,8 @@ import {
 	workflowRunStepRepository
 } from '@portal/shared/server/workflows/repository';
 import { requireApiAuth, resolveOrgId } from '@portal/shared/server/api/require-auth';
-import { createLogger } from '@portal/shared/server/logger';
-import { NotFoundError, DatabaseError, errorResponse } from '@portal/shared/server/errors';
+import { createLogger } from '@portal/server/logger';
+import { NotFoundError, DatabaseError, errorResponse } from '@portal/server/errors';
 
 const log = createLogger('v1-workflow-run-status');
 

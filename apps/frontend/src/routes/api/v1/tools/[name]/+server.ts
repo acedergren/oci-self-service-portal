@@ -3,8 +3,8 @@ import type { RequestHandler } from './$types';
 import { getToolDefinition } from '@portal/shared/tools/registry';
 import { getToolWarning, requiresApproval } from '@portal/shared/tools/types';
 import { requireApiAuth } from '@portal/shared/server/api/require-auth';
-import { NotFoundError, errorResponse } from '@portal/shared/server/errors';
-import { createLogger } from '@portal/shared/server/logger';
+import { NotFoundError, errorResponse } from '@portal/server/errors';
+import { createLogger } from '@portal/server/logger';
 
 const log = createLogger('api-v1-tools');
 

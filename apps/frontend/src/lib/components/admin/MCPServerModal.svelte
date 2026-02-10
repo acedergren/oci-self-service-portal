@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { McpCatalogItem, McpServer } from '@portal/shared/server/admin/mcp-types';
+	import type { McpCatalogItem, McpServer } from '@portal/server/admin/mcp-types';
 
 	interface Props {
 		open: boolean;

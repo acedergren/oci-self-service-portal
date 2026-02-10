@@ -1,14 +1,14 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { workflowRepository } from '@portal/shared/server/workflows/repository';
-import { requirePermission } from '@portal/shared/server/auth/rbac';
-import { createLogger } from '@portal/shared/server/logger';
+import { requirePermission } from '@portal/server/auth/rbac';
+import { createLogger } from '@portal/server/logger';
 import {
 	ValidationError,
 	NotFoundError,
 	DatabaseError,
 	errorResponse
-} from '@portal/shared/server/errors';
+} from '@portal/server/errors';
 import {
 	WorkflowNodeSchema,
 	WorkflowEdgeSchema,

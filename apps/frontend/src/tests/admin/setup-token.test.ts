@@ -35,7 +35,7 @@ import {
 	initSetupToken,
 	invalidateSetupToken,
 	validateSetupToken
-} from '@portal/shared/server/admin/setup-token.js';
+} from '@portal/server/admin/setup-token.js';
 
 function makeRequest(token?: string): Request {
 	const headers = new Headers();

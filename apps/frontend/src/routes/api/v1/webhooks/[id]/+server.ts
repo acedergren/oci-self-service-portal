@@ -8,10 +8,10 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
 import { requireApiAuth, resolveOrgId } from '@portal/shared/server/api/require-auth';
-import { webhookRepository } from '@portal/shared/server/oracle/repositories/webhook-repository';
+import { webhookRepository } from '@portal/server/oracle/repositories/webhook-repository';
 import { WebhookEventTypeSchema } from '@portal/shared/server/api/types';
 import { isValidWebhookUrl } from '@portal/shared/server/webhooks';
-import { createLogger } from '@portal/shared/server/logger';
+import { createLogger } from '@portal/server/logger';
 import { z } from 'zod';
 
 const log = createLogger('api:webhooks:id');

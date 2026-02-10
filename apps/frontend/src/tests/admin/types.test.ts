@@ -25,7 +25,7 @@ import {
 	SetupStatusSchema,
 	TestConnectionResultSchema,
 	ModelAllowlistSchema
-} from '@portal/shared/server/admin/types.js';
+} from '@portal/server/admin/types.js';
 
 describe('types.ts - Admin Zod Schemas', () => {
 	function expectValid(schema: { parse: (value: unknown) => unknown }, values: unknown[]): void {

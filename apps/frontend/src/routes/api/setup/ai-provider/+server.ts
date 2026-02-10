@@ -12,9 +12,9 @@ import {
 	CreateAiProviderInputSchema,
 	validateSetupToken,
 	stripAiProviderSecrets
-} from '@portal/shared/server/admin';
-import { createLogger } from '@portal/shared/server/logger';
-import { toPortalError } from '@portal/shared/server/errors';
+} from '@portal/server/admin';
+import { createLogger } from '@portal/server/logger';
+import { toPortalError } from '@portal/server/errors';
 
 const log = createLogger('setup');
 

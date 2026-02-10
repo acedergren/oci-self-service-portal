@@ -1,9 +1,9 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { workflowRepository } from '@portal/shared/server/workflows/repository';
-import { requirePermission } from '@portal/shared/server/auth/rbac';
-import { createLogger } from '@portal/shared/server/logger';
-import { ValidationError, DatabaseError, errorResponse } from '@portal/shared/server/errors';
+import { requirePermission } from '@portal/server/auth/rbac';
+import { createLogger } from '@portal/server/logger';
+import { ValidationError, DatabaseError, errorResponse } from '@portal/server/errors';
 import { WorkflowNodeSchema, WorkflowEdgeSchema } from '@portal/shared/workflows/types';
 import { z } from 'zod';
 import { addDeprecationHeaders } from '$lib/server/deprecation.js';

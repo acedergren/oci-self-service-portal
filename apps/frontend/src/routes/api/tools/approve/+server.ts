@@ -2,10 +2,10 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { logToolApproval } from '@portal/shared/server/audit';
 import { getToolDefinition } from '@portal/shared/tools/index';
-import { createLogger } from '@portal/shared/server/logger';
-import { requirePermission } from '@portal/shared/server/auth/rbac';
-import { pendingApprovals, recordApproval } from '@portal/shared/server/approvals';
-import { ValidationError, NotFoundError, errorResponse } from '@portal/shared/server/errors';
+import { createLogger } from '@portal/server/logger';
+import { requirePermission } from '@portal/server/auth/rbac';
+import { pendingApprovals, recordApproval } from '@portal/server/approvals';
+import { ValidationError, NotFoundError, errorResponse } from '@portal/server/errors';
 
 const log = createLogger('approve');
 

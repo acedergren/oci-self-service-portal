@@ -1,7 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
-import { hasPermission } from '@portal/shared/server/auth/rbac.js';
-import type { Permission } from '@portal/shared/server/auth/rbac.js';
+import { hasPermission } from '@portal/server/auth/rbac.js';
+import type { Permission } from '@portal/server/auth/rbac.js';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
 	const session = await locals.auth();
