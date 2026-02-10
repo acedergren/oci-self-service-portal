@@ -25,13 +25,13 @@ import { InternalMastraMCPClient } from '@mastra/mcp';
 import type { MastraMCPServerDefinition } from '@mastra/mcp';
 import type { Tool } from '@mastra/core/tools';
 import Dockerode from 'dockerode';
-import { mcpServerRepository } from '@portal/shared/server/admin/mcp-repository.js';
+import { mcpServerRepository } from '@portal/server/admin/mcp-repository.js';
 import type {
 	McpServer,
 	DecryptedCredential,
 	CachedTool
-} from '@portal/shared/server/admin/mcp-types.js';
-import { createLogger } from '@portal/shared/server/logger.js';
+} from '@portal/server/admin/mcp-types.js';
+import { createLogger } from '@portal/server/logger.js';
 
 const log = createLogger('mcp-connection-manager');
 

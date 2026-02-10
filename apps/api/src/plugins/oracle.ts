@@ -8,10 +8,10 @@ import {
 	isPoolInitialized,
 	type OracleConfig,
 	type OracleConnection
-} from '@portal/shared/server/oracle/connection';
-import { runMigrations } from '@portal/shared/server/oracle/migrations';
-import { webhookRepository } from '@portal/shared/server/oracle/repositories/webhook-repository';
-import { createLogger } from '@portal/shared/server/logger';
+} from '@portal/server/oracle/connection';
+import { runMigrations } from '@portal/server/oracle/migrations';
+import { webhookRepository } from '@portal/server/oracle/repositories/webhook-repository';
+import { createLogger } from '@portal/server/logger';
 
 const log = createLogger('fastify-oracle');
 

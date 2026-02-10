@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
-import { auth } from '@portal/shared/server/auth/config';
+import { auth } from '@portal/server/auth/config';
 
 function toWebRequest(request: FastifyRequest): Request {
 	const headers = new Headers();

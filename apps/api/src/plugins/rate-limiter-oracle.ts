@@ -1,7 +1,7 @@
 import fp from 'fastify-plugin';
 import type { FastifyRequest, FastifyReply, FastifyPluginAsync } from 'fastify';
-import { checkRateLimit, RATE_LIMIT_CONFIG } from '@portal/shared/server/rate-limiter';
-import { createLogger } from '@portal/shared/server/logger';
+import { checkRateLimit, RATE_LIMIT_CONFIG } from '@portal/server/rate-limiter';
+import { createLogger } from '@portal/server/logger';
 
 const log = createLogger('rate-limiter-oracle');
 

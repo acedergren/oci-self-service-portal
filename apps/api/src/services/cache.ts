@@ -1,5 +1,5 @@
 import Redis from 'iovalkey';
-import { createLogger } from '@portal/shared/server/logger';
+import { createLogger } from '@portal/server/logger';
 
 const logger = createLogger('cache');
 

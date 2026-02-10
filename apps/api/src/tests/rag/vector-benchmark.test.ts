@@ -6,7 +6,7 @@ vi.mock('@portal/shared/server/oracle/connection', () => ({
 }));
 
 import { OracleVectorStore } from '../../mastra/rag/oracle-vector-store.js';
-import { DB_TYPE_VECTOR } from '@portal/shared/server/oracle/connection';
+import { DB_TYPE_VECTOR } from '@portal/server/oracle/connection';
 
 // ── Mock Oracle connection ──────────────────────────────────────────────
 

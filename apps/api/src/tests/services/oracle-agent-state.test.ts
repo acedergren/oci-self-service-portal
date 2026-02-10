@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { OracleConnection } from '@portal/shared/server/oracle/connection';
+import type { OracleConnection } from '@portal/server/oracle/connection';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 

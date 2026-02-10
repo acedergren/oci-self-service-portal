@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { requireAuth, resolveOrgId } from '../../plugins/rbac.js';
-import { mcpServerRepository } from '@portal/shared/server/admin/mcp-repository.js';
+import { mcpServerRepository } from '@portal/server/admin/mcp-repository.js';
 import {
 	CreateMcpServerInputSchema,
 	UpdateMcpServerInputSchema,
@@ -13,10 +13,10 @@ import {
 	CachedToolSchema,
 	MetricsSummarySchema,
 	type MetricsSummary
-} from '@portal/shared/server/admin/mcp-types.js';
+} from '@portal/server/admin/mcp-types.js';
 import { mcpConnectionManager } from '../../services/mcp-connection-manager.js';
-import { NotFoundError, ValidationError, toPortalError } from '@portal/shared/server/errors.js';
-import { createLogger } from '@portal/shared/server/logger.js';
+import { NotFoundError, ValidationError, toPortalError } from '@portal/server/errors.js';
+import { createLogger } from '@portal/server/logger.js';
 
 const log = createLogger('api:admin:mcp');
 

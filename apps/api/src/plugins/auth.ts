@@ -1,8 +1,8 @@
 import fp from 'fastify-plugin';
 import type { FastifyPluginAsync, FastifyRequest } from 'fastify';
-import { auth, type Session, type User } from '@portal/shared/server/auth/config';
-import { getPermissionsForRole } from '@portal/shared/server/auth/rbac';
-import { createLogger } from '@portal/shared/server/logger';
+import { auth, type Session, type User } from '@portal/server/auth/config';
+import { getPermissionsForRole } from '@portal/server/auth/rbac';
+import { createLogger } from '@portal/server/logger';
 import type { ApiKeyContext } from '@portal/shared/server/api/types';
 
 const log = createLogger('fastify-auth');

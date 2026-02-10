@@ -7,17 +7,17 @@ import {
 	getToolWarning,
 	executeTool
 } from '@portal/shared/tools/index';
-import { consumeApproval, pendingApprovals, recordApproval } from '@portal/shared/server/approvals';
-import { createLogger } from '@portal/shared/server/logger';
+import { consumeApproval, pendingApprovals, recordApproval } from '@portal/server/approvals';
+import { createLogger } from '@portal/server/logger';
 import {
 	ValidationError,
 	NotFoundError,
 	AuthError,
 	toPortalError,
 	errorResponse
-} from '@portal/shared/server/errors';
-import { captureError } from '@portal/shared/server/sentry';
-import { toolExecutions, toolDuration } from '@portal/shared/server/metrics';
+} from '@portal/server/errors';
+import { captureError } from '@portal/server/sentry';
+import { toolExecutions, toolDuration } from '@portal/server/metrics';
 import { requireAuth, resolveOrgId } from '../plugins/rbac.js';
 
 const log = createLogger('api-tools');

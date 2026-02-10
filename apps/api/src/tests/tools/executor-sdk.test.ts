@@ -42,7 +42,7 @@ import {
 } from '@portal/shared/tools/executor-sdk';
 
 // Import OCIError from the same alias that executor-sdk uses internally
-import { OCIError } from '@portal/shared/server/errors';
+import { OCIError } from '@portal/server/errors';
 
 describe('executor-sdk', () => {
 	beforeEach(() => {

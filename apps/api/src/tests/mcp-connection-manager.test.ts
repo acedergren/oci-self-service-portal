@@ -139,7 +139,7 @@ import type {
 	McpServer,
 	DecryptedCredential,
 	CachedTool
-} from '@portal/shared/server/admin/mcp-types.js';
+} from '@portal/server/admin/mcp-types.js';
 import { MCPConnectionManager } from '../services/mcp-connection-manager.js';
 
 // ============================================================================

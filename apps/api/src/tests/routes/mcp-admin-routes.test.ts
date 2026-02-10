@@ -9,13 +9,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { buildTestApp, simulateSession } from './test-helpers.js';
 import { mcpAdminRoutes } from '../../routes/admin/mcp.js';
-import { NotFoundError } from '@portal/shared/server/errors.js';
+import { NotFoundError } from '@portal/server/errors.js';
 import type {
 	McpCatalogItem,
 	McpServer,
 	CachedTool,
 	MetricsSummary
-} from '@portal/shared/server/admin/mcp-types.js';
+} from '@portal/server/admin/mcp-types.js';
 
 // ============================================================================
 // Mock setup — forwarding pattern for mockReset: true

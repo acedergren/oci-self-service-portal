@@ -11,17 +11,17 @@ import {
 	validatorCompiler,
 	type ZodTypeProvider
 } from 'fastify-type-provider-zod';
-import { createLogger } from '@portal/shared/server/logger';
+import { createLogger } from '@portal/server/logger';
 import {
 	errorResponse,
 	isPortalError,
 	toPortalError,
 	ValidationError
-} from '@portal/shared/server/errors';
-import { RATE_LIMIT_CONFIG } from '@portal/shared/server/rate-limiter';
-import { generateRequestId } from '@portal/shared/server/tracing';
-import { getAuthCookieAttributes } from '@portal/shared/server/auth/cookies';
-import { initSetupToken } from '@portal/shared/server/admin';
+} from '@portal/server/errors';
+import { RATE_LIMIT_CONFIG } from '@portal/server/rate-limiter';
+import { generateRequestId } from '@portal/server/tracing';
+import { getAuthCookieAttributes } from '@portal/server/auth/cookies';
+import { initSetupToken } from '@portal/server/admin';
 import underPressurePlugin from './plugins/under-pressure.js';
 import cachePlugin from './plugins/cache.js';
 import oraclePlugin from './plugins/oracle.js';

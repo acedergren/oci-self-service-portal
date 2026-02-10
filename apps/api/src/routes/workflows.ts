@@ -18,7 +18,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { WorkflowStatusSchema } from '@portal/shared/workflows/types.js';
-import { ValidationError, NotFoundError, toPortalError } from '@portal/shared/server/errors.js';
+import { ValidationError, NotFoundError, toPortalError } from '@portal/server/errors.js';
 import {
 	createWorkflowRepository,
 	createWorkflowRunRepository,

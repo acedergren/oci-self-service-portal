@@ -1,6 +1,6 @@
 import { createApp, startServer, stopServer } from './app.js';
-import { createLogger } from '@portal/shared/server/logger';
-import { initSentry, closeSentry } from '@portal/shared/server/sentry';
+import { createLogger } from '@portal/server/logger';
+import { initSentry, closeSentry } from '@portal/server/sentry';
 
 const log = createLogger('server');
 

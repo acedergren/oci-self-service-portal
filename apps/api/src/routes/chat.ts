@@ -13,7 +13,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
-import { ValidationError } from '@portal/shared/server/errors.js';
+import { ValidationError } from '@portal/server/errors.js';
 import { FALLBACK_MODEL_ALLOWLIST, DEFAULT_MODEL } from '../mastra/agents/cloud-advisor.js';
 import { getProviderRegistry, getEnabledModelIds } from '../mastra/models/index.js';
 import { requireAuth, resolveOrgId } from '../plugins/rbac.js';

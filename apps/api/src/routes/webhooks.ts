@@ -1,11 +1,11 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { randomUUID } from 'node:crypto';
-import { isWebhookEncryptionEnabled } from '@portal/shared/server/crypto';
-import { webhookRepository } from '@portal/shared/server/oracle/repositories/webhook-repository';
+import { isWebhookEncryptionEnabled } from '@portal/server/crypto';
+import { webhookRepository } from '@portal/server/oracle/repositories/webhook-repository';
 import { CreateWebhookInputSchema, WebhookEventTypeSchema } from '@portal/shared/server/api/types';
 import { isValidWebhookUrl } from '@portal/shared/server/webhooks';
-import { createLogger } from '@portal/shared/server/logger';
+import { createLogger } from '@portal/server/logger';
 import { requireAuth, resolveOrgId } from '../plugins/rbac.js';
 
 const log = createLogger('api:webhooks');

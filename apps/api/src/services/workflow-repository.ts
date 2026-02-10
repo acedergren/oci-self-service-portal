@@ -15,7 +15,7 @@ import type {
 	WorkflowStepStatus,
 	NodeType
 } from '@portal/shared/workflows/types.js';
-import type { OracleConnection } from '@portal/shared/server/oracle/connection';
+import type { OracleConnection } from '@portal/server/oracle/connection';
 
 // ============================================================================
 // WithConnection type

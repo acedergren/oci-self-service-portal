@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { blockchainAuditRepository } from '@portal/shared/server/oracle/repositories/blockchain-audit-repository';
-import { createLogger } from '@portal/shared/server/logger';
+import { blockchainAuditRepository } from '@portal/server/oracle/repositories/blockchain-audit-repository';
+import { createLogger } from '@portal/server/logger';
 import { requireAuth } from '../plugins/rbac.js';
 
 const log = createLogger('api:audit');

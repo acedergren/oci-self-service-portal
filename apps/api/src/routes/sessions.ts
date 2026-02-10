@@ -4,9 +4,9 @@ import {
 	sessionRepository,
 	listSessionsEnriched,
 	deleteSession
-} from '@portal/shared/server/oracle/repositories/session-repository';
-import { createLogger } from '@portal/shared/server/logger';
-import { DatabaseError, errorResponse } from '@portal/shared/server/errors';
+} from '@portal/server/oracle/repositories/session-repository';
+import { createLogger } from '@portal/server/logger';
+import { DatabaseError, errorResponse } from '@portal/server/errors';
 import { requireAuth } from '../plugins/rbac.js';
 
 const log = createLogger('api-sessions');

@@ -6,14 +6,14 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { mcpServerRepository } from '@portal/shared/server/admin/mcp-repository.js';
+import { mcpServerRepository } from '@portal/server/admin/mcp-repository.js';
 import type {
 	McpCatalogRow,
 	McpServerRow,
 	McpCredentialRow,
 	McpToolCacheRow,
 	McpResourceCacheRow
-} from '@portal/shared/server/admin/mcp-types.js';
+} from '@portal/server/admin/mcp-types.js';
 
 // ============================================================================
 // Mock setup — forwarding pattern for mockReset: true

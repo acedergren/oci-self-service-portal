@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { registry } from '@portal/shared/server/metrics';
+import { registry } from '@portal/server/metrics';
 
 /**
  * Prometheus metrics endpoint.

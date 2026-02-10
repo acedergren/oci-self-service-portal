@@ -12,7 +12,7 @@ import {
 	stripAiProviderSecrets,
 	stripIdpSecrets,
 	validateSetupToken
-} from '@portal/shared/server/admin';
+} from '@portal/server/admin';
 import { isValidExternalUrl } from '@portal/shared/server/url-validation';
 
 const TestIdpInputSchema = z.object({

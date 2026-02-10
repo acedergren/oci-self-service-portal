@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { withConnection } from '@portal/shared/server/oracle/connection';
-import { createLogger } from '@portal/shared/server/logger';
+import { withConnection } from '@portal/server/oracle/connection';
+import { createLogger } from '@portal/server/logger';
 import { requireAuth } from '../plugins/rbac.js';
 
 const log = createLogger('api-activity');

@@ -1,7 +1,7 @@
 import fp from 'fastify-plugin';
 import underPressure from '@fastify/under-pressure';
 import type { FastifyPluginAsync } from 'fastify';
-import { createLogger } from '@portal/shared/server/logger.js';
+import { createLogger } from '@portal/server/logger.js';
 
 const logger = createLogger('under-pressure-plugin');
 

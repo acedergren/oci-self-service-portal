@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from 'fastify';
 import fp from 'fastify-plugin';
 import fastifySchedule from '@fastify/schedule';
 import { AsyncTask, CronJob } from 'toad-scheduler';
-import { createLogger } from '@portal/shared/server/logger';
+import { createLogger } from '@portal/server/logger';
 
 const log = createLogger('schedule');
 

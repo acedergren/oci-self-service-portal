@@ -29,7 +29,7 @@ import type {
 	ScoringSource
 } from '@mastra/core/evals';
 import type { StoragePagination } from '@mastra/core/storage';
-import type { OracleConnection } from '@portal/shared/server/oracle/connection';
+import type { OracleConnection } from '@portal/server/oracle/connection';
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 

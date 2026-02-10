@@ -1,8 +1,8 @@
 import fp from 'fastify-plugin';
 import type { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
-import { hasPermission, type Permission } from '@portal/shared/server/auth/rbac';
-import { validateApiKey } from '@portal/shared/server/auth/api-keys';
-import { createLogger } from '@portal/shared/server/logger';
+import { hasPermission, type Permission } from '@portal/server/auth/rbac';
+import { validateApiKey } from '@portal/server/auth/api-keys';
+import { createLogger } from '@portal/server/logger';
 
 const log = createLogger('fastify-rbac');
 

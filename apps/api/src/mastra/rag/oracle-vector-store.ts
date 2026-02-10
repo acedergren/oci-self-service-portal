@@ -20,7 +20,7 @@ import type {
 	DeleteVectorParams,
 	DeleteVectorsParams
 } from '@mastra/core/vector';
-import { DB_TYPE_VECTOR, type OracleConnection } from '@portal/shared/server/oracle/connection';
+import { DB_TYPE_VECTOR, type OracleConnection } from '@portal/server/oracle/connection';
 
 type WithConnectionFn = <T>(fn: (conn: OracleConnection) => Promise<T>) => Promise<T>;
 
