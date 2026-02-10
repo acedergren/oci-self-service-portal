@@ -6,19 +6,30 @@ import { createLogger } from '@portal/shared/server/logger';
 const log = createLogger('rate-limiter-oracle');
 
 /**
- * Paths that bypass rate limiting entirely.
+ * Rate limiter configuration constants.
+ * Centralizes path exclusions and endpoint-to-category mappings.
  */
-const EXCLUDE_PATHS = ['/healthz', '/health', '/api/metrics'];
+const RATE_LIMITER_CONFIG = {
+	/**
+	 * Paths that bypass rate limiting entirely.
+	 * Typically health checks and observability endpoints.
+	 */
+	excludePaths: ['/healthz', '/health', '/api/metrics'] as const,
 
-/**
- * Maps endpoint paths to rate limit categories.
- * Endpoints matching these paths use specific limits from RATE_LIMIT_CONFIG.
- * All other endpoints default to the 'api' limit.
- */
-const ENDPOINT_LIMITS: Record<string, string> = {
-	'/api/chat': 'chat',
-	'/api/tools': 'chat'
-};
+	/**
+	 * Maps endpoint paths to rate limit categories.
+	 * Endpoints matching these paths use specific limits from RATE_LIMIT_CONFIG.
+	 * All other endpoints default to the 'api' limit (60 req/min).
+	 *
+	 * Categories:
+	 * - 'chat': 20 req/min (AI-powered endpoints that are compute-intensive)
+	 * - 'api': 60 req/min (general API endpoints)
+	 */
+	endpointCategories: {
+		'/api/chat': 'chat',
+		'/api/tools': 'chat'
+	} as const
+} as const;
 
 /**
  * Resolve a unique client identifier from the request context.
@@ -39,7 +50,7 @@ function resolveClientId(request: FastifyRequest): string {
  * Returns the category key (e.g., 'chat', 'api') used to look up the limit.
  */
 function resolveEndpointCategory(path: string): string {
-	return ENDPOINT_LIMITS[path] ?? 'api';
+	return RATE_LIMITER_CONFIG.endpointCategories[path as keyof typeof RATE_LIMITER_CONFIG.endpointCategories] ?? 'api';
 }
 
 /**
@@ -58,7 +69,7 @@ const rateLimiterOraclePluginImpl: FastifyPluginAsync = async (fastify) => {
 		const path = request.url.split('?')[0]; // Strip query params
 
 		// Skip rate limiting for excluded paths
-		if (EXCLUDE_PATHS.includes(path)) {
+		if ((RATE_LIMITER_CONFIG.excludePaths as readonly string[]).includes(path)) {
 			return;
 		}
 

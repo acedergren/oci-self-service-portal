@@ -394,7 +394,7 @@ describe('rate-limiter-oracle plugin', () => {
 		it('skips /health without checking rate limit', async () => {
 			mockCheckRateLimit.mockClear();
 
-			const res = await app.inject({
+			await app.inject({
 				method: 'GET',
 				url: '/health'
 			});
