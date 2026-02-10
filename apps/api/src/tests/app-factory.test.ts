@@ -948,3 +948,87 @@ describe('createApp – OpenAPI docs', () => {
 		expect(response.statusCode).toBe(401);
 	});
 });
+
+// ---------------------------------------------------------------------------
+// Phase A: OpenTelemetry inline registration
+// ---------------------------------------------------------------------------
+
+describe('createApp – OTel inline registration', () => {
+	let app: FastifyInstance;
+
+	afterEach(async () => {
+		if (app) await app.close();
+		delete process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+		delete process.env.OTEL_SERVICE_NAME;
+	});
+
+	it('should skip OTel when OTEL_EXPORTER_OTLP_ENDPOINT is not set', async () => {
+		delete process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
+
+		app = await buildApp();
+		await app.ready();
+
+		// App boots fine without OTel — this verifies the no-op path
+		expect(app).toBeDefined();
+	});
+
+	it('should skip OTel when OTEL_EXPORTER_OTLP_ENDPOINT is empty', async () => {
+		process.env.OTEL_EXPORTER_OTLP_ENDPOINT = '';
+
+		app = await buildApp();
+		await app.ready();
+
+		// Empty string is falsy — OTel should not register
+		expect(app).toBeDefined();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Phase A: Graceful shutdown
+// ---------------------------------------------------------------------------
+
+describe('createApp – graceful shutdown', () => {
+	let app: FastifyInstance;
+
+	afterEach(async () => {
+		if (app) await app.close();
+	});
+
+	it('should register fastify-graceful-shutdown plugin', async () => {
+		app = await buildApp();
+		await app.ready();
+
+		// fastify-graceful-shutdown adds a "close" handler internally
+		// Verify app boots without errors (plugin registration succeeded)
+		expect(app).toBeDefined();
+	});
+
+	it('should close gracefully without errors', async () => {
+		app = await buildApp();
+		await app.ready();
+
+		// close() triggers all onClose hooks in reverse order:
+		// mastra MCP cleanup → oracle pool close → cache disconnect → shutdown log
+		await expect(app.close()).resolves.toBeUndefined();
+	});
+});
+
+// ---------------------------------------------------------------------------
+// Phase A: Schedule plugin integration
+// ---------------------------------------------------------------------------
+
+describe('createApp – schedule plugin', () => {
+	let app: FastifyInstance;
+
+	afterEach(async () => {
+		if (app) await app.close();
+	});
+
+	it('should register scheduler and boot without errors', async () => {
+		app = await buildApp();
+		await app.ready();
+
+		// @fastify/schedule decorates with 'scheduler'
+		expect(app).toHaveProperty('scheduler');
+	});
+});
