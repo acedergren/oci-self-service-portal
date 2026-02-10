@@ -7,8 +7,6 @@
  * Uses Oracle 26AI VECTOR(dim, FLOAT32) columns with COSINE similarity search.
  */
 
-// @ts-expect-error oracledb ships no type declarations
-import oracledb from 'oracledb';
 import { MastraVector } from '@mastra/core/vector';
 import type {
 	QueryResult,
@@ -22,7 +20,7 @@ import type {
 	DeleteVectorParams,
 	DeleteVectorsParams
 } from '@mastra/core/vector';
-import type { OracleConnection } from '@portal/shared/server/oracle/connection';
+import { DB_TYPE_VECTOR, type OracleConnection } from '@portal/shared/server/oracle/connection';
 
 type WithConnectionFn = <T>(fn: (conn: OracleConnection) => Promise<T>) => Promise<T>;
 
@@ -189,7 +187,7 @@ export class OracleVectorStore extends MastraVector {
              VALUES (:id, :vec, :meta, SYSTIMESTAMP)`,
 					{
 						id: generatedIds[i],
-						vec: { val: vecBuf, type: oracledb.DB_TYPE_VECTOR },
+						vec: { val: vecBuf, type: DB_TYPE_VECTOR },
 						meta
 					}
 				);
@@ -210,7 +208,7 @@ export class OracleVectorStore extends MastraVector {
 
 		return this.withConnection(async (conn) => {
 			const binds: Record<string, unknown> = {
-				queryVec: { val: queryVecBuf, type: oracledb.DB_TYPE_VECTOR },
+				queryVec: { val: queryVecBuf, type: DB_TYPE_VECTOR },
 				topK
 			};
 
@@ -350,7 +348,7 @@ export class OracleVectorStore extends MastraVector {
 			if (params.update.vector) {
 				const vecBuf = new Float32Array(params.update.vector);
 				setClauses.push(`embedding = :newVec`);
-				binds.newVec = { val: vecBuf, type: oracledb.DB_TYPE_VECTOR };
+				binds.newVec = { val: vecBuf, type: DB_TYPE_VECTOR };
 			}
 
 			if (params.update.metadata) {

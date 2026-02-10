@@ -9,6 +9,9 @@ const log = createLogger('oracle');
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
 oracledb.autoCommit = true;
 
+/** Re-export DB_TYPE_VECTOR so apps/api can use it without a direct oracledb dependency */
+export const DB_TYPE_VECTOR: number = oracledb.DB_TYPE_VECTOR;
+
 export interface OracleConfig {
 	user: string;
 	password: string;

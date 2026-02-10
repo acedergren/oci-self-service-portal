@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// ── Mock oracledb module ────────────────────────────────────────────────
-vi.mock('oracledb', () => ({
-	default: {
-		DB_TYPE_VECTOR: 2023 // Numeric constant representing VECTOR type
-	}
+// ── Mock Oracle connection module to provide DB_TYPE_VECTOR ─────────────
+// Factory is hoisted above const declarations (TDZ), so use literal value
+vi.mock('@portal/shared/server/oracle/connection', () => ({
+	DB_TYPE_VECTOR: 2113
 }));
 
 import { OracleVectorStore } from './oracle-vector-store.js';
