@@ -257,7 +257,9 @@ export class OracleAgentStateRepository {
 
 			const session = await this.getSession(id);
 			if (!session) {
-				throw new DatabaseError('Failed to retrieve created session', 'CREATE_SESSION_FAILED');
+				throw new DatabaseError('Failed to retrieve created session', {
+					code: 'CREATE_SESSION_FAILED'
+				});
 			}
 
 			return session;
@@ -266,7 +268,8 @@ export class OracleAgentStateRepository {
 			if (error instanceof DatabaseError) throw error;
 			throw new DatabaseError(
 				error instanceof Error ? error.message : 'Unknown error',
-				'CREATE_SESSION_FAILED'
+				{ code: 'CREATE_SESSION_FAILED' },
+				error instanceof Error ? error : undefined
 			);
 		}
 	}
@@ -286,7 +289,8 @@ export class OracleAgentStateRepository {
 			logger.error({ error, id }, 'Failed to get session');
 			throw new DatabaseError(
 				error instanceof Error ? error.message : 'Unknown error',
-				'GET_SESSION_FAILED'
+				{ code: 'GET_SESSION_FAILED' },
+				error instanceof Error ? error : undefined
 			);
 		}
 	}
@@ -324,7 +328,8 @@ export class OracleAgentStateRepository {
 			logger.error({ error, options }, 'Failed to list sessions');
 			throw new DatabaseError(
 				error instanceof Error ? error.message : 'Unknown error',
-				'LIST_SESSIONS_FAILED'
+				{ code: 'LIST_SESSIONS_FAILED' },
+				error instanceof Error ? error : undefined
 			);
 		}
 	}
@@ -358,7 +363,8 @@ export class OracleAgentStateRepository {
 			logger.error({ error, id, input }, 'Failed to update session');
 			throw new DatabaseError(
 				error instanceof Error ? error.message : 'Unknown error',
-				'UPDATE_SESSION_FAILED'
+				{ code: 'UPDATE_SESSION_FAILED' },
+				error instanceof Error ? error : undefined
 			);
 		}
 	}
@@ -399,7 +405,7 @@ export class OracleAgentStateRepository {
 
 			const turn = await this.getTurn(id);
 			if (!turn) {
-				throw new DatabaseError('Failed to retrieve created turn', 'ADD_TURN_FAILED');
+				throw new DatabaseError('Failed to retrieve created turn', { code: 'ADD_TURN_FAILED' });
 			}
 
 			return turn;
@@ -408,7 +414,8 @@ export class OracleAgentStateRepository {
 			if (error instanceof DatabaseError) throw error;
 			throw new DatabaseError(
 				error instanceof Error ? error.message : 'Unknown error',
-				'ADD_TURN_FAILED'
+				{ code: 'ADD_TURN_FAILED' },
+				error instanceof Error ? error : undefined
 			);
 		}
 	}
@@ -429,7 +436,8 @@ export class OracleAgentStateRepository {
 			logger.error({ error, id }, 'Failed to get turn');
 			throw new DatabaseError(
 				error instanceof Error ? error.message : 'Unknown error',
-				'GET_TURN_FAILED'
+				{ code: 'GET_TURN_FAILED' },
+				error instanceof Error ? error : undefined
 			);
 		}
 	}
@@ -464,7 +472,8 @@ export class OracleAgentStateRepository {
 			logger.error({ error, id, input }, 'Failed to update turn');
 			throw new DatabaseError(
 				error instanceof Error ? error.message : 'Unknown error',
-				'UPDATE_TURN_FAILED'
+				{ code: 'UPDATE_TURN_FAILED' },
+				error instanceof Error ? error : undefined
 			);
 		}
 	}
@@ -486,7 +495,8 @@ export class OracleAgentStateRepository {
 			logger.error({ error, sessionId }, 'Failed to get session turns');
 			throw new DatabaseError(
 				error instanceof Error ? error.message : 'Unknown error',
-				'GET_SESSION_TURNS_FAILED'
+				{ code: 'GET_SESSION_TURNS_FAILED' },
+				error instanceof Error ? error : undefined
 			);
 		}
 	}
@@ -527,7 +537,8 @@ export class OracleAgentStateRepository {
 			logger.error({ error, orgId }, 'Failed to get most recent session');
 			throw new DatabaseError(
 				error instanceof Error ? error.message : 'Unknown error',
-				'GET_MOST_RECENT_SESSION_FAILED'
+				{ code: 'GET_MOST_RECENT_SESSION_FAILED' },
+				error instanceof Error ? error : undefined
 			);
 		}
 	}
@@ -547,7 +558,8 @@ export class OracleAgentStateRepository {
 			logger.error({ error, id }, 'Failed to restore session');
 			throw new DatabaseError(
 				error instanceof Error ? error.message : 'Unknown error',
-				'RESTORE_SESSION_FAILED'
+				{ code: 'RESTORE_SESSION_FAILED' },
+				error instanceof Error ? error : undefined
 			);
 		}
 	}
