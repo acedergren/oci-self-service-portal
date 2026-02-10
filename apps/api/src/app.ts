@@ -22,9 +22,12 @@ import { RATE_LIMIT_CONFIG } from '@portal/shared/server/rate-limiter';
 import { generateRequestId } from '@portal/shared/server/tracing';
 import { getAuthCookieAttributes } from '@portal/shared/server/auth/cookies';
 import { initSetupToken } from '@portal/shared/server/admin';
+import underPressurePlugin from './plugins/under-pressure.js';
+import cachePlugin from './plugins/cache.js';
 import oraclePlugin from './plugins/oracle.js';
 import authPlugin from './plugins/auth.js';
 import rbacPlugin, { requireAuth } from './plugins/rbac.js';
+import { rateLimiterOraclePlugin } from './plugins/rate-limiter-oracle.js';
 import mastraPlugin from './plugins/mastra.js';
 import { healthRoutes } from './routes/health.js';
 import { sessionRoutes } from './routes/sessions.js';
@@ -301,6 +304,16 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 	// Register sensible (HTTP error helpers)
 	await app.register(fastifySensible);
 
+	// ── Resilience plugins (before auth chain) ───────────────────────
+
+	// Under-pressure: returns 503 when event loop, heap, or RSS exceeds thresholds.
+	// Custom health check pings Oracle when available, gracefully degrades otherwise.
+	await app.register(underPressurePlugin);
+
+	// Valkey cache: namespace-scoped TTLs with fail-open behavior.
+	// App continues to function even if Valkey is unreachable.
+	await app.register(cachePlugin);
+
 	// ── Auth chain (oracle → auth → RBAC) ───────────────────
 
 	// Register application plugins (Oracle → Auth → RBAC, in dependency order)
@@ -321,6 +334,10 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 		]
 	});
 	await app.register(rbacPlugin);
+
+	// Oracle-backed rate limiter: per-user, per-endpoint limits (L2 layer).
+	// Must come after auth chain so request.user and request.apiKeyContext are populated.
+	await app.register(rateLimiterOraclePlugin);
 
 	// ── Mastra framework (agents, workflows, MCP) ─────────────────────
 
