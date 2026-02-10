@@ -60,7 +60,7 @@ describe('OracleAgentStateRepository', () => {
 	describe('createSession', () => {
 		it('should insert session with UUID and return Session with camelCase fields', async () => {
 			const now = Date.now();
-			const sessionId = 'test-session-id';
+			const sessionId = '00000000-0000-4000-8000-000000000001';
 
 			// Mock INSERT (call 1) then SELECT (call 2)
 			let callCount = 0;
@@ -125,17 +125,17 @@ describe('OracleAgentStateRepository', () => {
 				callCount++;
 				if (callCount === 1) {
 					expect(binds?.config).toBe(JSON.stringify(config));
-					expect(binds?.orgId).toBe('org-123');
-					expect(binds?.threadId).toBe('thread-456');
+					expect(binds?.orgId).toBe('org-00000000-0000-4000-8000-000000000123');
+					expect(binds?.threadId).toBe('thread-00000000-0000-4000-8000-000000000456');
 					return { rows: [] };
 				}
 				if (callCount === 2) {
 					return {
 						rows: [
 							{
-								ID: 'sess-1',
-								ORG_ID: 'org-123',
-								THREAD_ID: 'thread-456',
+								ID: '00000000-0000-4000-8000-000000000002',
+								ORG_ID: 'org-00000000-0000-4000-8000-000000000123',
+								THREAD_ID: 'thread-00000000-0000-4000-8000-000000000456',
 								CREATED_AT: new Date(now),
 								UPDATED_AT: new Date(now),
 								TITLE: 'Test Session',
@@ -151,12 +151,12 @@ describe('OracleAgentStateRepository', () => {
 			});
 
 			const session = await repository.createSession({
-				id: 'sess-1',
+				id: '00000000-0000-4000-8000-000000000001',
 				model: 'claude-3',
 				region: 'us-west-2',
 				title: 'Test Session',
-				orgId: 'org-123',
-				threadId: 'thread-456',
+				orgId: 'org-00000000-0000-4000-8000-000000000123',
+				threadId: 'thread-00000000-0000-4000-8000-000000000456',
 				config
 			});
 
@@ -172,9 +172,9 @@ describe('OracleAgentStateRepository', () => {
 			mockExecute.mockResolvedValue({
 				rows: [
 					{
-						ID: 'sess-1',
-						ORG_ID: 'org-1',
-						THREAD_ID: 'thread-1',
+						ID: '00000000-0000-4000-8000-000000000001',
+						ORG_ID: 'org-00000000-0000-4000-8000-000000000001',
+						THREAD_ID: 'thread-00000000-0000-4000-8000-000000000001',
 						CREATED_AT: new Date(now),
 						UPDATED_AT: new Date(now),
 						TITLE: 'My Session',
@@ -186,10 +186,10 @@ describe('OracleAgentStateRepository', () => {
 				]
 			});
 
-			const session = await repository.getSession('sess-1');
+			const session = await repository.getSession('00000000-0000-4000-8000-000000000001');
 
 			expect(session).toMatchObject({
-				id: 'sess-1',
+				id: '00000000-0000-4000-8000-000000000001',
 				model: 'gpt-4',
 				region: 'us-east-1',
 				status: 'completed',
@@ -213,7 +213,7 @@ describe('OracleAgentStateRepository', () => {
 			mockExecute.mockResolvedValue({
 				rows: [
 					{
-						ID: 'sess-1',
+						ID: '00000000-0000-4000-8000-000000000001',
 						ORG_ID: null,
 						THREAD_ID: null,
 						CREATED_AT: new Date(now),
@@ -227,7 +227,7 @@ describe('OracleAgentStateRepository', () => {
 				]
 			});
 
-			const session = await repository.getSession('sess-1');
+			const session = await repository.getSession('00000000-0000-4000-8000-000000000001');
 
 			expect(session.config).toEqual({ temperature: 0.9, agentRole: 'assistant' });
 		});
@@ -241,7 +241,7 @@ describe('OracleAgentStateRepository', () => {
 			mockExecute.mockResolvedValue({
 				rows: [
 					{
-						ID: 'sess-2',
+						ID: '00000000-0000-4000-8000-000000000002',
 						ORG_ID: null,
 						THREAD_ID: null,
 						CREATED_AT: new Date(now - 1000),
@@ -253,7 +253,7 @@ describe('OracleAgentStateRepository', () => {
 						CONFIG: null
 					},
 					{
-						ID: 'sess-1',
+						ID: '00000000-0000-4000-8000-000000000001',
 						ORG_ID: null,
 						THREAD_ID: null,
 						CREATED_AT: new Date(now - 2000),
@@ -270,8 +270,8 @@ describe('OracleAgentStateRepository', () => {
 			const sessions = await repository.listSessions();
 
 			expect(sessions).toHaveLength(2);
-			expect(sessions[0].id).toBe('sess-2');
-			expect(sessions[1].id).toBe('sess-1');
+			expect(sessions[0].id).toBe('00000000-0000-4000-8000-000000000002');
+			expect(sessions[1].id).toBe('00000000-0000-4000-8000-000000000001');
 			expect(mockExecute).toHaveBeenCalledWith(
 				expect.stringContaining('ORDER BY updated_at DESC'),
 				expect.any(Object)
@@ -281,13 +281,13 @@ describe('OracleAgentStateRepository', () => {
 		it('should filter by status and org_id with FETCH FIRST', async () => {
 			mockExecute.mockResolvedValue({ rows: [] });
 
-			await repository.listSessions({ status: 'completed', orgId: 'org-123', limit: 10 });
+			await repository.listSessions({ status: 'completed', orgId: 'org-00000000-0000-4000-8000-000000000123', limit: 10 });
 
 			expect(mockExecute).toHaveBeenCalledWith(
 				expect.stringContaining('WHERE status = :status AND org_id = :orgId'),
 				expect.objectContaining({
 					status: 'completed',
-					orgId: 'org-123',
+					orgId: 'org-00000000-0000-4000-8000-000000000123',
 					limit: 10
 				})
 			);
@@ -330,7 +330,7 @@ describe('OracleAgentStateRepository', () => {
 					return {
 						rows: [
 							{
-								ID: 'sess-1',
+								ID: '00000000-0000-4000-8000-000000000001',
 								ORG_ID: null,
 								THREAD_ID: null,
 								CREATED_AT: new Date(now - 1000),
@@ -347,13 +347,13 @@ describe('OracleAgentStateRepository', () => {
 				return { rows: [] };
 			});
 
-			const session = await repository.updateSession('sess-1', {
+			const session = await repository.updateSession('00000000-0000-4000-8000-000000000001', {
 				title: 'Updated Title',
 				status: 'completed'
 			});
 
 			expect(session).toMatchObject({
-				id: 'sess-1',
+				id: '00000000-0000-4000-8000-000000000001',
 				title: 'Updated Title',
 				status: 'completed'
 			});
@@ -376,7 +376,7 @@ describe('OracleAgentStateRepository', () => {
 					return {
 						rows: [
 							{
-								ID: 'sess-1',
+								ID: '00000000-0000-4000-8000-000000000001',
 								ORG_ID: null,
 								THREAD_ID: null,
 								CREATED_AT: new Date(now),
@@ -393,7 +393,7 @@ describe('OracleAgentStateRepository', () => {
 				return { rows: [] };
 			});
 
-			const session = await repository.updateSession('sess-1', { status: 'error' });
+			const session = await repository.updateSession('00000000-0000-4000-8000-000000000001', { status: 'error' });
 
 			expect(session.status).toBe('error');
 			expect(session.title).toBe('Original Title');
@@ -440,8 +440,8 @@ describe('OracleAgentStateRepository', () => {
 					return {
 						rows: [
 							{
-								ID: 'turn-1',
-								SESSION_ID: 'sess-1',
+								ID: 'turn-00000000-0000-4000-8000-000000000001',
+								SESSION_ID: '00000000-0000-4000-8000-000000000001',
 								TURN_NUMBER: 1,
 								CREATED_AT: new Date(now),
 								USER_MESSAGE: JSON.stringify(userMessage),
@@ -457,13 +457,13 @@ describe('OracleAgentStateRepository', () => {
 				return { rows: [] };
 			});
 
-			const turn = await repository.addTurn('sess-1', {
+			const turn = await repository.addTurn('00000000-0000-4000-8000-000000000001', {
 				turnNumber: 1,
 				userMessage
 			});
 
 			expect(turn).toMatchObject({
-				sessionId: 'sess-1',
+				sessionId: '00000000-0000-4000-8000-000000000001',
 				turnNumber: 1,
 				userMessage,
 				toolCalls: []
@@ -489,8 +489,8 @@ describe('OracleAgentStateRepository', () => {
 					return {
 						rows: [
 							{
-								ID: 'turn-1',
-								SESSION_ID: 'sess-1',
+								ID: 'turn-00000000-0000-4000-8000-000000000001',
+								SESSION_ID: '00000000-0000-4000-8000-000000000001',
 								TURN_NUMBER: 1,
 								CREATED_AT: new Date(now),
 								USER_MESSAGE: JSON.stringify(userMessage),
@@ -506,7 +506,7 @@ describe('OracleAgentStateRepository', () => {
 				return { rows: [] };
 			});
 
-			const turn = await repository.addTurn('sess-1', {
+			const turn = await repository.addTurn('00000000-0000-4000-8000-000000000001', {
 				turnNumber: 1,
 				userMessage
 			});
@@ -534,8 +534,8 @@ describe('OracleAgentStateRepository', () => {
 			mockExecute.mockResolvedValue({
 				rows: [
 					{
-						ID: 'turn-1',
-						SESSION_ID: 'sess-1',
+						ID: 'turn-00000000-0000-4000-8000-000000000001',
+						SESSION_ID: '00000000-0000-4000-8000-000000000001',
 						TURN_NUMBER: 1,
 						CREATED_AT: new Date(now),
 						USER_MESSAGE: JSON.stringify(userMessage),
@@ -548,11 +548,11 @@ describe('OracleAgentStateRepository', () => {
 				]
 			});
 
-			const turn = await repository.getTurn('turn-1');
+			const turn = await repository.getTurn('turn-00000000-0000-4000-8000-000000000001');
 
 			expect(turn).toMatchObject({
-				id: 'turn-1',
-				sessionId: 'sess-1',
+				id: 'turn-00000000-0000-4000-8000-000000000001',
+				sessionId: '00000000-0000-4000-8000-000000000001',
 				turnNumber: 1,
 				userMessage,
 				assistantResponse,
@@ -569,8 +569,8 @@ describe('OracleAgentStateRepository', () => {
 			mockExecute.mockResolvedValue({
 				rows: [
 					{
-						ID: 'turn-1',
-						SESSION_ID: 'sess-1',
+						ID: 'turn-00000000-0000-4000-8000-000000000001',
+						SESSION_ID: '00000000-0000-4000-8000-000000000001',
 						TURN_NUMBER: 1,
 						CREATED_AT: new Date(now),
 						USER_MESSAGE: JSON.stringify({ role: 'user', content: 'First' }),
@@ -581,8 +581,8 @@ describe('OracleAgentStateRepository', () => {
 						ERROR: null
 					},
 					{
-						ID: 'turn-2',
-						SESSION_ID: 'sess-1',
+						ID: 'turn-00000000-0000-4000-8000-000000000002',
+						SESSION_ID: '00000000-0000-4000-8000-000000000001',
 						TURN_NUMBER: 2,
 						CREATED_AT: new Date(now + 1000),
 						USER_MESSAGE: JSON.stringify({ role: 'user', content: 'Second' }),
@@ -595,7 +595,7 @@ describe('OracleAgentStateRepository', () => {
 				]
 			});
 
-			const turns = await repository.getSessionTurns('sess-1');
+			const turns = await repository.getSessionTurns('00000000-0000-4000-8000-000000000001');
 
 			expect(turns).toHaveLength(2);
 			expect(turns[0].turnNumber).toBe(1);
@@ -636,8 +636,8 @@ describe('OracleAgentStateRepository', () => {
 					return {
 						rows: [
 							{
-								ID: 'turn-1',
-								SESSION_ID: 'sess-1',
+								ID: 'turn-00000000-0000-4000-8000-000000000001',
+								SESSION_ID: '00000000-0000-4000-8000-000000000001',
 								TURN_NUMBER: 1,
 								CREATED_AT: new Date(now),
 								USER_MESSAGE: JSON.stringify({ role: 'user', content: 'Hi' }),
@@ -653,7 +653,7 @@ describe('OracleAgentStateRepository', () => {
 				return { rows: [] };
 			});
 
-			const turn = await repository.updateTurn('turn-1', {
+			const turn = await repository.updateTurn('turn-00000000-0000-4000-8000-000000000001', {
 				assistantResponse,
 				toolCalls,
 				tokensUsed: 200,
@@ -685,8 +685,8 @@ describe('OracleAgentStateRepository', () => {
 			mockExecute.mockResolvedValue({
 				rows: [
 					{
-						ID: 'sess-latest',
-						ORG_ID: 'org-123',
+						ID: '00000000-0000-4000-8000-999999999999',
+						ORG_ID: 'org-00000000-0000-4000-8000-000000000123',
 						THREAD_ID: null,
 						CREATED_AT: new Date(now - 500),
 						UPDATED_AT: new Date(now),
@@ -699,12 +699,12 @@ describe('OracleAgentStateRepository', () => {
 				]
 			});
 
-			const session = await repository.getMostRecentSession('org-123');
+			const session = await repository.getMostRecentSession('org-00000000-0000-4000-8000-000000000123');
 
-			expect(session?.id).toBe('sess-latest');
+			expect(session?.id).toBe('00000000-0000-4000-8000-999999999999');
 			expect(mockExecute).toHaveBeenCalledWith(
 				expect.stringContaining("WHERE status = 'active' AND org_id = :orgId"),
-				expect.objectContaining({ orgId: 'org-123' })
+				expect.objectContaining({ orgId: 'org-00000000-0000-4000-8000-000000000123' })
 			);
 			expect(mockExecute).toHaveBeenCalledWith(
 				expect.stringContaining('ORDER BY updated_at DESC'),
@@ -719,7 +719,7 @@ describe('OracleAgentStateRepository', () => {
 		it('should return null if no active sessions for org', async () => {
 			mockExecute.mockResolvedValue({ rows: [] });
 
-			const session = await repository.getMostRecentSession('org-999');
+			const session = await repository.getMostRecentSession('org-00000000-0000-4000-8000-999999999999');
 
 			expect(session).toBeNull();
 		});
@@ -739,9 +739,9 @@ describe('OracleAgentStateRepository', () => {
 					return {
 						rows: [
 							{
-								ID: 'sess-1',
-								ORG_ID: 'org-1',
-								THREAD_ID: 'thread-1',
+								ID: '00000000-0000-4000-8000-000000000001',
+								ORG_ID: 'org-00000000-0000-4000-8000-000000000001',
+								THREAD_ID: 'thread-00000000-0000-4000-8000-000000000001',
 								CREATED_AT: new Date(now),
 								UPDATED_AT: new Date(now),
 								TITLE: 'Restored',
@@ -758,8 +758,8 @@ describe('OracleAgentStateRepository', () => {
 					return {
 						rows: [
 							{
-								ID: 'turn-1',
-								SESSION_ID: 'sess-1',
+								ID: 'turn-00000000-0000-4000-8000-000000000001',
+								SESSION_ID: '00000000-0000-4000-8000-000000000001',
 								TURN_NUMBER: 1,
 								CREATED_AT: new Date(now),
 								USER_MESSAGE: JSON.stringify({ role: 'user', content: 'Hello' }),
@@ -775,10 +775,10 @@ describe('OracleAgentStateRepository', () => {
 				return { rows: [] };
 			});
 
-			const restored = await repository.restoreSession('sess-1');
+			const restored = await repository.restoreSession('00000000-0000-4000-8000-000000000001');
 
 			expect(restored).not.toBeNull();
-			expect(restored.session.id).toBe('sess-1');
+			expect(restored.session.id).toBe('00000000-0000-4000-8000-000000000001');
 			expect(restored.turns).toHaveLength(1);
 			expect(restored.turns[0].turnNumber).toBe(1);
 		});
@@ -798,7 +798,7 @@ describe('OracleAgentStateRepository', () => {
 		it('should wrap Oracle errors in DatabaseError', async () => {
 			mockExecute.mockRejectedValue(new Error('ORA-12345: Connection failed'));
 
-			await expect(repository.getSession('sess-1')).rejects.toThrow();
+			await expect(repository.getSession('00000000-0000-4000-8000-000000000001')).rejects.toThrow();
 		});
 	});
 });
