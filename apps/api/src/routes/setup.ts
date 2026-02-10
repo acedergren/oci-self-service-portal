@@ -29,6 +29,44 @@ const TestAiProviderInputSchema = z.object({
 	region: z.string().optional()
 });
 
+const SetupErrorResponseSchema = z
+	.object({
+		error: z.string()
+	})
+	.passthrough();
+
+const SetupStatusResponseSchema = z.object({
+	isSetupComplete: z.boolean(),
+	steps: z.object({
+		idp: z.boolean(),
+		aiProvider: z.boolean(),
+		settings: z.boolean()
+	}),
+	activeIdpCount: z.number(),
+	activeAiProviderCount: z.number(),
+	defaultIdpId: z.string().nullable(),
+	defaultAiProviderId: z.string().nullable()
+});
+
+const SetupTestResultSchema = z
+	.object({
+		success: z.boolean(),
+		message: z.string()
+	})
+	.passthrough();
+
+const SetupCompleteResponseSchema = z.object({
+	success: z.literal(true),
+	message: z.string(),
+	idpCount: z.number(),
+	aiProviderCount: z.number()
+});
+
+const SetupSettingsResponseSchema = z.object({
+	success: z.literal(true),
+	count: z.number()
+});
+
 async function toWebRequest(request: FastifyRequest): Promise<Request> {
 	const headers = new Headers();
 	for (const [key, value] of Object.entries(request.headers)) {
@@ -58,33 +96,52 @@ async function requireSetupToken(request: FastifyRequest, reply: FastifyReply): 
 }
 
 export async function setupRoutes(app: FastifyInstance): Promise<void> {
-	app.get('/api/setup/status', { preHandler: requireSetupToken }, async (_request, reply) => {
-		const isSetupComplete = await settingsRepository.isSetupComplete();
-		const [idps, aiProviders] = await Promise.all([
-			idpRepository.listActive(),
-			aiProviderRepository.listActive()
-		]);
+	app.get(
+		'/api/setup/status',
+		{
+			preHandler: requireSetupToken,
+			schema: {
+				response: {
+					200: SetupStatusResponseSchema,
+					401: SetupErrorResponseSchema,
+					403: SetupErrorResponseSchema
+				}
+			}
+		},
+		async (_request, reply) => {
+			const isSetupComplete = await settingsRepository.isSetupComplete();
+			const [idps, aiProviders] = await Promise.all([
+				idpRepository.listActive(),
+				aiProviderRepository.listActive()
+			]);
 
-		const defaultIdp = idps.find((idp) => idp.isDefault);
-		const defaultAiProvider = aiProviders.find((p) => p.isDefault);
+			const defaultIdp = idps.find((idp) => idp.isDefault);
+			const defaultAiProvider = aiProviders.find((p) => p.isDefault);
 
-		return reply.send({
-			isSetupComplete,
-			steps: {
-				idp: idps.length > 0,
-				aiProvider: aiProviders.length > 0,
-				settings: isSetupComplete
-			},
-			activeIdpCount: idps.length,
-			activeAiProviderCount: aiProviders.length,
-			defaultIdpId: defaultIdp?.id ?? null,
-			defaultAiProviderId: defaultAiProvider?.id ?? null
-		});
-	});
+			return reply.send({
+				isSetupComplete,
+				steps: {
+					idp: idps.length > 0,
+					aiProvider: aiProviders.length > 0,
+					settings: isSetupComplete
+				},
+				activeIdpCount: idps.length,
+				activeAiProviderCount: aiProviders.length,
+				defaultIdpId: defaultIdp?.id ?? null,
+				defaultAiProviderId: defaultAiProvider?.id ?? null
+			});
+		}
+	);
 
 	app.post(
 		'/api/setup/idp',
-		{ preHandler: requireSetupToken, schema: { body: CreateIdpInputSchema } },
+		{
+			preHandler: requireSetupToken,
+			schema: {
+				body: CreateIdpInputSchema,
+				response: { 201: z.object({ id: z.string() }).passthrough() }
+			}
+		},
 		async (request, reply) => {
 			const idp = await idpRepository.create(request.body as z.infer<typeof CreateIdpInputSchema>);
 			return reply.status(201).send(stripIdpSecrets(idp));
@@ -93,7 +150,13 @@ export async function setupRoutes(app: FastifyInstance): Promise<void> {
 
 	app.post(
 		'/api/setup/idp/test',
-		{ preHandler: requireSetupToken, schema: { body: TestIdpInputSchema } },
+		{
+			preHandler: requireSetupToken,
+			schema: {
+				body: TestIdpInputSchema,
+				response: { 200: SetupTestResultSchema }
+			}
+		},
 		async (request, reply) => {
 			const input = request.body as z.infer<typeof TestIdpInputSchema>;
 			const details: Record<string, unknown> = {};
@@ -169,7 +232,13 @@ export async function setupRoutes(app: FastifyInstance): Promise<void> {
 
 	app.post(
 		'/api/setup/ai-provider',
-		{ preHandler: requireSetupToken, schema: { body: CreateAiProviderInputSchema } },
+		{
+			preHandler: requireSetupToken,
+			schema: {
+				body: CreateAiProviderInputSchema,
+				response: { 201: z.object({ id: z.string() }).passthrough() }
+			}
+		},
 		async (request, reply) => {
 			const provider = await aiProviderRepository.create(
 				request.body as z.infer<typeof CreateAiProviderInputSchema>
@@ -180,7 +249,15 @@ export async function setupRoutes(app: FastifyInstance): Promise<void> {
 
 	app.post(
 		'/api/setup/ai-provider/test',
-		{ schema: { body: TestAiProviderInputSchema } },
+		{
+			schema: {
+				body: TestAiProviderInputSchema,
+				response: {
+					200: SetupTestResultSchema,
+					403: SetupErrorResponseSchema
+				}
+			}
+		},
 		async (request, reply) => {
 			const isSetupComplete = await settingsRepository.isSetupComplete();
 			if (isSetupComplete) {
@@ -227,7 +304,13 @@ export async function setupRoutes(app: FastifyInstance): Promise<void> {
 
 	app.post(
 		'/api/setup/settings',
-		{ preHandler: requireSetupToken, schema: { body: BulkSetSettingsInputSchema } },
+		{
+			preHandler: requireSetupToken,
+			schema: {
+				body: BulkSetSettingsInputSchema,
+				response: { 200: SetupSettingsResponseSchema }
+			}
+		},
 		async (request, reply) => {
 			const input = request.body as z.infer<typeof BulkSetSettingsInputSchema>;
 			await settingsRepository.bulkSet(input.settings);
@@ -235,30 +318,46 @@ export async function setupRoutes(app: FastifyInstance): Promise<void> {
 		}
 	);
 
-	app.post('/api/setup/complete', { preHandler: requireSetupToken }, async (_request, reply) => {
-		const [idps, aiProviders] = await Promise.all([
-			idpRepository.listActive(),
-			aiProviderRepository.listActive()
-		]);
+	app.post(
+		'/api/setup/complete',
+		{
+			preHandler: requireSetupToken,
+			schema: {
+				response: {
+					200: SetupCompleteResponseSchema,
+					400: SetupErrorResponseSchema,
+					401: SetupErrorResponseSchema,
+					403: SetupErrorResponseSchema
+				}
+			}
+		},
+		async (_request, reply) => {
+			const [idps, aiProviders] = await Promise.all([
+				idpRepository.listActive(),
+				aiProviderRepository.listActive()
+			]);
 
-		if (idps.length === 0) {
-			return reply
-				.status(400)
-				.send({ error: 'Cannot complete setup: no IDP providers configured' });
+			if (idps.length === 0) {
+				return reply
+					.status(400)
+					.send({ error: 'Cannot complete setup: no IDP providers configured' });
+			}
+
+			if (aiProviders.length === 0) {
+				return reply
+					.status(400)
+					.send({ error: 'Cannot complete setup: no AI providers configured' });
+			}
+
+			await settingsRepository.markSetupComplete();
+			invalidateSetupToken();
+
+			return reply.send({
+				success: true,
+				message: 'Setup completed successfully',
+				idpCount: idps.length,
+				aiProviderCount: aiProviders.length
+			});
 		}
-
-		if (aiProviders.length === 0) {
-			return reply.status(400).send({ error: 'Cannot complete setup: no AI providers configured' });
-		}
-
-		await settingsRepository.markSetupComplete();
-		invalidateSetupToken();
-
-		return reply.send({
-			success: true,
-			message: 'Setup completed successfully',
-			idpCount: idps.length,
-			aiProviderCount: aiProviders.length
-		});
-	});
+	);
 }

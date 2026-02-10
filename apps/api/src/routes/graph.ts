@@ -17,12 +17,22 @@ const GraphQuerySchema = z.object({
 	limit: z.coerce.number().int().min(1).max(200).default(50)
 });
 
+const GraphResponseSchema = z.object({ type: z.string() }).passthrough();
+const GraphErrorResponseSchema = z.object({ error: z.string() });
+
 export async function graphRoutes(app: FastifyInstance): Promise<void> {
 	app.get(
 		'/api/v1/graph',
 		{
 			preHandler: requireAuth('admin:audit'),
-			schema: { querystring: GraphQuerySchema }
+			schema: {
+				querystring: GraphQuerySchema,
+				response: {
+					200: GraphResponseSchema,
+					400: GraphErrorResponseSchema,
+					503: GraphErrorResponseSchema
+				}
+			}
 		},
 		async (request, reply) => {
 			const { type, userId, toolName, limit } = request.query as z.infer<typeof GraphQuerySchema>;

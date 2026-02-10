@@ -1,15 +1,34 @@
 import type { FastifyInstance } from 'fastify';
+import { z } from 'zod';
 import { blockchainAuditRepository } from '@portal/shared/server/oracle/repositories/blockchain-audit-repository';
 import { createLogger } from '@portal/shared/server/logger';
 import { requireAuth } from '../plugins/rbac.js';
 
 const log = createLogger('api:audit');
 
+const VerifyAuditResponseSchema = z.object({
+	valid: z.boolean(),
+	rowCount: z.number(),
+	lastVerified: z.string().nullable(),
+	verifiedAt: z.string()
+});
+
+const AuditErrorResponseSchema = z.object({
+	error: z.string(),
+	valid: z.literal(false)
+});
+
 export async function auditRoutes(app: FastifyInstance): Promise<void> {
 	app.get(
 		'/api/v1/audit/verify',
 		{
-			preHandler: requireAuth('admin:audit')
+			preHandler: requireAuth('admin:audit'),
+			schema: {
+				response: {
+					200: VerifyAuditResponseSchema,
+					503: AuditErrorResponseSchema
+				}
+			}
 		},
 		async (request, reply) => {
 			try {

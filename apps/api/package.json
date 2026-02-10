@@ -27,16 +27,19 @@
 		"@fastify/swagger-ui": "^5.2.5",
 		"@mastra/core": "^1.2.0",
 		"@mastra/fastify": "^1.1.1",
+		"@mastra/mcp": "^1.0.0",
 		"@mastra/memory": "^1.1.0",
 		"@mastra/rag": "2.1.0",
 		"@portal/shared": "workspace:*",
 		"ai": "^6.0.69",
+		"dockerode": "^4.0.9",
 		"fastify": "^5.7.4",
 		"fastify-plugin": "^5.1.0",
 		"fastify-type-provider-zod": "^6.1.0",
 		"zod": "^4.3.6"
 	},
 	"devDependencies": {
+		"@types/dockerode": "^4.0.1",
 		"tsx": "^4.21.0",
 		"typescript": "^5.9.3",
 		"vitest": "^4.0.18"

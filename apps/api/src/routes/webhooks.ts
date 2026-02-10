@@ -27,22 +27,65 @@ const UpdateWebhookBody = z
 
 const WebhookIdParam = z.object({ id: z.string() });
 
+const WebhookErrorSchema = z.object({ error: z.string() });
+
+const DateOrString = z.union([z.string(), z.date()]);
+
+const WebhookItemSchema = z.object({
+	id: z.string(),
+	url: z.string(),
+	events: z.array(z.string()),
+	status: z.string(),
+	failureCount: z.number().optional(),
+	createdAt: DateOrString.optional(),
+	updatedAt: DateOrString.optional()
+});
+
+const WebhookListResponseSchema = z.object({
+	webhooks: z.array(WebhookItemSchema)
+});
+
+const WebhookCreateResponseSchema = z.object({
+	id: z.string(),
+	secret: z.string()
+});
+
 export async function webhookRoutes(app: FastifyInstance): Promise<void> {
 	// GET /api/v1/webhooks — list webhooks for org
-	app.get('/api/v1/webhooks', { preHandler: requireAuth('tools:read') }, async (request, reply) => {
-		const orgId = resolveOrgId(request);
-		if (!orgId) return reply.status(403).send({ error: 'No organization context' });
+	app.get(
+		'/api/v1/webhooks',
+		{
+			preHandler: requireAuth('tools:read'),
+			schema: {
+				response: {
+					200: WebhookListResponseSchema,
+					403: WebhookErrorSchema
+				}
+			}
+		},
+		async (request, reply) => {
+			const orgId = resolveOrgId(request);
+			if (!orgId) return reply.status(403).send({ error: 'No organization context' });
 
-		const webhooks = await webhookRepository.list(orgId);
-		return reply.send({ webhooks });
-	});
+			const webhooks = await webhookRepository.list(orgId);
+			return reply.send({ webhooks });
+		}
+	);
 
 	// POST /api/v1/webhooks — create webhook
 	app.post(
 		'/api/v1/webhooks',
 		{
 			preHandler: requireAuth('tools:execute'),
-			schema: { body: CreateWebhookBody }
+			schema: {
+				body: CreateWebhookBody,
+				response: {
+					201: WebhookCreateResponseSchema,
+					400: WebhookErrorSchema,
+					403: WebhookErrorSchema,
+					503: WebhookErrorSchema
+				}
+			}
 		},
 		async (request, reply) => {
 			const orgId = resolveOrgId(request);
@@ -82,7 +125,14 @@ export async function webhookRoutes(app: FastifyInstance): Promise<void> {
 		'/api/v1/webhooks/:id',
 		{
 			preHandler: requireAuth('tools:read'),
-			schema: { params: WebhookIdParam }
+			schema: {
+				params: WebhookIdParam,
+				response: {
+					200: WebhookItemSchema,
+					403: WebhookErrorSchema,
+					404: WebhookErrorSchema
+				}
+			}
 		},
 		async (request, reply) => {
 			const orgId = resolveOrgId(request);
@@ -109,7 +159,16 @@ export async function webhookRoutes(app: FastifyInstance): Promise<void> {
 		'/api/v1/webhooks/:id',
 		{
 			preHandler: requireAuth('tools:execute'),
-			schema: { params: WebhookIdParam, body: UpdateWebhookBody }
+			schema: {
+				params: WebhookIdParam,
+				body: UpdateWebhookBody,
+				response: {
+					200: z.object({ ok: z.literal(true) }),
+					400: WebhookErrorSchema,
+					403: WebhookErrorSchema,
+					404: WebhookErrorSchema
+				}
+			}
 		},
 		async (request, reply) => {
 			const orgId = resolveOrgId(request);
@@ -135,7 +194,13 @@ export async function webhookRoutes(app: FastifyInstance): Promise<void> {
 		'/api/v1/webhooks/:id',
 		{
 			preHandler: requireAuth('tools:execute'),
-			schema: { params: WebhookIdParam }
+			schema: {
+				params: WebhookIdParam,
+				response: {
+					204: z.null(),
+					403: WebhookErrorSchema
+				}
+			}
 		},
 		async (request, reply) => {
 			const orgId = resolveOrgId(request);
@@ -143,7 +208,7 @@ export async function webhookRoutes(app: FastifyInstance): Promise<void> {
 
 			const { id } = request.params as z.infer<typeof WebhookIdParam>;
 			await webhookRepository.delete(id, orgId);
-			return reply.status(204).send();
+			return reply.status(204).send(null);
 		}
 	);
 }
