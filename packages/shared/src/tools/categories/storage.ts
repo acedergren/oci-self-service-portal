@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { ToolEntry } from '../types.js';
-import { executeOCI, executeOCIAsync, requireCompartmentId } from '../executor.js';
+import { executeOCISDK, normalizeSDKResponse, requireCompartmentId } from '../executor-sdk.js';
+import { executeOCIAsync } from '../executor.js';
 
 const compartmentIdSchema = z
 	.string()
@@ -27,19 +28,14 @@ export const storageTools: ToolEntry[] = [
 			const compartmentId = requireCompartmentId(args);
 			let namespace = args.namespace as string | undefined;
 			if (!namespace) {
-				const nsResult = (await executeOCIAsync(['os', 'ns', 'get'])) as { data: string };
-				namespace = nsResult.data;
+				const nsResp = await executeOCISDK('objectStorage', 'getNamespace', {});
+				namespace = (nsResp as { value: string }).value;
 			}
-			return executeOCIAsync([
-				'os',
-				'bucket',
-				'list',
-				'--compartment-id',
+			const response = await executeOCISDK('objectStorage', 'listBuckets', {
 				compartmentId,
-				'--namespace',
-				namespace,
-				'--all'
-			]);
+				namespaceName: namespace
+			});
+			return normalizeSDKResponse(response);
 		}
 	},
 	{
@@ -61,22 +57,18 @@ export const storageTools: ToolEntry[] = [
 			const compartmentId = requireCompartmentId(args);
 			let namespace = args.namespace as string | undefined;
 			if (!namespace) {
-				const nsResult = (await executeOCIAsync(['os', 'ns', 'get'])) as { data: string };
-				namespace = nsResult.data;
+				const nsResp = await executeOCISDK('objectStorage', 'getNamespace', {});
+				namespace = (nsResp as { value: string }).value;
 			}
-			return executeOCIAsync([
-				'os',
-				'bucket',
-				'create',
-				'--compartment-id',
-				compartmentId,
-				'--namespace',
-				namespace,
-				'--name',
-				args.name as string,
-				'--public-access-type',
-				(args.publicAccessType as string) || 'NoPublicAccess'
-			]);
+			const response = await executeOCISDK('objectStorage', 'createBucket', {
+				namespaceName: namespace,
+				createBucketDetails: {
+					compartmentId,
+					name: args.name as string,
+					publicAccessType: (args.publicAccessType as string) || 'NoPublicAccess'
+				}
+			});
+			return normalizeSDKResponse(response);
 		}
 	},
 	{
@@ -95,19 +87,14 @@ export const storageTools: ToolEntry[] = [
 		executeAsync: async (args) => {
 			let namespace = args.namespace as string | undefined;
 			if (!namespace) {
-				const nsResult = (await executeOCIAsync(['os', 'ns', 'get'])) as { data: string };
-				namespace = nsResult.data;
+				const nsResp = await executeOCISDK('objectStorage', 'getNamespace', {});
+				namespace = (nsResp as { value: string }).value;
 			}
-			return executeOCIAsync([
-				'os',
-				'bucket',
-				'delete',
-				'--namespace',
-				namespace,
-				'--bucket-name',
-				args.bucketName as string,
-				'--force'
-			]);
+			const response = await executeOCISDK('objectStorage', 'deleteBucket', {
+				namespaceName: namespace,
+				bucketName: args.bucketName as string
+			});
+			return normalizeSDKResponse(response);
 		}
 	},
 	{
@@ -117,8 +104,10 @@ export const storageTools: ToolEntry[] = [
 		category: 'storage',
 		approvalLevel: 'auto',
 		parameters: z.object({}),
-		execute: () => {
-			return executeOCI(['os', 'ns', 'get']);
+		executeAsync: async () => {
+			const response = await executeOCISDK('objectStorage', 'getNamespace', {});
+			// SDK returns { value: "namespace-string" }, normalize to { data: "namespace-string" }
+			return { data: (response as { value: string }).value };
 		}
 	},
 	{
@@ -130,9 +119,9 @@ export const storageTools: ToolEntry[] = [
 		parameters: z.object({
 			compartmentId: compartmentIdSchema
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			return executeOCI([
+			return executeOCIAsync([
 				'artifacts',
 				'container',
 				'repository',
@@ -154,7 +143,7 @@ export const storageTools: ToolEntry[] = [
 			repositoryName: z.string().optional().describe('Filter by repository name'),
 			imageVersion: z.string().optional().describe('Filter by image version/tag')
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
 			const cliArgs = [
 				'artifacts',
@@ -167,7 +156,7 @@ export const storageTools: ToolEntry[] = [
 			];
 			if (args.repositoryName) cliArgs.push('--repository-name', args.repositoryName as string);
 			if (args.imageVersion) cliArgs.push('--display-name', args.imageVersion as string);
-			return executeOCI(cliArgs);
+			return executeOCIAsync(cliArgs);
 		}
 	}
 ];
