@@ -394,7 +394,7 @@ describe('017-vpd.sql migration', () => {
 		// Path is relative to monorepo root, not apps/api
 		const migrationPath = join(
 			process.cwd(),
-			'../../packages/shared/src/server/oracle/migrations/017-vpd.sql'
+			'../../packages/server/src/oracle/migrations/017-vpd.sql'
 		);
 
 		expect(existsSync(migrationPath)).toBe(true);
@@ -403,7 +403,7 @@ describe('017-vpd.sql migration', () => {
 	it('should contain six table policy definitions', () => {
 		const migrationPath = join(
 			process.cwd(),
-			'../../packages/shared/src/server/oracle/migrations/017-vpd.sql'
+			'../../packages/server/src/oracle/migrations/017-vpd.sql'
 		);
 
 		const content = readFileSync(migrationPath, 'utf-8');
@@ -430,7 +430,7 @@ describe('017-vpd.sql migration', () => {
 	it('should set update_check => TRUE for all policies', () => {
 		const migrationPath = join(
 			process.cwd(),
-			'../../packages/shared/src/server/oracle/migrations/017-vpd.sql'
+			'../../packages/server/src/oracle/migrations/017-vpd.sql'
 		);
 
 		const content = readFileSync(migrationPath, 'utf-8');
@@ -443,7 +443,7 @@ describe('017-vpd.sql migration', () => {
 	it('should define application context PORTAL_CTX', () => {
 		const migrationPath = join(
 			process.cwd(),
-			'../../packages/shared/src/server/oracle/migrations/017-vpd.sql'
+			'../../packages/server/src/oracle/migrations/017-vpd.sql'
 		);
 
 		const content = readFileSync(migrationPath, 'utf-8');
@@ -455,7 +455,7 @@ describe('017-vpd.sql migration', () => {
 	it('should define portal_ctx_pkg package with three procedures', () => {
 		const migrationPath = join(
 			process.cwd(),
-			'../../packages/shared/src/server/oracle/migrations/017-vpd.sql'
+			'../../packages/server/src/oracle/migrations/017-vpd.sql'
 		);
 
 		const content = readFileSync(migrationPath, 'utf-8');
@@ -475,7 +475,7 @@ describe('017-vpd.sql migration', () => {
 	it('should define portal_vpd_policy function', () => {
 		const migrationPath = join(
 			process.cwd(),
-			'../../packages/shared/src/server/oracle/migrations/017-vpd.sql'
+			'../../packages/server/src/oracle/migrations/017-vpd.sql'
 		);
 
 		const content = readFileSync(migrationPath, 'utf-8');
@@ -493,7 +493,7 @@ describe('017-vpd.sql migration', () => {
 	it('should use SELECT,INSERT,UPDATE,DELETE statement types', () => {
 		const migrationPath = join(
 			process.cwd(),
-			'../../packages/shared/src/server/oracle/migrations/017-vpd.sql'
+			'../../packages/server/src/oracle/migrations/017-vpd.sql'
 		);
 
 		const content = readFileSync(migrationPath, 'utf-8');

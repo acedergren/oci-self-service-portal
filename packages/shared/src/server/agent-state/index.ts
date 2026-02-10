@@ -1,5 +1,5 @@
-// packages/agent-state/src/index.ts
-export * from './types';
-export * from './schema';
-export * from './repository';
-export * from './connection';
+/**
+ * Re-export stub for backward compatibility.
+ * Actual implementation now lives in @portal/server.
+ */
+export * from '@portal/server/agent-state';
