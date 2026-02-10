@@ -1,12 +1,10 @@
 <script lang="ts">
-	import { Chat } from '@ai-sdk/svelte';
-	import { DefaultChatTransport } from 'ai';
 	import type { PageData } from './$types';
 	import { Spinner, Badge, ModelPicker, ApprovalDialog } from '$lib/components/ui/index.js';
 	import MarkdownRenderer from '$lib/components/ui/MarkdownRenderer.svelte';
 	import { ThoughtPanel, ToolPanel, AgentWorkflowPanel } from '$lib/components/panels/index.js';
 	import type { AgentPlan } from '$lib/components/panels/index.js';
-	import type { ToolCall, PendingApproval } from '@portal/shared/tools/types';
+	import type { ToolCall } from '@portal/shared/tools/types';
 	import { inferApprovalLevel, requiresApproval } from '@portal/shared/tools/types';
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import {
@@ -16,8 +14,8 @@
 		useDeleteSession
 	} from '@portal/shared/query/hooks';
 	import { queryKeys, fetchSessionDetail } from '@portal/shared/query';
-	import { extractToolParts, getToolState, formatToolName } from '$lib/utils/message-parts.js';
 	import { BottomNav, Drawer } from '$lib/components/mobile/index.js';
+	import { createChatContext } from '$lib/components/chat/ai-context.svelte.js';
 
 	let { data }: { data: PageData } = $props();
 
@@ -123,13 +121,6 @@
 		}
 	}
 
-	// Agent state - derived from live message data
-	let currentThought = $state<string | undefined>(undefined);
-	let reasoningSteps = $state<Array<{ id: string; content: string; timestamp: number }>>([]);
-	let pendingApproval = $state<PendingApproval | undefined>(undefined);
-	let isExecutingApproval = $state(false);
-	let fetchingApprovalFor = $state<string | null>(null);
-
 	// Error notification state
 	let errorNotification = $state<{ message: string; timestamp: number } | null>(null);
 
@@ -149,38 +140,6 @@
 		errorNotification = null;
 	}
 
-	// Derive tool calls from the last assistant message
-	const toolCalls = $derived(() => {
-		const messages = chat.messages;
-		if (messages.length === 0) return [];
-
-		// Get all tool parts from all assistant messages
-		const allToolParts: ToolCall[] = [];
-		for (const msg of messages) {
-			if (msg.role !== 'assistant') continue;
-			const parts = extractToolParts(msg.parts as Array<{ type: string; [key: string]: unknown }>);
-			for (const part of parts) {
-				allToolParts.push({
-					id: part.toolCallId,
-					name: formatToolName(part.type),
-					args: (part.input ?? {}) as Record<string, unknown>,
-					status: getToolState(part.state),
-					startedAt: Date.now(),
-					completedAt: part.state === 'result' ? Date.now() : undefined
-				});
-			}
-		}
-		return allToolParts;
-	});
-
-	// Watch tool calls for ones that need approval
-	$effect(() => {
-		const calls = toolCalls();
-		if (calls.length > 0 && !pendingApproval && !isExecutingApproval) {
-			checkForPendingApprovals();
-		}
-	});
-
 	// Custom fetch that injects the current model into request body
 	const modelAwareFetch: typeof fetch = async (input, init) => {
 		if (init?.body && typeof init.body === 'string') {
@@ -195,11 +154,16 @@
 		return fetch(input, init);
 	};
 
-	const chat = new Chat({
-		transport: new DefaultChatTransport({
-			api: '/api/chat',
-			fetch: modelAwareFetch
-		})
+	// Create shared chat context — encapsulates Chat instance + derived state
+	const ctx = createChatContext({ customFetch: modelAwareFetch });
+	const { chat } = ctx;
+
+	// Watch tool calls for ones that need approval
+	$effect(() => {
+		const calls = ctx.toolCalls;
+		if (calls.length > 0 && !ctx.pendingApproval && !ctx.isExecutingApproval) {
+			checkForPendingApprovals();
+		}
 	});
 
 	async function handleSubmit(event: SubmitEvent) {
@@ -209,14 +173,14 @@
 		const isFirstMessage = chat.messages.length === 0;
 
 		// Simulate thinking state
-		currentThought = 'Analyzing your request...';
+		ctx.currentThought = 'Analyzing your request...';
 
 		chat.sendMessage({ text: input });
 		input = '';
 
 		// Clear thought after a delay
 		setTimeout(() => {
-			currentThought = undefined;
+			ctx.currentThought = undefined;
 		}, 2000);
 
 		// Refresh session title after first message
@@ -235,9 +199,7 @@
 		sessionTokens = { input: 0, output: 0, cost: 0 };
 
 		// Clear agent state
-		currentThought = undefined;
-		reasoningSteps = [];
-		pendingApproval = undefined;
+		ctx.clearAgentState();
 	}
 
 	async function handleSelectSession(id: string) {
@@ -259,9 +221,7 @@
 			}
 
 			// Clear agent state
-			currentThought = undefined;
-			reasoningSteps = [];
-			pendingApproval = undefined;
+			ctx.clearAgentState();
 		} catch (error) {
 			console.error('Failed to load session:', error);
 		}
@@ -290,7 +250,7 @@
 			id: 'tools',
 			label: 'Tools',
 			icon: '⚙',
-			badge: toolCalls().filter((t) => t.status === 'running').length
+			badge: ctx.toolCalls.filter((t) => t.status === 'running').length
 		},
 		{ id: 'settings', label: 'Settings', icon: '⚡' }
 	]);
@@ -302,18 +262,18 @@
 	}
 
 	async function handleToolApprove(toolCallId: string) {
-		if (!pendingApproval || isExecutingApproval) return;
+		if (!ctx.pendingApproval || ctx.isExecutingApproval) return;
 
-		isExecutingApproval = true;
+		ctx.isExecutingApproval = true;
 
 		try {
 			const response = await fetch('/api/tools/execute', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					toolCallId: pendingApproval.toolCallId,
-					toolName: pendingApproval.toolName,
-					args: pendingApproval.args,
+					toolCallId: ctx.pendingApproval.toolCallId,
+					toolName: ctx.pendingApproval.toolName,
+					args: ctx.pendingApproval.args,
 					approved: true,
 					sessionId: localSessionId
 				})
@@ -337,13 +297,13 @@
 			console.error('Failed to execute approved tool:', error);
 			showError(`Failed to execute tool: ${message}`);
 		} finally {
-			isExecutingApproval = false;
-			pendingApproval = undefined;
+			ctx.isExecutingApproval = false;
+			ctx.pendingApproval = undefined;
 		}
 	}
 
 	async function handleToolReject(toolCallId: string) {
-		if (!pendingApproval) return;
+		if (!ctx.pendingApproval) return;
 
 		// Log the rejection
 		try {
@@ -351,9 +311,9 @@
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
-					toolCallId: pendingApproval.toolCallId,
-					toolName: pendingApproval.toolName,
-					args: pendingApproval.args,
+					toolCallId: ctx.pendingApproval.toolCallId,
+					toolName: ctx.pendingApproval.toolName,
+					args: ctx.pendingApproval.args,
 					approved: false,
 					sessionId: localSessionId
 				})
@@ -366,15 +326,15 @@
 			console.error('Failed to log rejection:', error);
 		}
 
-		pendingApproval = undefined;
+		ctx.pendingApproval = undefined;
 	}
 
 	// Check tool calls for ones that need approval
 	function checkForPendingApprovals() {
 		// Guard against concurrent fetches (race condition fix)
-		if (pendingApproval || fetchingApprovalFor) return;
+		if (ctx.pendingApproval || ctx.fetchingApprovalFor) return;
 
-		const calls = toolCalls();
+		const calls = ctx.toolCalls;
 		// Find any tool that's in 'pending' state and requires approval
 		for (const call of calls) {
 			if (call.status === 'pending') {
@@ -383,7 +343,7 @@
 
 				if (requiresApproval(approvalLevel)) {
 					// Set guard before async operation
-					fetchingApprovalFor = call.id;
+					ctx.fetchingApprovalFor = call.id;
 					// Fetch tool info to create approval request
 					fetchToolApprovalInfo(call);
 					return; // Only process one at a time
@@ -404,7 +364,7 @@
 			const info = await response.json();
 
 			if (info.requiresApproval) {
-				pendingApproval = {
+				ctx.pendingApproval = {
 					toolCallId: call.id,
 					toolName: call.name,
 					category: info.category,
@@ -421,7 +381,7 @@
 			showError(`Failed to get tool info for ${call.name}`);
 		} finally {
 			// Always clear the guard to allow future checks
-			fetchingApprovalFor = null;
+			ctx.fetchingApprovalFor = null;
 		}
 	}
 
@@ -464,11 +424,11 @@
 			modelPickerOpen = !modelPickerOpen;
 		}
 
-		if (pendingApproval) {
+		if (ctx.pendingApproval) {
 			if (event.key === 'y') {
-				handleToolApprove(pendingApproval.toolCallId);
+				handleToolApprove(ctx.pendingApproval.toolCallId);
 			} else if (event.key === 'n') {
-				handleToolReject(pendingApproval.toolCallId);
+				handleToolReject(ctx.pendingApproval.toolCallId);
 			}
 		}
 
@@ -478,9 +438,10 @@
 		}
 	}
 
-	const isLoading = $derived(chat.status === 'submitted' || chat.status === 'streaming');
-	const isThinking = $derived(chat.status === 'submitted');
-	const isStreaming = $derived(chat.status === 'streaming');
+	// Derived status flags — read from context for consistency
+	const isLoading = $derived(ctx.isLoading);
+	const isThinking = $derived(ctx.isThinking);
+	const isStreaming = $derived(ctx.isStreaming);
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -824,15 +785,15 @@
 			>
 				<ThoughtPanel
 					isOpen={thoughtOpen}
-					thought={currentThought}
+					thought={ctx.currentThought}
 					{isThinking}
 					ontoggle={() => (thoughtOpen = !thoughtOpen)}
 				/>
 
 				<ToolPanel
 					isOpen={toolsOpen}
-					tools={toolCalls()}
-					{pendingApproval}
+					tools={ctx.toolCalls}
+					pendingApproval={ctx.pendingApproval}
 					ontoggle={() => (toolsOpen = !toolsOpen)}
 					onapprove={handleToolApprove}
 					onreject={handleToolReject}
@@ -853,8 +814,8 @@
 			<div class="p-3">
 				<ToolPanel
 					isOpen={true}
-					tools={toolCalls()}
-					{pendingApproval}
+					tools={ctx.toolCalls}
+					pendingApproval={ctx.pendingApproval}
 					ontoggle={() => {}}
 					onapprove={handleToolApprove}
 					onreject={handleToolReject}
@@ -880,8 +841,8 @@
 />
 
 <!-- Approval Dialog for destructive operations -->
-{#if pendingApproval}
-	{@const approval = pendingApproval}
+{#if ctx.pendingApproval}
+	{@const approval = ctx.pendingApproval}
 	<ApprovalDialog
 		{approval}
 		onApprove={() => handleToolApprove(approval.toolCallId)}
@@ -917,7 +878,7 @@
 		<span>[o] tools</span>
 		<span>[w] workflow</span>
 		<span>[m] model</span>
-		{#if pendingApproval}
+		{#if ctx.pendingApproval}
 			<span class="text-warning">[y] approve [n] reject</span>
 		{/if}
 	</div>

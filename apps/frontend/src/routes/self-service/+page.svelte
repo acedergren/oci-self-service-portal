@@ -1,7 +1,6 @@
 <script lang="ts">
-	import { Chat } from '@ai-sdk/svelte';
-	import { DefaultChatTransport } from 'ai';
 	import { useModels } from '@portal/shared/query/hooks';
+	import { createChatContext } from '$lib/components/chat/ai-context.svelte.js';
 	import {
 		WORKFLOW_TEMPLATES,
 		createPlanFromTemplate,
@@ -58,12 +57,8 @@
 		return fetch(input, init);
 	};
 
-	const chat = new Chat({
-		transport: new DefaultChatTransport({
-			api: '/api/chat',
-			fetch: modelAwareFetch
-		})
-	});
+	const ctx = createChatContext({ customFetch: modelAwareFetch });
+	const { chat } = ctx;
 
 	// ── Event handlers ──────────────────────────────────────────────────────
 	function sendPrompt(prompt: string) {
