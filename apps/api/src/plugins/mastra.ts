@@ -20,12 +20,14 @@ import { OracleStore } from '../mastra/storage/oracle-store.js';
 import { OracleVectorStore } from '../mastra/rag/oracle-vector-store.js';
 import { buildMastraTools } from '../mastra/tools/registry.js';
 import { createCloudAdvisorAgent, DEFAULT_MODEL } from '../mastra/agents/cloud-advisor.js';
+import { mcpConnectionManager } from '../services/mcp-connection-manager.js';
 
 declare module 'fastify' {
 	interface FastifyInstance {
 		mastra: Mastra;
 		vectorStore?: OracleVectorStore;
 		ociEmbedder?: EmbeddingModel;
+		mcpConnectionManager: typeof mcpConnectionManager;
 	}
 }
 
@@ -97,6 +99,16 @@ const mastraPlugin: FastifyPluginAsync = async (fastify) => {
 	}
 	fastify.decorate('ociEmbedder', ociEmbedder);
 
+	// ── Decorate with MCP connection manager ───────────────────────────
+	fastify.decorate('mcpConnectionManager', mcpConnectionManager);
+
+	// ── Initialize MCP connection manager (reconnect previously-connected servers)
+	if (hasOracle) {
+		mcpConnectionManager.initialize().catch((err) => {
+			fastify.log.error({ err }, 'Failed to initialize MCP connection manager');
+		});
+	}
+
 	// ── Create MastraServer and register routes ────────────────────────
 	const server = new MastraServer({
 		app: fastify,
@@ -122,6 +134,11 @@ const mastraPlugin: FastifyPluginAsync = async (fastify) => {
 	});
 
 	await server.init();
+
+	// ── Add cleanup hook for MCP connection manager ────────────────────
+	fastify.addHook('onClose', async () => {
+		await mcpConnectionManager.shutdown();
+	});
 
 	fastify.log.info(
 		`Mastra plugin registered: ${Object.keys(tools).length} tools, 1 agent (CloudAdvisor), ` +

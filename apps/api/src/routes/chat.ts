@@ -16,7 +16,7 @@ import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { ValidationError } from '@portal/shared/server/errors.js';
 import { FALLBACK_MODEL_ALLOWLIST, DEFAULT_MODEL } from '../mastra/agents/cloud-advisor.js';
 import { getProviderRegistry, getEnabledModelIds } from '../mastra/models/index.js';
-import { requireAuth } from '../plugins/rbac.js';
+import { requireAuth, resolveOrgId } from '../plugins/rbac.js';
 
 // ── Constants ────────────────────────────────────────────────────────────
 
@@ -81,6 +81,20 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
 			// ── Get CloudAdvisor agent ──────────────────────────────────────
 			const agent = fastify.mastra.getAgent('cloud-advisor');
 
+			// ── Load MCP toolsets for org (non-blocking — chat works without them)
+			let mcpToolsets: Record<string, unknown> | undefined;
+			const orgId = resolveOrgId(request);
+			if (orgId && fastify.mcpConnectionManager) {
+				try {
+					const toolsets = await fastify.mcpConnectionManager.getToolsets(orgId);
+					if (Object.keys(toolsets).length > 0) {
+						mcpToolsets = toolsets;
+					}
+				} catch (err) {
+					request.log.warn({ err, orgId }, 'Failed to load MCP toolsets, continuing without');
+				}
+			}
+
 			// ── Stream response ─────────────────────────────────────────────
 			// Use per-request UUID for anonymous users to prevent memory sharing (S-8)
 			const userId = request.user?.id ?? `anon-${randomUUID()}`;
@@ -104,7 +118,9 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
 						resource: userId
 					},
 					maxSteps: MAX_AGENT_STEPS,
-					abortSignal: controller.signal
+					abortSignal: controller.signal,
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					toolsets: mcpToolsets as any
 				});
 
 				// Set SSE headers for streaming
