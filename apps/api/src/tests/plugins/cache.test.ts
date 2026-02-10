@@ -26,10 +26,22 @@ const mockClient = {
 	status: 'ready' as const
 };
 
-const MockRedis = vi.fn(() => mockClient as unknown as Redis);
+// Constructor tracking
+const constructorCalls: Array<{ url?: string }> = [];
+let shouldThrowOnConstruct = false;
+
+class MockRedisClass {
+	constructor(url?: string) {
+		if (shouldThrowOnConstruct) {
+			throw new Error('Connection refused');
+		}
+		constructorCalls.push({ url });
+		return mockClient as unknown as Redis;
+	}
+}
 
 vi.mock('iovalkey', () => ({
-	default: MockRedis
+	default: MockRedisClass
 }));
 
 describe('cache plugin', () => {
@@ -37,12 +49,15 @@ describe('cache plugin', () => {
 
 	beforeEach(async () => {
 		vi.clearAllMocks();
+		constructorCalls.length = 0; // Clear constructor call tracking
+		shouldThrowOnConstruct = false; // Reset throw flag
 		mockClient.status = 'ready';
 		mockClient.get.mockResolvedValue(null);
 		mockClient.set.mockResolvedValue('OK');
 		mockClient.setex.mockResolvedValue('OK');
 		mockClient.del.mockResolvedValue(1);
 		mockClient.quit.mockResolvedValue('OK');
+		mockClient.on.mockReturnValue(mockClient); // Return mockClient for chaining
 
 		app = Fastify({ logger: false });
 	});
@@ -84,14 +99,20 @@ describe('cache plugin', () => {
 		});
 
 		it('should survive Valkey connection failure on startup', async () => {
-			MockRedis.mockImplementationOnce(() => {
-				throw new Error('Connection refused');
-			});
+			shouldThrowOnConstruct = true;
 
 			const cachePlugin = await import('../../plugins/cache.js');
 
-			await expect(app.register(cachePlugin.default)).resolves.toBeUndefined();
-			await expect(app.ready()).resolves.toBeDefined();
+			// Plugin should register successfully (fail-open)
+			await app.register(cachePlugin.default);
+
+			// Cache should be decorated but not connected
+			expect(app.cache).toBeDefined();
+			expect(app.cache.isConnected).toBe(false);
+
+			// App should still be usable (fail-open behavior)
+			const result = await app.cache.get('test', 'key');
+			expect(result).toBeNull();
 		});
 	});
 
@@ -103,7 +124,8 @@ describe('cache plugin', () => {
 			const cachePlugin = await import('../../plugins/cache.js');
 			await app.register(cachePlugin.default);
 
-			expect(MockRedis).toHaveBeenCalledWith('redis://env-test:6379');
+			expect(constructorCalls).toHaveLength(1);
+			expect(constructorCalls[0]?.url).toBe('redis://env-test:6379');
 
 			// Restore
 			if (originalEnv) {
@@ -120,7 +142,8 @@ describe('cache plugin', () => {
 			const cachePlugin = await import('../../plugins/cache.js');
 			await app.register(cachePlugin.default, { url: 'redis://option-test:6379' });
 
-			expect(MockRedis).toHaveBeenCalledWith('redis://option-test:6379');
+			expect(constructorCalls).toHaveLength(1);
+			expect(constructorCalls[0]?.url).toBe('redis://option-test:6379');
 
 			// Restore
 			if (originalEnv) {

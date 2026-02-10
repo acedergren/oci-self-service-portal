@@ -24,10 +24,18 @@ const mockClient = {
 	status: 'ready' as const
 };
 
-const MockRedis = vi.fn(() => mockClient as unknown as Redis);
+// Constructor tracking
+const constructorCalls: Array<{ url?: string }> = [];
+
+class MockRedisClass {
+	constructor(url?: string) {
+		constructorCalls.push({ url });
+		return mockClient as unknown as Redis;
+	}
+}
 
 vi.mock('iovalkey', () => ({
-	default: MockRedis
+	default: MockRedisClass
 }));
 
 describe('CacheService', () => {
@@ -35,12 +43,14 @@ describe('CacheService', () => {
 
 	beforeEach(async () => {
 		vi.clearAllMocks();
+		constructorCalls.length = 0; // Clear constructor call tracking
 		mockClient.status = 'ready';
 		mockClient.get.mockResolvedValue(null);
 		mockClient.set.mockResolvedValue('OK');
 		mockClient.setex.mockResolvedValue('OK');
 		mockClient.del.mockResolvedValue(1);
 		mockClient.quit.mockResolvedValue('OK');
+		mockClient.on.mockReturnValue(mockClient); // Return mockClient for chaining
 
 		// Dynamic import after mocks
 		const mod = await import('../../services/cache.js');
@@ -56,14 +66,16 @@ describe('CacheService', () => {
 			const service = new CacheService({ url: 'redis://test:6379' });
 			await service.connect();
 
-			expect(MockRedis).toHaveBeenCalledWith('redis://test:6379');
+			expect(constructorCalls).toHaveLength(1);
+			expect(constructorCalls[0]?.url).toBe('redis://test:6379');
 		});
 
 		it('should default to localhost when no URL provided', async () => {
 			const service = new CacheService({});
 			await service.connect();
 
-			expect(MockRedis).toHaveBeenCalledWith();
+			expect(constructorCalls).toHaveLength(1);
+			expect(constructorCalls[0]?.url).toBeUndefined();
 		});
 
 		it('should set isConnected to true on ready event', async () => {
