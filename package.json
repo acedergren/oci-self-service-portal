@@ -14,6 +14,7 @@
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"check": "pnpm --filter @portal/frontend check",
+		"knip": "knip",
 		"prepare": "git config core.hooksPath .githooks"
 	},
 	"devDependencies": {

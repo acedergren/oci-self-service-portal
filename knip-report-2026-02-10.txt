@@ -1,0 +1,117 @@
+No Svelte config file found in /Users/acedergr/Projects/oci-self-service-portal - using SvelteKit's default configuration without an adapter.
+Unused files (7)
+apps/api/src/mastra/tools/index.ts  
+apps/api/src/plugins/index.ts       
+apps/api/src/routes/index.ts        
+tests/e2e/demo-runner.ts            
+tests/e2e/index.ts                  
+tests/e2e/self-service-portal.e2e.ts
+tests/e2e/types.ts                  
+Unused dependencies (16)
+@fastify/compress               apps/api/package.json:21:4       
+@fastify/schedule               apps/api/package.json:27:4       
+@fastify/sse                    apps/api/package.json:29:4       
+@fastify/swagger-ui             apps/api/package.json:31:4       
+@mastra/evals                   apps/api/package.json:34:4       
+@mastra/rag                     apps/api/package.json:38:4       
+@mastra/sentry                  apps/api/package.json:39:4       
+fastify-graceful-shutdown       apps/api/package.json:45:4       
+rate-limiter-flexible           apps/api/package.json:49:4       
+zod-validation-error            apps/api/package.json:51:4       
+@sentry/sveltekit               apps/frontend/package.json:21:4  
+oracledb                        apps/frontend/package.json:30:4  
+pino                            apps/frontend/package.json:31:4  
+uuid                            apps/frontend/package.json:34:4  
+@acedergren/oci-genai-provider  packages/shared/package.json:53:4
+@modelcontextprotocol/sdk       packages/shared/package.json:54:4
+Unused devDependencies (11)
+@tailwindcss/typography            apps/frontend/package.json:41:4
+bits-ui                            apps/frontend/package.json:44:4
+postcss                            apps/frontend/package.json:45:4
+tailwind-variants                  apps/frontend/package.json:48:4
+tailwindcss                        apps/frontend/package.json:49:4
+@arethetypeswrong/cli              package.json:21:4              
+@stoplight/spectral-cli            package.json:23:4              
+@stoplight/spectral-owasp-ruleset  package.json:24:4              
+madge                              package.json:29:4              
+publint                            package.json:32:4              
+syncpack                           package.json:33:4              
+Unlisted dependencies (5)
+@ai-sdk/azure         apps/api/src/mastra/models/provider-registry.ts:135:32       
+@tanstack/query-core  packages/shared/src/query/options.ts:1:31                    
+pino-pretty           packages/shared/src/server/logger.ts:103:8                   
+eventsource           packages/shared/src/server/mcp-client/transports/sse.ts:51:22
+@sentry/node          packages/shared/src/server/sentry.ts:81:20                   
+Unresolved imports (5)
+$lib/server/feature-flags.js  apps/frontend/src/hooks.server.ts:23:54                                     
+$lib/server/deprecation.js    apps/frontend/src/routes/api/workflows/[id]/+server.ts:18:39                
+$lib/server/deprecation.js    apps/frontend/src/routes/api/workflows/[id]/run/+server.ts:17:39            
+$lib/server/deprecation.js    apps/frontend/src/routes/api/workflows/+server.ts:9:39                      
+$lib/server/deprecation.js    apps/frontend/src/routes/api/workflows/runs/[runId]/approve/+server.ts:18:39
+Unused exports (29)
+createPortalMCPServer         function  apps/api/src/mastra/mcp/portal-mcp-server.ts:209:17
+EMBEDDING_MODEL                         apps/api/src/mastra/rag/oci-embedder.ts:196:10     
+getDefaultCompartmentId       function  apps/api/src/mastra/tools/executor.ts:41:17        
+createAISDKToolsWithApproval  function  apps/api/src/mastra/tools/registry.ts:177:17       
+toolDefinitions                         apps/api/src/mastra/tools/registry.ts:245:10       
+asyncToolExecutors                      apps/api/src/mastra/tools/registry.ts:245:27       
+isReadOnlyOperation           function  apps/api/src/mastra/tools/types.ts:115:17          
+isDestructiveOperation        function  apps/api/src/mastra/tools/types.ts:123:17          
+inferApprovalLevel            function  apps/api/src/mastra/tools/types.ts:131:17          
+DESTRUCTIVE_TOOL_WARNINGS               apps/api/src/mastra/tools/types.ts:140:14          
+getToolWarning                function  apps/api/src/mastra/tools/types.ts:166:17          
+requiresApproval              function  apps/api/src/mastra/tools/types.ts:173:17          
+VALID_REQUEST_ID                        apps/api/src/plugins/request-logger.ts:9:14        
+HealthCheckResponseSchema               apps/api/src/routes/schemas.ts:7:14                
+SessionsQuerySchema                     apps/api/src/routes/schemas.ts:28:14               
+CreateSessionSchema                     apps/api/src/routes/schemas.ts:36:14               
+SessionParamsSchema                     apps/api/src/routes/schemas.ts:44:14               
+SessionResponseSchema                   apps/api/src/routes/schemas.ts:50:14               
+SessionListResponseSchema               apps/api/src/routes/schemas.ts:65:14               
+ActivityQuerySchema                     apps/api/src/routes/schemas.ts:76:14               
+ActivityItemSchema                      apps/api/src/routes/schemas.ts:83:14               
+ActivityResponseSchema                  apps/api/src/routes/schemas.ts:93:14               
+ErrorResponseSchema                     apps/api/src/routes/schemas.ts:135:14              
+addPendingApproval            function  apps/api/src/services/approvals.ts:28:17           
+startCleanupTimer             function  apps/api/src/services/approvals.ts:116:17          
+stopCleanupTimer              function  apps/api/src/services/approvals.ts:125:17          
+_resetApprovals               function  apps/api/src/services/approvals.ts:136:17          
+registerToolHandlers          function  apps/api/src/services/tools.ts:34:17               
+_resetToolHandlers            function  apps/api/src/services/tools.ts:67:17               
+Unused exported types (18)
+MCPToolResult        interface  apps/api/src/mastra/mcp/portal-mcp-server.ts:39:18
+ToolCall             interface  apps/api/src/mastra/tools/types.ts:42:18          
+PendingApproval      interface  apps/api/src/mastra/tools/types.ts:77:18          
+ApprovalDecision     interface  apps/api/src/mastra/tools/types.ts:92:18          
+ToolResult           interface  apps/api/src/mastra/tools/types.ts:103:18         
+HealthCheckResponse  type       apps/api/src/routes/schemas.ts:22:13              
+SessionsQuery        type       apps/api/src/routes/schemas.ts:34:13              
+CreateSessionBody    type       apps/api/src/routes/schemas.ts:42:13              
+SessionParams        type       apps/api/src/routes/schemas.ts:48:13              
+SessionResponse      type       apps/api/src/routes/schemas.ts:63:13              
+SessionListResponse  type       apps/api/src/routes/schemas.ts:70:13              
+ActivityQuery        type       apps/api/src/routes/schemas.ts:81:13              
+ActivityItem         type       apps/api/src/routes/schemas.ts:91:13              
+ActivityResponse     type       apps/api/src/routes/schemas.ts:98:13              
+ToolExecuteQuery     type       apps/api/src/routes/schemas.ts:108:13             
+ToolExecuteBody      type       apps/api/src/routes/schemas.ts:117:13             
+ToolApproveBody      type       apps/api/src/routes/schemas.ts:129:13             
+ErrorResponse        type       apps/api/src/routes/schemas.ts:142:13             
+Configuration hints (24)
+tsx                                            knip.config.ts  Remove from ignoreDependencies   
+typescript                                     knip.config.ts  Remove from ignoreDependencies   
+prettier                                       knip.config.ts  Remove from ignoreDependencies   
+eslint                                         knip.config.ts  Remove from ignoreDependencies   
+vitest                                         knip.config.ts  Remove from ignoreDependencies   
+vite                                           knip.config.ts  Remove from ignoreDependencies   
+@sveltejs/adapter-node        apps/frontend    knip.config.ts  Remove from ignoreDependencies   
+@sveltejs/vite-plugin-svelte  apps/frontend    knip.config.ts  Remove from ignoreDependencies   
+@types/node                   apps/frontend    knip.config.ts  Remove from ignoreDependencies   
+vitest                        apps/frontend    knip.config.ts  Remove from ignoreDependencies   
+...8 more similar hints                                                                         
+src/index.ts                  apps/api         knip.config.ts  Refine entry pattern (no matches)
+vitest.config.ts              packages/shared  knip.config.ts  Refine entry pattern (no matches)
+src/hooks.server.ts           apps/frontend    knip.config.ts  Remove redundant entry pattern   
+vitest.config.ts              apps/frontend    knip.config.ts  Remove redundant entry pattern   
+svelte.config.js              apps/frontend    knip.config.ts  Remove redundant entry pattern   
+vitest.config.ts              apps/api         knip.config.ts  Remove redundant entry pattern   

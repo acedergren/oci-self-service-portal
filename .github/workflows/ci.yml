@@ -50,6 +50,43 @@ jobs:
         run: pnpm -r format:check
 
   # =============================================================================
+  # Dead Code Analysis (non-blocking)
+  # =============================================================================
+  knip:
+    name: Dead Code Analysis (knip)
+    runs-on: ubuntu-latest
+    continue-on-error: true # Non-blocking - don't fail CI on knip issues
+    strategy:
+      matrix:
+        node-version: [22] # Run only on Node 22 to save CI minutes
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'pnpm'
+
+      - name: Configure npm for GitHub Packages
+        run: |
+          echo "@acedergren:registry=https://npm.pkg.github.com" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run knip (dead code detection)
+        run: pnpm knip --no-exit-code
+        continue-on-error: true
+
+  # =============================================================================
   # Type Check (per workspace)
   # =============================================================================
   typecheck-shared:
