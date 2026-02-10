@@ -39,7 +39,7 @@ vi.mock('iovalkey', () => ({
 }));
 
 describe('CacheService', () => {
-	let CacheService: any;
+	let CacheService: typeof import('../../services/cache.js').CacheService;
 
 	beforeEach(async () => {
 		vi.clearAllMocks();
@@ -95,10 +95,12 @@ describe('CacheService', () => {
 		it('should set isConnected to false on error event', async () => {
 			let readyHandler: (() => void) | undefined;
 			let errorHandler: ((err: Error) => void) | undefined;
-			mockClient.on.mockImplementation((event: string, handler: any) => {
-				if (event === 'ready') readyHandler = handler;
-				if (event === 'error') errorHandler = handler;
-			});
+			mockClient.on.mockImplementation(
+				(event: string, handler: (() => void) | ((err: Error) => void)) => {
+					if (event === 'ready') readyHandler = handler as () => void;
+					if (event === 'error') errorHandler = handler as (err: Error) => void;
+				}
+			);
 
 			const service = new CacheService({});
 			await service.connect();
