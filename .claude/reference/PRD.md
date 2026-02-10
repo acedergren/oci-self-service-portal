@@ -329,6 +329,204 @@ And an "Execute" button proxies the call through the backend
 **Affected Files**: `apps/frontend/src/routes/admin/integrations/+page.svelte`, `apps/frontend/src/routes/admin/integrations/+page.server.ts`, all 4 component files
 **Test File**: `apps/api/src/tests/routes/mcp-admin-routes.test.ts` (API layer backing the UI)
 
+#### M8: Fix Catalog Seed Data
+
+**User Story**: As a Platform Administrator, I want catalog servers to actually work when installed so that I can connect to external services without manual configuration.
+
+**Acceptance Criteria**:
+
+```gherkin
+Given the mcp_catalog table is seeded
+When a catalog item's default_config is used to start an MCP server
+Then the config contains a valid npx command and args for the @modelcontextprotocol/server-* package
+And the Docker image field is empty or references a real, pullable image
+
+Given the Slack catalog item is installed
+When the MCPConnectionManager builds the stdio config
+Then the command is "npx" with args ["-y", "@modelcontextprotocol/server-slack"]
+And the SLACK_BOT_TOKEN env var is passed from credentials
+
+Given the GitHub catalog item's required_credentials
+When the admin provides a GitHub PAT
+Then the credential key is "GITHUB_PERSONAL_ACCESS_TOKEN" (not "GITHUB_TOKEN")
+And it matches the env var expected by @modelcontextprotocol/server-github
+
+Given the Jira catalog item's required_credentials
+When the admin provides Jira connection details
+Then the credential key for the instance URL is "JIRA_DOMAIN" (not "JIRA_URL")
+And it matches the env var expected by @modelcontextprotocol/server-jira
+```
+
+**Affected Files**: `packages/shared/src/server/oracle/migrations/014-fix-catalog-seeds.sql` (new), `packages/shared/src/server/admin/mcp-repository.ts`
+**Test File**: `apps/api/src/tests/admin/mcp-repository.test.ts` (updated seed data validation)
+
+#### M9: Fix Docker Orchestration for Production Scale
+
+**User Story**: As a Platform Administrator, I want Docker containers for catalog servers to have proper port mapping and SSE endpoints so that the MCPClient can connect to containerized MCP servers.
+
+**Acceptance Criteria**:
+
+```gherkin
+Given a catalog server is configured for Docker transport
+When the Docker container is started
+Then the image tag comes from docker_tag column (not transport type)
+And a host port is mapped to the container's SSE port (default 3000)
+And the MCPClient connection URL is derived from the container's mapped port
+
+Given a catalog server has both stdio and Docker configs
+When the Docker container is started with SSE transport
+Then the MCPClient connects via HTTP/SSE URL (not stdio)
+And credentials are passed as environment variables to the container
+
+Given the Docker image name is validated
+When the tag is constructed
+Then it uses the format "${docker_image}:${docker_tag}" (e.g., "mcp/server-slack:latest")
+And never uses the transport type as a tag
+```
+
+**Affected Files**: `apps/api/src/services/mcp-connection-manager.ts` (startDockerContainer, buildMCPClientConfig)
+**Test File**: `apps/api/src/tests/mcp-connection-manager.test.ts` (Docker port mapping, URL derivation)
+
+#### M10: Auto-Connect After Catalog Install
+
+**User Story**: As a Platform Administrator, I want the server to automatically connect after I install a catalog item with all required credentials so that I don't have to manually click "Connect" as a separate step.
+
+**Acceptance Criteria**:
+
+```gherkin
+Given the admin installs a catalog item
+When all required credentials are provided during installation
+Then the backend automatically calls connectServer() after creating the DB record
+And the install endpoint response includes connection status and tool count
+
+Given the admin installs a catalog item
+When some required credentials are missing
+Then the server is created with status "disconnected"
+And the response indicates which credentials are still needed
+
+Given auto-connect fails during install
+When the connection error occurs
+Then the server is still created in the database with status "error"
+And the error message is returned in the install response
+And the admin can retry connection manually
+```
+
+**Affected Files**: `apps/api/src/routes/admin/mcp.ts` (install-from-catalog endpoint), `apps/api/src/services/mcp-connection-manager.ts`
+**Test File**: `apps/api/src/tests/routes/mcp-admin-routes.test.ts` (install returns connection status)
+
+#### M11: Implement Lazy Reconnect on Startup
+
+**User Story**: As an Operations Engineer, I want MCP servers to automatically reconnect after an API restart so that CloudAdvisor retains access to external tools without admin intervention.
+
+**Acceptance Criteria**:
+
+```gherkin
+Given the API server restarts
+When initialize() is called
+Then it queries all servers with status='connected' across all orgs
+And stores their IDs in a pendingReconnect set (grouped by orgId)
+And does NOT immediately connect any of them
+
+Given an org has servers in pendingReconnect
+When the first getToolsets(orgId) call is made for that org
+Then the pending servers for that org are reconnected
+And subsequent getToolsets(orgId) calls do not re-trigger reconnection
+
+Given a pending server fails to reconnect
+When the reconnection attempt errors
+Then the server status is updated to 'error' with the error message
+And other pending servers for the same org are still attempted
+And getToolsets() returns tools from successfully reconnected servers only
+```
+
+**Affected Files**: `apps/api/src/services/mcp-connection-manager.ts` (initialize, getToolsets)
+**Test File**: `apps/api/src/tests/mcp-connection-manager.test.ts` (lazy reconnect tests)
+
+#### M12: Credential Key Alignment Validation
+
+**User Story**: As a Platform Administrator, I want credential keys in the catalog to exactly match what the MCP server package expects so that servers authenticate correctly on first attempt.
+
+**Acceptance Criteria**:
+
+```gherkin
+Given the mcp_catalog seed data
+When migration 014 runs
+Then credential keys are updated to match upstream package env vars:
+  | Catalog    | Old Key         | New Key                        | Package                              |
+  | Slack      | SLACK_BOT_TOKEN | SLACK_BOT_TOKEN                | @modelcontextprotocol/server-slack   |
+  | GitHub     | GITHUB_TOKEN    | GITHUB_PERSONAL_ACCESS_TOKEN   | @modelcontextprotocol/server-github  |
+  | PagerDuty  | PAGERDUTY_API_KEY | PAGERDUTY_API_KEY            | @modelcontextprotocol/server-pagerduty |
+  | Jira       | JIRA_URL        | JIRA_DOMAIN                    | @modelcontextprotocol/server-jira    |
+
+Given an installed server has credentials with old keys
+When migration 014 runs
+Then existing mcp_server_credentials rows are updated to new key names
+And the server can be reconnected without re-entering credentials
+```
+
+**Affected Files**: `packages/shared/src/server/oracle/migrations/014-fix-catalog-seeds.sql` (new), `packages/shared/src/server/admin/mcp-repository.ts`
+**Test File**: `apps/api/src/tests/admin/mcp-repository.test.ts` (credential key validation)
+
+#### M13: Transport Selection for Catalog Servers
+
+**User Story**: As a Platform Administrator, I want to choose between stdio (dev) and Docker (production) transport when installing a catalog server so that I can match the transport to my deployment environment.
+
+**Acceptance Criteria**:
+
+```gherkin
+Given the admin installs a catalog item
+When the install modal loads
+Then transport options are shown: "Stdio (npx)" and "Docker (container)"
+And the default is "Stdio" if Docker daemon is not detected
+
+Given the admin selects stdio transport
+When the server is created
+Then config uses the catalog's default_config_stdio (npx command + args)
+And no Docker container is started
+
+Given the admin selects Docker transport
+When the server is created
+Then config uses the catalog's default_config_docker (image + tag + port)
+And a Docker container is started with SSE endpoint
+And the MCPClient connects via the container's SSE URL
+
+Given Docker is not available
+When the admin tries to select Docker transport
+Then the Docker option is disabled with tooltip "Docker daemon not detected"
+And only stdio is available
+```
+
+**Affected Files**: `apps/api/src/services/mcp-connection-manager.ts`, `apps/api/src/routes/admin/mcp.ts`, `apps/frontend/src/lib/components/admin/MCPServerModal.svelte`
+**Test File**: `apps/api/src/tests/mcp-connection-manager.test.ts` (transport selection tests)
+
+#### M14: End-to-End Integration Tests for Catalog Servers
+
+**User Story**: As a developer, I want automated integration tests for all 4 primary catalog integrations so that regressions in the install-connect-discover flow are caught before release.
+
+**Acceptance Criteria**:
+
+```gherkin
+Given each catalog server (Slack, GitHub, PagerDuty, Jira)
+When the integration test runs
+Then it:
+  1. Installs the server from catalog via API
+  2. Sets required credentials with correct keys
+  3. Connects the server (mocked MCP protocol, not real external API)
+  4. Verifies tools are discovered (>0 tools in cache)
+  5. Verifies getToolsets(orgId) includes the server's tools
+  6. Disconnects the server
+  7. Verifies cleanup (client removed, status updated)
+
+Given an integration test with invalid credentials
+When connection is attempted
+Then the server status is 'error'
+And the error message indicates authentication failure
+And other servers are not affected
+```
+
+**Affected Files**: `apps/api/src/tests/mcp-integration.test.ts` (new)
+**Test File**: `apps/api/src/tests/mcp-integration.test.ts` (self — this IS the test file)
+
 ### Should Have (P1)
 
 #### S1: Tool Call Metrics and Performance Monitoring
@@ -390,6 +588,84 @@ Then the most recent logs are displayed in reverse chronological order
 **Affected Files**: `packages/shared/src/server/oracle/migrations/013-mcp-servers.sql` (mcp_server_logs table), `packages/shared/src/server/admin/mcp-repository.ts`
 **Test File**: `apps/api/src/tests/admin/mcp-repository.test.ts`
 
+#### S4: Health Check Polling
+
+**User Story**: As a Platform Administrator, I want connected MCP servers to be automatically health-checked so that I'm alerted to failures without manually checking each server.
+
+**Acceptance Criteria**:
+
+```gherkin
+Given an MCP server is connected
+When the health check polling loop runs (60-second interval)
+Then it calls getServerHealth() for each connected server
+
+Given a connected server fails 3 consecutive health checks
+When the third failure is detected
+Then the server status is updated to 'error'
+And the last_error is populated with the failure reason
+And a warning is logged
+
+Given the health check polling is running
+When the MCPConnectionManager is shut down
+Then the polling interval is cleared
+And no more health checks are scheduled
+
+Given MCPConnectionManager constructor options
+When healthCheckIntervalMs is provided
+Then the polling uses the specified interval instead of the default 60s
+```
+
+**Affected Files**: `apps/api/src/services/mcp-connection-manager.ts` (startHealthCheckPolling, stopHealthCheckPolling)
+**Test File**: `apps/api/src/tests/mcp-connection-manager.test.ts` (vi.useFakeTimers for polling tests)
+
+#### S5: Missing Config Tests (Slack + GitHub)
+
+**User Story**: As a developer, I want test coverage for all 4 static MCP config factories so that credential key correctness is verified automatically.
+
+**Acceptance Criteria**:
+
+```gherkin
+Given the Slack config factory
+When createSlackConfig() is called with a valid botToken
+Then the config uses command "npx" with args ["-y", "@modelcontextprotocol/server-slack"]
+And env contains SLACK_BOT_TOKEN with the provided value
+
+Given the GitHub config factory
+When createGitHubConfig() is called with a valid token
+Then the config uses command "npx" with args ["-y", "@modelcontextprotocol/server-github"]
+And env contains GITHUB_PERSONAL_ACCESS_TOKEN with the provided value
+
+Given any config factory
+When called with empty/missing required credentials
+Then it throws an Error with a descriptive message
+```
+
+**Affected Files**: `packages/shared/src/server/mcp-client/configs/slack.test.ts` (new), `packages/shared/src/server/mcp-client/configs/github.test.ts` (new)
+**Test File**: Self (these ARE the test files)
+
+#### S6: Connection Audit Logging
+
+**User Story**: As a Security Reviewer, I want connect/disconnect/error events recorded in the audit log so that I can review MCP server lifecycle changes.
+
+**Acceptance Criteria**:
+
+```gherkin
+Given an MCP server is connected
+When connectServer() succeeds
+Then a log entry is inserted into mcp_server_logs with level 'info' and message containing server name and 'connected'
+
+Given an MCP server is disconnected
+When disconnectServer() completes
+Then a log entry is inserted into mcp_server_logs with level 'info' and message containing server name and 'disconnected'
+
+Given an MCP server connection fails
+When connectServer() catches an error
+Then a log entry is inserted into mcp_server_logs with level 'error' and message containing the error details
+```
+
+**Affected Files**: `apps/api/src/services/mcp-connection-manager.ts` (connectServer, disconnectServer), `packages/shared/src/server/admin/mcp-repository.ts` (insertLog method)
+**Test File**: `apps/api/src/tests/admin/mcp-repository.test.ts` (audit log tests)
+
 ### Could Have (P2)
 
 #### C1: Catalog Item Search and Category Filtering
@@ -417,6 +693,7 @@ Then the most recent logs are displayed in reverse chronological order
 - **W5**: MCP OAuth flow — Mastra supports it but admin UI doesn't expose it; use API key/token auth instead
 - **W6**: Resource subscriptions — MCP protocol supports subscriptions but not needed for initial release
 - **W7**: Prompt support — MCP protocol supports prompts but not needed for tool-focused first release
+- **W8**: Mastra registry support (Smithery, Ampersand) — Deferred to Phase 10.2. Requires separate architecture decisions for SSE-based registry servers and marketplace UI
 
 ---
 
@@ -511,6 +788,60 @@ Then the most recent logs are displayed in reverse chronological order
 | SvelteKit load() only               | Simple, built-in                     | No optimistic updates, no background refetch | Poor UX for status monitoring       |
 
 **Consequences**: 5-second polling on Connected Servers tab. Acceptable latency for admin monitoring use case. WebSocket can be added later if needed.
+
+### AD-6: Dual Transport Support (Stdio + Docker/SSE)
+
+| Aspect        | Detail                                                                                                                                                                                            |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Context**   | Catalog servers currently reference fake Docker images. Real MCP servers are npm packages run via `npx`. Production needs Docker isolation; dev needs fast stdio.                                 |
+| **Decision**  | Catalog items carry both `default_config_stdio` (npx-based) and `default_config_docker` (container with SSE). Admin selects transport at install time. Default to stdio if Docker is unavailable. |
+| **Rationale** | Supports both dev (fast iteration, no Docker) and production (isolation, survives restarts). Avoids forcing Docker on deployments that don't have it.                                             |
+
+**Alternatives Evaluated**:
+
+| Option                            | Pros                                          | Cons                                                       | Rejected Because                                   |
+| --------------------------------- | --------------------------------------------- | ---------------------------------------------------------- | -------------------------------------------------- |
+| Stdio only (remove Docker)        | Simplest, no container management             | No isolation, no resource limits, doesn't survive restarts | Insufficient for production multi-tenant           |
+| Docker only                       | Best isolation, consistent environment        | Requires Docker everywhere, slow cold start                | Too restrictive for dev and non-Docker deployments |
+| **Dual transport (stdio+Docker)** | Best of both worlds, admin controls trade-off | Two code paths to maintain, more testing surface           | **Selected**                                       |
+
+**Consequences**: Catalog seed migration (014) must include both config shapes. MCPConnectionManager must handle transport selection during install. Integration tests must cover both transport paths.
+
+### AD-7: Lazy Reconnect over Eager Reconnect
+
+| Aspect        | Detail                                                                                                                                                                                        |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Context**   | `initialize()` is currently a stub. On API restart, all previously connected servers are disconnected. Need a reconnect strategy that doesn't cause a thundering herd on startup.             |
+| **Decision**  | Lazy reconnect: `initialize()` queries all servers with `status='connected'`, stores IDs in `pendingReconnect` set. On first `getToolsets(orgId)` call, reconnect that org's pending servers. |
+| **Rationale** | Avoids thundering herd (reconnecting N servers simultaneously on startup). Spreads load across time as orgs make their first requests. Keeps startup fast.                                    |
+
+**Alternatives Evaluated**:
+
+| Option                     | Pros                                         | Cons                                                     | Rejected Because                               |
+| -------------------------- | -------------------------------------------- | -------------------------------------------------------- | ---------------------------------------------- |
+| Eager reconnect on startup | All servers immediately available            | Thundering herd, slow startup, Docker pull storms        | Blocks API startup, poor for large deployments |
+| **Lazy reconnect per-org** | Fast startup, load spread, per-org isolation | First request per org has latency penalty                | **Selected**                                   |
+| No reconnect (manual only) | Simplest, no complexity                      | Admin must manually reconnect every server after restart | Unacceptable UX                                |
+
+**Consequences**: First chat request after restart may be slower (reconnect latency). Mitigated by showing "reconnecting" status in UI and non-blocking fallback to built-in tools.
+
+### AD-8: Credential Key Alignment Strategy
+
+| Aspect        | Detail                                                                                                                                                                                                                                     |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Context**   | Catalog seed `required_credentials[].key` values don't match the env vars that upstream npm packages actually expect. E.g., catalog seeds `GITHUB_TOKEN` but `@modelcontextprotocol/server-github` expects `GITHUB_PERSONAL_ACCESS_TOKEN`. |
+| **Decision**  | Catalog seed `required_credentials[].key` must exactly match the upstream npm package's expected env var name. Verified against `@modelcontextprotocol/server-*` source code.                                                              |
+| **Rationale** | MCPConnectionManager passes credential keys as env var names to the MCP server process. If they don't match, the server silently fails to authenticate. Exact match eliminates this failure mode.                                          |
+
+**Alternatives Evaluated**:
+
+| Option                              | Pros                                 | Cons                                               | Rejected Because                                 |
+| ----------------------------------- | ------------------------------------ | -------------------------------------------------- | ------------------------------------------------ |
+| **Exact match with upstream**       | Zero translation errors, transparent | Must track upstream changes                        | **Selected**                                     |
+| Mapping layer (our key → their key) | Freedom to name our keys nicely      | Hidden translation, bugs when mapping changes      | Adds indirection that causes silent failures     |
+| Convention-based (UPPER_SNAKE)      | Consistent naming across all servers | Upstream packages don't follow a single convention | Different packages use different naming patterns |
+
+**Consequences**: Migration 014 must update credential keys. Existing installed servers with old keys need migration handling. Integration tests (M14) verify correct key names per upstream package. Credential key mapping for all 4 catalog servers documented in migration comments.
 
 ---
 
@@ -633,18 +964,101 @@ Phase 7: Tests
 **Parallelizable with**: Internal parallelism (3 test files are independent)
 **Status**: Complete (commits ae5ce1de, 6f62d839, f47510ba)
 
+### Phase 10.1 Overview: External MCP Integrations
+
+**Problem**: Phase 7 delivered management infrastructure, but catalog servers are partially non-functional. Docker images are fake, credential keys don't match upstream npm packages, `initialize()` is a stub, and there's no auto-connect or health polling. Custom stdio servers work end-to-end — the gap is specifically in the catalog install flow and Docker orchestration.
+
+**Strategy**: Fix Docker properly for scale (not remove it). Three transport tiers:
+
+- **Stdio (npx)**: Dev/testing — fast, no Docker dependency
+- **Docker containers with SSE/HTTP**: Production — isolation, survives restarts
+- **Remote SSE/HTTP**: External servers — horizontal scaling
+
+```
+Phase 10.1a: Catalog Fix (foundation)
+├── M8 (seed data fix)
+├── M12 (credential alignment)
+├── S5 (missing config tests)
+└── Migration 014
+
+Phase 10.1b: Manager Fix (needs 10.1a)
+├── M9 (Docker orchestration fix)
+├── M11 (lazy reconnect)
+├── M13 (transport selection)
+└── AD-6, AD-7
+
+Phase 10.1c: Integration (needs 10.1b)
+├── M10 (auto-connect after install)
+├── M14 (e2e integration tests)
+├── S4 (health check polling)
+└── S6 (connection audit logging)
+```
+
+### Phase 10.1a: Catalog Fix (Foundation)
+
+**Goal**: Fix catalog seed data so installed servers can actually connect via stdio (npx).
+**Prerequisites**: Phase 7 complete (all existing tests passing)
+**Delivers**: M8, M12, S5
+
+**Scope**:
+
+- Migration 014: Fix all 6 catalog seed entries with correct `default_config` (npx commands), fix credential key mismatches
+- Validate credential keys match upstream `@modelcontextprotocol/server-*` packages
+- Add missing test files for Slack and GitHub static configs
+
+**Parallelizable with**: Nothing (foundation for 10.1b)
+
+### Phase 10.1b: Manager Fix (Docker + Reconnect + Transport)
+
+**Goal**: Fix Docker orchestration bugs and implement lazy reconnect and transport selection.
+**Prerequisites**: Phase 10.1a complete (correct seed data to test against)
+**Delivers**: M9, M11, M13
+
+**Scope**:
+
+- Fix Docker tag bug (line 480 of `mcp-connection-manager.ts`)
+- Add port mapping and SSE endpoint exposure for Docker containers
+- Derive MCPClient connection URL from Docker container info
+- Implement lazy reconnect in `initialize()` — store pending server IDs, reconnect per-org on first `getToolsets()`
+- Add transport selection: catalog items carry both `default_config_stdio` and `default_config_docker`
+- AD-6 (dual transport), AD-7 (lazy reconnect)
+
+**Parallelizable with**: Nothing (service layer feeds 10.1c)
+
+### Phase 10.1c: Integration (Auto-Connect + Tests + Monitoring)
+
+**Goal**: Complete the install flow with auto-connect, verify all integrations end-to-end, add monitoring.
+**Prerequisites**: Phase 10.1b complete (working Docker + reconnect)
+**Delivers**: M10, M14, S4, S6
+
+**Scope**:
+
+- Auto-connect after catalog install when all credentials provided
+- End-to-end integration tests for all 4 catalog servers (Slack, GitHub, PagerDuty, Jira)
+- Health check polling (60s interval, 3 consecutive failures → error)
+- Connection audit logging to `mcp_server_logs`
+
+**Parallelizable with**: M14 and S4/S6 are independent (can run in parallel)
+
 ---
 
 ## 8. TDD Protocol
 
 ### Test File Mapping
 
-| Requirement    | Test File                                            | Test Type   | Vitest Gotchas                                   |
-| -------------- | ---------------------------------------------------- | ----------- | ------------------------------------------------ |
-| M1, M3, S1     | `apps/api/src/tests/admin/mcp-repository.test.ts`    | Unit        | globalThis registry for vi.mock() TDZ, mockReset |
-| M2, M4, M6, S2 | `apps/api/src/tests/mcp-connection-manager.test.ts`  | Unit        | Mock @mastra/mcp MCPClient, mock dockerode       |
-| M1, M2, M3, M5 | `apps/api/src/tests/routes/mcp-admin-routes.test.ts` | Integration | Fastify inject(), Zod type provider, skipAuth    |
-| M7             | (Frontend — visual verification)                     | Manual      | Svelte 5 component testing deferred              |
+| Requirement    | Test File                                                                             | Test Type   | Vitest Gotchas                                            |
+| -------------- | ------------------------------------------------------------------------------------- | ----------- | --------------------------------------------------------- |
+| M1, M3, S1     | `apps/api/src/tests/admin/mcp-repository.test.ts`                                     | Unit        | globalThis registry for vi.mock() TDZ, mockReset          |
+| M2, M4, M6, S2 | `apps/api/src/tests/mcp-connection-manager.test.ts`                                   | Unit        | Mock @mastra/mcp MCPClient, mock dockerode                |
+| M1, M2, M3, M5 | `apps/api/src/tests/routes/mcp-admin-routes.test.ts`                                  | Integration | Fastify inject(), Zod type provider, skipAuth             |
+| M7             | (Frontend — visual verification)                                                      | Manual      | Svelte 5 component testing deferred                       |
+| M8, M12        | `apps/api/src/tests/admin/mcp-repository.test.ts`                                     | Unit        | Verify corrected seed data and credential key alignment   |
+| M9, M11, M13   | `apps/api/src/tests/mcp-connection-manager.test.ts`                                   | Unit        | Docker port mapping, lazy reconnect, transport selection  |
+| M10            | `apps/api/src/tests/routes/mcp-admin-routes.test.ts`                                  | Integration | Install endpoint returns connection status                |
+| M14            | `apps/api/src/tests/mcp-integration.test.ts` (new)                                    | Integration | End-to-end: install → connect → discover tools per server |
+| S4             | `apps/api/src/tests/mcp-connection-manager.test.ts`                                   | Unit        | `vi.useFakeTimers()` for 60s polling interval             |
+| S5             | `packages/shared/src/server/mcp-client/configs/slack.test.ts`, `github.test.ts` (new) | Unit        | Config factory validation, env var correctness            |
+| S6             | `apps/api/src/tests/admin/mcp-repository.test.ts`                                     | Unit        | Connection audit log insertion and retrieval              |
 
 ### Testing Strategy
 
@@ -672,19 +1086,27 @@ Phase 7: Tests
 | R5  | MCP tool execution latency affects chat UX         | Medium      | Medium | Non-blocking: getToolsets() failure falls back to built-in tools. Tool timeouts in MCPClient config                        |
 | R6  | Community MCP servers unreliable or abandoned      | Medium      | Low    | Catalog is curated with tested images. Status monitoring detects failures. Admins can disconnect                           |
 | R7  | Cross-org tool leakage via MCPConnectionManager    | Low         | High   | All queries filter by org_id. getToolsets(orgId) only returns servers for the requesting org                               |
+| R8  | npx cold-start latency (10-30s first connect)      | High        | Medium | Pre-install packages with `--prefer-offline` or Docker prebuilt images. Show "connecting" spinner in UI                    |
+| R9  | Upstream MCP server credential env var changes     | Low         | Medium | Integration tests verify exact env var names. Track upstream changelogs for `@modelcontextprotocol/server-*` packages      |
+| R10 | Docker host unavailable in some deployments        | Medium      | Medium | Stdio (npx) fallback always available. Transport selection (M13) lets admin choose. Docker is optional, not required       |
 
 ---
 
 ## 10. Success Metrics
 
-| Metric                        | Target              | Measurement Method                                 | Timeframe           |
-| ----------------------------- | ------------------- | -------------------------------------------------- | ------------------- |
-| MCP servers installed         | >= 3 per org        | `SELECT COUNT(*) FROM mcp_servers GROUP BY org_id` | 30 days post-launch |
-| Tool call success rate        | >= 95%              | `mcp_server_metrics.success` aggregate             | Rolling 7 days      |
-| Average tool call latency     | < 5 seconds         | `AVG(duration_ms)` from mcp_server_metrics         | Rolling 7 days      |
-| Admin install completion rate | >= 80%              | Catalog install starts vs. connected status        | 30 days post-launch |
-| Agent MCP tool usage          | >= 10 calls/day     | mcp_server_metrics records per day                 | 14 days post-launch |
-| Test coverage                 | >= 75 tests passing | `npx vitest run` test count for MCP files          | At release          |
+| Metric                        | Target              | Measurement Method                                                       | Timeframe           |
+| ----------------------------- | ------------------- | ------------------------------------------------------------------------ | ------------------- |
+| MCP servers installed         | >= 3 per org        | `SELECT COUNT(*) FROM mcp_servers GROUP BY org_id`                       | 30 days post-launch |
+| Tool call success rate        | >= 95%              | `mcp_server_metrics.success` aggregate                                   | Rolling 7 days      |
+| Average tool call latency     | < 5 seconds         | `AVG(duration_ms)` from mcp_server_metrics                               | Rolling 7 days      |
+| Admin install completion rate | >= 80%              | Catalog install starts vs. connected status                              | 30 days post-launch |
+| Agent MCP tool usage          | >= 10 calls/day     | mcp_server_metrics records per day                                       | 14 days post-launch |
+| Test coverage                 | >= 75 tests passing | `npx vitest run` test count for MCP files                                | At release          |
+| Catalog install success       | 100% for 4 servers  | Install + connect for Slack/GitHub/PagerDuty/Jira with valid credentials | Phase 10.1 release  |
+| Tool discovery                | >0 tools/server     | `mcp_tool_cache` rows per installed catalog server                       | Phase 10.1 release  |
+| CloudAdvisor tool invocation  | >= 1 call/server    | Successful tool call via agent for each integration                      | Phase 10.1 release  |
+| Health check detection        | < 120 seconds       | Time from server failure to status='error' update                        | Phase 10.1 release  |
+| Admin install time            | < 5 minutes e2e     | Time from catalog "Install" click to first tool call                     | Phase 10.1 release  |
 
 ---
 
@@ -730,6 +1152,7 @@ _All resolved during implementation._
 
 ## 13. Changelog
 
-| Date       | Change Type | Description                                                    |
-| ---------- | ----------- | -------------------------------------------------------------- |
-| 2026-02-10 | Created     | Initial PRD based on implemented Premium MCP Server Management |
+| Date       | Change Type | Description                                                                           |
+| ---------- | ----------- | ------------------------------------------------------------------------------------- |
+| 2026-02-10 | Created     | Initial PRD based on implemented Premium MCP Server Management                        |
+| 2026-02-10 | Updated     | Phase 10.1 external integrations requirements added (M8-M14, S4-S6, AD-6/7/8, R8-R10) |
