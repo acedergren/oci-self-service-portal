@@ -47,7 +47,7 @@
 			queryClient.invalidateQueries({ queryKey: ['admin', 'ai-providers'] });
 			toast.success('AI provider created successfully');
 			showModal = false;
-			resetForm();
+			resetSuperform();
 		},
 		onError: (error: Error) => {
 			toast.error(error.message);
@@ -69,7 +69,7 @@
 			queryClient.invalidateQueries({ queryKey: ['admin', 'ai-providers'] });
 			toast.success('AI provider updated successfully');
 			showModal = false;
-			resetForm();
+			resetSuperform();
 		},
 		onError: (error: Error) => {
 			toast.error(error.message);
@@ -137,60 +137,61 @@
 	let showModal = $state(false);
 	let editingProvider: AIProvider | null = $state(null);
 
-	// Form state
-	let form = $state({
-		displayName: '',
-		providerType: 'oci' as 'oci' | 'openai' | 'anthropic',
-		apiEndpoint: '',
-		modelId: '',
-		apiKey: '',
-		compartmentId: '',
-		enabled: true
+	// Superforms setup
+	import { superForm, defaults } from 'sveltekit-superforms';
+	import { zodClient } from 'sveltekit-superforms/adapters';
+	import { aiProviderFormSchema } from '$lib/schemas/admin.js';
+
+	const providerDefaults = defaults(aiProviderFormSchema);
+
+	const {
+		form,
+		errors,
+		reset: resetSuperform
+	} = superForm(providerDefaults, {
+		SPA: true,
+		validators: zodClient(aiProviderFormSchema),
+		resetForm: false,
+		onUpdate({ form: f }) {
+			if (!f.valid) return;
+			if (editingProvider) {
+				updateMutation.mutate({ id: editingProvider.id, ...f.data } as any);
+			} else {
+				createProviderMutation.mutate(f.data as any);
+			}
+		}
 	});
 
-	function resetForm() {
-		form = {
-			displayName: '',
-			providerType: 'oci',
-			apiEndpoint: '',
-			modelId: '',
-			apiKey: '',
-			compartmentId: '',
-			enabled: true
-		};
-		editingProvider = null;
-	}
-
 	function openCreateModal() {
-		resetForm();
+		editingProvider = null;
+		resetSuperform({
+			data: {
+				displayName: '',
+				providerType: 'oci',
+				apiEndpoint: '',
+				modelId: '',
+				apiKey: '',
+				compartmentId: '',
+				enabled: true
+			}
+		});
 		showModal = true;
 	}
 
 	function openEditModal(provider: AIProvider) {
 		editingProvider = provider;
-		form = {
-			displayName: provider.displayName,
-			providerType: provider.providerType,
-			apiEndpoint: provider.apiEndpoint,
-			modelId: provider.modelId,
-			apiKey: '',
-			compartmentId: provider.compartmentId || '',
-			enabled: provider.enabled
-		};
+		resetSuperform({
+			data: {
+				displayName: provider.displayName,
+				providerType: provider.providerType,
+				apiEndpoint: provider.apiEndpoint,
+				modelId: provider.modelId,
+				apiKey: '',
+				compartmentId: provider.compartmentId || '',
+				enabled: provider.enabled
+			}
+		});
 		showModal = true;
-	}
-
-	function handleSubmit(e: Event) {
-		e.preventDefault();
-
-		if (editingProvider) {
-			updateMutation.mutate({
-				id: editingProvider.id,
-				...form
-			});
-		} else {
-			createProviderMutation.mutate(form);
-		}
 	}
 
 	function handleDelete(id: string) {
@@ -379,22 +380,23 @@
 				<button class="modal-close" onclick={() => (showModal = false)}>×</button>
 			</div>
 
-			<form class="modal-form" onsubmit={handleSubmit}>
+			<form class="modal-form" method="POST">
 				<div class="form-group">
 					<label for="displayName" class="form-label">Display Name</label>
 					<input
 						id="displayName"
 						type="text"
 						class="form-input"
-						bind:value={form.displayName}
+						class:form-error={$errors.displayName}
+						bind:value={$form.displayName}
 						placeholder="e.g., OCI Cohere Command R+"
-						required
 					/>
+					{#if $errors.displayName}<p class="field-error">{$errors.displayName}</p>{/if}
 				</div>
 
 				<div class="form-group">
 					<label for="providerType" class="form-label">Provider Type</label>
-					<select id="providerType" class="form-select" bind:value={form.providerType} required>
+					<select id="providerType" class="form-select" bind:value={$form.providerType}>
 						<option value="oci">OCI GenAI</option>
 						<option value="openai">OpenAI</option>
 						<option value="anthropic">Anthropic</option>
@@ -407,10 +409,11 @@
 						id="modelId"
 						type="text"
 						class="form-input"
-						bind:value={form.modelId}
+						class:form-error={$errors.modelId}
+						bind:value={$form.modelId}
 						placeholder="e.g., cohere.command-r-plus"
-						required
 					/>
+					{#if $errors.modelId}<p class="field-error">{$errors.modelId}</p>{/if}
 				</div>
 
 				<div class="form-group">
@@ -419,10 +422,11 @@
 						id="apiEndpoint"
 						type="url"
 						class="form-input"
-						bind:value={form.apiEndpoint}
+						class:form-error={$errors.apiEndpoint}
+						bind:value={$form.apiEndpoint}
 						placeholder="https://..."
-						required
 					/>
+					{#if $errors.apiEndpoint}<p class="field-error">{$errors.apiEndpoint}</p>{/if}
 				</div>
 
 				<div class="form-group">
@@ -433,20 +437,19 @@
 						id="apiKey"
 						type="password"
 						class="form-input"
-						bind:value={form.apiKey}
+						bind:value={$form.apiKey}
 						placeholder="Enter API key"
-						required={!editingProvider}
 					/>
 				</div>
 
-				{#if form.providerType === 'oci'}
+				{#if $form.providerType === 'oci'}
 					<div class="form-group">
 						<label for="compartmentId" class="form-label">Compartment OCID (Optional)</label>
 						<input
 							id="compartmentId"
 							type="text"
 							class="form-input"
-							bind:value={form.compartmentId}
+							bind:value={$form.compartmentId}
 							placeholder="ocid1.compartment..."
 						/>
 					</div>
@@ -454,7 +457,7 @@
 
 				<div class="form-group">
 					<label class="form-checkbox">
-						<input type="checkbox" bind:checked={form.enabled} />
+						<input type="checkbox" bind:checked={$form.enabled} />
 						<span>Enable this provider</span>
 					</label>
 				</div>
@@ -873,6 +876,16 @@
 		gap: var(--space-md);
 		padding-top: var(--space-lg);
 		border-top: 1px solid var(--border-muted);
+	}
+
+	.field-error {
+		color: oklch(0.7 0.2 25);
+		font-size: var(--text-xs);
+		margin-top: var(--space-xs);
+	}
+
+	.form-error {
+		border-color: oklch(0.7 0.2 25) !important;
 	}
 
 	@media (max-width: 768px) {

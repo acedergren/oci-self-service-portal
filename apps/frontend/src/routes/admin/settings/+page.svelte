@@ -1,6 +1,9 @@
 <script lang="ts">
 	import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 	import { toast } from 'svelte-sonner';
+	import { superForm, defaults } from 'sveltekit-superforms';
+	import { zodClient } from 'sveltekit-superforms/adapters';
+	import { portalSettingsFormSchema } from '$lib/schemas/admin.js';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -59,25 +62,31 @@
 		}
 	}));
 
+	// Superforms for validated editing
+	const settingsDefaults = defaults(portalSettingsFormSchema);
+
+	const { form, errors, reset } = superForm(settingsDefaults, {
+		SPA: true,
+		validators: zodClient(portalSettingsFormSchema),
+		resetForm: false,
+		onUpdate({ form: f }) {
+			if (!f.valid) return;
+			updateMutation.mutate(f.data);
+		}
+	});
+
 	// Editing state
 	let isEditing = $state(false);
-	let form = $state<Partial<PortalSettings>>({});
 
 	function startEditing() {
 		if ($settingsQuery.data) {
-			form = { ...$settingsQuery.data };
+			reset({ data: { ...$settingsQuery.data } });
 			isEditing = true;
 		}
 	}
 
 	function cancelEditing() {
 		isEditing = false;
-		form = {};
-	}
-
-	function handleSubmit(e: Event) {
-		e.preventDefault();
-		updateMutation.mutate(form);
 	}
 
 	function handleToggleMaintenance() {
@@ -115,7 +124,7 @@
 		</div>
 	{:else if $settingsQuery.data}
 		{#if isEditing}
-			<form class="settings-form" onsubmit={handleSubmit}>
+			<form class="settings-form" method="POST">
 				<div class="settings-section">
 					<h2 class="section-title">General</h2>
 					<div class="form-grid">
@@ -125,14 +134,22 @@
 								id="portalName"
 								type="text"
 								class="form-input"
-								bind:value={form.portalName}
-								required
+								class:form-error={$errors.portalName}
+								bind:value={$form.portalName}
 							/>
+							{#if $errors.portalName}<p class="field-error">{$errors.portalName}</p>{/if}
 						</div>
 
 						<div class="form-group">
 							<label for="logoUrl" class="form-label">Logo URL (Optional)</label>
-							<input id="logoUrl" type="url" class="form-input" bind:value={form.logoUrl} />
+							<input
+								id="logoUrl"
+								type="url"
+								class="form-input"
+								class:form-error={$errors.logoUrl}
+								bind:value={$form.logoUrl}
+							/>
+							{#if $errors.logoUrl}<p class="field-error">{$errors.logoUrl}</p>{/if}
 						</div>
 					</div>
 				</div>
@@ -147,15 +164,17 @@
 									id="primaryColor"
 									type="color"
 									class="form-color"
-									bind:value={form.primaryColor}
+									bind:value={$form.primaryColor}
 								/>
 								<input
 									type="text"
 									class="form-input"
-									bind:value={form.primaryColor}
+									class:form-error={$errors.primaryColor}
+									bind:value={$form.primaryColor}
 									placeholder="#000000"
 								/>
 							</div>
+							{#if $errors.primaryColor}<p class="field-error">{$errors.primaryColor}</p>{/if}
 						</div>
 
 						<div class="form-group">
@@ -165,15 +184,17 @@
 									id="accentColor"
 									type="color"
 									class="form-color"
-									bind:value={form.accentColor}
+									bind:value={$form.accentColor}
 								/>
 								<input
 									type="text"
 									class="form-input"
-									bind:value={form.accentColor}
+									class:form-error={$errors.accentColor}
+									bind:value={$form.accentColor}
 									placeholder="#000000"
 								/>
 							</div>
+							{#if $errors.accentColor}<p class="field-error">{$errors.accentColor}</p>{/if}
 						</div>
 					</div>
 				</div>
@@ -183,14 +204,14 @@
 					<div class="form-grid">
 						<div class="form-group">
 							<label class="form-checkbox">
-								<input type="checkbox" bind:checked={form.signupEnabled} />
+								<input type="checkbox" bind:checked={$form.signupEnabled} />
 								<span>Enable self-service signup</span>
 							</label>
 						</div>
 
 						<div class="form-group">
 							<label class="form-checkbox">
-								<input type="checkbox" bind:checked={form.requireEmailVerification} />
+								<input type="checkbox" bind:checked={$form.requireEmailVerification} />
 								<span>Require email verification</span>
 							</label>
 						</div>
@@ -201,11 +222,12 @@
 								id="sessionTimeout"
 								type="number"
 								class="form-input"
-								bind:value={form.sessionTimeout}
+								class:form-error={$errors.sessionTimeout}
+								bind:value={$form.sessionTimeout}
 								min="5"
 								max="1440"
-								required
 							/>
+							{#if $errors.sessionTimeout}<p class="field-error">{$errors.sessionTimeout}</p>{/if}
 						</div>
 
 						<div class="form-group">
@@ -216,7 +238,7 @@
 								id="allowedDomains"
 								type="text"
 								class="form-input"
-								bind:value={form.allowedDomains}
+								bind:value={$form.allowedDomains}
 								placeholder="example.com, company.org"
 							/>
 						</div>
@@ -232,11 +254,12 @@
 								id="maxUploadSize"
 								type="number"
 								class="form-input"
-								bind:value={form.maxUploadSize}
+								class:form-error={$errors.maxUploadSize}
+								bind:value={$form.maxUploadSize}
 								min="1"
 								max="100"
-								required
 							/>
+							{#if $errors.maxUploadSize}<p class="field-error">{$errors.maxUploadSize}</p>{/if}
 						</div>
 					</div>
 				</div>
@@ -246,7 +269,7 @@
 					<div class="form-grid">
 						<div class="form-group">
 							<label class="form-checkbox">
-								<input type="checkbox" bind:checked={form.maintenanceMode} />
+								<input type="checkbox" bind:checked={$form.maintenanceMode} />
 								<span>Enable maintenance mode</span>
 							</label>
 						</div>
@@ -258,7 +281,7 @@
 							<textarea
 								id="maintenanceMessage"
 								class="form-textarea"
-								bind:value={form.maintenanceMessage}
+								bind:value={$form.maintenanceMessage}
 								rows="3"
 								placeholder="We're performing scheduled maintenance. Please check back soon."
 							></textarea>
@@ -277,9 +300,13 @@
 								id="termsOfServiceUrl"
 								type="url"
 								class="form-input"
-								bind:value={form.termsOfServiceUrl}
+								class:form-error={$errors.termsOfServiceUrl}
+								bind:value={$form.termsOfServiceUrl}
 								placeholder="https://..."
 							/>
+							{#if $errors.termsOfServiceUrl}<p class="field-error">
+									{$errors.termsOfServiceUrl}
+								</p>{/if}
 						</div>
 
 						<div class="form-group">
@@ -288,9 +315,13 @@
 								id="privacyPolicyUrl"
 								type="url"
 								class="form-input"
-								bind:value={form.privacyPolicyUrl}
+								class:form-error={$errors.privacyPolicyUrl}
+								bind:value={$form.privacyPolicyUrl}
 								placeholder="https://..."
 							/>
+							{#if $errors.privacyPolicyUrl}<p class="field-error">
+									{$errors.privacyPolicyUrl}
+								</p>{/if}
 						</div>
 					</div>
 				</div>
@@ -793,6 +824,21 @@
 	.form-color::-webkit-color-swatch {
 		border: none;
 		border-radius: calc(var(--radius-md) - 4px);
+	}
+
+	.field-error {
+		margin-top: var(--space-xs);
+		font-size: var(--text-xs);
+		color: var(--semantic-error, #ef4444);
+		font-weight: 500;
+	}
+
+	.form-error {
+		border-color: var(--semantic-error, #ef4444) !important;
+	}
+
+	.form-error:focus {
+		box-shadow: 0 0 0 3px oklch(0.65 0.28 25 / 0.2) !important;
 	}
 
 	.color-input-group .form-input {

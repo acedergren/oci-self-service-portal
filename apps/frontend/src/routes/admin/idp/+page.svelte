@@ -2,6 +2,9 @@
 	import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 	import { toast } from 'svelte-sonner';
 	import { browser } from '$app/environment';
+	import { superForm, defaults } from 'sveltekit-superforms';
+	import { zodClient } from 'sveltekit-superforms/adapters';
+	import { idpFormSchema, type IdpFormData } from '$lib/schemas/admin.js';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -37,25 +40,32 @@
 	// State for create/edit modal
 	let showModal = $state(false);
 	let editingIdp = $state<IDP | null>(null);
-	let formData = $state({
-		displayName: '',
-		providerId: '',
-		providerType: 'oidc' as 'oidc' | 'idcs',
-		clientId: '',
-		clientSecret: '',
-		issuerUrl: '',
-		authorizationUrl: '',
-		tokenUrl: '',
-		userinfoUrl: '',
-		scopes: 'openid profile email',
-		pkce: true,
-		adminGroups: '',
-		operatorGroups: ''
+
+	// Superforms setup — client-side validation with Zod
+	const idpDefaults = defaults(idpFormSchema);
+
+	const {
+		form: formData,
+		errors,
+		validate,
+		reset
+	} = superForm(idpDefaults, {
+		SPA: true,
+		validators: zodClient(idpFormSchema),
+		resetForm: false,
+		onUpdate({ form }) {
+			if (!form.valid) return;
+			if (editingIdp) {
+				$updateIdpMutation.mutate({ id: editingIdp.id, data: form.data });
+			} else {
+				$createIdpMutation.mutate(form.data);
+			}
+		}
 	});
 
 	// Create IDP mutation
 	const createIdpMutation = createMutation(() => ({
-		mutationFn: async (data: typeof formData) => {
+		mutationFn: async (data: IdpFormData) => {
 			const response = await fetch('/api/admin/idp', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -79,7 +89,7 @@
 
 	// Update IDP mutation
 	const updateIdpMutation = createMutation(() => ({
-		mutationFn: async ({ id, data }: { id: string; data: typeof formData }) => {
+		mutationFn: async ({ id, data }: { id: string; data: IdpFormData }) => {
 			const response = await fetch(`/api/admin/idp/${id}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
@@ -146,56 +156,51 @@
 
 	function openCreateModal() {
 		editingIdp = null;
-		formData = {
-			displayName: '',
-			providerId: '',
-			providerType: 'oidc',
-			clientId: '',
-			clientSecret: '',
-			issuerUrl: '',
-			authorizationUrl: '',
-			tokenUrl: '',
-			userinfoUrl: '',
-			scopes: 'openid profile email',
-			pkce: true,
-			adminGroups: '',
-			operatorGroups: ''
-		};
+		reset({
+			data: {
+				displayName: '',
+				providerId: '',
+				providerType: 'oidc',
+				clientId: '',
+				clientSecret: '',
+				issuerUrl: '',
+				authorizationUrl: '',
+				tokenUrl: '',
+				userinfoUrl: '',
+				scopes: 'openid profile email',
+				pkce: true,
+				adminGroups: '',
+				operatorGroups: ''
+			}
+		});
 		showModal = true;
 	}
 
 	function openEditModal(idp: IDP) {
 		editingIdp = idp;
-		formData = {
-			displayName: idp.displayName || '',
-			providerId: idp.providerId || '',
-			providerType: idp.providerType || 'oidc',
-			clientId: idp.clientId || '',
-			clientSecret: '', // Don't pre-fill secret
-			issuerUrl: idp.issuerUrl || '',
-			authorizationUrl: idp.authorizationUrl || '',
-			tokenUrl: idp.tokenUrl || '',
-			userinfoUrl: idp.userinfoUrl || '',
-			scopes: idp.scopes || 'openid profile email',
-			pkce: idp.pkce ?? true,
-			adminGroups: idp.adminGroups || '',
-			operatorGroups: idp.operatorGroups || ''
-		};
+		reset({
+			data: {
+				displayName: idp.displayName || '',
+				providerId: idp.providerId || '',
+				providerType: idp.providerType || 'oidc',
+				clientId: idp.clientId || '',
+				clientSecret: '', // Don't pre-fill secret
+				issuerUrl: idp.issuerUrl || '',
+				authorizationUrl: '',
+				tokenUrl: '',
+				userinfoUrl: '',
+				scopes: idp.scopes || 'openid profile email',
+				pkce: idp.pkce ?? true,
+				adminGroups: idp.adminGroups || '',
+				operatorGroups: idp.operatorGroups || ''
+			}
+		});
 		showModal = true;
 	}
 
 	function closeModal() {
 		showModal = false;
 		editingIdp = null;
-	}
-
-	function handleSubmit(e: SubmitEvent) {
-		e.preventDefault();
-		if (editingIdp) {
-			$updateIdpMutation.mutate({ id: editingIdp.id, data: formData });
-		} else {
-			$createIdpMutation.mutate(formData);
-		}
 	}
 
 	function handleDelete(id: string) {
@@ -341,17 +346,19 @@
 			<button type="button" class="btn-close" onclick={closeModal}>×</button>
 		</div>
 
-		<form class="modal-body" onsubmit={handleSubmit}>
+		<form class="modal-body" method="POST">
 			<div class="form-group">
 				<label for="displayName">Display Name</label>
 				<input
 					type="text"
 					id="displayName"
-					bind:value={formData.displayName}
+					bind:value={$formData.displayName}
 					placeholder="My SSO Provider"
-					required
+					aria-invalid={$errors.displayName ? 'true' : undefined}
 					class="form-input"
+					class:form-error={$errors.displayName}
 				/>
+				{#if $errors.displayName}<p class="field-error">{$errors.displayName}</p>{/if}
 			</div>
 
 			<div class="form-group">
@@ -359,20 +366,23 @@
 				<input
 					type="text"
 					id="providerId"
-					bind:value={formData.providerId}
+					bind:value={$formData.providerId}
 					placeholder="my-sso"
-					required
 					disabled={!!editingIdp}
+					aria-invalid={$errors.providerId ? 'true' : undefined}
 					class="form-input"
+					class:form-error={$errors.providerId}
 				/>
-				<p class="form-hint">
-					Unique identifier for this provider (cannot be changed after creation)
-				</p>
+				{#if $errors.providerId}<p class="field-error">{$errors.providerId}</p>
+				{:else}<p class="form-hint">
+						Unique identifier for this provider (cannot be changed after creation)
+					</p>
+				{/if}
 			</div>
 
 			<div class="form-group">
 				<label for="providerType">Provider Type</label>
-				<select id="providerType" bind:value={formData.providerType} class="form-select">
+				<select id="providerType" bind:value={$formData.providerType} class="form-select">
 					<option value="oidc">Generic OIDC</option>
 					<option value="idcs">OCI Identity Domains</option>
 				</select>
@@ -384,10 +394,12 @@
 					<input
 						type="text"
 						id="clientId"
-						bind:value={formData.clientId}
-						required
+						bind:value={$formData.clientId}
+						aria-invalid={$errors.clientId ? 'true' : undefined}
 						class="form-input"
+						class:form-error={$errors.clientId}
 					/>
+					{#if $errors.clientId}<p class="field-error">{$errors.clientId}</p>{/if}
 				</div>
 
 				<div class="form-group">
@@ -395,10 +407,9 @@
 					<input
 						type="password"
 						id="clientSecret"
-						bind:value={formData.clientSecret}
+						bind:value={$formData.clientSecret}
 						class="form-input"
 						placeholder={editingIdp ? 'Leave blank to keep existing' : ''}
-						required={!editingIdp}
 					/>
 				</div>
 			</div>
@@ -408,11 +419,13 @@
 				<input
 					type="url"
 					id="issuerUrl"
-					bind:value={formData.issuerUrl}
+					bind:value={$formData.issuerUrl}
 					placeholder="https://identity.example.com"
-					required
+					aria-invalid={$errors.issuerUrl ? 'true' : undefined}
 					class="form-input"
+					class:form-error={$errors.issuerUrl}
 				/>
+				{#if $errors.issuerUrl}<p class="field-error">{$errors.issuerUrl}</p>{/if}
 			</div>
 
 			<div class="form-group">
@@ -420,7 +433,7 @@
 				<input
 					type="text"
 					id="scopes"
-					bind:value={formData.scopes}
+					bind:value={$formData.scopes}
 					placeholder="openid profile email"
 					class="form-input"
 				/>
@@ -428,12 +441,12 @@
 
 			<div class="form-group">
 				<label class="checkbox-label">
-					<input type="checkbox" bind:checked={formData.pkce} />
+					<input type="checkbox" bind:checked={$formData.pkce} />
 					<span>Enable PKCE</span>
 				</label>
 			</div>
 
-			{#if formData.providerType === 'idcs'}
+			{#if $formData.providerType === 'idcs'}
 				<div class="form-divider"></div>
 
 				<h3 class="section-title">Group Mapping (Optional)</h3>
@@ -443,7 +456,7 @@
 					<input
 						type="text"
 						id="adminGroups"
-						bind:value={formData.adminGroups}
+						bind:value={$formData.adminGroups}
 						placeholder="portal-admins, cloud-admins"
 						class="form-input"
 					/>
@@ -454,7 +467,7 @@
 					<input
 						type="text"
 						id="operatorGroups"
-						bind:value={formData.operatorGroups}
+						bind:value={$formData.operatorGroups}
 						placeholder="portal-operators, cloud-ops"
 						class="form-input"
 					/>
@@ -830,6 +843,21 @@
 		margin-top: var(--space-xs);
 		font-size: var(--text-xs);
 		color: var(--fg-tertiary);
+	}
+
+	.field-error {
+		margin-top: var(--space-xs);
+		font-size: var(--text-xs);
+		color: var(--semantic-error, #ef4444);
+		font-weight: 500;
+	}
+
+	.form-error {
+		border-color: var(--semantic-error, #ef4444) !important;
+	}
+
+	.form-error:focus {
+		box-shadow: 0 0 0 2px oklch(0.65 0.28 25 / 0.2) !important;
 	}
 
 	.checkbox-label {

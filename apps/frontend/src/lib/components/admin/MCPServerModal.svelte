@@ -1,5 +1,8 @@
 <script lang="ts">
 	import type { McpCatalogItem, McpServer } from '@portal/server/admin/mcp-types';
+	import { superForm, defaults } from 'sveltekit-superforms';
+	import { zodClient } from 'sveltekit-superforms/adapters';
+	import { mcpServerFormSchema } from '$lib/schemas/admin.js';
 
 	interface Props {
 		open: boolean;
@@ -21,20 +24,65 @@
 		isPending = false
 	}: Props = $props();
 
-	// Form state
-	let formData = $state({
-		catalogItemId: '',
-		serverName: '',
-		displayName: '',
-		description: '',
-		transportType: 'stdio' as 'stdio' | 'sse' | 'http',
-		credentials: {} as Record<string, string>,
-		config: {
-			url: '',
-			command: '',
-			args: [] as string[],
-			env: {} as Record<string, string>,
-			headers: {} as Record<string, string>
+	// Credentials are outside of Zod schema (dynamic per catalog item)
+	let credentials = $state<Record<string, string>>({});
+
+	// Parse flat text fields into structured data for API submission
+	function parseArgsText(text: string): string[] {
+		return text.split('\n').filter((line) => line.trim());
+	}
+
+	function parseEnvText(text: string): Record<string, string> {
+		const env: Record<string, string> = {};
+		text.split('\n').forEach((line) => {
+			const [key, ...valueParts] = line.split('=');
+			if (key && valueParts.length > 0) {
+				env[key.trim()] = valueParts.join('=').trim();
+			}
+		});
+		return env;
+	}
+
+	function parseHeadersText(text: string): Record<string, string> {
+		const headers: Record<string, string> = {};
+		text.split('\n').forEach((line) => {
+			const [key, ...valueParts] = line.split(':');
+			if (key && valueParts.length > 0) {
+				headers[key.trim()] = valueParts.join(':').trim();
+			}
+		});
+		return headers;
+	}
+
+	const mcpDefaults = defaults(mcpServerFormSchema);
+
+	const {
+		form: formData,
+		errors,
+		reset
+	} = superForm(mcpDefaults, {
+		SPA: true,
+		validators: zodClient(mcpServerFormSchema),
+		resetForm: false,
+		onUpdate({ form: f }) {
+			if (!f.valid) return;
+			const d = f.data as Record<string, any>;
+			// Convert flat form data to structured API payload
+			onSubmit({
+				catalogItemId: d.catalogItemId,
+				serverName: d.serverName,
+				displayName: d.displayName,
+				description: d.description,
+				transportType: d.transportType,
+				credentials,
+				config: {
+					url: d.url,
+					command: d.command,
+					args: parseArgsText(d.argsText),
+					env: parseEnvText(d.envText),
+					headers: parseHeadersText(d.headersText)
+				}
+			});
 		}
 	});
 
@@ -42,90 +90,63 @@
 	$effect(() => {
 		if (!open) return;
 
+		credentials = {};
+
 		if (mode === 'install' && catalogItem) {
-			formData = {
-				catalogItemId: catalogItem.id,
-				serverName: catalogItem.catalogId,
-				displayName: catalogItem.displayName,
-				description: catalogItem.description,
-				transportType: catalogItem.defaultConfig.transport || 'stdio',
-				credentials: {},
-				config: {
+			reset({
+				data: {
+					catalogItemId: catalogItem.id,
+					serverName: catalogItem.catalogId,
+					displayName: catalogItem.displayName,
+					description: catalogItem.description,
+					transportType: catalogItem.defaultConfig.transport || 'stdio',
 					url: catalogItem.defaultConfig.url || '',
 					command: catalogItem.defaultConfig.command || '',
-					args: catalogItem.defaultConfig.args || [],
-					env: catalogItem.defaultConfig.env || {},
-					headers: catalogItem.defaultConfig.headers || {}
+					argsText: (catalogItem.defaultConfig.args || []).join('\n'),
+					envText: Object.entries(catalogItem.defaultConfig.env || {})
+						.map(([k, v]) => `${k}=${v}`)
+						.join('\n'),
+					headersText: Object.entries(catalogItem.defaultConfig.headers || {})
+						.map(([k, v]) => `${k}: ${v}`)
+						.join('\n')
 				}
-			};
+			});
 		} else if (mode === 'edit' && server) {
-			formData = {
-				catalogItemId: server.catalogItemId || '',
-				serverName: server.serverName,
-				displayName: server.displayName,
-				description: server.description || '',
-				transportType: server.transportType,
-				credentials: {},
-				config: {
+			reset({
+				data: {
+					catalogItemId: server.catalogItemId || '',
+					serverName: server.serverName,
+					displayName: server.displayName,
+					description: server.description || '',
+					transportType: server.transportType,
 					url: server.config.url || '',
 					command: server.config.command || '',
-					args: server.config.args || [],
-					env: server.config.env || {},
-					headers: server.config.headers || {}
+					argsText: (server.config.args || []).join('\n'),
+					envText: Object.entries(server.config.env || {})
+						.map(([k, v]) => `${k}=${v}`)
+						.join('\n'),
+					headersText: Object.entries(server.config.headers || {})
+						.map(([k, v]) => `${k}: ${v}`)
+						.join('\n')
 				}
-			};
+			});
 		} else if (mode === 'custom') {
-			formData = {
-				catalogItemId: '',
-				serverName: '',
-				displayName: '',
-				description: '',
-				transportType: 'stdio',
-				credentials: {},
-				config: {
+			reset({
+				data: {
+					catalogItemId: '',
+					serverName: '',
+					displayName: '',
+					description: '',
+					transportType: 'stdio',
 					url: '',
 					command: '',
-					args: [],
-					env: {},
-					headers: {}
+					argsText: '',
+					envText: '',
+					headersText: ''
 				}
-			};
+			});
 		}
 	});
-
-	function handleSubmit(e: SubmitEvent) {
-		e.preventDefault();
-		onSubmit(formData);
-	}
-
-	function handleArgsChange(e: Event) {
-		const target = e.target as HTMLTextAreaElement;
-		formData.config.args = target.value.split('\n').filter((line) => line.trim());
-	}
-
-	function handleEnvChange(e: Event) {
-		const target = e.target as HTMLTextAreaElement;
-		const env: Record<string, string> = {};
-		target.value.split('\n').forEach((line) => {
-			const [key, ...valueParts] = line.split('=');
-			if (key && valueParts.length > 0) {
-				env[key.trim()] = valueParts.join('=').trim();
-			}
-		});
-		formData.config.env = env;
-	}
-
-	function handleHeadersChange(e: Event) {
-		const target = e.target as HTMLTextAreaElement;
-		const headers: Record<string, string> = {};
-		target.value.split('\n').forEach((line) => {
-			const [key, ...valueParts] = line.split(':');
-			if (key && valueParts.length > 0) {
-				headers[key.trim()] = valueParts.join(':').trim();
-			}
-		});
-		formData.config.headers = headers;
-	}
 
 	const modalTitle = $derived(
 		mode === 'install'
@@ -133,18 +154,6 @@
 			: mode === 'edit'
 				? 'Edit MCP Server'
 				: 'Add Custom MCP Server'
-	);
-
-	const argsText = $derived(formData.config.args.join('\n'));
-	const envText = $derived(
-		Object.entries(formData.config.env)
-			.map(([k, v]) => `${k}=${v}`)
-			.join('\n')
-	);
-	const headersText = $derived(
-		Object.entries(formData.config.headers)
-			.map(([k, v]) => `${k}: ${v}`)
-			.join('\n')
 	);
 </script>
 
@@ -156,22 +165,26 @@
 			<button type="button" class="btn-close" onclick={onClose}>×</button>
 		</div>
 
-		<form class="modal-body" onsubmit={handleSubmit}>
+		<form class="modal-body" method="POST">
 			<div class="form-group">
 				<label for="serverName">Server Name</label>
 				<input
 					type="text"
 					id="serverName"
-					bind:value={formData.serverName}
+					bind:value={$formData.serverName}
 					placeholder="my-mcp-server"
-					pattern="[a-z0-9-]+"
-					required
 					disabled={mode === 'edit'}
 					class="form-input"
+					class:form-error={$errors.serverName}
+					aria-invalid={!!$errors.serverName}
 				/>
-				<p class="form-hint">
-					Lowercase alphanumeric with hyphens {mode === 'edit' ? '(cannot be changed)' : ''}
-				</p>
+				{#if $errors.serverName}
+					<p class="field-error">{$errors.serverName}</p>
+				{:else}
+					<p class="form-hint">
+						Lowercase alphanumeric with hyphens {mode === 'edit' ? '(cannot be changed)' : ''}
+					</p>
+				{/if}
 			</div>
 
 			<div class="form-group">
@@ -179,18 +192,20 @@
 				<input
 					type="text"
 					id="displayName"
-					bind:value={formData.displayName}
+					bind:value={$formData.displayName}
 					placeholder="My MCP Server"
-					required
 					class="form-input"
+					class:form-error={$errors.displayName}
+					aria-invalid={!!$errors.displayName}
 				/>
+				{#if $errors.displayName}<p class="field-error">{$errors.displayName}</p>{/if}
 			</div>
 
 			<div class="form-group">
 				<label for="description">Description</label>
 				<textarea
 					id="description"
-					bind:value={formData.description}
+					bind:value={$formData.description}
 					placeholder="Optional description..."
 					rows="3"
 					class="form-input"
@@ -200,7 +215,7 @@
 			{#if mode !== 'install'}
 				<div class="form-group">
 					<label for="transportType">Transport Type</label>
-					<select id="transportType" bind:value={formData.transportType} class="form-select">
+					<select id="transportType" bind:value={$formData.transportType} class="form-select">
 						<option value="stdio">stdio (local process)</option>
 						<option value="sse">SSE (Server-Sent Events)</option>
 						<option value="http">HTTP</option>
@@ -209,15 +224,14 @@
 			{/if}
 
 			<!-- Transport-specific config -->
-			{#if formData.transportType === 'stdio'}
+			{#if $formData.transportType === 'stdio'}
 				<div class="form-group">
 					<label for="command">Command</label>
 					<input
 						type="text"
 						id="command"
-						bind:value={formData.config.command}
+						bind:value={$formData.command}
 						placeholder="npx"
-						required
 						class="form-input"
 					/>
 				</div>
@@ -226,8 +240,7 @@
 					<label for="args">Arguments (one per line)</label>
 					<textarea
 						id="args"
-						value={argsText}
-						oninput={handleArgsChange}
+						bind:value={$formData.argsText}
 						placeholder="-y&#10;@modelcontextprotocol/server-github"
 						rows="4"
 						class="form-input"
@@ -238,8 +251,7 @@
 					<label for="env">Environment Variables (KEY=value)</label>
 					<textarea
 						id="env"
-						value={envText}
-						oninput={handleEnvChange}
+						bind:value={$formData.envText}
 						placeholder="PATH=/usr/bin&#10;NODE_ENV=production"
 						rows="3"
 						class="form-input"
@@ -251,9 +263,8 @@
 					<input
 						type="url"
 						id="url"
-						bind:value={formData.config.url}
+						bind:value={$formData.url}
 						placeholder="https://mcp.example.com/events"
-						required
 						class="form-input"
 					/>
 				</div>
@@ -262,8 +273,7 @@
 					<label for="headers">Headers (Key: Value)</label>
 					<textarea
 						id="headers"
-						value={headersText}
-						oninput={handleHeadersChange}
+						bind:value={$formData.headersText}
 						placeholder="Authorization: Bearer token&#10;Content-Type: application/json"
 						rows="3"
 						class="form-input"
@@ -282,7 +292,7 @@
 						<input
 							type={cred.type === 'password' ? 'password' : 'text'}
 							id={`cred-${cred.key}`}
-							bind:value={formData.credentials[cred.key]}
+							bind:value={credentials[cred.key]}
 							placeholder={cred.description}
 							required
 							class="form-input"
@@ -429,6 +439,16 @@
 		margin-top: var(--space-xs);
 		font-size: var(--text-xs);
 		color: var(--fg-tertiary);
+	}
+
+	.field-error {
+		color: oklch(0.7 0.2 25);
+		font-size: var(--text-xs);
+		margin-top: var(--space-xs);
+	}
+
+	.form-error {
+		border-color: oklch(0.7 0.2 25) !important;
 	}
 
 	.form-divider {
