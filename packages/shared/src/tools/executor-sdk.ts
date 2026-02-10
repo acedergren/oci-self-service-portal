@@ -35,7 +35,7 @@ export async function executeOCISDK<S extends OCIServiceName>(
 		try {
 			const client = getSDKClient(service);
 
-			const method = (client as Record<string, unknown>)[operation];
+			const method = (client as unknown as Record<string, unknown>)[operation];
 			if (typeof method !== 'function') {
 				throw new OCIError(`Unknown SDK operation: ${service}.${operation}`, {
 					service,

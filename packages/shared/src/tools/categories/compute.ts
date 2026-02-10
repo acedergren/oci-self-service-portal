@@ -1,12 +1,6 @@
 import { z } from 'zod';
 import type { ToolEntry } from '../types.js';
-import {
-	executeAndSlim,
-	executeOCISDK,
-	normalizeSDKResponse,
-	requireCompartmentId,
-	slimOCIResponse
-} from '../executor-sdk.js';
+import { executeAndSlim, executeOCISDK, requireCompartmentId } from '../executor-sdk.js';
 import { executeOCI, executeOCIAsync } from '../executor.js';
 import { getSDKClient } from '../sdk-auth.js';
 
