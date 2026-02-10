@@ -14,4 +14,7 @@ export * from './workflows/types.js';
 // Re-export all server API types and schemas
 export * from './server/api/types.js';
 
+// Re-export error hierarchy
+export * from './errors.js';
+
 export const PACKAGE_VERSION = '0.0.1';
