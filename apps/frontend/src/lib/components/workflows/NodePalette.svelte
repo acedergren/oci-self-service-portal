@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { NodePaletteProps, PaletteItem } from './types.js';
+	import { fuzzySearch } from '$lib/utils/fuzzy-search.js';
 
 	let { groups, onDragStart }: NodePaletteProps = $props();
 
@@ -9,12 +10,10 @@
 		groups
 			.map((group) => ({
 				...group,
-				items: group.items.filter(
-					(item) =>
-						!searchQuery ||
-						item.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-						item.description.toLowerCase().includes(searchQuery.toLowerCase())
-				)
+				items: fuzzySearch(group.items, searchQuery, [
+					{ name: 'label', weight: 2 },
+					{ name: 'description', weight: 1 }
+				])
 			}))
 			.filter((group) => group.items.length > 0)
 	);

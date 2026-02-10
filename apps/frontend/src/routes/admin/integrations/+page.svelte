@@ -7,6 +7,7 @@
 	import IntegrationServerCard from '$lib/components/admin/IntegrationServerCard.svelte';
 	import MCPServerModal from '$lib/components/admin/MCPServerModal.svelte';
 	import ToolPlaygroundCard from '$lib/components/admin/ToolPlaygroundCard.svelte';
+	import { fuzzySearch } from '$lib/utils/fuzzy-search.js';
 
 	let { data }: { data: PageData } = $props();
 
@@ -238,16 +239,17 @@
 	const servers = $derived($serversQuery.data?.servers || []);
 	const tools = $derived($toolsQuery.data?.tools || []);
 
-	const filteredCatalogItems = $derived(
-		catalogItems.filter((item: any) => {
-			const matchesSearch =
-				item.displayName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-				item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-				item.tags?.some((tag: string) => tag.toLowerCase().includes(searchQuery.toLowerCase()));
-			const matchesCategory = categoryFilter === 'all' || item.category === categoryFilter;
-			return matchesSearch && matchesCategory;
-		})
-	);
+	const filteredCatalogItems = $derived.by(() => {
+		const categoryFiltered =
+			categoryFilter === 'all'
+				? catalogItems
+				: catalogItems.filter((item: any) => item.category === categoryFilter);
+		return fuzzySearch(categoryFiltered, searchQuery, [
+			{ name: 'displayName', weight: 2 },
+			{ name: 'description', weight: 1 },
+			{ name: 'tags', weight: 1.5 }
+		]);
+	});
 
 	const categories = $derived(['all', ...new Set(catalogItems.map((item: any) => item.category))]);
 

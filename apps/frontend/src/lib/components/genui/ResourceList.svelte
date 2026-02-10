@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { ResourceItem } from './types.js';
+	import { fuzzySearch } from '$lib/utils/fuzzy-search.js';
 
 	interface Props {
 		resources: ResourceItem[];
@@ -12,14 +13,11 @@
 	let filterQuery = $state('');
 
 	const filtered = $derived(
-		filterQuery
-			? resources.filter(
-					(r) =>
-						r.name.toLowerCase().includes(filterQuery.toLowerCase()) ||
-						r.type.toLowerCase().includes(filterQuery.toLowerCase()) ||
-						(r.description?.toLowerCase().includes(filterQuery.toLowerCase()) ?? false)
-				)
-			: resources
+		fuzzySearch(resources, filterQuery, [
+			{ name: 'name', weight: 2 },
+			{ name: 'type', weight: 1.5 },
+			{ name: 'description', weight: 1 }
+		])
 	);
 
 	function statusVariant(status: ResourceItem['status']): string {
