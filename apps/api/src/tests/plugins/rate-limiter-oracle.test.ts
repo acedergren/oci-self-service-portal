@@ -103,11 +103,10 @@ describe('rate-limiter-oracle plugin', () => {
 		});
 
 		it('defaults to api limit for unlisted endpoints', async () => {
-			app.get('/api/unlisted', async () => ({ data: [] }));
-
+			// Use an endpoint that doesn't exist in ENDPOINT_LIMITS
 			await app.inject({
 				method: 'GET',
-				url: '/api/unlisted'
+				url: '/api/other'
 			});
 
 			expect(mockCheckRateLimit).toHaveBeenCalledWith(
@@ -120,12 +119,31 @@ describe('rate-limiter-oracle plugin', () => {
 
 	describe('per-user tracking', () => {
 		it('uses user ID from session when authenticated', async () => {
-			app.addHook('preHandler', async (request) => {
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				(request as any).user = { id: 'user-123' };
-			});
+			// Build a custom app with authenticated user
+			const authApp = Fastify();
+			const userSym = Symbol.for('user');
+			await authApp.register(
+				fp(
+					async (fastify) => {
+						// Use getter to provide user context
+						fastify.decorateRequest('user', {
+							getter() {
+								// eslint-disable-next-line @typescript-eslint/no-explicit-any
+								const val = (this as any)[userSym];
+								return val !== undefined ? val : { id: 'user-123' };
+							}
+						});
+						fastify.decorateRequest('apiKeyContext', null);
+					},
+					{ name: 'auth', fastify: '5.x' }
+				)
+			);
+			const { rateLimiterOraclePlugin } = await import('../../plugins/rate-limiter-oracle.js');
+			await authApp.register(rateLimiterOraclePlugin);
+			authApp.get('/api/sessions', async () => ({ data: [] }));
+			await authApp.ready();
 
-			await app.inject({
+			await authApp.inject({
 				method: 'GET',
 				url: '/api/sessions'
 			});
@@ -135,15 +153,34 @@ describe('rate-limiter-oracle plugin', () => {
 				expect.any(String),
 				expect.any(Object)
 			);
+
+			await authApp.close();
 		});
 
 		it('uses API key ID when present', async () => {
-			app.addHook('preHandler', async (request) => {
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				(request as any).apiKeyContext = { keyId: 'key-abc' };
-			});
+			const authApp = Fastify();
+			const apiKeySym = Symbol.for('apiKeyContext');
+			await authApp.register(
+				fp(
+					async (fastify) => {
+						fastify.decorateRequest('user', null);
+						fastify.decorateRequest('apiKeyContext', {
+							getter() {
+								// eslint-disable-next-line @typescript-eslint/no-explicit-any
+								const val = (this as any)[apiKeySym];
+								return val !== undefined ? val : { keyId: 'key-abc' };
+							}
+						});
+					},
+					{ name: 'auth', fastify: '5.x' }
+				)
+			);
+			const { rateLimiterOraclePlugin } = await import('../../plugins/rate-limiter-oracle.js');
+			await authApp.register(rateLimiterOraclePlugin);
+			authApp.get('/api/sessions', async () => ({ data: [] }));
+			await authApp.ready();
 
-			await app.inject({
+			await authApp.inject({
 				method: 'GET',
 				url: '/api/sessions'
 			});
@@ -153,6 +190,8 @@ describe('rate-limiter-oracle plugin', () => {
 				expect.any(String),
 				expect.any(Object)
 			);
+
+			await authApp.close();
 		});
 
 		it('falls back to IP for unauthenticated requests', async () => {
@@ -170,40 +209,61 @@ describe('rate-limiter-oracle plugin', () => {
 		});
 
 		it('tracks limits independently per user', async () => {
+			const authApp = Fastify();
+			let requestCount = 0;
+			const userSym = Symbol('user-memo');
+			await authApp.register(
+				fp(
+					async (fastify) => {
+						fastify.decorateRequest('user', {
+							getter() {
+								// eslint-disable-next-line @typescript-eslint/no-explicit-any
+								const req = this as any;
+								// Memoize the user value per request to avoid multiple increments
+								if (!req[userSym]) {
+									requestCount++;
+									req[userSym] = { id: `user-${requestCount}` };
+								}
+								return req[userSym];
+							}
+						});
+						fastify.decorateRequest('apiKeyContext', null);
+					},
+					{ name: 'auth', fastify: '5.x' }
+				)
+			);
+			const { rateLimiterOraclePlugin } = await import('../../plugins/rate-limiter-oracle.js');
+			await authApp.register(rateLimiterOraclePlugin);
+			authApp.get('/api/sessions', async () => ({ data: [] }));
+			await authApp.ready();
+
 			// User 1 request
-			app.addHook('preHandler', async (request) => {
-				if (request.url === '/api/sessions') {
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					(request as any).user = { id: 'user-1' };
-				}
-			});
-			await app.inject({
+			await authApp.inject({
 				method: 'GET',
 				url: '/api/sessions'
 			});
 
-			expect(mockCheckRateLimit).toHaveBeenCalledWith(
+			expect(mockCheckRateLimit).toHaveBeenNthCalledWith(
+				1,
 				'user:user-1',
 				expect.any(String),
 				expect.any(Object)
 			);
 
-			// User 2 request (simulate new request)
-			app.removeAllHooks();
-			app.addHook('preHandler', async (request) => {
-				// eslint-disable-next-line @typescript-eslint/no-explicit-any
-				(request as any).user = { id: 'user-2' };
-			});
-			await app.inject({
+			// User 2 request
+			await authApp.inject({
 				method: 'GET',
 				url: '/api/sessions'
 			});
 
-			expect(mockCheckRateLimit).toHaveBeenCalledWith(
+			expect(mockCheckRateLimit).toHaveBeenNthCalledWith(
+				2,
 				'user:user-2',
 				expect.any(String),
 				expect.any(Object)
 			);
+
+			await authApp.close();
 		});
 	});
 
@@ -332,7 +392,6 @@ describe('rate-limiter-oracle plugin', () => {
 		});
 
 		it('skips /health without checking rate limit', async () => {
-			app.get('/health', async () => ({ status: 'ok' }));
 			mockCheckRateLimit.mockClear();
 
 			const res = await app.inject({
@@ -340,7 +399,7 @@ describe('rate-limiter-oracle plugin', () => {
 				url: '/health'
 			});
 
-			expect(res.statusCode).toBe(200);
+			// Even though route doesn't exist, plugin should skip rate limiting
 			expect(mockCheckRateLimit).not.toHaveBeenCalled();
 		});
 
