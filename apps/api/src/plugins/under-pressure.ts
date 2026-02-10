@@ -46,16 +46,17 @@ const underPressurePlugin: FastifyPluginAsync<UnderPressurePluginOptions> = asyn
 	// Custom pressure handler that returns 503 with proper body and Retry-After header
 	const pressureHandler = async (
 		_req: unknown,
-		reply: { code: (statusCode: number) => { header: (key: string, value: string) => { send: (body: object) => void } } }
+		reply: {
+			code: (statusCode: number) => {
+				header: (key: string, value: string) => { send: (body: object) => void };
+			};
+		}
 	) => {
-		reply
-			.code(503)
-			.header('Retry-After', '30')
-			.send({
-				statusCode: 503,
-				error: 'Service Unavailable',
-				message: 'Server is under pressure'
-			});
+		reply.code(503).header('Retry-After', '30').send({
+			statusCode: 503,
+			error: 'Service Unavailable',
+			message: 'Server is under pressure'
+		});
 	};
 
 	await fastify.register(underPressure, {
