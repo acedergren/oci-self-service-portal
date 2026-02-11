@@ -2,6 +2,7 @@ export { healthRoutes } from './health.js';
 export { sessionRoutes } from './sessions.js';
 export { activityRoutes } from './activity.js';
 export { toolRoutes } from './tools.js';
+export { v1ToolRoutes } from './v1-tools.js';
 export { metricsRoutes } from './metrics.js';
 export { default as searchRoutes } from './search.js';
 export { default as mcpRoutes } from './mcp.js';

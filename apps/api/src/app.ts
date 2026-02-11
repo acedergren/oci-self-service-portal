@@ -34,6 +34,7 @@ import { healthRoutes } from './routes/health.js';
 import { sessionRoutes } from './routes/sessions.js';
 import { activityRoutes } from './routes/activity.js';
 import { toolExecuteRoutes, toolApproveRoutes } from './routes/tools/index.js';
+import { v1ToolRoutes } from './routes/v1-tools.js';
 import workflowRoutes from './routes/workflows.js';
 import chatRoutes from './routes/chat.js';
 import mcpRoutes from './routes/mcp.js';
@@ -414,6 +415,7 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 	await app.register(activityRoutes);
 	await app.register(toolExecuteRoutes);
 	await app.register(toolApproveRoutes);
+	await app.register(v1ToolRoutes);
 	await app.register(workflowRoutes);
 	await app.register(chatRoutes);
 	await app.register(mcpRoutes);

@@ -129,6 +129,45 @@ export const ToolApproveBodySchema = z.object({
 export type ToolApproveBody = z.infer<typeof ToolApproveBodySchema>;
 
 // ---------------------------------------------------------------------------
+// Tools — V1 API
+// ---------------------------------------------------------------------------
+
+/** Valid tool categories for v1 API filtering */
+export const ToolCategorySchema = z.enum([
+	'compute',
+	'networking',
+	'storage',
+	'database',
+	'identity',
+	'observability',
+	'pricing',
+	'search',
+	'billing',
+	'logging'
+]);
+
+export type ToolCategory = z.infer<typeof ToolCategorySchema>;
+
+export const V1ToolsQuerySchema = z.object({
+	category: ToolCategorySchema.optional()
+});
+
+export type V1ToolsQuery = z.infer<typeof V1ToolsQuerySchema>;
+
+export const V1ToolNameParamsSchema = z.object({
+	name: z.string().min(1).max(200)
+});
+
+export type V1ToolNameParams = z.infer<typeof V1ToolNameParamsSchema>;
+
+export const V1ToolExecuteBodySchema = z.object({
+	args: z.record(z.string(), z.unknown()).default({}),
+	confirmed: z.boolean().optional()
+});
+
+export type V1ToolExecuteBody = z.infer<typeof V1ToolExecuteBodySchema>;
+
+// ---------------------------------------------------------------------------
 // Common error response
 // ---------------------------------------------------------------------------
 
