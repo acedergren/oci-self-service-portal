@@ -36,5 +36,6 @@ export {
 	topologicalSort,
 	detectCycles,
 	safeEvaluateExpression,
-	resolveOutputMapping
+	resolveOutputMapping,
+	resolvePath
 } from './graph-utils.js';

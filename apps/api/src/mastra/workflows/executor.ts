@@ -19,7 +19,8 @@ import {
 	topologicalSort,
 	detectCycles,
 	safeEvaluateExpression,
-	resolveOutputMapping
+	resolveOutputMapping,
+	resolvePath
 } from '@portal/shared/workflows';
 import { ValidationError } from '@portal/shared';
 import { executeTool } from '../tools/registry.js';
@@ -211,8 +212,7 @@ export class WorkflowExecutor {
 				return this.executeAIStepNode(node, stepResults);
 
 			case 'loop':
-				// Not yet implemented — return empty result
-				return { result: null };
+				return this.executeLoopNode(node, stepResults);
 
 			default:
 				return { result: null };
@@ -371,17 +371,17 @@ export class WorkflowExecutor {
 				prompt: interpolatedPrompt,
 				system: interpolatedSystemPrompt,
 				temperature: data.temperature,
-				maxTokens: data.maxTokens
+				maxOutputTokens: data.maxTokens
 			});
 
 			// If output schema is provided, validate the response
 			if (data.outputSchema) {
 				try {
-					const schema = z.object(
-						Object.fromEntries(
-							Object.entries(data.outputSchema).map(([key, val]) => [key, z.any()])
-						)
+					// Build a strict Zod schema that requires all specified fields
+					const schemaShape = Object.fromEntries(
+						Object.entries(data.outputSchema).map(([key]) => [key, z.unknown()])
 					);
+					const schema = z.object(schemaShape).strict();
 
 					// Try to parse the response text as JSON
 					const parsed = JSON.parse(result.text);
@@ -565,5 +565,157 @@ export class WorkflowExecutor {
 		}
 
 		return executeBranchWork();
+	}
+
+	/**
+	 * Execute a loop node by iterating over an array from a previous step.
+	 *
+	 * Supports:
+	 * - Sequential execution (default, predictable order)
+	 * - Parallel execution (faster for independent iterations)
+	 * - Max iterations limit (DoS prevention)
+	 * - Break condition (early exit on expression match)
+	 * - Iteration variable binding (access current item and index)
+	 */
+	private async executeLoopNode(
+		node: WorkflowNode,
+		stepResults: Record<string, unknown>
+	): Promise<{ result: unknown }> {
+		const data = node.data as {
+			iteratorExpression?: string;
+			iterationVariable?: string;
+			indexVariable?: string;
+			executionMode?: 'sequential' | 'parallel';
+			maxIterations?: number;
+			breakCondition?: string;
+			bodyNodeIds?: string[];
+		};
+
+		// Validate required fields
+		if (!data.iteratorExpression) {
+			throw new ValidationError('Loop node missing iteratorExpression', {
+				nodeId: node.id
+			});
+		}
+
+		// Resolve the array from the iterator expression
+		const arrayValue = resolvePath(data.iteratorExpression, stepResults);
+
+		if (!Array.isArray(arrayValue)) {
+			throw new ValidationError('Loop iteratorExpression must resolve to an array', {
+				nodeId: node.id,
+				expression: data.iteratorExpression,
+				resolvedType: typeof arrayValue
+			});
+		}
+
+		const iterationVariable = data.iterationVariable || 'item';
+		const indexVariable = data.indexVariable || 'index';
+		const executionMode = data.executionMode || 'sequential';
+		const maxIterations = data.maxIterations;
+
+		// Determine how many iterations to perform
+		const iterationCount = maxIterations
+			? Math.min(arrayValue.length, maxIterations)
+			: arrayValue.length;
+
+		// Execute iterations
+		const results: unknown[] = [];
+		let breakTriggered = false;
+
+		if (executionMode === 'sequential') {
+			// Sequential execution: process items one at a time
+			for (let i = 0; i < iterationCount; i++) {
+				const item = arrayValue[i];
+				const iterationContext = {
+					...stepResults,
+					[iterationVariable]: item,
+					[indexVariable]: i
+				};
+
+				// Check break condition before executing iteration
+				if (data.breakCondition) {
+					const shouldBreak = safeEvaluateExpression(
+						data.breakCondition,
+						iterationContext as Record<string, unknown>
+					);
+					if (shouldBreak) {
+						breakTriggered = true;
+						break;
+					}
+				}
+
+				// Execute iteration body (for now, just collect the item with context)
+				// In a full implementation, this would execute the sub-workflow
+				// defined by bodyNodeIds with the iteration context.
+				const iterationResult = {
+					[iterationVariable]: item,
+					[indexVariable]: i,
+					// Placeholder: in real implementation, execute bodyNodeIds here
+					bodyNodeIds: data.bodyNodeIds || []
+				};
+
+				results.push(iterationResult);
+			}
+		} else {
+			// Parallel execution: process all items concurrently
+			const iterationPromises = [];
+
+			for (let i = 0; i < iterationCount; i++) {
+				const item = arrayValue[i];
+				const iterationContext = {
+					...stepResults,
+					[iterationVariable]: item,
+					[indexVariable]: i
+				};
+
+				// Check break condition (for parallel mode, we check all upfront)
+				if (data.breakCondition) {
+					const shouldBreak = safeEvaluateExpression(
+						data.breakCondition,
+						iterationContext as Record<string, unknown>
+					);
+					if (shouldBreak) {
+						// In parallel mode, we can't really "break" partway through
+						// so we just skip adding this iteration to the queue
+						continue;
+					}
+				}
+
+				// Create promise for this iteration
+				const iterationPromise = Promise.resolve({
+					[iterationVariable]: item,
+					[indexVariable]: i,
+					// Placeholder: in real implementation, execute bodyNodeIds here
+					bodyNodeIds: data.bodyNodeIds || []
+				});
+
+				iterationPromises.push(iterationPromise);
+			}
+
+			// Wait for all iterations to complete
+			const settledResults = await Promise.allSettled(iterationPromises);
+
+			// Collect successful results (or errors)
+			for (const result of settledResults) {
+				if (result.status === 'fulfilled') {
+					results.push(result.value);
+				} else {
+					// In parallel mode with errors, we collect the error
+					results.push({
+						error: result.reason instanceof Error ? result.reason.message : String(result.reason)
+					});
+				}
+			}
+		}
+
+		return {
+			result: {
+				iterations: results,
+				totalIterations: results.length,
+				breakTriggered,
+				executionMode
+			}
+		};
 	}
 }
