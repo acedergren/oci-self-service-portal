@@ -17,6 +17,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import Fastify, { type FastifyInstance, type FastifyRequest } from 'fastify';
 import fp from 'fastify-plugin';
+import fastifyCookie from '@fastify/cookie';
 import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod';
 
 // ---------------------------------------------------------------------------
@@ -76,6 +77,9 @@ async function buildApp(): Promise<FastifyInstance> {
 	const app = Fastify({ logger: false });
 	app.setValidatorCompiler(validatorCompiler);
 	app.setSerializerCompiler(serializerCompiler);
+
+	// Register cookie support (required for session cookie handling)
+	await app.register(fastifyCookie);
 
 	// Fake auth plugin (decorates request like the real auth plugin)
 	const fakeAuthPlugin = fp(
