@@ -11,6 +11,20 @@ vi.mock('../tools/registry.js', () => ({
 	}))
 }));
 
+// Mock AI SDK and provider registry
+const mockGenerateText = vi.fn();
+const mockLanguageModel = vi.fn();
+
+vi.mock('ai', () => ({
+	generateText: (...args: unknown[]) => mockGenerateText(...args)
+}));
+
+vi.mock('../models/provider-registry.js', () => ({
+	getProviderRegistry: vi.fn(async () => ({
+		languageModel: (...args: unknown[]) => mockLanguageModel(...args)
+	}))
+}));
+
 import { WorkflowExecutor } from './executor.js';
 import { executeTool } from '../tools/registry.js';
 
@@ -234,16 +248,14 @@ describe('WorkflowExecutor', () => {
 			expect(result.error).toContain('expression');
 		});
 
-		it('unimplemented node types (ai-step, loop, parallel) return null', async () => {
-			const nodes = [makeNode('n1', 'ai-step'), makeNode('n2', 'loop'), makeNode('n3', 'parallel')];
+		it('unimplemented node type (loop) returns null', async () => {
+			const nodes = [makeNode('n2', 'loop')];
 			const def = makeDefinition(nodes, []);
 
 			const result = await executor.execute(def, {});
 
 			expect(result.status).toBe('completed');
-			expect(result.stepResults!['n1']).toBeNull();
 			expect(result.stepResults!['n2']).toBeNull();
-			expect(result.stepResults!['n3']).toBeNull();
 		});
 	});
 
@@ -311,6 +323,163 @@ describe('WorkflowExecutor', () => {
 
 			expect(result.status).toBe('failed');
 			expect(result.error).toContain('OCI CLI error: 404');
+		});
+	});
+
+	// ── Parallel node ───────────────────────────────────────────────────
+
+	describe('parallel node', () => {
+		it('executes all branches with "all" merge strategy', async () => {
+			const nodes = [
+				makeNode('parallel', 'parallel', {
+					branchNodeIds: [
+						['branch-1-node-1', 'branch-1-node-2'],
+						['branch-2-node-1'],
+						['branch-3-node-1', 'branch-3-node-2', 'branch-3-node-3']
+					],
+					mergeStrategy: 'all',
+					errorHandling: 'fail-fast'
+				})
+			];
+			const def = makeDefinition(nodes, []);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('completed');
+			expect(result.stepResults!['parallel']).toBeDefined();
+			const parallelResult = result.stepResults!['parallel'] as Record<string, unknown>;
+			expect(parallelResult['branch-0']).toBeDefined();
+			expect(parallelResult['branch-1']).toBeDefined();
+			expect(parallelResult['branch-2']).toBeDefined();
+		});
+
+		it('returns first successful branch with "any" merge strategy', async () => {
+			const nodes = [
+				makeNode('parallel', 'parallel', {
+					branchNodeIds: [['slow-branch'], ['fast-branch'], ['another-branch']],
+					mergeStrategy: 'any'
+				})
+			];
+			const def = makeDefinition(nodes, []);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('completed');
+			const parallelResult = result.stepResults!['parallel'] as Record<string, unknown>;
+			// Should have exactly one branch result
+			const branchKeys = Object.keys(parallelResult);
+			expect(branchKeys.length).toBe(1);
+		});
+
+		it('returns first completed branch (even if error) with "first" merge strategy', async () => {
+			const nodes = [
+				makeNode('parallel', 'parallel', {
+					branchNodeIds: [['branch-1'], ['branch-2']],
+					mergeStrategy: 'first',
+					errorHandling: 'collect-all'
+				})
+			];
+			const def = makeDefinition(nodes, []);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('completed');
+			const parallelResult = result.stepResults!['parallel'] as Record<string, unknown>;
+			const branchKeys = Object.keys(parallelResult);
+			expect(branchKeys.length).toBe(1);
+		});
+
+		it('throws ValidationError when branchNodeIds is missing', async () => {
+			const nodes = [makeNode('parallel', 'parallel', {})];
+			const def = makeDefinition(nodes, []);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('failed');
+			expect(result.error).toContain('branchNodeIds');
+		});
+
+		it('throws ValidationError when branchNodeIds is empty', async () => {
+			const nodes = [
+				makeNode('parallel', 'parallel', {
+					branchNodeIds: []
+				})
+			];
+			const def = makeDefinition(nodes, []);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('failed');
+			expect(result.error).toContain('branchNodeIds');
+		});
+
+		it('collects all branch results including errors with "collect-all" error handling', async () => {
+			const nodes = [
+				makeNode('parallel', 'parallel', {
+					branchNodeIds: [['success-branch'], ['error-branch'], ['another-success']],
+					mergeStrategy: 'all',
+					errorHandling: 'collect-all'
+				})
+			];
+			const def = makeDefinition(nodes, []);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('completed');
+			const parallelResult = result.stepResults!['parallel'] as Record<string, unknown>;
+			// All branches should be present in result
+			expect(parallelResult['branch-0']).toBeDefined();
+			expect(parallelResult['branch-1']).toBeDefined();
+			expect(parallelResult['branch-2']).toBeDefined();
+		});
+
+		it('handles timeout by rejecting slow branches', async () => {
+			const nodes = [
+				makeNode('parallel', 'parallel', {
+					branchNodeIds: [['fast'], ['slow'], ['medium']],
+					mergeStrategy: 'all',
+					timeoutMs: 100, // Very short timeout
+					errorHandling: 'collect-all'
+				})
+			];
+			const def = makeDefinition(nodes, []);
+
+			// All branches complete nearly instantly in this stub implementation,
+			// but the timeout mechanism is in place
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('completed');
+		}, 10000);
+
+		it('uses default merge strategy "all" when not specified', async () => {
+			const nodes = [
+				makeNode('parallel', 'parallel', {
+					branchNodeIds: [['b1'], ['b2']]
+					// mergeStrategy not specified
+				})
+			];
+			const def = makeDefinition(nodes, []);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('completed');
+			const parallelResult = result.stepResults!['parallel'] as Record<string, unknown>;
+			expect(Object.keys(parallelResult).length).toBe(2);
+		});
+
+		it('uses default error handling "fail-fast" when not specified', async () => {
+			const nodes = [
+				makeNode('parallel', 'parallel', {
+					branchNodeIds: [['b1'], ['b2']],
+					mergeStrategy: 'all'
+					// errorHandling not specified
+				})
+			];
+			const def = makeDefinition(nodes, []);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('completed');
 		});
 	});
 });

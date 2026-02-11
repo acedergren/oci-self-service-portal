@@ -83,7 +83,7 @@
 		}
 	}));
 
-	const createMutation = createMutation(() => ({
+	const createServerMutation = createMutation(() => ({
 		mutationFn: async (data: any) => {
 			const res = await fetch('/api/admin/mcp/servers', {
 				method: 'POST',
@@ -285,7 +285,7 @@
 		if (modalMode === 'install') {
 			$installMutation.mutate(data);
 		} else if (modalMode === 'custom') {
-			$createMutation.mutate(data);
+			$createServerMutation.mutate(data);
 		} else if (modalMode === 'edit' && editingServer) {
 			$updateMutation.mutate({ id: editingServer.id, data });
 		}
@@ -499,7 +499,9 @@
 		server={editingServer}
 		onClose={closeModal}
 		onSubmit={handleModalSubmit}
-		isPending={$installMutation.isPending || $createMutation.isPending || $updateMutation.isPending}
+		isPending={$installMutation.isPending ||
+			$createServerMutation.isPending ||
+			$updateMutation.isPending}
 	/>
 {/if}
 

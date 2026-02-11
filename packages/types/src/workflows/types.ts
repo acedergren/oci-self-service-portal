@@ -66,7 +66,11 @@ export type ConditionNodeData = z.infer<typeof ConditionNodeDataSchema>;
 
 export const LoopNodeDataSchema = z.object({
 	iteratorExpression: z.string(),
+	iterationVariable: z.string().default('item'),
+	indexVariable: z.string().default('index'),
+	executionMode: z.enum(['sequential', 'parallel']).default('sequential'),
 	maxIterations: z.number().int().positive().optional(),
+	breakCondition: z.string().optional(),
 	bodyNodeIds: z.array(z.string()).optional()
 });
 export type LoopNodeData = z.infer<typeof LoopNodeDataSchema>;
@@ -82,7 +86,9 @@ export const AIStepNodeDataSchema = z.object({
 	prompt: z.string(),
 	model: z.string().optional(),
 	systemPrompt: z.string().optional(),
-	temperature: z.number().min(0).max(2).optional()
+	temperature: z.number().min(0).max(2).optional(),
+	maxTokens: z.number().int().positive().optional(),
+	outputSchema: z.record(z.string(), z.unknown()).optional()
 });
 export type AIStepNodeData = z.infer<typeof AIStepNodeDataSchema>;
 
@@ -107,7 +113,10 @@ export type OutputNodeData = z.infer<typeof OutputNodeDataSchema>;
 
 export const ParallelNodeDataSchema = z.object({
 	branchNodeIds: z.array(z.array(z.string())),
-	waitForAll: z.boolean().optional()
+	waitForAll: z.boolean().optional(), // Deprecated: use mergeStrategy instead
+	mergeStrategy: z.enum(['all', 'any', 'first']).default('all'),
+	timeoutMs: z.number().int().positive().optional(),
+	errorHandling: z.enum(['fail-fast', 'collect-all']).default('fail-fast')
 });
 export type ParallelNodeData = z.infer<typeof ParallelNodeDataSchema>;
 
