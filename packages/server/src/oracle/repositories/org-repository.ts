@@ -27,11 +27,21 @@ interface OrgMemberRow {
 // ============================================================================
 
 function rowToOrg(row: OrganizationRow): Organization {
+	let settings: Record<string, unknown> | undefined;
+	if (row.SETTINGS) {
+		try {
+			settings = JSON.parse(row.SETTINGS);
+		} catch {
+			// Corrupt JSON in CLOB — fallback to empty object
+			settings = {};
+		}
+	}
+
 	return OrganizationSchema.parse({
 		id: row.ID,
 		name: row.NAME,
 		ociCompartmentId: row.OCI_COMPARTMENT_ID ?? undefined,
-		settings: row.SETTINGS ? JSON.parse(row.SETTINGS) : undefined,
+		settings,
 		status: row.STATUS,
 		createdAt: row.CREATED_AT,
 		updatedAt: row.UPDATED_AT
@@ -67,7 +77,11 @@ export const orgRepository = {
 			);
 		});
 
-		return (await this.getById(id))!;
+		const created = await this.getById(id);
+		if (!created) {
+			throw new Error(`Failed to retrieve organization after creation: ${id}`);
+		}
+		return created;
 	},
 
 	async getById(id: string): Promise<Organization | null> {

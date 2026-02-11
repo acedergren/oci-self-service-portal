@@ -83,7 +83,11 @@ export const sessionRepository = {
 			);
 		});
 
-		return (await this.getById(id))!;
+		const created = await this.getById(id);
+		if (!created) {
+			throw new Error(`Failed to retrieve session after creation: ${id}`);
+		}
+		return created;
 	},
 
 	async getById(id: string): Promise<ChatSession | null> {
@@ -118,12 +122,13 @@ export const sessionRepository = {
 
 			const where = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
 			const limit = options?.limit ?? 50;
+			const offset = options?.offset ?? 0;
 
 			const result = await conn.execute<ChatSessionRow>(
 				`SELECT * FROM chat_sessions ${where}
 				 ORDER BY updated_at DESC
-				 FETCH FIRST :maxRows ROWS ONLY`,
-				{ ...binds, maxRows: limit }
+				 OFFSET :offset ROWS FETCH FIRST :maxRows ROWS ONLY`,
+				{ ...binds, offset, maxRows: limit }
 			);
 
 			if (!result.rows) return [];
