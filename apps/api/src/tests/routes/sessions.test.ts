@@ -27,10 +27,14 @@ import { serializerCompiler, validatorCompiler } from 'fastify-type-provider-zod
 const mockListSessionsEnriched = vi.fn();
 const mockCreate = vi.fn();
 const mockDeleteSession = vi.fn();
+const mockGetById = vi.fn();
+const mockUpdate = vi.fn();
 
 vi.mock('@portal/shared/server/oracle/repositories/session-repository', () => ({
 	sessionRepository: {
-		create: (...args: unknown[]) => mockCreate(...args)
+		create: (...args: unknown[]) => mockCreate(...args),
+		getById: (...args: unknown[]) => mockGetById(...args),
+		update: (...args: unknown[]) => mockUpdate(...args)
 	},
 	listSessionsEnriched: (...args: unknown[]) => mockListSessionsEnriched(...args),
 	deleteSession: (...args: unknown[]) => mockDeleteSession(...args)
@@ -506,5 +510,260 @@ describe('DELETE /api/sessions/:id', () => {
 		});
 
 		expect(res.statusCode).toBe(503);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/sessions/:id/continue
+// ---------------------------------------------------------------------------
+
+describe('POST /api/sessions/:id/continue', () => {
+	let app: FastifyInstance;
+
+	beforeEach(() => {
+		mockGetById.mockReset();
+		mockUpdate.mockReset();
+		mockValidateApiKey.mockReset();
+	});
+
+	afterEach(async () => {
+		if (app) await app.close();
+	});
+
+	it('returns 401 for unauthenticated requests', async () => {
+		app = await buildApp();
+		await app.ready();
+
+		const res = await app.inject({
+			method: 'POST',
+			url: '/api/sessions/a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d/continue'
+		});
+
+		expect(res.statusCode).toBe(401);
+	});
+
+	it('returns 403 when user lacks sessions:write permission', async () => {
+		app = await buildApp();
+		simulateSession(app, { id: 'user-1' }, ['sessions:read']);
+		await app.ready();
+
+		const res = await app.inject({
+			method: 'POST',
+			url: '/api/sessions/a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d/continue'
+		});
+
+		expect(res.statusCode).toBe(403);
+	});
+
+	it('returns 404 when session does not exist', async () => {
+		mockGetById.mockResolvedValue(null);
+
+		app = await buildApp();
+		simulateSession(app, { id: 'user-1' }, ['sessions:write']);
+		await app.ready();
+
+		const res = await app.inject({
+			method: 'POST',
+			url: '/api/sessions/a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d/continue'
+		});
+
+		expect(res.statusCode).toBe(404);
+		// Error response structure may vary - just verify it's an error response
+		expect(mockGetById).toHaveBeenCalledWith('a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d');
+	});
+
+	it('returns 403 when session belongs to different user (IDOR protection)', async () => {
+		const sessionId = 'b1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d';
+		mockGetById.mockResolvedValue({
+			id: sessionId,
+			userId: 'user-2',
+			model: 'default',
+			region: 'eu-frankfurt-1',
+			status: 'active'
+		});
+
+		app = await buildApp();
+		simulateSession(app, { id: 'user-1' }, ['sessions:write']);
+		await app.ready();
+
+		const res = await app.inject({
+			method: 'POST',
+			url: `/api/sessions/${sessionId}/continue`
+		});
+
+		expect(res.statusCode).toBe(403);
+		const body = JSON.parse(res.body);
+		expect(body.message).toContain('does not belong to you');
+	});
+
+	it('allows switching to legacy session with null userId', async () => {
+		const sessionId = 'c1c2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d';
+		mockGetById.mockResolvedValue({
+			id: sessionId,
+			userId: null,
+			model: 'default',
+			region: 'eu-frankfurt-1',
+			status: 'active'
+		});
+
+		app = await buildApp();
+		simulateSession(app, { id: 'user-1' }, ['sessions:write']);
+		await app.ready();
+
+		const res = await app.inject({
+			method: 'POST',
+			url: `/api/sessions/${sessionId}/continue`
+		});
+
+		expect(res.statusCode).toBe(200);
+		const body = JSON.parse(res.body);
+		expect(body.success).toBe(true);
+		expect(body.sessionId).toBe(sessionId);
+	});
+
+	it('sets session cookie with correct attributes', async () => {
+		const sessionId = 'd1d2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d';
+		mockGetById.mockResolvedValue({
+			id: sessionId,
+			userId: 'user-1',
+			model: 'default',
+			region: 'eu-frankfurt-1',
+			status: 'active'
+		});
+
+		app = await buildApp();
+		simulateSession(app, { id: 'user-1' }, ['sessions:write']);
+		await app.ready();
+
+		const res = await app.inject({
+			method: 'POST',
+			url: `/api/sessions/${sessionId}/continue`
+		});
+
+		expect(res.statusCode).toBe(200);
+		const setCookieHeader = res.headers['set-cookie'];
+		expect(setCookieHeader).toBeDefined();
+		expect(setCookieHeader).toContain(`oci_chat_session=${sessionId}`);
+		expect(setCookieHeader).toContain('Path=/');
+		expect(setCookieHeader).toContain('HttpOnly');
+		expect(setCookieHeader).toContain('SameSite=Lax');
+	});
+
+	it('reactivates completed session when switching to it', async () => {
+		const sessionId = 'e1e2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d';
+		mockGetById.mockResolvedValue({
+			id: sessionId,
+			userId: 'user-1',
+			model: 'default',
+			region: 'eu-frankfurt-1',
+			status: 'completed'
+		});
+		mockUpdate.mockResolvedValue(undefined);
+
+		app = await buildApp();
+		simulateSession(app, { id: 'user-1' }, ['sessions:write']);
+		await app.ready();
+
+		const res = await app.inject({
+			method: 'POST',
+			url: `/api/sessions/${sessionId}/continue`
+		});
+
+		expect(res.statusCode).toBe(200);
+		expect(mockUpdate).toHaveBeenCalledWith(sessionId, { status: 'active' });
+	});
+
+	it('does not call update for already-active session', async () => {
+		const sessionId = 'f1f2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d';
+		mockGetById.mockResolvedValue({
+			id: sessionId,
+			userId: 'user-1',
+			model: 'default',
+			region: 'eu-frankfurt-1',
+			status: 'active'
+		});
+
+		app = await buildApp();
+		simulateSession(app, { id: 'user-1' }, ['sessions:write']);
+		await app.ready();
+
+		const res = await app.inject({
+			method: 'POST',
+			url: `/api/sessions/${sessionId}/continue`
+		});
+
+		expect(res.statusCode).toBe(200);
+		expect(mockUpdate).not.toHaveBeenCalled();
+	});
+
+	it('validates UUID format in params', async () => {
+		app = await buildApp();
+		simulateSession(app, { id: 'user-1' }, ['sessions:write']);
+		await app.ready();
+
+		const res = await app.inject({
+			method: 'POST',
+			url: '/api/sessions/not-a-uuid/continue'
+		});
+
+		expect(res.statusCode).toBe(400);
+	});
+
+	it('returns 503 when DB is unavailable', async () => {
+		app = await buildApp();
+		simulateSession(app, { id: 'user-1' }, ['sessions:write']);
+		app.addHook('onRequest', async (request) => {
+			(request as any).dbAvailable = false;
+		});
+		await app.ready();
+
+		const res = await app.inject({
+			method: 'POST',
+			url: '/api/sessions/a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d/continue'
+		});
+
+		expect(res.statusCode).toBe(503);
+	});
+
+	it('returns 503 when repository throws database error', async () => {
+		mockGetById.mockRejectedValue(new Error('Database connection lost'));
+
+		app = await buildApp();
+		simulateSession(app, { id: 'user-1' }, ['sessions:write']);
+		await app.ready();
+
+		const res = await app.inject({
+			method: 'POST',
+			url: '/api/sessions/a1b2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d/continue'
+		});
+
+		expect(res.statusCode).toBe(503);
+		// Error response structure may vary - just verify we got the right status
+		expect(mockGetById).toHaveBeenCalled();
+	});
+
+	it('returns success with sessionId in response body', async () => {
+		const sessionId = '123e4567-e89b-12d3-a456-426614174000';
+		mockGetById.mockResolvedValue({
+			id: sessionId,
+			userId: 'user-1',
+			model: 'default',
+			region: 'eu-frankfurt-1',
+			status: 'active'
+		});
+
+		app = await buildApp();
+		simulateSession(app, { id: 'user-1' }, ['sessions:write']);
+		await app.ready();
+
+		const res = await app.inject({
+			method: 'POST',
+			url: `/api/sessions/${sessionId}/continue`
+		});
+
+		expect(res.statusCode).toBe(200);
+		const body = JSON.parse(res.body);
+		expect(body.success).toBe(true);
+		expect(body.sessionId).toBe(sessionId);
 	});
 });
