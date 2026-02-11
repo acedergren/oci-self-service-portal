@@ -248,14 +248,26 @@ describe('WorkflowExecutor', () => {
 			expect(result.error).toContain('expression');
 		});
 
-		it.skip('unimplemented node type (loop) returns null', async () => {
-			const nodes = [makeNode('n2', 'loop')];
-			const def = makeDefinition(nodes, []);
+		it('loop node iterates over array (tested in loop node suite)', async () => {
+			// Full loop tests are in the "loop node" describe block.
+			// This just verifies the node type dispatches correctly.
+			mockedExecuteTool.mockResolvedValueOnce({ items: ['a'] });
+
+			const nodes = [
+				makeNode('n1', 'tool', { toolName: 'list' }),
+				makeNode('n2', 'loop', {
+					iteratorExpression: 'n1.items'
+				})
+			];
+			const edges = [makeEdge('n1', 'n2')];
+			const def = makeDefinition(nodes, edges);
 
 			const result = await executor.execute(def, {});
 
 			expect(result.status).toBe('completed');
-			expect(result.stepResults!['n2']).toBeNull();
+			const loopResult = result.stepResults!['n2'] as Record<string, unknown>;
+			expect(loopResult).toBeDefined();
+			expect(loopResult.totalIterations).toBe(1);
 		});
 	});
 
@@ -480,6 +492,310 @@ describe('WorkflowExecutor', () => {
 			const result = await executor.execute(def, {});
 
 			expect(result.status).toBe('completed');
+		});
+	});
+
+	// ── Loop node ────────────────────────────────────────────────────────
+
+	describe('loop node', () => {
+		it('iterates sequentially over an array', async () => {
+			mockedExecuteTool.mockResolvedValueOnce({ items: ['a', 'b', 'c'] });
+
+			const nodes = [
+				makeNode('n1', 'tool', { toolName: 'list-items' }),
+				makeNode('loop', 'loop', {
+					iteratorExpression: 'n1.items',
+					executionMode: 'sequential'
+				})
+			];
+			const edges = [makeEdge('n1', 'loop')];
+			const def = makeDefinition(nodes, edges);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('completed');
+			const loopResult = result.stepResults!['loop'] as Record<string, unknown>;
+			expect(loopResult.totalIterations).toBe(3);
+			expect(loopResult.executionMode).toBe('sequential');
+			expect(loopResult.breakTriggered).toBe(false);
+			expect(Array.isArray(loopResult.iterations)).toBe(true);
+			const iterations = loopResult.iterations as Array<Record<string, unknown>>;
+			expect(iterations[0].item).toBe('a');
+			expect(iterations[1].item).toBe('b');
+			expect(iterations[2].item).toBe('c');
+		});
+
+		it('iterates in parallel over an array', async () => {
+			mockedExecuteTool.mockResolvedValueOnce({ items: [1, 2, 3, 4] });
+
+			const nodes = [
+				makeNode('n1', 'tool', { toolName: 'list-nums' }),
+				makeNode('loop', 'loop', {
+					iteratorExpression: 'n1.items',
+					executionMode: 'parallel'
+				})
+			];
+			const edges = [makeEdge('n1', 'loop')];
+			const def = makeDefinition(nodes, edges);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('completed');
+			const loopResult = result.stepResults!['loop'] as Record<string, unknown>;
+			expect(loopResult.totalIterations).toBe(4);
+			expect(loopResult.executionMode).toBe('parallel');
+		});
+
+		it('respects maxIterations limit', async () => {
+			mockedExecuteTool.mockResolvedValueOnce({ items: ['a', 'b', 'c', 'd', 'e'] });
+
+			const nodes = [
+				makeNode('n1', 'tool', { toolName: 'list' }),
+				makeNode('loop', 'loop', {
+					iteratorExpression: 'n1.items',
+					maxIterations: 2
+				})
+			];
+			const edges = [makeEdge('n1', 'loop')];
+			const def = makeDefinition(nodes, edges);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('completed');
+			const loopResult = result.stepResults!['loop'] as Record<string, unknown>;
+			expect(loopResult.totalIterations).toBe(2);
+			const iterations = loopResult.iterations as Array<Record<string, unknown>>;
+			expect(iterations).toHaveLength(2);
+		});
+
+		it('handles break condition in sequential mode', async () => {
+			mockedExecuteTool.mockResolvedValueOnce({ items: [1, 2, 3, 4, 5] });
+
+			const nodes = [
+				makeNode('n1', 'tool', { toolName: 'list' }),
+				makeNode('loop', 'loop', {
+					iteratorExpression: 'n1.items',
+					executionMode: 'sequential',
+					iterationVariable: 'item',
+					breakCondition: 'item == 3'
+				})
+			];
+			const edges = [makeEdge('n1', 'loop')];
+			const def = makeDefinition(nodes, edges);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('completed');
+			const loopResult = result.stepResults!['loop'] as Record<string, unknown>;
+			expect(loopResult.breakTriggered).toBe(true);
+			// Should have iterated items 1 and 2, then broken before 3
+			const iterations = loopResult.iterations as unknown[];
+			expect(iterations.length).toBeLessThan(5);
+		});
+
+		it('throws ValidationError when iteratorExpression is missing', async () => {
+			const nodes = [makeNode('loop', 'loop', {})];
+			const def = makeDefinition(nodes, []);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('failed');
+			expect(result.error).toContain('iteratorExpression');
+		});
+
+		it('throws ValidationError when iterator resolves to non-array', async () => {
+			mockedExecuteTool.mockResolvedValueOnce({ notAnArray: 'string-value' });
+
+			const nodes = [
+				makeNode('n1', 'tool', { toolName: 'get' }),
+				makeNode('loop', 'loop', {
+					iteratorExpression: 'n1.notAnArray'
+				})
+			];
+			const edges = [makeEdge('n1', 'loop')];
+			const def = makeDefinition(nodes, edges);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('failed');
+			expect(result.error).toContain('array');
+		});
+
+		it('uses custom iteration variable names', async () => {
+			mockedExecuteTool.mockResolvedValueOnce({ data: ['x', 'y'] });
+
+			const nodes = [
+				makeNode('n1', 'tool', { toolName: 'list' }),
+				makeNode('loop', 'loop', {
+					iteratorExpression: 'n1.data',
+					iterationVariable: 'element',
+					indexVariable: 'idx'
+				})
+			];
+			const edges = [makeEdge('n1', 'loop')];
+			const def = makeDefinition(nodes, edges);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('completed');
+			const loopResult = result.stepResults!['loop'] as Record<string, unknown>;
+			const iterations = loopResult.iterations as Array<Record<string, unknown>>;
+			expect(iterations[0].element).toBe('x');
+			expect(iterations[0].idx).toBe(0);
+			expect(iterations[1].element).toBe('y');
+			expect(iterations[1].idx).toBe(1);
+		});
+	});
+
+	// ── AI-step node ─────────────────────────────────────────────────────
+
+	describe('ai-step node', () => {
+		it('calls generateText with interpolated prompt', async () => {
+			mockGenerateText.mockResolvedValueOnce({
+				text: 'Hello from AI',
+				usage: { promptTokens: 10, completionTokens: 5 }
+			});
+
+			const nodes = [
+				makeNode('input', 'input'),
+				makeNode('ai', 'ai-step', {
+					prompt: 'Summarize: {{input.text}}',
+					model: 'oci:cohere.command-r-plus'
+				})
+			];
+			const edges = [makeEdge('input', 'ai')];
+			const def = makeDefinition(nodes, edges);
+
+			const result = await executor.execute(def, { text: 'Test content' });
+
+			expect(result.status).toBe('completed');
+			const aiResult = result.stepResults!['ai'] as Record<string, unknown>;
+			expect(aiResult.text).toBe('Hello from AI');
+
+			// Verify generateText was called with interpolated prompt
+			expect(mockGenerateText).toHaveBeenCalledWith(
+				expect.objectContaining({
+					prompt: 'Summarize: Test content'
+				})
+			);
+		});
+
+		it('uses default model when not specified', async () => {
+			mockGenerateText.mockResolvedValueOnce({
+				text: 'Default model response',
+				usage: { promptTokens: 5, completionTokens: 3 }
+			});
+
+			const nodes = [
+				makeNode('ai', 'ai-step', {
+					prompt: 'Hello world'
+					// model not specified
+				})
+			];
+			const def = makeDefinition(nodes, []);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('completed');
+			// Should have called languageModel with the default model string
+			expect(mockLanguageModel).toHaveBeenCalledWith('oci:cohere.command-r-plus');
+		});
+
+		it('throws ValidationError when prompt is missing', async () => {
+			const nodes = [makeNode('ai', 'ai-step', {})];
+			const def = makeDefinition(nodes, []);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('failed');
+			expect(result.error).toContain('prompt');
+		});
+
+		it('validates output against schema', async () => {
+			mockGenerateText.mockResolvedValueOnce({
+				text: '{"name": "test", "score": 42}',
+				usage: { promptTokens: 10, completionTokens: 8 }
+			});
+
+			const nodes = [
+				makeNode('ai', 'ai-step', {
+					prompt: 'Generate JSON',
+					outputSchema: { name: 'string', score: 'number' }
+				})
+			];
+			const def = makeDefinition(nodes, []);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('completed');
+			const aiResult = result.stepResults!['ai'] as Record<string, unknown>;
+			expect(aiResult).toEqual({ name: 'test', score: 42 });
+		});
+
+		it('fails when output does not match schema', async () => {
+			mockGenerateText.mockResolvedValueOnce({
+				text: 'not valid JSON',
+				usage: { promptTokens: 10, completionTokens: 5 }
+			});
+
+			const nodes = [
+				makeNode('ai', 'ai-step', {
+					prompt: 'Generate JSON',
+					outputSchema: { name: 'string' }
+				})
+			];
+			const def = makeDefinition(nodes, []);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('failed');
+			expect(result.error).toContain('schema validation');
+		});
+
+		it('includes system prompt when provided', async () => {
+			mockGenerateText.mockResolvedValueOnce({
+				text: 'Response with system prompt',
+				usage: { promptTokens: 15, completionTokens: 5 }
+			});
+
+			const nodes = [
+				makeNode('ai', 'ai-step', {
+					prompt: 'User question',
+					systemPrompt: 'You are a helpful assistant',
+					temperature: 0.7,
+					maxTokens: 100
+				})
+			];
+			const def = makeDefinition(nodes, []);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('completed');
+			expect(mockGenerateText).toHaveBeenCalledWith(
+				expect.objectContaining({
+					prompt: 'User question',
+					system: 'You are a helpful assistant',
+					temperature: 0.7,
+					maxOutputTokens: 100
+				})
+			);
+		});
+
+		it('returns failed status when generateText throws', async () => {
+			mockGenerateText.mockRejectedValueOnce(new Error('Model unavailable'));
+
+			const nodes = [
+				makeNode('ai', 'ai-step', {
+					prompt: 'Test prompt',
+					model: 'oci:bad-model'
+				})
+			];
+			const def = makeDefinition(nodes, []);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('failed');
+			expect(result.error).toContain('Model unavailable');
 		});
 	});
 });
