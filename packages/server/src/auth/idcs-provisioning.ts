@@ -78,13 +78,15 @@ export async function provisionFromIdcsGroups(
 	try {
 		await withConnection(async (conn) => {
 			// Atomic upsert: insert membership if new, update role if changed
+			// SECURITY: autoCommit required to persist changes (otherwise silently rolled back on connection release)
 			await conn.execute(
 				`MERGE INTO org_members m
 				 USING (SELECT :userId AS user_id, :orgId AS org_id FROM DUAL) src
 				 ON (m.user_id = src.user_id AND m.org_id = src.org_id)
 				 WHEN MATCHED THEN UPDATE SET role = :role
 				 WHEN NOT MATCHED THEN INSERT (user_id, org_id, role) VALUES (:userId, :orgId, :role)`,
-				{ userId, orgId, role }
+				{ userId, orgId, role },
+				{ autoCommit: true }
 			);
 		});
 

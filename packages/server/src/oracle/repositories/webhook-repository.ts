@@ -285,7 +285,11 @@ export const webhookRepository = {
 			return { migrated: 0, remaining: 0 };
 		}
 
-		const safeBatchSize = Math.max(1, Math.min(batchSize, 1000));
+		// Validate batch size is a safe integer to prevent SQL injection via template literal
+		const safeBatchSize = Math.floor(Math.max(1, Math.min(batchSize, 1000)));
+		if (!Number.isInteger(safeBatchSize) || safeBatchSize < 1 || safeBatchSize > 1000) {
+			throw new Error('Invalid batch size');
+		}
 
 		return withConnection(async (conn) => {
 			const legacyRows = await conn.execute<{ ID: string; SECRET: string }>(

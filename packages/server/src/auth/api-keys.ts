@@ -174,15 +174,13 @@ export async function validateApiKey(key: string): Promise<ApiKeyContext | null>
  * Revoke an API key by setting its revoked_at timestamp and status.
  *
  * Scoped to an organization to prevent cross-org revocation.
+ * SECURITY: orgId is required to prevent cross-org IDOR attacks.
  */
-export async function revokeApiKey(id: string, orgId?: string): Promise<void> {
+export async function revokeApiKey(id: string, orgId: string): Promise<void> {
 	await withConnection(async (conn) => {
-		const sql = orgId
-			? `UPDATE api_keys SET revoked_at = SYSTIMESTAMP, status = 'revoked', updated_at = SYSTIMESTAMP
-			   WHERE id = :id AND org_id = :orgId`
-			: `UPDATE api_keys SET revoked_at = SYSTIMESTAMP, status = 'revoked', updated_at = SYSTIMESTAMP
-			   WHERE id = :id`;
-		const binds = orgId ? { id, orgId } : { id };
+		const sql = `UPDATE api_keys SET revoked_at = SYSTIMESTAMP, status = 'revoked', updated_at = SYSTIMESTAMP
+			   WHERE id = :id AND org_id = :orgId`;
+		const binds = { id, orgId };
 
 		const result = await conn.execute(sql, binds);
 		const affected = (result as unknown as { rowsAffected?: number }).rowsAffected ?? 0;
