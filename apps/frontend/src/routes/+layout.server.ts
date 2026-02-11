@@ -1,6 +1,8 @@
 import type { LayoutServerLoad } from './$types';
-import { FASTIFY_URL } from '$lib/server/feature-flags.js';
 import { createLogger } from '@portal/shared/server/logger';
+
+// Fastify backend URL for session fetch during SSR
+const FASTIFY_URL = process.env.FASTIFY_URL || 'http://localhost:3001';
 
 /**
  * Root layout server load function.

@@ -10,7 +10,6 @@ import { generateRequestId, REQUEST_ID_HEADER } from '@portal/server/tracing';
 import { RateLimitError, errorResponse } from '@portal/server/errors';
 import { httpRequestDuration } from '@portal/server/metrics';
 import { initSentry, captureError, closeSentry } from '@portal/server/sentry';
-import { shouldProxyToFastify, proxyToFastify } from '$lib/server/feature-flags.js';
 
 const log = createLogger('hooks');
 
@@ -221,21 +220,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const incomingId = event.request.headers.get(REQUEST_ID_HEADER);
 	const requestId = incomingId || generateRequestId();
 	event.locals.requestId = requestId;
-
-	// ── Fastify proxy (Phase C - Fastify-First Migration) ──────────────────
-	// All auth logic now handled by Fastify. SvelteKit hooks just forward cookies.
-	if (shouldProxyToFastify(event.url.pathname)) {
-		const proxyResponse = await proxyToFastify(event.request, event.url.pathname);
-		proxyResponse.headers.set(REQUEST_ID_HEADER, requestId);
-		logRequest(
-			event.request.method,
-			event.url.pathname,
-			proxyResponse.status,
-			performance.now() - startTime,
-			requestId
-		);
-		return proxyResponse;
-	}
 
 	// Make DB status available to all routes
 	const isDbReady = await ensureDatabase();

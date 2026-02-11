@@ -5,7 +5,6 @@ import fastifyHelmet from '@fastify/helmet';
 import fastifyCompress from '@fastify/compress';
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifySensible from '@fastify/sensible';
-import fastifySse from '@fastify/sse';
 import fastifySwagger from '@fastify/swagger';
 import scalarFastify from '@scalar/fastify-api-reference';
 import {
@@ -331,9 +330,6 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 
 	// Register sensible (HTTP error helpers)
 	await app.register(fastifySensible);
-
-	// Register SSE (Server-Sent Events) for streaming responses
-	await app.register(fastifySse);
 
 	// ── Resilience plugins (before auth chain) ───────────────────────
 

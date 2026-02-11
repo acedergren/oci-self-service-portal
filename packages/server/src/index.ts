@@ -15,7 +15,6 @@ export * from './sentry.js';
 export * from './tracing.js';
 export * from './metrics.js';
 export * from './crypto.js';
-export * from './feature-flags.js';
 export * from './rate-limiter.js';
 // approvals.ts excluded from barrel due to name collision with metrics.ts (pendingApprovals).
 // Import directly: import { ... } from '@portal/server/approvals';
