@@ -2,8 +2,10 @@ import Fastify, { type FastifyServerOptions, type FastifyInstance } from 'fastif
 import fastifyCors from '@fastify/cors';
 import fastifyCookie from '@fastify/cookie';
 import fastifyHelmet from '@fastify/helmet';
+import fastifyCompress from '@fastify/compress';
 import fastifyRateLimit from '@fastify/rate-limit';
 import fastifySensible from '@fastify/sensible';
+import fastifySse from '@fastify/sse';
 import fastifySwagger from '@fastify/swagger';
 import scalarFastify from '@scalar/fastify-api-reference';
 import {
@@ -295,6 +297,14 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 		credentials: true
 	});
 
+	// Register compression (gzip + brotli)
+	// Note: SSE and streaming responses are automatically excluded from compression
+	// by @fastify/sse and Fastify's streaming handling
+	await app.register(fastifyCompress, {
+		threshold: 1024, // Minimum 1KB to compress
+		encodings: ['br', 'gzip']
+	});
+
 	// Register rate limiting
 	if (enableRateLimit) {
 		await app.register(fastifyRateLimit, {
@@ -321,6 +331,9 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 
 	// Register sensible (HTTP error helpers)
 	await app.register(fastifySensible);
+
+	// Register SSE (Server-Sent Events) for streaming responses
+	await app.register(fastifySse);
 
 	// ── Resilience plugins (before auth chain) ───────────────────────
 

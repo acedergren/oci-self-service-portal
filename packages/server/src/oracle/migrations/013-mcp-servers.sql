@@ -264,3 +264,29 @@ INSERT INTO mcp_catalog (catalog_id, display_name, description, category, docker
     6,
     '["web-search","research","information-retrieval"]'
 );
+
+INSERT INTO mcp_catalog (catalog_id, display_name, description, category, docker_image, default_config, required_credentials, is_featured, sort_order, tags) VALUES (
+    'aws-bedrock',
+    'AWS Bedrock MCP Server',
+    'Connect to Amazon Bedrock for foundation model inference, including Claude, Llama, Titan, and other models. Provides tools for text generation, embeddings, and model invocation with AWS IAM authentication. Supports streaming responses and multi-modal inputs.',
+    'ai-providers',
+    'mcp/aws-bedrock-server',
+    '{"transport":"stdio","region":"us-east-1"}',
+    '[{"key":"AWS_ACCESS_KEY_ID","displayName":"Access Key ID","description":"AWS IAM access key ID","type":"text"},{"key":"AWS_SECRET_ACCESS_KEY","displayName":"Secret Access Key","description":"AWS IAM secret access key","type":"token"},{"key":"AWS_REGION","displayName":"AWS Region","description":"AWS region for Bedrock (e.g., us-east-1)","type":"text"}]',
+    1,
+    7,
+    '["ai","llm","foundation-models","aws"]'
+);
+
+INSERT INTO mcp_catalog (catalog_id, display_name, description, category, docker_image, default_config, required_credentials, is_featured, sort_order, tags) VALUES (
+    'azure-openai',
+    'Azure OpenAI MCP Server',
+    'Integrate with Azure OpenAI Service for GPT-4, GPT-3.5, DALL-E, and Whisper models. Provides tools for chat completions, embeddings, image generation, and audio transcription. Supports Azure AD authentication and private endpoints for enterprise deployments.',
+    'ai-providers',
+    'mcp/azure-openai-server',
+    '{"transport":"stdio"}',
+    '[{"key":"AZURE_OPENAI_ENDPOINT","displayName":"Endpoint URL","description":"Azure OpenAI resource endpoint (e.g., https://your-resource.openai.azure.com)","type":"url"},{"key":"AZURE_OPENAI_API_KEY","displayName":"API Key","description":"Azure OpenAI API key from resource portal","type":"token"},{"key":"AZURE_OPENAI_DEPLOYMENT","displayName":"Deployment Name","description":"Model deployment name configured in Azure","type":"text"}]',
+    1,
+    8,
+    '["ai","llm","openai","azure","gpt"]'
+);
