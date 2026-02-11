@@ -1,5 +1,6 @@
 import type { LayoutServerLoad } from './$types';
 import { FASTIFY_URL } from '$lib/server/feature-flags.js';
+import { createLogger } from '@portal/shared/server/logger';
 
 /**
  * Root layout server load function.
@@ -31,7 +32,7 @@ export const load: LayoutServerLoad = async ({ request, locals, fetch }) => {
 		}
 	} catch (err) {
 		// Log error but don't fail SSR - render page with null session
-		console.error('Failed to fetch session from Fastify:', err);
+		createLogger('layout').error({ err }, 'Failed to fetch session from Fastify');
 	}
 
 	return {

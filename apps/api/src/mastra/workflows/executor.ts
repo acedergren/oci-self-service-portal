@@ -34,6 +34,7 @@ import { z } from 'zod';
 
 const MAX_STEPS = 50;
 const MAX_DURATION_MS = 300_000; // 5 minutes
+const MAX_LOOP_ITERATIONS = 1000; // Safety cap for loop nodes without maxIterations
 
 // ============================================================================
 // Execution Result Types
@@ -280,16 +281,27 @@ export class WorkflowExecutor {
 			context as Record<string, unknown>
 		);
 
-		// Skip the branch not taken — recursively skip all downstream nodes
+		// Skip the branch not taken, but don't skip merge nodes that have
+		// other non-skipped predecessors (diamond graph topology).
 		const branchToSkip = conditionResult ? data.falseBranch : data.trueBranch;
 		if (branchToSkip) {
-			// BFS from the skipped branch root through the adjacency list
 			const queue = [branchToSkip];
 			while (queue.length > 0) {
 				const current = queue.shift()!;
 				if (skippedNodes.has(current)) continue;
+
+				// Check if this node has any non-skipped predecessor (merge point)
+				const predecessors = edges.filter((e) => e.target === current).map((e) => e.source);
+				const allPredecessorsSkipped = predecessors.every(
+					(p) => skippedNodes.has(p) || p === node.id
+				);
+
+				// Only skip if all predecessors are skipped (or are the condition node itself)
+				if (predecessors.length > 1 && !allPredecessorsSkipped) {
+					continue; // Merge node — don't skip
+				}
+
 				skippedNodes.add(current);
-				// Find all nodes reachable from current (via edges)
 				for (const edge of edges) {
 					if (edge.source === current && !skippedNodes.has(edge.target)) {
 						queue.push(edge.target);
@@ -494,9 +506,11 @@ export class WorkflowExecutor {
 				});
 			} else if (mergeStrategy === 'any') {
 				// Return the first branch to complete successfully
-				const result = await Promise.race(branchPromises);
-				const successIndex = branchPromises.findIndex((p) => p === Promise.resolve(result));
-				branchResults = [{ branchIndex: successIndex, result }];
+				// Wrap each promise with its index so we know which branch won
+				const result = await Promise.race(
+					branchPromises.map((p, i) => p.then((res) => ({ branchIndex: i, result: res })))
+				);
+				branchResults = [result];
 			} else {
 				// mergeStrategy === 'first' — return first to complete (even if it errors)
 				const result = await Promise.race(
@@ -614,10 +628,11 @@ export class WorkflowExecutor {
 		const executionMode = data.executionMode || 'sequential';
 		const maxIterations = data.maxIterations;
 
-		// Determine how many iterations to perform
-		const iterationCount = maxIterations
-			? Math.min(arrayValue.length, maxIterations)
-			: arrayValue.length;
+		// Determine how many iterations to perform (capped by MAX_LOOP_ITERATIONS for DoS prevention)
+		const effectiveMax = maxIterations
+			? Math.min(maxIterations, MAX_LOOP_ITERATIONS)
+			: MAX_LOOP_ITERATIONS;
+		const iterationCount = Math.min(arrayValue.length, effectiveMax);
 
 		// Execute iterations
 		const results: unknown[] = [];

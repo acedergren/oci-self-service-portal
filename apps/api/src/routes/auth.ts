@@ -85,10 +85,17 @@ export async function authRoutes(app: FastifyInstance): Promise<void> {
 				// Set HTTP status
 				reply.status(response.status);
 
-				// Copy all response headers (especially Set-Cookie for sessions)
-				response.headers.forEach((value, key) => {
-					reply.header(key, value);
-				});
+				// Copy all response headers — use getSetCookie() for Set-Cookie
+				// to preserve multiple cookies (session + CSRF).
+				// Headers.forEach deduplicates Set-Cookie, losing values.
+				for (const [key, value] of response.headers.entries()) {
+					if (key.toLowerCase() !== 'set-cookie') {
+						reply.header(key, value);
+					}
+				}
+				for (const cookie of response.headers.getSetCookie()) {
+					reply.header('set-cookie', cookie);
+				}
 
 				// Get response body
 				const body = await response.text();

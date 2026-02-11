@@ -54,6 +54,8 @@ type UIChunk = Record<string, any>;
 export function createToolProgressTransform(): TransformStream<UIChunk, UIChunk> {
 	// Track start times so we can include duration in completed events
 	const toolStartTimes = new Map<string, number>();
+	// Track tool names so we can include them in completed/error events
+	const toolNames = new Map<string, string>();
 
 	return new TransformStream<UIChunk, UIChunk>({
 		transform(chunk: UIChunk, controller) {
@@ -64,6 +66,7 @@ export function createToolProgressTransform(): TransformStream<UIChunk, UIChunk>
 				const c = chunk as ToolInputAvailableChunk;
 				const now = Date.now();
 				toolStartTimes.set(c.toolCallId, now);
+				toolNames.set(c.toolCallId, c.toolName);
 
 				const progress: ToolProgressChunk = {
 					type: 'data-tool-progress',
@@ -82,15 +85,16 @@ export function createToolProgressTransform(): TransformStream<UIChunk, UIChunk>
 			if (chunk.type === 'tool-output-available') {
 				const c = chunk as ToolOutputAvailableChunk;
 				const startedAt = toolStartTimes.get(c.toolCallId);
+				const toolName = toolNames.get(c.toolCallId) ?? '';
 				const now = Date.now();
 
 				const progress: ToolProgressChunk = {
 					type: 'data-tool-progress',
 					data: {
 						toolCallId: c.toolCallId,
-						toolName: '',
+						toolName,
 						stage: 'completed',
-						message: getToolProgressMessage('', 'completed'),
+						message: getToolProgressMessage(toolName, 'completed'),
 						startedAt,
 						completedAt: now
 					},
@@ -98,18 +102,20 @@ export function createToolProgressTransform(): TransformStream<UIChunk, UIChunk>
 				};
 				controller.enqueue(progress as unknown as UIChunk);
 				toolStartTimes.delete(c.toolCallId);
+				toolNames.delete(c.toolCallId);
 			}
 
 			if (chunk.type === 'tool-output-error') {
 				const c = chunk as ToolOutputErrorChunk;
 				const startedAt = toolStartTimes.get(c.toolCallId);
+				const toolName = toolNames.get(c.toolCallId) ?? '';
 				const now = Date.now();
 
 				const progress: ToolProgressChunk = {
 					type: 'data-tool-progress',
 					data: {
 						toolCallId: c.toolCallId,
-						toolName: '',
+						toolName,
 						stage: 'error',
 						message: c.errorText || 'Tool execution failed',
 						startedAt,
@@ -119,6 +125,7 @@ export function createToolProgressTransform(): TransformStream<UIChunk, UIChunk>
 				};
 				controller.enqueue(progress as unknown as UIChunk);
 				toolStartTimes.delete(c.toolCallId);
+				toolNames.delete(c.toolCallId);
 			}
 		}
 	});

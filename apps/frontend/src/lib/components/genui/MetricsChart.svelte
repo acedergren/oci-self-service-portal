@@ -22,7 +22,9 @@
 
 	let selectedIndex = $state(0);
 
-	const activeSeries = $derived(series[selectedIndex] ?? series[0]);
+	const activeSeries = $derived(
+		series.length > 0 ? (series[selectedIndex] ?? series[0]) : undefined
+	);
 
 	const chartData = $derived(
 		activeSeries
@@ -33,7 +35,7 @@
 			: []
 	);
 
-	const stats = $derived(() => {
+	const stats = $derived.by(() => {
 		if (chartData.length === 0) return { latest: 0, min: 0, max: 0, avg: 0 };
 		const values = chartData.map((d) => d.value);
 		return {
@@ -66,34 +68,34 @@
 	{#if series.length === 0 || chartData.length === 0}
 		<p class="empty-message">No metrics data available.</p>
 	{:else}
-		{@const s = stats()}
+		{@const s = stats}
 		<div class="metrics-summary">
 			<div class="metric-stat">
 				<span class="stat-label">Latest</span>
 				<span class="stat-value">
 					{s.latest.toFixed(1)}
-					<span class="stat-unit">{activeSeries.unit}</span>
+					<span class="stat-unit">{activeSeries!.unit}</span>
 				</span>
 			</div>
 			<div class="metric-stat">
 				<span class="stat-label">Min</span>
 				<span class="stat-value">
 					{s.min.toFixed(1)}
-					<span class="stat-unit">{activeSeries.unit}</span>
+					<span class="stat-unit">{activeSeries!.unit}</span>
 				</span>
 			</div>
 			<div class="metric-stat">
 				<span class="stat-label">Max</span>
 				<span class="stat-value">
 					{s.max.toFixed(1)}
-					<span class="stat-unit">{activeSeries.unit}</span>
+					<span class="stat-unit">{activeSeries!.unit}</span>
 				</span>
 			</div>
 			<div class="metric-stat">
 				<span class="stat-label">Avg</span>
 				<span class="stat-value">
 					{s.avg.toFixed(1)}
-					<span class="stat-unit">{activeSeries.unit}</span>
+					<span class="stat-unit">{activeSeries!.unit}</span>
 				</span>
 			</div>
 		</div>
