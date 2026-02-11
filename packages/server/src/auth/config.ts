@@ -127,6 +127,13 @@ export const auth = betterAuth({
 	// Fallback needed for build (SvelteKit post-build runs in NODE_ENV=production).
 	// Runtime validation in hooks.server.ts warns if secret is missing in production.
 	secret: process.env.BETTER_AUTH_SECRET || 'dev-build-only-secret',
+	// Trusted origins: allow cross-origin auth requests from SvelteKit frontend.
+	// Required for cookie-based authentication when frontend (port 5173) calls Fastify API (port 3000).
+	// In production, this should be set via BETTER_AUTH_TRUSTED_ORIGINS env var.
+	trustedOrigins: process.env.BETTER_AUTH_TRUSTED_ORIGINS?.split(',') || [
+		'http://localhost:5173', // SvelteKit dev server
+		'http://localhost:3000' // Fastify API (for same-origin requests)
+	],
 	advanced: {
 		useSecureCookies: AUTH_USE_SECURE_COOKIES,
 		defaultCookieAttributes: AUTH_COOKIE_ATTRIBUTES,

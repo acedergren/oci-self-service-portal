@@ -119,13 +119,15 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 	}
 
 	// CORS origin: credentials:true requires an explicit origin (not '*').
-	// In production, CORS_ORIGIN must be set. In development, fall back to 'true'
-	// (reflects the request origin — safe for local dev, rejected in prod).
+	// In production, CORS_ORIGIN must be set. In development, allow SvelteKit frontend origin.
 	if (isProduction && !corsOrigin && !process.env.CORS_ORIGIN) {
 		log.fatal('CORS_ORIGIN is required in production (credentials:true forbids wildcard)');
 		throw new Error('CORS_ORIGIN is required in production');
 	}
-	const resolvedCorsOrigin = corsOrigin ?? process.env.CORS_ORIGIN ?? true;
+	// In development, explicitly allow SvelteKit frontend for cross-origin auth.
+	// Aligns with Better Auth trustedOrigins configuration.
+	const resolvedCorsOrigin = corsOrigin ??
+		process.env.CORS_ORIGIN ?? ['http://localhost:5173', 'http://localhost:3000'];
 
 	// Create Fastify instance with Pino logger integration
 	const app = Fastify({
