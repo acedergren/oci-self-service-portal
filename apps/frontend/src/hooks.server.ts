@@ -1,25 +1,15 @@
 import type { Handle, RequestEvent } from '@sveltejs/kit';
 import { dev } from '$app/environment';
-import { redirect } from '@sveltejs/kit';
 import crypto from 'crypto';
 import { createLogger } from '@portal/server/logger';
 import { initPool, closePool } from '@portal/server/oracle/connection';
 import { runMigrations } from '@portal/server/oracle/migrations';
 import { webhookRepository } from '@portal/server/oracle/repositories/webhook-repository';
-import { auth } from '@portal/server/auth/config';
-import { getPermissionsForRole, type Permission } from '@portal/server/auth/rbac';
-import { getOrgRole } from '@portal/server/auth/tenancy';
 import { checkRateLimit, RATE_LIMIT_CONFIG } from '@portal/server/rate-limiter';
 import { generateRequestId, REQUEST_ID_HEADER } from '@portal/server/tracing';
-import {
-	RateLimitError,
-	AuthError,
-	PortalError,
-	errorResponse
-} from '@portal/server/errors';
+import { RateLimitError, errorResponse } from '@portal/server/errors';
 import { httpRequestDuration } from '@portal/server/metrics';
 import { initSentry, captureError, closeSentry } from '@portal/server/sentry';
-import { validateApiKey } from '@portal/server/auth/api-keys';
 import { shouldProxyToFastify, proxyToFastify } from '$lib/server/feature-flags.js';
 
 const log = createLogger('hooks');
@@ -107,17 +97,6 @@ const RATE_LIMIT_EXEMPT_PATHS = ['/api/health', '/api/healthz', '/api/metrics'];
 
 // Paths exempt from request logging (noisy health checks and Prometheus scrapes)
 const LOG_EXEMPT_PATHS = ['/api/health', '/api/healthz', '/api/metrics'];
-
-// ── Auth guard ─────────────────────────────────────────────────────────────
-// Public paths that skip authentication entirely
-const PUBLIC_PATHS = [
-	'/api/health',
-	'/api/healthz',
-	'/api/auth/',
-	'/login',
-	'/api/metrics',
-	'/api/v1/openapi.json'
-];
 
 /**
  * Get client identifier from request event
@@ -217,8 +196,7 @@ function logRequest(
 	path: string,
 	status: number,
 	durationMs: number,
-	requestId: string,
-	userId?: string
+	requestId: string
 ): void {
 	// Record HTTP request duration metric (always, even for exempt paths)
 	const route = path.split('?')[0]; // strip query params
@@ -228,7 +206,7 @@ function logRequest(
 
 	const level = status >= 500 ? 'error' : status >= 400 ? 'warn' : 'info';
 	log[level](
-		{ method, path, status, durationMs: Math.round(durationMs), requestId, userId },
+		{ method, path, status, durationMs: Math.round(durationMs), requestId },
 		`${method} ${path} ${status} ${Math.round(durationMs)}ms`
 	);
 }
@@ -244,7 +222,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const requestId = incomingId || generateRequestId();
 	event.locals.requestId = requestId;
 
-	// ── Fastify proxy (Phase 9.16) ──────────────────────────────────────────
+	// ── Fastify proxy (Phase C - Fastify-First Migration) ──────────────────
+	// All auth logic now handled by Fastify. SvelteKit hooks just forward cookies.
 	if (shouldProxyToFastify(event.url.pathname)) {
 		const proxyResponse = await proxyToFastify(event.request, event.url.pathname);
 		proxyResponse.headers.set(REQUEST_ID_HEADER, requestId);
@@ -262,9 +241,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const isDbReady = await ensureDatabase();
 	event.locals.dbAvailable = isDbReady;
 
-	// Initialize default permissions (empty array — no access)
-	event.locals.permissions = [];
-
 	const { url } = event;
 
 	// ── CORS preflight for /api/v1/* ─────────────────────────────────────────
@@ -280,109 +256,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 			return new Response(null, { status: 204, headers: preflightHeaders });
 		}
 		// No matching origin — fall through to normal handling (returns no CORS headers)
-	}
-
-	// ── Auth guard ───────────────────────────────────────────────────────────
-	const isPublic = PUBLIC_PATHS.some((p) => url.pathname.startsWith(p));
-
-	if (!isPublic) {
-		// ── API key authentication (checked before session auth) ───────────────
-		// Supports both `Authorization: Bearer portal_...` and `X-API-Key: portal_...`
-		const authHeader = event.request.headers.get('authorization');
-		const apiKeyHeader = event.request.headers.get('x-api-key');
-		const apiKeyCandidate = authHeader?.startsWith('Bearer portal_')
-			? authHeader.slice(7)
-			: apiKeyHeader?.startsWith('portal_')
-				? apiKeyHeader
-				: undefined;
-
-		let apiKeyAuthenticated = false;
-
-		if (apiKeyCandidate) {
-			const ctx = await validateApiKey(apiKeyCandidate);
-			if (ctx) {
-				event.locals.apiKeyContext = ctx;
-				event.locals.permissions = ctx.permissions as Permission[];
-				apiKeyAuthenticated = true;
-				log.debug(
-					{ keyId: ctx.keyId, orgId: ctx.orgId, path: url.pathname },
-					'API key authenticated'
-				);
-			} else {
-				// API key was provided but is invalid — reject immediately
-				const authResp = errorResponse(new AuthError('Invalid API key'), requestId);
-				logRequest(
-					event.request.method,
-					url.pathname,
-					401,
-					performance.now() - startTime,
-					requestId
-				);
-				return withV1Cors(authResp, event);
-			}
-		}
-
-		// ── Session authentication (skipped if API key was valid) ──────────────
-		if (!apiKeyAuthenticated) {
-			try {
-				const session = await auth.api.getSession({ headers: event.request.headers });
-
-				if (session) {
-					event.locals.user = session.user;
-					event.locals.session = session.session;
-
-					// Resolve permissions from org role (gracefully degrade if DB is down)
-					if (isDbReady) {
-						const activeOrgId = (session.session as Record<string, unknown>)
-							.activeOrganizationId as string | undefined;
-						const orgRole = await getOrgRole(session.user.id, activeOrgId);
-						event.locals.permissions = getPermissionsForRole(orgRole ?? 'viewer');
-					} else {
-						event.locals.permissions = getPermissionsForRole('viewer');
-					}
-				} else {
-					// No session — enforce auth on protected routes
-					if (url.pathname.startsWith('/api/')) {
-						const authResp = errorResponse(new AuthError('Authentication required'), requestId);
-						logRequest(
-							event.request.method,
-							url.pathname,
-							401,
-							performance.now() - startTime,
-							requestId
-						);
-						return withV1Cors(authResp, event);
-					}
-					// Page routes: redirect to login
-					throw redirect(303, '/login');
-				}
-			} catch (err) {
-				// Re-throw SvelteKit redirects
-				if (err && typeof err === 'object' && 'status' in err && 'location' in err) {
-					throw err;
-				}
-				log.error({ err, path: url.pathname }, 'auth guard error');
-				if (err instanceof Error) captureError(err, { path: url.pathname, phase: 'auth-guard' });
-				// Never grant permissions on auth failure
-				if (url.pathname.startsWith('/api/')) {
-					const svcResp = errorResponse(
-						new PortalError('AUTH_SERVICE_UNAVAILABLE', 'Authentication service unavailable', 503, {
-							service: 'auth'
-						}),
-						requestId
-					);
-					logRequest(
-						event.request.method,
-						url.pathname,
-						503,
-						performance.now() - startTime,
-						requestId
-					);
-					return withV1Cors(svcResp, event);
-				}
-				throw redirect(303, '/login');
-			}
-		}
 	}
 
 	// Apply rate limiting to API routes (except exempt paths)
@@ -411,14 +284,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 			rateLimitResponse.headers.set('X-RateLimit-Limit', String(limit));
 			rateLimitResponse.headers.set('X-RateLimit-Remaining', '0');
 			rateLimitResponse.headers.set('X-RateLimit-Reset', String(Math.ceil(resetAt / 1000)));
-			logRequest(
-				event.request.method,
-				url.pathname,
-				429,
-				performance.now() - startTime,
-				requestId,
-				event.locals.user?.id
-			);
+			logRequest(event.request.method, url.pathname, 429, performance.now() - startTime, requestId);
 			return withV1Cors(rateLimitResponse, event);
 		}
 
@@ -441,8 +307,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 			url.pathname,
 			response.status,
 			performance.now() - startTime,
-			requestId,
-			event.locals.user?.id
+			requestId
 		);
 		return withV1Cors(securedApiResponse, event);
 	}
@@ -460,8 +325,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		url.pathname,
 		response.status,
 		performance.now() - startTime,
-		requestId,
-		event.locals.user?.id
+		requestId
 	);
 	return secureResponse;
 };
