@@ -50,6 +50,12 @@ wallets/
 # Serena
 .serena/cache/
 
+# FireCrawl
+.firecrawl/
+
+# Generated artifacts
+openapi.json
+
 # Misc
 .opencode/
 *.tgz

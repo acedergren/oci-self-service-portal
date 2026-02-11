@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # =============================================================================
-# Pre-push hook: CodeRabbit, Semgrep, CodeQL security scans
+# Pre-push hook: Security scans (Semgrep, CodeQL, Trufflehog, Spectral, Cherrybomb)
 #
 # Scans files changed in the commits being pushed (not the full codebase).
 # Each scanner runs independently — one failure does not skip the others.
@@ -9,14 +9,20 @@
 # Install: git config core.hooksPath .githooks
 #
 # Required tools:
-#   - semgrep (brew install semgrep)
-#   - codeql  (brew install codeql)
-#   - claude  (for CodeRabbit via claude skill)
+#   - semgrep     (brew install semgrep)
+#   - codeql      (brew install codeql)
+#   - trufflehog  (brew install trufflehog)
+#   - spectral    (pnpm add -D -w @stoplight/spectral-cli @stoplight/spectral-owasp-ruleset)
+#   - cherrybomb  (cargo install cherrybomb)
+#   - claude      (for CodeRabbit via claude skill)
 # =============================================================================
 set -uo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
 cd "$REPO_ROOT"
+
+# Ensure cargo binaries (cherrybomb) are in PATH
+[ -d "$HOME/.cargo/bin" ] && export PATH="$HOME/.cargo/bin:$PATH"
 
 # Parse the range of commits being pushed (stdin from git)
 FAILED=false
@@ -163,7 +169,94 @@ else
 fi
 echo ""
 
-# ---- 3. CodeRabbit ----
+# ---- 3. Trufflehog (secret scanning) ----
+echo "=== Trufflehog Secret Scan ==="
+if command -v trufflehog &>/dev/null; then
+  # Scan only the commits being pushed (incremental, fast)
+  TH_OUTPUT=$(trufflehog git "file://$(pwd)" --since-commit "$COMMIT_RANGE" --only-verified --no-update --json 2>/dev/null || true)
+  TH_COUNT=$(echo "$TH_OUTPUT" | grep -c '"DetectorName"' 2>/dev/null || echo "0")
+
+  if [ "$TH_COUNT" -gt 0 ]; then
+    echo "[trufflehog] CRITICAL: $TH_COUNT verified secret(s) found in commits!"
+    echo "$TH_OUTPUT" | python3 -c "
+import sys, json
+for line in sys.stdin:
+    line = line.strip()
+    if not line: continue
+    try:
+        r = json.loads(line)
+        det = r.get('DetectorName', 'unknown')
+        src = r.get('SourceMetadata', {}).get('Data', {}).get('Git', {})
+        path = src.get('file', '?')
+        print(f'  [{det}] {path}')
+    except: pass
+" 2>/dev/null
+    FAILED=true
+  else
+    echo "[trufflehog] Clean - no verified secrets"
+  fi
+else
+  echo "[trufflehog] SKIPPED — trufflehog not installed (brew install trufflehog)"
+fi
+echo ""
+
+# ---- 4. Spectral OWASP (OpenAPI lint) ----
+echo "=== Spectral OWASP API Lint ==="
+if command -v npx &>/dev/null && [ -f ".spectral.yaml" ]; then
+  # Export OpenAPI spec first (fast, no network needed)
+  SPEC_FILE=$(mktemp)
+  mv "$SPEC_FILE" "${SPEC_FILE}.json"
+  SPEC_FILE="${SPEC_FILE}.json"
+  if pnpm --filter @portal/api swagger:export -- "$SPEC_FILE" 2>/dev/null; then
+    SPECTRAL_OUTPUT=$(npx spectral lint "$SPEC_FILE" --ruleset .spectral.yaml 2>&1) || true
+    SPECTRAL_ERRORS=$(echo "$SPECTRAL_OUTPUT" | grep -c " error " 2>/dev/null || echo "0")
+    SPECTRAL_WARNS=$(echo "$SPECTRAL_OUTPUT" | grep -c " warning " 2>/dev/null || echo "0")
+
+    if [ "$SPECTRAL_ERRORS" -gt 0 ]; then
+      echo "[spectral] $SPECTRAL_ERRORS error(s), $SPECTRAL_WARNS warning(s):"
+      echo "$SPECTRAL_OUTPUT" | grep -E " (error|warning) " | head -20
+      FAILED=true
+    elif [ "$SPECTRAL_WARNS" -gt 0 ]; then
+      echo "[spectral] $SPECTRAL_WARNS warning(s) (non-blocking)"
+    else
+      echo "[spectral] Clean - no OWASP findings"
+    fi
+    rm -f "$SPEC_FILE"
+  else
+    echo "[spectral] SKIPPED — OpenAPI export failed (check apps/api/scripts/export-openapi.ts)"
+  fi
+else
+  echo "[spectral] SKIPPED — .spectral.yaml not found or npx unavailable"
+fi
+echo ""
+
+# ---- 5. Cherrybomb (API security) ----
+echo "=== Cherrybomb API Security ==="
+if command -v cherrybomb &>/dev/null; then
+  SPEC_FILE=$(mktemp)
+  mv "$SPEC_FILE" "${SPEC_FILE}.json"
+  SPEC_FILE="${SPEC_FILE}.json"
+  if pnpm --filter @portal/api swagger:export -- "$SPEC_FILE" 2>/dev/null; then
+    CB_OUTPUT=$(cherrybomb --no-telemetry --file "$SPEC_FILE" --profile passive 2>&1) || true
+    CB_ALERTS=$(echo "$CB_OUTPUT" | grep -ciE "alert|vulnerability|issue" 2>/dev/null || echo "0")
+
+    if [ "$CB_ALERTS" -gt 0 ]; then
+      echo "[cherrybomb] $CB_ALERTS alert(s) found:"
+      echo "$CB_OUTPUT" | head -30
+      # Warning only — Cherrybomb can be noisy
+    else
+      echo "[cherrybomb] Clean - no alerts"
+    fi
+    rm -f "$SPEC_FILE"
+  else
+    echo "[cherrybomb] SKIPPED — OpenAPI export failed"
+  fi
+else
+  echo "[cherrybomb] SKIPPED — cherrybomb not installed (cargo install cherrybomb)"
+fi
+echo ""
+
+# ---- 6. CodeRabbit ----
 echo "=== CodeRabbit AI Review ==="
 if command -v claude &>/dev/null; then
   echo "[coderabbit] Triggering CodeRabbit review via Claude skill..."
@@ -185,7 +278,7 @@ else
 fi
 echo ""
 
-# ---- 4. Tests (bonus — catches broken code before push) ----
+# ---- 7. Tests (bonus — catches broken code before push) ----
 echo "=== Running Tests ==="
 if ! pnpm test 2>&1; then
   echo "[tests] FAILED — fix failing tests before pushing"
