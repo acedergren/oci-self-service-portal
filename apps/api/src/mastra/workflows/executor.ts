@@ -379,7 +379,7 @@ export class WorkflowExecutor {
 		try {
 			// Generate text using AI SDK
 			const result = await generateText({
-				model: registry.languageModel(modelString),
+				model: registry.languageModel(modelString as Parameters<typeof registry.languageModel>[0]),
 				prompt: interpolatedPrompt,
 				system: interpolatedSystemPrompt,
 				temperature: data.temperature,

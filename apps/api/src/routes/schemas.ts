@@ -155,7 +155,14 @@ export const V1ToolsQuerySchema = z.object({
 export type V1ToolsQuery = z.infer<typeof V1ToolsQuerySchema>;
 
 export const V1ToolNameParamsSchema = z.object({
-	name: z.string().min(1).max(200)
+	name: z
+		.string()
+		.min(1)
+		.max(200)
+		.regex(
+			/^[a-zA-Z0-9_.-]+$/,
+			'Tool name must contain only letters, digits, hyphens, dots, and underscores'
+		)
 });
 
 export type V1ToolNameParams = z.infer<typeof V1ToolNameParamsSchema>;

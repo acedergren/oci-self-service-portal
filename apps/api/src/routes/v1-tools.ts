@@ -146,10 +146,10 @@ export async function v1ToolRoutes(app: FastifyInstance): Promise<void> {
 				const confirmedBody = body.confirmed === true;
 
 				if (!confirmedHeader && !confirmedBody) {
-					return reply.status(403).send({
-						error: 'Forbidden',
+					return reply.status(422).send({
+						error: 'Confirmation Required',
 						message: `Tool "${name}" requires confirmation. Set "confirmed": true in body or X-Confirm: true header.`,
-						statusCode: 403,
+						statusCode: 422,
 						toolName: name,
 						approvalLevel: toolDef.approvalLevel,
 						requiresConfirmation: true

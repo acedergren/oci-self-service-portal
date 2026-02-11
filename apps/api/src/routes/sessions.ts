@@ -179,7 +179,7 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
 	app.post(
 		'/api/sessions/:id/continue',
 		{
-			preHandler: requireAuth('sessions:read'),
+			preHandler: requireAuth('sessions:write'),
 			schema: {
 				params: z.object({
 					id: z.string().uuid()
@@ -213,6 +213,7 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
 				}
 
 				// Verify session ownership (prevent IDOR)
+				// Null userId check allows legacy sessions created before user tracking
 				if (session.userId && session.userId !== userId) {
 					log.warn({ sessionId, userId, ownerId: session.userId }, 'Session ownership mismatch');
 					return reply.status(403).send({
