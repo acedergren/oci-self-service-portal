@@ -52,7 +52,7 @@
 		<h3 class="chart-title">{title}</h3>
 		{#if series.length > 1}
 			<div class="series-tabs">
-				{#each series as s, i}
+				{#each series as s, i (s.name)}
 					<button
 						class="series-tab"
 						class:active={i === selectedIndex}
