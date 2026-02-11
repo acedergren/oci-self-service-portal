@@ -102,15 +102,18 @@ export class StdioTransport extends EventEmitter implements MCPTransport {
 
 			// Kill process
 			if (proc && !proc.killed) {
-				proc.on('close', () => resolve());
-				proc.kill('SIGTERM');
-
 				// Force kill after 5 seconds
-				setTimeout(() => {
+				const forceKillTimeout = setTimeout(() => {
 					if (!proc.killed) {
 						proc.kill('SIGKILL');
 					}
 				}, 5000);
+
+				proc.on('close', () => {
+					clearTimeout(forceKillTimeout);
+					resolve();
+				});
+				proc.kill('SIGTERM');
 			} else {
 				resolve();
 			}

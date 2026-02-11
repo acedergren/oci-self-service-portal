@@ -27,6 +27,7 @@ export interface MCPServerEntry {
 	client: MCPClient;
 	state: ConnectionState;
 	enabled: boolean;
+	reconnectAttempts: number;
 }
 
 export interface MCPManagerOptions {
@@ -44,6 +45,9 @@ export interface MCPManagerOptions {
 
 	/** Reconnect delay in milliseconds */
 	reconnectDelay?: number;
+
+	/** Maximum reconnection attempts before giving up */
+	maxReconnectAttempts?: number;
 }
 
 export class MCPManager extends EventEmitter {
@@ -55,6 +59,7 @@ export class MCPManager extends EventEmitter {
 		this.options = {
 			autoReconnect: true,
 			reconnectDelay: 5000,
+			maxReconnectAttempts: 5,
 			...options
 		};
 	}
@@ -86,15 +91,33 @@ export class MCPManager extends EventEmitter {
 				entry.state = state;
 				this.emit('serverStateChange', name, state);
 
-				// Auto-reconnect on disconnect
+				// Reset reconnect attempts on successful connection
+				if (state === 'connected') {
+					entry.reconnectAttempts = 0;
+				}
+
+				// Auto-reconnect on disconnect with retry limit
 				if (state === 'disconnected' && entry.enabled && this.options.autoReconnect) {
+					if (entry.reconnectAttempts >= (this.options.maxReconnectAttempts ?? 5)) {
+						this.options.onLog?.(
+							name,
+							'error',
+							`Max reconnection attempts (${this.options.maxReconnectAttempts}) reached, giving up`
+						);
+						entry.enabled = false;
+						return;
+					}
+
+					entry.reconnectAttempts++;
+					const delay = this.options.reconnectDelay! * Math.pow(2, entry.reconnectAttempts - 1);
+
 					setTimeout(() => {
 						if (entry.enabled) {
 							this.connectServer(name).catch((e) => {
 								this.options.onLog?.(name, 'error', 'Reconnect failed', e);
 							});
 						}
-					}, this.options.reconnectDelay);
+					}, delay);
 				}
 			}
 		});
@@ -104,7 +127,8 @@ export class MCPManager extends EventEmitter {
 			config,
 			client,
 			state: 'disconnected',
-			enabled: false
+			enabled: false,
+			reconnectAttempts: 0
 		});
 
 		this.emit('serverAdded', name);
@@ -197,10 +221,23 @@ export class MCPManager extends EventEmitter {
 	 */
 	getAllTools(): MCPToolDefinition[] {
 		const tools: MCPToolDefinition[] = [];
+		const toolNames = new Set<string>();
 
 		for (const entry of this.servers.values()) {
 			if (entry.state === 'connected') {
-				tools.push(...entry.client.getTools());
+				const serverTools = entry.client.getTools();
+				for (const tool of serverTools) {
+					// Check for name collisions and log warning
+					if (toolNames.has(tool.name)) {
+						this.options.onLog?.(
+							entry.name,
+							'warn',
+							`Tool name collision detected: "${tool.name}" is already registered by another server. Consider using namespace prefixing.`
+						);
+					}
+					toolNames.add(tool.name);
+					tools.push(tool);
+				}
 			}
 		}
 
