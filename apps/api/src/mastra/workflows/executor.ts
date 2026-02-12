@@ -62,6 +62,18 @@ export interface ExecutionCallbacks {
 	onNodeStart?: (nodeId: string, nodeType: string) => void;
 	onNodeComplete?: (nodeId: string, nodeType: string, result: unknown) => void;
 	onNodeError?: (nodeId: string, nodeType: string, error: string, willRetry: boolean) => void;
+	onCompensation?: (nodeId: string, toolName: string, success: boolean) => void;
+}
+
+// ============================================================================
+// Compensation / Saga
+// ============================================================================
+
+export interface CompensationEntry {
+	nodeId: string;
+	toolName: string;
+	compensateAction: string;
+	compensateArgs?: Record<string, unknown>;
 }
 
 // ============================================================================
@@ -72,6 +84,7 @@ export interface EngineState {
 	suspendedAtNodeId: string;
 	completedNodeIds: string[];
 	stepResults: Record<string, unknown>;
+	compensationStack?: CompensationEntry[];
 }
 
 export interface ExecutionResult {
@@ -143,6 +156,7 @@ export class WorkflowExecutor {
 	): Promise<ExecutionResult> {
 		const stepResults: Record<string, unknown> = { ...existingResults };
 		const skippedNodes = new Set<string>();
+		const compensationStack: CompensationEntry[] = [];
 		let output: Record<string, unknown> | undefined;
 		let stepCount = completedNodeIds.size;
 		const startTime = Date.now();
@@ -159,6 +173,7 @@ export class WorkflowExecutor {
 			const elapsed = Date.now() - startTime;
 
 			if (stepCount > MAX_STEPS) {
+				await this.runCompensations(compensationStack, callbacks);
 				return {
 					status: 'failed',
 					stepResults,
@@ -167,6 +182,7 @@ export class WorkflowExecutor {
 			}
 
 			if (elapsed > MAX_DURATION_MS) {
+				await this.runCompensations(compensationStack, callbacks);
 				return {
 					status: 'failed',
 					stepResults,
@@ -193,13 +209,30 @@ export class WorkflowExecutor {
 						engineState: {
 							suspendedAtNodeId: node.id,
 							completedNodeIds: [...completedNodeIds, ...Object.keys(stepResults)],
-							stepResults
+							stepResults,
+							compensationStack
 						}
 					};
 				}
 
 				stepResults[node.id] = nodeResult.result;
 				callbacks?.onNodeComplete?.(node.id, node.type, nodeResult.result);
+
+				// Track compensatable tool nodes for saga rollback
+				if (node.type === 'tool') {
+					const toolData = node.data as {
+						toolName?: string;
+						compensate?: { action: string; args?: Record<string, unknown> };
+					};
+					if (toolData.compensate && toolData.toolName) {
+						compensationStack.push({
+							nodeId: node.id,
+							toolName: toolData.toolName,
+							compensateAction: toolData.compensate.action,
+							compensateArgs: toolData.compensate.args
+						});
+					}
+				}
 
 				// Capture output from output nodes
 				if (node.type === 'output' && nodeResult.result) {
@@ -208,6 +241,10 @@ export class WorkflowExecutor {
 			} catch (err) {
 				const errorMsg = err instanceof Error ? err.message : String(err);
 				callbacks?.onNodeError?.(node.id, node.type, errorMsg, false);
+
+				// Run compensations in reverse order (saga rollback)
+				await this.runCompensations(compensationStack, callbacks);
+
 				return {
 					status: 'failed',
 					stepResults,
@@ -221,6 +258,25 @@ export class WorkflowExecutor {
 			stepResults,
 			output
 		};
+	}
+
+	/**
+	 * Run compensation actions in reverse order (saga rollback).
+	 * Best-effort: failures are logged but don't stop remaining compensations.
+	 */
+	private async runCompensations(
+		stack: CompensationEntry[],
+		callbacks?: ExecutionCallbacks
+	): Promise<void> {
+		for (let i = stack.length - 1; i >= 0; i--) {
+			const entry = stack[i];
+			try {
+				await executeTool(entry.compensateAction, entry.compensateArgs ?? {});
+				callbacks?.onCompensation?.(entry.nodeId, entry.toolName, true);
+			} catch {
+				callbacks?.onCompensation?.(entry.nodeId, entry.toolName, false);
+			}
+		}
 	}
 
 	/**

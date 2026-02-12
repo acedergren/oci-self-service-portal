@@ -211,6 +211,34 @@ export const WorkflowStepSchema = z.object({
 export type WorkflowStep = z.infer<typeof WorkflowStepSchema>;
 
 // ============================================================================
+// Engine State Schema (suspend / resume)
+// ============================================================================
+
+export const EngineStateSchema = z.object({
+	suspendedAtNodeId: z.string(),
+	completedNodeIds: z.array(z.string()),
+	stepResults: z.record(z.string(), z.unknown()),
+	compensationStack: z
+		.array(
+			z.object({
+				nodeId: z.string(),
+				toolName: z.string(),
+				compensateAction: z.string(),
+				compensateArgs: z.record(z.string(), z.unknown()).optional()
+			})
+		)
+		.optional()
+});
+export type EngineState = z.infer<typeof EngineStateSchema>;
+
+export const ResumePayloadSchema = z.object({
+	approved: z.boolean(),
+	approvedBy: z.string().optional(),
+	approvalData: z.record(z.string(), z.unknown()).optional()
+});
+export type ResumePayload = z.infer<typeof ResumePayloadSchema>;
+
+// ============================================================================
 // Insert Schemas (omit server-generated fields)
 // ============================================================================
 
