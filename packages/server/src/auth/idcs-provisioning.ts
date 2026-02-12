@@ -23,15 +23,17 @@ const IDCS_ADMIN_GROUPS = (
 	process.env.OCI_IAM_ADMIN_GROUPS || 'PortalAdmins,OCI_Administrators,Administrators'
 )
 	.split(',')
-	.map((s) => s.trim());
+	.map((s) => s.trim().toLowerCase())
+	.filter(Boolean);
 const IDCS_OPERATOR_GROUPS = (
 	process.env.OCI_IAM_OPERATOR_GROUPS || 'PortalOperators,OCI_Operators,CloudOperators'
 )
 	.split(',')
-	.map((s) => s.trim());
+	.map((s) => s.trim().toLowerCase())
+	.filter(Boolean);
 
 export function mapIdcsGroupsToRole(groups: string[]): 'admin' | 'operator' | 'viewer' {
-	const groupSet = new Set(groups);
+	const groupSet = new Set(groups.map((g) => g.toLowerCase()));
 	if (IDCS_ADMIN_GROUPS.some((g) => groupSet.has(g))) return 'admin';
 	if (IDCS_OPERATOR_GROUPS.some((g) => groupSet.has(g))) return 'operator';
 	return 'viewer';
