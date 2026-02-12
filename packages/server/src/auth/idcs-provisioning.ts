@@ -8,8 +8,34 @@
  * This runs post-login and updates the org_members table if needed.
  */
 import { withConnection } from '../oracle/connection';
-import { mapIdcsGroupsToRole } from './config';
 import { createLogger } from '../logger';
+
+/**
+ * Maps IDCS group names to portal roles.
+ *
+ * IDCS groups come from the `groups` claim in the userinfo response.
+ * The first match wins (ordered highest to lowest privilege).
+ *
+ * Configurable via OCI_IAM_ADMIN_GROUPS, OCI_IAM_OPERATOR_GROUPS env vars
+ * (comma-separated group names). Defaults to common IDCS group patterns.
+ */
+const IDCS_ADMIN_GROUPS = (
+	process.env.OCI_IAM_ADMIN_GROUPS || 'PortalAdmins,OCI_Administrators,Administrators'
+)
+	.split(',')
+	.map((s) => s.trim());
+const IDCS_OPERATOR_GROUPS = (
+	process.env.OCI_IAM_OPERATOR_GROUPS || 'PortalOperators,OCI_Operators,CloudOperators'
+)
+	.split(',')
+	.map((s) => s.trim());
+
+export function mapIdcsGroupsToRole(groups: string[]): 'admin' | 'operator' | 'viewer' {
+	const groupSet = new Set(groups);
+	if (IDCS_ADMIN_GROUPS.some((g) => groupSet.has(g))) return 'admin';
+	if (IDCS_OPERATOR_GROUPS.some((g) => groupSet.has(g))) return 'operator';
+	return 'viewer';
+}
 
 const log = createLogger('idcs-provisioning');
 
