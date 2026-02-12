@@ -49,6 +49,7 @@ import { webhookRoutes } from './routes/webhooks.js';
 import { setupRoutes } from './routes/setup.js';
 import { authRoutes } from './routes/auth.js';
 import { mcpAdminRoutes } from './routes/admin/mcp.js';
+import { adminMetricsRoutes } from './routes/admin/metrics.js';
 
 const log = createLogger('app');
 
@@ -438,6 +439,7 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 	await app.register(setupRoutes);
 	await app.register(authRoutes);
 	await app.register(mcpAdminRoutes);
+	await app.register(adminMetricsRoutes);
 
 	log.info('Fastify app created with plugins and routes');
 	return app;

@@ -8,6 +8,8 @@
  * - PUT    /api/v1/workflows/:id        — update workflow
  * - DELETE /api/v1/workflows/:id        — delete workflow
  * - POST   /api/v1/workflows/:id/run    — execute workflow
+ * - GET    /api/v1/workflows/runs                    — list all runs (admin)
+ * - GET    /api/v1/workflows/:id/runs               — list runs for workflow
  * - GET    /api/v1/workflows/:id/runs/:runId         — get run detail
  * - GET    /api/v1/workflows/:id/runs/:runId/stream  — SSE stream for run progress
  * - POST   /api/v1/workflows/:id/runs/:runId/approve — approve suspended run
@@ -587,6 +589,100 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 
 				throw portalErr;
 			}
+		}
+	);
+
+	// ── GET /api/v1/workflows/runs ──────────────────────────────────────
+	// Admin view: list all runs across all workflows for the org.
+
+	app.get(
+		'/api/v1/workflows/runs',
+		{
+			schema: {
+				querystring: z.object({
+					limit: z.coerce.number().int().min(1).max(100).default(50),
+					offset: z.coerce.number().int().min(0).default(0),
+					status: z
+						.enum(['pending', 'running', 'completed', 'failed', 'suspended', 'cancelled'])
+						.optional()
+				})
+			},
+			preHandler: requireAuth('workflows:read')
+		},
+		async (request, reply) => {
+			const { runs } = getRepos();
+			const orgId = resolveOrgId(request);
+			if (!orgId) {
+				return reply.code(400).send({ error: 'Organization context required' });
+			}
+
+			const { limit, offset, status } = request.query;
+			const result = await runs.listByOrg(orgId, { limit, offset, status });
+
+			return reply.send({
+				runs: result.runs.map((r) => ({
+					id: r.id,
+					definitionId: r.definitionId,
+					status: r.status,
+					startedAt: r.startedAt?.toISOString() ?? null,
+					completedAt: r.completedAt?.toISOString() ?? null,
+					createdAt: r.createdAt?.toISOString() ?? null
+				})),
+				total: result.total
+			});
+		}
+	);
+
+	// ── GET /api/v1/workflows/:id/runs ──────────────────────────────────
+	// List all runs for a specific workflow (org-scoped).
+
+	app.get(
+		'/api/v1/workflows/:id/runs',
+		{
+			schema: {
+				params: WorkflowIdParamsSchema,
+				querystring: z.object({
+					limit: z.coerce.number().int().min(1).max(100).default(50),
+					offset: z.coerce.number().int().min(0).default(0),
+					status: z
+						.enum(['pending', 'running', 'completed', 'failed', 'suspended', 'cancelled'])
+						.optional()
+				})
+			},
+			preHandler: requireAuth('workflows:read')
+		},
+		async (request, reply) => {
+			const { workflows, runs } = getRepos();
+			const orgId = resolveOrgId(request);
+			if (!orgId) {
+				return reply.code(400).send({ error: 'Organization context required' });
+			}
+
+			// Verify the workflow exists and belongs to this org
+			const workflow = await workflows.getByIdForOrg(request.params.id, orgId);
+			if (!workflow) {
+				throw new NotFoundError(`Workflow ${request.params.id} not found`);
+			}
+
+			const { limit, offset, status } = request.query;
+			const runsList = await runs.listByWorkflowForOrg(request.params.id, orgId, {
+				limit,
+				offset,
+				status
+			});
+
+			return reply.send({
+				runs: runsList.map((r) => ({
+					id: r.id,
+					definitionId: r.definitionId,
+					status: r.status,
+					startedAt: r.startedAt?.toISOString() ?? null,
+					completedAt: r.completedAt?.toISOString() ?? null,
+					createdAt: r.createdAt?.toISOString() ?? null
+				})),
+				workflowId: request.params.id,
+				workflowName: workflow.name
+			});
 		}
 	);
 

@@ -245,6 +245,15 @@ export interface WorkflowRunRepo {
 	getByIdForUser(id: string, userId: string, orgId?: string): Promise<WorkflowRun | null>;
 	updateStatus(id: string, input: UpdateRunInput): Promise<WorkflowRun | null>;
 	listByWorkflow(workflowId: string, limit?: number): Promise<WorkflowRun[]>;
+	listByWorkflowForOrg(
+		workflowId: string,
+		orgId: string,
+		options?: { limit?: number; offset?: number; status?: string }
+	): Promise<WorkflowRun[]>;
+	listByOrg(
+		orgId: string,
+		options?: { limit?: number; offset?: number; status?: string }
+	): Promise<{ runs: WorkflowRun[]; total: number }>;
 	listByUser(userId: string, limit?: number): Promise<WorkflowRun[]>;
 }
 
@@ -638,6 +647,58 @@ export function createWorkflowRunRepository(withConnection: WithConnectionFn): W
 				);
 				if (!result.rows) return [];
 				return result.rows.map(rowToRun);
+			});
+		},
+
+		async listByWorkflowForOrg(
+			workflowId: string,
+			orgId: string,
+			options: { limit?: number; offset?: number; status?: string } = {}
+		): Promise<WorkflowRun[]> {
+			const { limit = 50, offset = 0, status } = options;
+			return withConnection(async (conn) => {
+				let sql = `SELECT * FROM workflow_runs WHERE workflow_id = :workflowId AND org_id = :orgId`;
+				const binds: Record<string, unknown> = { workflowId, orgId };
+				if (status) {
+					sql += ` AND status = :status`;
+					binds.status = status;
+				}
+				sql += ` ORDER BY created_at DESC OFFSET :offset ROWS FETCH FIRST :maxRows ROWS ONLY`;
+				binds.offset = offset;
+				binds.maxRows = limit;
+				const result = await conn.execute<WorkflowRunRow>(sql, binds);
+				if (!result.rows) return [];
+				return result.rows.map(rowToRun);
+			});
+		},
+
+		async listByOrg(
+			orgId: string,
+			options: { limit?: number; offset?: number; status?: string } = {}
+		): Promise<{ runs: WorkflowRun[]; total: number }> {
+			const { limit = 50, offset = 0, status } = options;
+			return withConnection(async (conn) => {
+				let whereClauses = 'org_id = :orgId';
+				const binds: Record<string, unknown> = { orgId };
+				if (status) {
+					whereClauses += ` AND status = :status`;
+					binds.status = status;
+				}
+				const countResult = await conn.execute<{ CNT: number }>(
+					`SELECT COUNT(*) AS CNT FROM workflow_runs WHERE ${whereClauses}`,
+					binds
+				);
+				const total = countResult.rows?.[0]?.CNT ?? 0;
+
+				const result = await conn.execute<WorkflowRunRow>(
+					`SELECT * FROM workflow_runs WHERE ${whereClauses}
+					 ORDER BY created_at DESC OFFSET :offset ROWS FETCH FIRST :maxRows ROWS ONLY`,
+					{ ...binds, offset, maxRows: limit }
+				);
+				return {
+					runs: result.rows ? result.rows.map(rowToRun) : [],
+					total
+				};
 			});
 		},
 
