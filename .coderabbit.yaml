@@ -220,6 +220,14 @@ reviews:
     yamllint:
       enabled: true
 
+    # CSS/SCSS linting
+    stylelint:
+      enabled: true # For apps/frontend/src/app.css (690 lines)
+
+    # Advanced secret scanning (verification)
+    trufflehog:
+      enabled: true # Complements Gitleaks with secret verification
+
     # Disable tools not relevant to our stack
     shellcheck:
       enabled: false # We use bash deliberately in scripts
