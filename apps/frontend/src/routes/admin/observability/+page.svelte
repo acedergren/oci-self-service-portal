@@ -183,10 +183,15 @@
 										<div class="bar-container">
 											<div
 												class="bar-fill"
-												style="width: {(count / metrics.tools.totalExecutions) * 100}%"
+												style="width: {metrics.tools.totalExecutions > 0
+													? (count / metrics.tools.totalExecutions) * 100
+													: 0}%"
 											></div>
 											<span class="bar-label"
-												>{((count / metrics.tools.totalExecutions) * 100).toFixed(1)}%</span
+												>{(metrics.tools.totalExecutions > 0
+													? (count / metrics.tools.totalExecutions) * 100
+													: 0
+												).toFixed(1)}%</span
 											>
 										</div>
 									</td>

@@ -346,6 +346,9 @@ importers:
       better-sqlite3:
         specifier: ^12.6.2
         version: 12.6.2
+      ipaddr.js:
+        specifier: ^2.2.0
+        version: 2.3.0
       oci-sdk:
         specifier: ^2.125.0
         version: 2.125.0

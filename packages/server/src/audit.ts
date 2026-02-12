@@ -300,10 +300,24 @@ export function logToolExecution(
 				approvalLevel,
 				success,
 				duration,
-				error
+				error: error ? sanitizeExternalError(error) : undefined
 			}
 		});
 	}
+}
+
+function sanitizeExternalError(err: unknown): string {
+	// Webhooks are external integrations; never send raw Error objects / stacks.
+	if (typeof err === 'string') return err;
+	if (
+		err &&
+		typeof err === 'object' &&
+		'message' in err &&
+		typeof (err as { message?: unknown }).message === 'string'
+	) {
+		return (err as { message: string }).message;
+	}
+	return 'Unknown error';
 }
 
 /**

@@ -197,7 +197,7 @@ async function deliverToWebhook(
 	}
 
 	// Attempt delivery with retries
-	for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+	for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
 		try {
 			const controller = new AbortController();
 			const timeout = setTimeout(() => controller.abort(), DELIVERY_TIMEOUT);
