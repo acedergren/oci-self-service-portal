@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import type { ToolEntry } from '../types.js';
-import { executeOCI, executeOCIAsync, slimOCIResponse, requireCompartmentId } from '../executor.js';
+import {
+	executeOCISDK,
+	normalizeSDKResponse,
+	executeAndSlim,
+	requireCompartmentId
+} from '../executor-sdk.js';
 
 const compartmentIdSchema = z
 	.string()
@@ -20,11 +25,11 @@ export const observabilityTools: ToolEntry[] = [
 			compartmentId: compartmentIdSchema,
 			displayName: z.string().optional()
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			const cliArgs = ['monitoring', 'alarm', 'list', '--compartment-id', compartmentId, '--all'];
-			if (args.displayName) cliArgs.push('--display-name', args.displayName as string);
-			return slimOCIResponse(executeOCI(cliArgs), [
+			const request: Record<string, unknown> = { compartmentId };
+			if (args.displayName) request.displayName = args.displayName;
+			return executeAndSlim('monitoring', 'listAlarms', request, [
 				'display-name',
 				'id',
 				'severity',
@@ -53,29 +58,26 @@ export const observabilityTools: ToolEntry[] = [
 			endTime: z.string().optional().describe('End time (ISO 8601) — defaults to now'),
 			resolution: z.string().optional().describe('Data resolution (e.g., 1m, 5m, 1h)')
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
 			const now = new Date();
 			const threeHoursAgo = new Date(now.getTime() - 3 * 60 * 60 * 1000);
 			const startTime = (args.startTime as string) || threeHoursAgo.toISOString();
 			const endTime = (args.endTime as string) || now.toISOString();
-			const cliArgs = [
-				'monitoring',
-				'metric-data',
-				'summarize-metrics-data',
-				'--compartment-id',
+
+			const summarizeMetricsDataDetails: Record<string, unknown> = {
+				namespace: args.namespace,
+				query: args.query,
+				startTime: new Date(startTime),
+				endTime: new Date(endTime)
+			};
+			if (args.resolution) summarizeMetricsDataDetails.resolution = args.resolution;
+
+			const response = await executeOCISDK('monitoring', 'summarizeMetricsData', {
 				compartmentId,
-				'--namespace',
-				args.namespace as string,
-				'--query-text',
-				args.query as string,
-				'--start-time',
-				startTime,
-				'--end-time',
-				endTime
-			];
-			if (args.resolution) cliArgs.push('--resolution', args.resolution as string);
-			return executeOCI(cliArgs);
+				summarizeMetricsDataDetails
+			});
+			return normalizeSDKResponse(response);
 		}
 	},
 	{
@@ -129,21 +131,17 @@ export const observabilityTools: ToolEntry[] = [
 			const resourceFilter = instanceId ? `{resourceId = "${instanceId}"}` : '';
 			const mqlQuery = `${metricName}[${config.interval}]${resourceFilter}.${aggregation}()`;
 
-			const result = await executeOCIAsync([
-				'monitoring',
-				'metric-data',
-				'summarize-metrics-data',
-				'--compartment-id',
+			const response = await executeOCISDK('monitoring', 'summarizeMetricsData', {
 				compartmentId,
-				'--namespace',
-				'oci_computeagent',
-				'--query-text',
-				mqlQuery,
-				'--start-time',
-				startTime.toISOString(),
-				'--end-time',
-				now.toISOString()
-			]);
+				summarizeMetricsDataDetails: {
+					namespace: 'oci_computeagent',
+					query: mqlQuery,
+					startTime,
+					endTime: now
+				}
+			});
+
+			const result = normalizeSDKResponse(response);
 
 			return {
 				metricName,
@@ -169,17 +167,15 @@ export const observabilityTools: ToolEntry[] = [
 		parameters: z.object({
 			compartmentId: compartmentIdSchema
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			return executeOCI([
-				'monitoring',
-				'metric',
-				'list',
-				'--compartment-id',
+			const response = await executeOCISDK('monitoring', 'listMetrics', {
 				compartmentId,
-				'--group-by',
-				JSON.stringify(['namespace'])
-			]);
+				listMetricsDetails: {
+					groupBy: ['namespace']
+				}
+			});
+			return normalizeSDKResponse(response);
 		}
 	}
 ];

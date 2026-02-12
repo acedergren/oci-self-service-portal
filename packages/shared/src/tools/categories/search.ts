@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { ToolEntry } from '../types.js';
-import { executeOCI } from '../executor.js';
+import { executeOCISDK, normalizeSDKResponse } from '../executor-sdk.js';
 
 export const searchTools: ToolEntry[] = [
 	{
@@ -17,16 +17,16 @@ export const searchTools: ToolEntry[] = [
 				),
 			limit: z.number().default(50).describe('Maximum number of results')
 		}),
-		execute: (args) => {
-			return executeOCI([
-				'search',
-				'resource',
-				'structured-search',
-				'--query-text',
-				args.queryText as string,
-				'--limit',
-				String(args.limit || 50)
-			]);
+		executeAsync: async (args) => {
+			const response = await executeOCISDK('resourceSearch', 'searchResources', {
+				searchDetails: {
+					type: 'Structured',
+					query: args.queryText as string,
+					matchingContextType: 'NONE'
+				},
+				limit: args.limit || 50
+			});
+			return normalizeSDKResponse(response);
 		}
 	},
 	{
@@ -54,20 +54,20 @@ export const searchTools: ToolEntry[] = [
 				.optional()
 				.describe('Narrow search to a specific resource type')
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const displayName = args.displayName as string;
 			const resourceType = args.resourceType as string | undefined;
 			const typeClause = resourceType ? `${resourceType} resources` : 'all resources';
 			const queryText = `query ${typeClause} where displayName = '${displayName}'`;
-			return executeOCI([
-				'search',
-				'resource',
-				'structured-search',
-				'--query-text',
-				queryText,
-				'--limit',
-				'50'
-			]);
+			const response = await executeOCISDK('resourceSearch', 'searchResources', {
+				searchDetails: {
+					type: 'Structured',
+					query: queryText,
+					matchingContextType: 'NONE'
+				},
+				limit: 50
+			});
+			return normalizeSDKResponse(response);
 		}
 	}
 ];

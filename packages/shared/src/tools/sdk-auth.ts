@@ -160,6 +160,8 @@ const CLIENT_MAP = {
 		new oci.containerengine.ContainerEngineClient({
 			authenticationDetailsProvider: getOCIAuthProvider()
 		}),
+	artifacts: () =>
+		new oci.artifacts.ArtifactsClient({ authenticationDetailsProvider: getOCIAuthProvider() }),
 	logging: () =>
 		new oci.logging.LoggingManagementClient({
 			authenticationDetailsProvider: getOCIAuthProvider()

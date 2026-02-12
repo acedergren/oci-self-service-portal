@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { ToolEntry } from '../types.js';
-import { executeOCIAsync, toMidnightUTC, requireCompartmentId } from '../executor.js';
+import { executeOCISDK, normalizeSDKResponse, requireCompartmentId } from '../executor-sdk.js';
+import { toMidnightUTC } from '../executor.js';
 
 const compartmentIdSchema = z
 	.string()
@@ -61,40 +62,31 @@ export const billingTools: ToolEntry[] = [
 
 			let tenancyId: string;
 			try {
-				const tenancy = (await executeOCIAsync([
-					'iam',
-					'compartment',
-					'get',
-					'--compartment-id',
+				const tenancyResp = await executeOCISDK('identity', 'getCompartment', {
 					compartmentId
-				])) as { data: { 'compartment-id': string } };
-				tenancyId = tenancy.data['compartment-id'] || compartmentId;
+				});
+				const compartment = (tenancyResp as { compartment: { compartmentId: string } }).compartment;
+				tenancyId = compartment.compartmentId || compartmentId;
 			} catch {
 				tenancyId = compartmentId;
 			}
 
-			const result = await executeOCIAsync([
-				'usage-api',
-				'usage-summary',
-				'request-summarized-usages',
-				'--tenant-id',
-				tenancyId,
-				'--time-usage-started',
-				toMidnightUTC(startDate),
-				'--time-usage-ended',
-				toMidnightUTC(endDate),
-				'--granularity',
-				granularity,
-				'--group-by',
-				JSON.stringify([groupBy])
-			]);
+			const result = await executeOCISDK('usageApi', 'requestSummarizedUsages', {
+				requestSummarizedUsagesDetails: {
+					tenantId: tenancyId,
+					timeUsageStarted: new Date(toMidnightUTC(startDate)),
+					timeUsageEnded: new Date(toMidnightUTC(endDate)),
+					granularity,
+					groupBy: [groupBy]
+				}
+			});
 
 			return {
 				period,
 				groupBy,
 				granularity,
 				timeRange: { start: toMidnightUTC(startDate), end: toMidnightUTC(endDate) },
-				data: result
+				data: normalizeSDKResponse(result)
 			};
 		}
 	}

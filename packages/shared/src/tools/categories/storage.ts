@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import type { ToolEntry } from '../types.js';
 import { executeOCISDK, normalizeSDKResponse, requireCompartmentId } from '../executor-sdk.js';
-import { executeOCIAsync } from '../executor.js';
 
 const compartmentIdSchema = z
 	.string()
@@ -121,15 +120,10 @@ export const storageTools: ToolEntry[] = [
 		}),
 		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			return executeOCIAsync([
-				'artifacts',
-				'container',
-				'repository',
-				'list',
-				'--compartment-id',
-				compartmentId,
-				'--all'
-			]);
+			const response = await executeOCISDK('artifacts', 'listContainerRepositories', {
+				compartmentId
+			});
+			return normalizeSDKResponse(response);
 		}
 	},
 	{
@@ -145,18 +139,11 @@ export const storageTools: ToolEntry[] = [
 		}),
 		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			const cliArgs = [
-				'artifacts',
-				'container',
-				'image',
-				'list',
-				'--compartment-id',
-				compartmentId,
-				'--all'
-			];
-			if (args.repositoryName) cliArgs.push('--repository-name', args.repositoryName as string);
-			if (args.imageVersion) cliArgs.push('--display-name', args.imageVersion as string);
-			return executeOCIAsync(cliArgs);
+			const request: Record<string, unknown> = { compartmentId };
+			if (args.repositoryName) request.repositoryName = args.repositoryName;
+			if (args.imageVersion) request.displayName = args.imageVersion;
+			const response = await executeOCISDK('artifacts', 'listContainerImages', request);
+			return normalizeSDKResponse(response);
 		}
 	}
 ];
