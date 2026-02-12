@@ -156,14 +156,15 @@ export async function dispatchEvent(event: DispatchEvent): Promise<DispatchResul
 		return [];
 	}
 
-	const results: DispatchResult[] = [];
+	const settled = await Promise.allSettled(
+		webhooks.map((webhook) => deliverToWebhook(webhook, event))
+	);
 
-	for (const webhook of webhooks) {
-		const result = await deliverToWebhook(webhook, event);
-		results.push(result);
-	}
-
-	return results;
+	return settled.map((result, i) =>
+		result.status === 'fulfilled'
+			? result.value
+			: { webhookId: webhooks[i].ID, status: 'failed' as const, error: String(result.reason) }
+	);
 }
 
 /**

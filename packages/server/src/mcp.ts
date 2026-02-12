@@ -184,10 +184,10 @@ export function getMCPServers(): Array<{ name: string; state: string; toolCount:
 
 	return manager
 		.getServers()
-		.map((server: { name: string; state: string; client: { getTools(): unknown[] } }) => ({
+		.map((server: { name: string; state: string; client?: { getTools(): unknown[] } }) => ({
 			name: server.name,
 			state: server.state,
-			toolCount: server.client.getTools().length
+			toolCount: server.client?.getTools().length ?? 0
 		}));
 }
 

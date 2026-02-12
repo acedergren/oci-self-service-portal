@@ -155,7 +155,8 @@ function writeAuditLogToFile(entry: AuditLogEntry): void {
  * Tries Oracle first; falls back to JSONL file if the DB write fails.
  */
 export function writeAuditLog(
-	entry: Omit<AuditLogEntry, 'id' | 'timestamp' | 'redactedArgs'>
+	entry: Omit<AuditLogEntry, 'id' | 'timestamp' | 'redactedArgs'>,
+	orgId?: string
 ): void {
 	const fullEntry: AuditLogEntry = {
 		id: generateAuditId(),
@@ -190,7 +191,7 @@ export function writeAuditLog(
 	// Failures are logged but never block the request.
 	const blockchainEntry: BlockchainAuditEntry = {
 		userId: entry.userId ?? 'anonymous',
-		orgId: entry.sessionId ? undefined : undefined,
+		orgId,
 		action: `tool.${entry.action}`,
 		toolName: entry.toolName,
 		resourceType: entry.toolCategory,
@@ -272,18 +273,21 @@ export function logToolExecution(
 	userId?: string,
 	orgId?: string
 ): void {
-	writeAuditLog({
-		toolName,
-		toolCategory,
-		approvalLevel,
-		action: success ? 'executed' : 'failed',
-		args,
-		success,
-		error,
-		duration,
-		sessionId,
-		userId
-	});
+	writeAuditLog(
+		{
+			toolName,
+			toolCategory,
+			approvalLevel,
+			action: success ? 'executed' : 'failed',
+			args,
+			success,
+			error,
+			duration,
+			sessionId,
+			userId
+		},
+		orgId
+	);
 
 	// Fire webhook event (non-blocking) when org context is available
 	if (orgId) {
