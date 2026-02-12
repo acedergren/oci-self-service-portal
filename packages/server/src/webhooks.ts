@@ -11,6 +11,7 @@
 import { createHmac, timingSafeEqual } from 'crypto';
 import { createLogger } from './logger.js';
 import { webhookRepository } from './oracle/repositories/webhook-repository.js';
+import { isValidExternalUrl } from './url-validation.js';
 
 const log = createLogger('webhooks');
 
@@ -54,76 +55,14 @@ export function verifySignature(payload: string, signature: string, secret: stri
  * - Loopback (localhost, [::1])
  * - Link-local (169.254.x — cloud metadata)
  * - Internal hostnames (*.internal)
+ * - DNS rebinding (hostnames that resolve to private IPs)
+ *
+ * This function performs DNS resolution to prevent DNS rebinding attacks
+ * where a malicious DNS server could make a public hostname resolve to a private IP.
  */
-export function isValidWebhookUrl(url: string): boolean {
-	let parsed: URL;
-	try {
-		parsed = new URL(url);
-	} catch {
-		return false;
-	}
-
-	// Require HTTPS
-	if (parsed.protocol !== 'https:') {
-		return false;
-	}
-
-	const hostname = parsed.hostname.toLowerCase();
-
-	// Block localhost and loopback
-	if (hostname === 'localhost' || hostname === '[::1]' || hostname === '::1') {
-		return false;
-	}
-
-	// Block internal hostnames
-	if (hostname.endsWith('.internal')) {
-		return false;
-	}
-
-	// Block IPv6 private/reserved ranges
-	// Strip brackets for IPv6 addresses (URL parser wraps them as [::1])
-	const bare = hostname.startsWith('[') ? hostname.slice(1, -1) : hostname;
-	if (bare.includes(':')) {
-		const lower = bare.toLowerCase();
-		// ::1 loopback
-		if (lower === '::1') return false;
-		// ::ffff:127.0.0.1 IPv4-mapped loopback
-		if (lower.startsWith('::ffff:')) return false;
-		// fc00::/7 — unique local addresses (fc00:: and fd00::)
-		if (lower.startsWith('fc') || lower.startsWith('fd')) return false;
-		// fe80::/10 — link-local
-		if (lower.startsWith('fe80')) return false;
-		// :: unspecified
-		if (lower === '::') return false;
-		// Block all other IPv6 (no legitimate reason for raw IPv6 webhook URLs)
-		return false;
-	}
-
-	// Block private IPv4 ranges
-	const ipMatch = hostname.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-	if (ipMatch) {
-		const [, a, b] = ipMatch.map(Number);
-
-		// 10.0.0.0/8
-		if (a === 10) return false;
-
-		// 127.0.0.0/8
-		if (a === 127) return false;
-
-		// 172.16.0.0/12
-		if (a === 172 && b >= 16 && b <= 31) return false;
-
-		// 192.168.0.0/16
-		if (a === 192 && b === 168) return false;
-
-		// 169.254.0.0/16 (link-local / cloud metadata)
-		if (a === 169 && b === 254) return false;
-
-		// 0.0.0.0
-		if (a === 0) return false;
-	}
-
-	return true;
+export async function isValidWebhookUrl(url: string): Promise<boolean> {
+	// Delegate to the centralized SSRF prevention function
+	return isValidExternalUrl(url);
 }
 
 // ============================================================================
@@ -190,8 +129,8 @@ async function deliverToWebhook(
 		headers['X-Webhook-Signature'] = generateSignature(payload, webhook.SECRET);
 	}
 
-	// Validate URL (SSRF prevention)
-	if (!isValidWebhookUrl(webhook.URL)) {
+	// Validate URL (SSRF prevention with DNS resolution to prevent rebinding)
+	if (!(await isValidWebhookUrl(webhook.URL))) {
 		log.warn({ webhookId: webhook.ID, url: webhook.URL }, 'Webhook URL blocked by SSRF filter');
 		return { webhookId: webhook.ID, status: 'failed', error: 'URL blocked by SSRF filter' };
 	}

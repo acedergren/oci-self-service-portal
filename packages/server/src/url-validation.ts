@@ -4,9 +4,13 @@
  * Provides validation for URLs that will be fetched by the server,
  * preventing Server-Side Request Forgery (SSRF) attacks by blocking
  * private IP ranges, loopback addresses, and cloud metadata endpoints.
+ *
+ * SECURITY: Includes DNS resolution to prevent DNS rebinding attacks where
+ * a hostname initially resolves to a public IP but later changes to a private IP.
  */
 
 import ipaddr from 'ipaddr.js';
+import { promises as dns } from 'dns';
 
 function isBlockedIpLiteral(hostname: string): boolean {
 	const bare = hostname.startsWith('[') ? hostname.slice(1, -1) : hostname;
@@ -31,8 +35,11 @@ function isBlockedIpLiteral(hostname: string): boolean {
 
 /**
  * Validate a URL is safe to fetch (SSRF prevention).
+ *
+ * This performs DNS resolution to prevent DNS rebinding attacks where a hostname
+ * initially points to a public IP but later changes to point to a private IP.
  */
-export function isValidExternalUrl(url: string): boolean {
+export async function isValidExternalUrl(url: string): Promise<boolean> {
 	let parsed: URL;
 	try {
 		parsed = new URL(url);
@@ -55,6 +62,44 @@ export function isValidExternalUrl(url: string): boolean {
 
 	// Block any non-global IP literal (covers private, loopback, link-local, etc)
 	if (isBlockedIpLiteral(hostname)) return false;
+
+	// DNS resolution check to prevent rebinding attacks
+	// If hostname is not an IP literal, resolve it and check all resolved IPs
+	if (!ipaddr.isValid(hostname.startsWith('[') ? hostname.slice(1, -1) : hostname)) {
+		try {
+			// Resolve both IPv4 and IPv6 addresses
+			const addresses: string[] = [];
+
+			try {
+				const ipv4Addrs = await dns.resolve4(hostname);
+				addresses.push(...ipv4Addrs);
+			} catch {
+				// IPv4 resolution failed or not available - continue to check IPv6
+			}
+
+			try {
+				const ipv6Addrs = await dns.resolve6(hostname);
+				addresses.push(...ipv6Addrs);
+			} catch {
+				// IPv6 resolution failed or not available
+			}
+
+			// If no addresses resolved at all, reject the URL
+			if (addresses.length === 0) {
+				return false;
+			}
+
+			// Check if ANY resolved IP is private/loopback/link-local
+			for (const addr of addresses) {
+				if (isBlockedIpLiteral(addr)) {
+					return false; // Found a private/blocked IP - reject the entire URL
+				}
+			}
+		} catch {
+			// DNS resolution completely failed - reject for safety
+			return false;
+		}
+	}
 
 	return true;
 }
