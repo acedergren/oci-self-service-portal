@@ -25,6 +25,13 @@
 		{ href: '/admin/settings', label: 'Portal Settings', icon: '⚙️' }
 	];
 
+	const devToolItems = [
+		{ href: '/admin/agents', label: 'Agent Playground', icon: '🧪' },
+		{ href: '/admin/workflows/runs', label: 'Workflow Monitor', icon: '📊' },
+		{ href: '/admin/tools/playground', label: 'Tool Tester', icon: '🛠️' },
+		{ href: '/admin/observability', label: 'Observability', icon: '📈' }
+	];
+
 	function isActive(href: string): boolean {
 		return $page.url.pathname === href || $page.url.pathname.startsWith(href + '/');
 	}
@@ -41,6 +48,18 @@
 
 			<nav class="sidebar-nav">
 				{#each navItems as item (item.href)}
+					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
+					<a href={item.href} class="nav-item" class:active={isActive(item.href)}>
+						<span class="nav-icon">{item.icon}</span>
+						<span class="nav-label">{item.label}</span>
+					</a>
+				{/each}
+
+				<div class="nav-divider">
+					<span class="divider-label">Developer Tools</span>
+				</div>
+
+				{#each devToolItems as item (item.href)}
 					<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
 					<a href={item.href} class="nav-item" class:active={isActive(item.href)}>
 						<span class="nav-icon">{item.icon}</span>
@@ -118,6 +137,21 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-xs);
+	}
+
+	.nav-divider {
+		display: flex;
+		align-items: center;
+		margin: var(--space-md) 0 var(--space-xs);
+		padding: 0 var(--space-md);
+	}
+
+	.divider-label {
+		font-size: var(--text-xs);
+		font-weight: 600;
+		color: var(--fg-tertiary);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
 	}
 
 	.nav-item {
