@@ -1,9 +1,9 @@
 # PRD: Phase 10 — Foundation Rewrite, Workflow Designer & Oracle 26AI Modernization
 
-> **Status**: Draft v5
+> **Status**: Draft v7
 > **Author**: Claude Opus 4.6 + acedergr
 > **Created**: 2026-02-10
-> **Last Updated**: 2026-02-10
+> **Last Updated**: 2026-02-11
 
 ---
 
@@ -52,17 +52,32 @@ A phased foundation rewrite that:
 
 ### Success Criteria
 
-| Metric                            | Target         | Measurement                                      |
-| --------------------------------- | -------------- | ------------------------------------------------ |
-| SvelteKit API routes eliminated   | 37 → 0         | Zero `+server.ts` files proxying to Fastify      |
-| OCI tool call latency (p95)       | < 500ms        | SDK API call vs 2-5s CLI subprocess              |
-| Shared package compile time       | < 3s           | `tsc --noEmit` on split packages                 |
-| Workflow node types implemented   | 8/8            | All node types functional in designer + executor |
-| Oracle query performance (vector) | 3x improvement | HNSW DML index vs IVF rebuild                    |
-| Test suite pass rate              | 100%           | `npx vitest run` on all workspaces               |
-| Deprecated dependencies           | 0              | `pnpm outdated` shows no deprecated              |
-| Custom LOC replaced by packages   | ~1,300 LOC     | MCP client + Terraform generator                 |
-| Auth codepaths                    | 1              | Single Fastify auth plugin, zero SvelteKit auth  |
+| Metric                            | Target         | Measurement                                                      |
+| --------------------------------- | -------------- | ---------------------------------------------------------------- |
+| SvelteKit API routes eliminated   | 37 → 0         | Zero `+server.ts` files proxying to Fastify                      |
+| OCI tool call latency (p95)       | < 500ms        | SDK API call vs 2-5s CLI subprocess                              |
+| Shared package compile time       | < 3s           | `tsc --noEmit` on split packages                                 |
+| Workflow node types implemented   | 8/8            | All node types functional in designer + executor                 |
+| Oracle query performance (vector) | 3x improvement | HNSW DML index vs IVF rebuild                                    |
+| Test suite pass rate              | 100%           | `npx vitest run` on all workspaces                               |
+| Deprecated dependencies           | 0              | `pnpm outdated` shows no deprecated                              |
+| Custom LOC replaced by packages   | ~1,300 LOC     | MCP client + Terraform generator                                 |
+| Auth codepaths                    | 1              | Single Fastify auth plugin, zero SvelteKit auth                  |
+| Admin experience pages            | 4 new pages    | /admin/{agents, workflows/runs, tools/playground, observability} |
+| Design iterations per admin page  | >= 2           | Browser feedback loops validate visual quality                   |
+
+### Global Engineering Gates (Phase 10)
+
+These are the minimum runnable gates used as exit criteria across milestones:
+
+- Install: `pnpm install`
+- Build: `pnpm build`
+- Lint (repo-wide): `pnpm lint`
+- Tests (full): `npx vitest run`
+- Typecheck (targeted):
+  - API: `cd apps/api && npx tsc --noEmit`
+  - Frontend: `cd apps/frontend && npx svelte-check`
+  - Shared: `cd packages/shared && npx tsc --noEmit`
 
 ---
 
@@ -98,9 +113,9 @@ When Better Auth is migrated to Fastify
 Then OIDC callbacks, session management, and CSRF protection work from Fastify
 And SvelteKit hooks only forward the session cookie (no auth logic)
 
-Given the FASTIFY_PROXY_ROUTES feature flag in SvelteKit
+Given Phase 9 introduced the FASTIFY_PROXY_ROUTES feature flag to gate the cutover
 When Phase 10 is complete
-Then the proxy code and feature flag are removed
+Then the proxy code and feature flag stay deleted
 And SvelteKit serves only SSR pages and static assets
 ```
 
@@ -228,21 +243,97 @@ And no application code can bypass tenant isolation
 **Affected Files**: `apps/api/src/mastra/rag/oracle-vector-store.ts`, `packages/shared/src/server/oracle/migrations/015-26ai.sql` (new)
 **Test File**: `apps/api/src/tests/rag/oracle-vector-store.test.ts`
 
+#### US-6: Self-Built Admin Experience (Admin, Developer)
+
+As a **Platform Admin**, I want a coherent admin experience for managing agents, monitoring workflows, and testing tools so that I don't need a separate dev tool (Mastra Studio) running alongside the portal.
+
+**Acceptance Criteria**:
+
+```gherkin
+Given the admin portal at /admin/agents
+When I select an agent (e.g. CloudAdvisor)
+Then I can chat with it in a streaming playground
+And I can see real-time tool calls as the agent works
+And I can view token usage, latency, and model selection per request
+
+Given the admin portal at /admin/workflows/runs
+When a workflow is executing
+Then I see live SSE-powered step-by-step progress
+And I can pause, resume, or cancel a running workflow
+And I can view execution history with filtering
+
+Given the admin portal at /admin/tools/playground
+When I select a tool and provide arguments
+Then I can execute it and see the raw OCI response
+And dangerous tools show the approval flow preview
+And execution time and category are displayed
+
+Given the admin portal at /admin/observability
+When I view the observability dashboard
+Then I see agent traces (tool calls, ordering, latency)
+And workflow run timelines with error rates
+And cost tracking per agent/workflow/model
+```
+
+**Affected Files**: `apps/frontend/src/routes/admin/agents/`, `apps/frontend/src/routes/admin/tools/playground/`, `apps/frontend/src/routes/admin/observability/` (all new)
+**Test File**: `apps/frontend/src/tests/phase10/admin-experience.test.ts`
+
+#### US-7: Frontend Design Iteration with Browser Feedback (Developer, Admin)
+
+As a **Developer**, I want to iterate on admin UI designs using browser-based feedback loops so that design decisions are validated visually before committing to implementation.
+
+**Acceptance Criteria**:
+
+```gherkin
+Given a new admin page design
+When multiple design iterations are created
+Then each iteration is branched for independent evaluation
+And browser screenshots/feedback inform the selection process
+
+Given the admin portal design system
+When new pages are added
+Then they use shadcn-svelte components consistently
+And responsive design works across desktop and tablet viewports
+And the design matches the existing portal aesthetic
+```
+
+**Affected Files**: All new admin pages
+**Test File**: Visual regression tests via browser automation
+
 ### Non-Goals
 
 - **Kubernetes migration**: Stay on single OCI instance with Docker Compose
 - **GraphQL API**: REST + SSE is sufficient; GraphQL adds complexity without clear benefit
 - **Mobile app**: Responsive web only; native apps are out of scope
 - **Multi-region deployment**: Single region with DR as a future phase
-- **Mastra Studio in production**: Dev-only tool for agent/workflow testing
+- **Mastra Studio embedding**: Studio is a standalone dev tool (Hono + React), not embeddable in SvelteKit. Build custom admin experience instead (AD-53)
 - **Real-time collaboration**: No WebSocket-based multi-user workflow editing
 - **Full SvelteKit removal**: SvelteKit stays for SSR/UI — we remove its API role, not the framework
 
 ---
 
+## 2A. Engineering Traceability (Contract)
+
+This section makes Phase 10 executable: each requirement maps to Phase 10 tasks, primary files, tests, and runnable verification gates.
+
+| Requirement                                                                       | Phase 10 Tasks (primary)                            | Key Files (indicative)                                                                                                                                                                | Tests (primary)                                                                              | Verification Gates                                                                                                   |
+| --------------------------------------------------------------------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| US-1 Fastify-first API boundary + single auth/RBAC enforcement                    | C-1.01..C-1.05, C-2.01..C-2.06, C-3.05..C-3.08      | `apps/api/src/app.ts`, `apps/api/src/plugins/auth.ts`, `apps/api/src/routes/`, `apps/frontend/src/hooks.server.ts`, `apps/frontend/src/routes/+layout.server.ts`                      | `apps/api/src/tests/routes/auth-routes.test.ts`, `apps/api/src/tests/routes/*.test.ts`       | `npx vitest run apps/api`; `find apps/frontend -name '+server.ts'` (0 API routes); `cd apps/api && npx tsc --noEmit` |
+| US-2 OCI SDK migration (latency + structured errors)                              | D-1.01..D-1.03, D-2.01..D-2.05, D-3.01..D-3.06      | `packages/shared/src/tools/sdk-auth.ts` (new), `packages/shared/src/tools/executor-sdk.ts` (new), `packages/shared/src/tools/categories/`                                             | `apps/api/src/tests/tools/executor-sdk.test.ts`, `apps/api/src/tests/tools/*.test.ts`        | `npx vitest run apps/api`; benchmark script (p95 SDK < 500ms)                                                        |
+| US-3 Workflow designer node completion + executor features                        | E-1.01..E-1.03, E-2.01..E-2.07, E-3.03..E-3.06      | `apps/api/src/mastra/workflows/`, `packages/shared/src/workflows/types.ts`, `apps/frontend/src/lib/components/workflow/`                                                              | `apps/api/src/tests/workflows/executor.test.ts`, `apps/frontend/src/tests/phase10/*.test.ts` | `npx vitest run`; `cd apps/frontend && npx svelte-check`                                                             |
+| US-4 Package split (`@portal/types`, `@portal/server`, `@portal/ui`)              | B-1.01..B-1.07, B-2.01..B-2.05                      | `packages/types/`, `packages/server/`, `packages/ui/`, `pnpm-workspace.yaml`                                                                                                          | Package-level build/typecheck tests as defined in Phase B                                    | `pnpm build`; `npx vitest run`; `npx madge --circular`                                                               |
+| US-5 Oracle 26AI modernization (HNSW DML + typed vector binding + VPD)            | F-1.01..F-1.03, F-2.01..F-2.05                      | `apps/api/src/mastra/rag/oracle-vector-store.ts`, `packages/shared/src/server/oracle/migrations/015-hnsw.sql` (new), `packages/shared/src/server/oracle/migrations/017-vpd.sql` (new) | `apps/api/src/tests/rag/oracle-vector-store.test.ts`, VPD isolation tests                    | `npx vitest run apps/api`; migration run; benchmark shows 3x improvement                                             |
+| US-6 Admin experience pages (agents/workflow runs/tools playground/observability) | B-3.06..B-3.15, (additional admin tasks as defined) | `apps/frontend/src/routes/admin/agents/`, `apps/frontend/src/routes/admin/tools/playground/`, `apps/frontend/src/routes/admin/observability/`                                         | `apps/frontend/src/tests/phase10/admin-experience.test.ts`                                   | `npx vitest run apps/frontend`; `cd apps/frontend && npx svelte-check`                                               |
+| US-7 Browser-feedback design iterations                                           | Process requirement                                 | All new admin pages                                                                                                                                                                   | Visual regression / screenshots as defined                                                   | Manual: capture screenshots per iteration; record decision in PRD                                                    |
+
+Notes:
+
+- Phase 10 task IDs are defined in `.claude/reference/phase-10-task-plan.md`.
+- File paths are indicative; treat the gates as authoritative.
+
 ## 3. Separation of Concerns
 
-### Current State (Problematic)
+### Current State Before Fastify Cutover (Problematic)
 
 ```
 Request → Nginx → SvelteKit hooks.server.ts
@@ -1560,11 +1651,11 @@ Developer → git push → pre-push hooks (6 scanners + tests)
 
 ### Feature Flags
 
-| Flag                   | Purpose                           | Phase 10 Action         |
-| ---------------------- | --------------------------------- | ----------------------- |
-| `FASTIFY_ENABLED`      | Enable Fastify proxy in SvelteKit | Remove (always on)      |
-| `FASTIFY_URL`          | Fastify backend URL               | Keep for deployment     |
-| `FASTIFY_PROXY_ROUTES` | Which routes to proxy             | Remove (all in Fastify) |
+| Flag          | Purpose                     | Phase 10 Action          |
+| ------------- | --------------------------- | ------------------------ |
+| `FASTIFY_URL` | Fastify backend URL for SSR | Keep (session hydration) |
+
+> `FASTIFY_ENABLED` and `FASTIFY_PROXY_ROUTES` were deleted during the Phase C cleanup (Fastify now handles 100% of `/api/*` traffic without a feature flag).
 
 ---
 
@@ -1831,6 +1922,9 @@ Phase A: Dependency Updates + Fastify Hardening (1-2 weeks)
 ├── Run knip in CI (already installed)
 ├── Add iovalkey + cache module (AD-39: Valkey caching layer)
 ├── Switch @fastify/swagger-ui → @scalar/fastify-api-reference (AD-42)
+├── Set up Grafana + Tempo observability backend (AD-48)
+├── Add rate-limiter-flexible with Oracle adapter for per-user limits (AD-49)
+├── Configure @fastify/schedule + Oracle queue table for background jobs (AD-50)
 ├── DEFERRED: Vite 7 + ESLint 10 (AD-41: blocked by typescript-eslint)
 └── Run syncpack to align dependency versions
 
@@ -1844,16 +1938,20 @@ Phase B: Package Split + Frontend Libraries (2 weeks)
 ├── Add fuse.js for fuzzy search in tool palette/MCP catalog
 └── Validate build + test suite passes
 
-Phase C: Fastify-First Migration + Mastra Studio (2-3 weeks)
-├── Move Better Auth to Fastify (catch-all route, toWebRequest pattern)
-├── Migrate all 37 SvelteKit +server.ts routes to Fastify
-├── Update SvelteKit to cookie-forwarding only
-├── Add P1 Fastify plugins: @fastify/sse, cache-manager, @fastify/compress, @fastify/schedule
-├── Configure Mastra Studio at /admin/studio with RBAC auth gating
-├── Remove FASTIFY_PROXY_ROUTES feature flag
-├── Remove SvelteKit proxy middleware
-├── Update nginx config (all /api/* direct to Fastify)
-└── Test OIDC flow end-to-end with OCI IDCS
+Phase C: Fastify-First Migration (2-3 weeks) ✅ COMPLETE
+├── ✅ Move Better Auth to Fastify (catch-all route, toWebRequest pattern)
+├── ✅ Migrate all SvelteKit +server.ts routes to Fastify (frontend hosts SSR + static only)
+├── ✅ Update SvelteKit to cookie-forwarding only
+├── ✅ Add @fastify/compress (gzip + brotli, threshold: 1KB)
+├── ✅ Add AWS + Azure MCP servers to cross-cloud catalog (AD-45: GCP deferred)
+├── ✅ Remove 11 stale SvelteKit route duplicates
+├── ✅ Verify nginx config (already routes /api/* to Fastify)
+├── ✅ Test OIDC flow end-to-end with OCI IDCS
+├── ✅ 59 integration tests for v1-tools + session continue
+├── ✅ Raw SSE streaming verified (no @fastify/sse plugin needed)
+├── ✅ Delete 15 SvelteKit +server.ts stubs (914450a5)
+├── ✅ Remove FASTIFY_PROXY_ROUTES / FASTIFY_ENABLED feature flags (Fastify always on)
+└── NOTE: Mastra Studio embedding dropped — replaced by Phase G (AD-53)
 
 Phase D: OCI SDK Migration (3-4 weeks)
 ├── Add oci-sdk auth provider (config file + instance principal)
@@ -1875,31 +1973,68 @@ Phase E: Workflow Designer Completion + AI Hardening (2-3 weeks)
 ├── Add Agent Guardrails (PromptInjectionDetector, PIIDetector, TokenLimiter)
 ├── Configure @mastra/evals scorers on CloudAdvisor agent
 ├── Add crash recovery via restartAllActiveWorkflowRuns()
-└── Update frontend editor components for new node types
+├── Update frontend editor components for new node types
+└── A2A Agent Card DEFERRED to post-Phase E (AD-43: Mastra A2A #8411 bugs)
 
-Phase F: Oracle 26AI Modernization (1-2 weeks)
-├── Migration 015: HNSW DML vector indexes
-├── Migration 016: JSON Relational Duality Views
-├── Migration 017: VPD tenant isolation policies
+Phase F: Oracle 26AI Modernization (1-2 weeks) — AD-52: all parallel
+├── Migration 015: HNSW DML vector indexes (parallelizable with 016/017)
+├── Migration 016: JSON Relational Duality Views (parallelizable with 015/017)
+├── Migration 017: VPD tenant isolation policies (parallelizable with 015/016)
 ├── Replace vectorToOracleString with direct Float32Array binding
 ├── Update OracleVectorStore for HNSW + DB_TYPE_VECTOR
 ├── Optional: Hybrid Vector Index for RAG
 └── Benchmark vector query performance (3x target)
+
+Phase G: Self-Built Admin Experience (2-3 weeks) — AD-53
+├── G-1: Agent Playground (/admin/agents)
+│   ├── Agent selection + streaming chat interface
+│   ├── Real-time tool call visualization
+│   ├── Token usage, latency, model metrics per request
+│   └── System prompt editing + parameter tuning
+├── G-2: Workflow Execution Monitor (/admin/workflows/runs)
+│   ├── Live SSE-powered workflow step progress
+│   ├── Pause/resume/cancel controls
+│   ├── Step-by-step inputs/outputs inspection
+│   └── Execution history with filtering and search
+├── G-3: Tool Tester (/admin/tools/playground)
+│   ├── Tool selection with argument builder
+│   ├── Raw OCI response vs slimmed output comparison
+│   ├── Approval flow preview for dangerous tools
+│   └── Execution time and category display
+├── G-4: Observability Dashboard (/admin/observability)
+│   ├── Agent traces (tool calls, ordering, latency)
+│   ├── Workflow run timelines
+│   ├── Error rates and latency percentiles
+│   └── Cost tracking per agent/workflow/model
+├── Design iteration: Multiple UI iterations per page (AD-54)
+│   ├── Use shadcn-svelte, responsive-design, visual-design skills
+│   ├── Browser feedback loops for design selection
+│   └── Branch per iteration, merge winner
+├── Verify OracleStore MastraStorage compliance (AD-55)
+│   └── OracleStore already implements full interface (1244 LOC)
+│       — verify edge cases, add missing integration tests
+└── All pages gated behind RBAC admin role
 ```
 
 ### Phase Dependencies
 
 ```
-A (deps+hardening) ──► B (split+frontend) ──► C (fastify-first+studio)
+A (deps+hardening) ──► B (split+frontend) ──► C (fastify-first) ✅ mostly done
                                                   │
 A (deps+hardening) ──────────────────────────► D (oci-sdk) [independent of B/C]
                                                   │
 B (split+frontend) ──► E (workflows+AI) [needs @portal/types + @portal/server]
                                                   │
 A (deps+hardening) ──────────────────────────► F (oracle) [independent, needs only A]
+                                                  │
+C (fastify-first) ──► G (admin experience) [needs Fastify API + Mastra REST]
+                           │
+                           ├── G-1, G-3 can start immediately after C
+                           ├── G-2 benefits from E (workflow completion)
+                           └── G-4 needs A (Grafana/Tempo setup)
 ```
 
-**Parallelizable**: D and F can run in parallel with B/C/E.
+**Parallelizable**: D, F, and G-1/G-3 can run in parallel. G-2 benefits from E but can start with basic workflow support. G-4 needs Grafana from Phase A.
 
 ### Completed Work (Pre-Phase A) [DRIFT DETECTED]
 
@@ -1939,77 +2074,92 @@ The following was implemented on `main` before Phase A kickoff (11 commits, 2026
 
 ### Technical Risks
 
-| #   | Risk                                                 | Probability | Impact | Mitigation                                                                                          |
-| --- | ---------------------------------------------------- | ----------- | ------ | --------------------------------------------------------------------------------------------------- |
-| R1  | Vite 7 breaks SvelteKit build                        | Medium      | High   | Test in branch first. Pin Vite 6 if Svelte adapter isn't ready.                                     |
-| R2  | ESLint 10 flat config migration                      | Medium      | Medium | Already using flat config (eslint.config.js). Test plugin compatibility.                            |
-| R3  | Better Auth Fastify migration breaks OIDC            | Medium      | High   | Keep callback path identical (/api/auth/\*). Test with OCI IDCS before cutover.                     |
-| R4  | oci-sdk missing functionality vs CLI                 | Low         | Medium | Hybrid approach: SDK for supported operations, CLI fallback for gaps.                               |
-| R5  | Package split breaks import paths                    | High        | Medium | Automated import rewriting via `jscodeshift`. Run full test suite.                                  |
-| R6  | VPD policies conflict with admin queries             | Low         | High   | Admin role gets VPD exemption via application context variable.                                     |
-| R7  | HNSW index memory pressure on small instances        | Medium      | Medium | Configure HNSW neighbors=16 (not 64). Monitor memory via OCI metrics.                               |
-| R8  | @modelcontextprotocol/sdk v2 breaking changes        | Low         | Medium | Pin to ^1.26.0. MCPConnectionManager wraps SDK (buffer layer).                                      |
-| R9  | 37 route migration introduces regressions            | High        | High   | Migrate routes in batches. Keep proxy fallback during transition.                                   |
-| R10 | OCI SDK auth config differs from CLI                 | Medium      | Medium | Document both auth methods. Instance principal for prod, config file for dev.                       |
-| R11 | Float32Array vector binding breaks legacy queries    | Low         | Medium | Test with existing data first. Fallback to string conversion if needed.                             |
-| R12 | Mastra Studio auth bypass in staging/prod            | Medium      | High   | Gate behind RBAC admin role. Disable by default in production (MASTRA_STUDIO_ENABLED).              |
-| R13 | @mastra/evals scorer costs (LLM calls for scoring)   | Medium      | Medium | Use 10% sampling rate. Use gpt-4o-mini (cheapest). Disable in test environments.                    |
-| R14 | Agent Guardrails false positives block legit queries | Medium      | Medium | Start with `warn` strategy, switch to `block` after tuning. Log all detections.                     |
-| R15 | New Fastify plugins increase startup time            | Low         | Low    | Benchmark cold start. Lazy-load non-critical plugins (schedule, compress).                          |
-| R16 | MCP consolidation breaks custom client consumers     | Low         | Low    | Custom client is unused in production. Deprecate with README notice. Keep for reference.            |
-| R17 | A2A protocol instability (pre-1.0)                   | Medium      | Medium | Defer to post-Phase E. Mastra A2A has known bugs. Production-ready A2A planned late 2026.           |
-| R18 | Cross-CSP MCP servers require customer credentials   | Medium      | High   | Reuse MCPConnectionManager's AES-256-GCM credential encryption. Admin-only installation.            |
-| R19 | OCI Cache (Valkey) adds infrastructure dependency    | Low         | Medium | Graceful degradation: fall back to direct Oracle queries if Valkey unavailable. ~$28/mo minimum.    |
-| R20 | Vite 7/ESLint 10 ecosystem lag                       | Medium      | Low    | DEFERRED (AD-41). No security impact from staying on Vite 6/ESLint 9. Monitor typescript-eslint v9. |
+| #   | Risk                                                 | Probability | Impact | Mitigation                                                                                                                                    |
+| --- | ---------------------------------------------------- | ----------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| R1  | Vite 7 breaks SvelteKit build                        | Medium      | High   | Test in branch first. Pin Vite 6 if Svelte adapter isn't ready.                                                                               |
+| R2  | ESLint 10 flat config migration                      | Medium      | Medium | Already using flat config (eslint.config.js). Test plugin compatibility.                                                                      |
+| R3  | Better Auth Fastify migration breaks OIDC            | Medium      | High   | Keep callback path identical (/api/auth/\*). Test with OCI IDCS before cutover.                                                               |
+| R4  | oci-sdk missing functionality vs CLI                 | Low         | Medium | Hybrid approach: SDK for supported operations, CLI fallback for gaps.                                                                         |
+| R5  | Package split breaks import paths                    | High        | Medium | Automated import rewriting via `jscodeshift`. Run full test suite.                                                                            |
+| R6  | VPD policies conflict with admin queries             | Low         | High   | Admin role gets VPD exemption via application context variable.                                                                               |
+| R7  | HNSW index memory pressure on small instances        | Medium      | Medium | Configure HNSW neighbors=16 (not 64). Monitor memory via OCI metrics.                                                                         |
+| R8  | @modelcontextprotocol/sdk v2 breaking changes        | Low         | Medium | Pin to ^1.26.0. MCPConnectionManager wraps SDK (buffer layer).                                                                                |
+| R9  | 37 route migration introduces regressions            | High        | High   | Migrate routes in batches. Keep proxy fallback during transition.                                                                             |
+| R10 | OCI SDK auth config differs from CLI                 | Medium      | Medium | Document both auth methods. Instance principal for prod, config file for dev.                                                                 |
+| R11 | Float32Array vector binding breaks legacy queries    | Low         | Medium | Test with existing data first. Fallback to string conversion if needed.                                                                       |
+| R12 | ~~Mastra Studio auth bypass~~ REMOVED (AD-53)        | —           | —      | Studio embedding dropped. Self-built admin pages inherit existing RBAC — no new auth surface.                                                 |
+| R13 | @mastra/evals scorer costs (LLM calls for scoring)   | Medium      | Medium | Use 10% sampling rate. Use gpt-4o-mini (cheapest). Disable in test environments.                                                              |
+| R14 | Agent Guardrails false positives block legit queries | Medium      | Medium | Start with `warn` strategy, switch to `block` after tuning. Log all detections.                                                               |
+| R15 | New Fastify plugins increase startup time            | Low         | Low    | Benchmark cold start. Lazy-load non-critical plugins (schedule, compress).                                                                    |
+| R16 | MCP consolidation breaks custom client consumers     | Low         | Low    | Custom client is unused in production. Deprecate with README notice. Keep for reference.                                                      |
+| R17 | A2A protocol instability (pre-1.0)                   | Medium      | Medium | Defer to post-Phase E. Mastra A2A has known bugs. Production-ready A2A planned late 2026.                                                     |
+| R18 | Cross-CSP MCP servers require customer credentials   | Medium      | High   | Reuse MCPConnectionManager's AES-256-GCM credential encryption. Admin-only installation.                                                      |
+| R19 | OCI Cache (Valkey) adds infrastructure dependency    | Low         | Medium | Graceful degradation: fall back to direct Oracle queries if Valkey unavailable. ~$28/mo minimum.                                              |
+| R20 | Vite 7/ESLint 10 ecosystem lag                       | Medium      | Low    | DEFERRED (AD-41). No security impact from staying on Vite 6/ESLint 9. Monitor typescript-eslint v9.                                           |
+| R21 | Phase G admin experience scope creep                 | Medium      | Medium | Strict 4-page scope (agents, workflows, tools, observability). Design iteration adds time but improves quality. Cap at 2 iterations per page. |
+| R22 | Browser feedback loop adds latency to design process | Low         | Low    | Offset by catching design issues early. Limited to Phase G admin pages only, not all frontend work.                                           |
 
 ---
 
 ## 19. Decision Log
 
-| ID    | Decision                                                     | Date       | Rationale                                                                                                                         |
-| ----- | ------------------------------------------------------------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| AD-1  | Replace custom MCP client with @modelcontextprotocol/sdk     | 2026-02-10 | Official SDK, automatic protocol updates, 24K+ users                                                                              |
-| AD-2  | Replace Terraform generator with terraform-generator         | 2026-02-10 | AST-based > string concat, CDKTF deprecated                                                                                       |
-| AD-3  | Gradual oci-sdk migration (hybrid CLI+SDK)                   | 2026-02-10 | 3-5x faster, typed, but 60+ tools need incremental migration                                                                      |
-| AD-4  | Keep OracleVectorStore (no alternative)                      | 2026-02-10 | No Oracle vector store exists in any framework                                                                                    |
-| AD-5  | Keep Better Auth (already external)                          | 2026-02-10 | No Fastify-native auth matches feature set                                                                                        |
-| AD-6  | Keep pricing service (no alternative)                        | 2026-02-10 | No multi-cloud pricing npm package exists                                                                                         |
-| AD-7  | Use Mastra workflow primitives for remaining node types      | 2026-02-10 | .then(), .parallel(), .foreach() map to designer node types                                                                       |
-| AD-8  | Split @portal/shared into 3 packages                         | 2026-02-10 | Faster builds, cleaner boundaries, framework isolation                                                                            |
-| AD-9  | Move Better Auth entirely to Fastify                         | 2026-02-10 | Single auth boundary, eliminates dual-runtime auth                                                                                |
-| AD-10 | VPD for tenant isolation                                     | 2026-02-10 | Database-level security, defense-in-depth                                                                                         |
-| AD-11 | Direct Float32Array vector binding                           | 2026-02-10 | node-oracledb 6.5+ supports native TypedArrays                                                                                    |
-| AD-12 | Remove Inngest (use Mastra suspend/resume instead)           | 2026-02-10 | Mastra provides built-in durability, crash recovery, sleep                                                                        |
-| AD-13 | Better Auth Fastify via toWebRequest pattern                 | 2026-02-10 | Official integration pattern from Better Auth docs                                                                                |
-| AD-14 | Adopt Mastra Studio as primary agent/workflow debugging UI   | 2026-02-10 | Replaces need for bespoke admin AI testing pages; admin-gated in staging/prod                                                     |
-| AD-15 | Add @mastra/sentry for AI-specific observability             | 2026-02-10 | Maps Mastra spans → Sentry AI operations (gen_ai.invoke_agent, etc.)                                                              |
-| AD-16 | Add @mastra/evals for agent quality scoring                  | 2026-02-10 | Scorer framework with 10% production sampling, results visible in Studio                                                          |
-| AD-17 | Add Mastra Agent Guardrails (input/output processors)        | 2026-02-10 | PromptInjectionDetector, PIIDetector, ModerationProcessor for AI defense-in-depth                                                 |
-| AD-18 | Adopt Mastra workflow lifecycle callbacks                    | 2026-02-10 | onFinish/onError for audit logging, Sentry integration, admin notifications                                                       |
-| AD-19 | Use typed suspendSchema/resumeSchema for approvals           | 2026-02-10 | Runtime validation of suspend/resume payloads via Zod schemas                                                                     |
-| AD-20 | Adopt Mastra workflow streaming (writer argument)            | 2026-02-10 | Real-time step progress + agent stream piping to client                                                                           |
-| AD-21 | Add @fastify/websocket for real-time updates                 | 2026-02-10 | Workflow execution live updates, agent streaming, admin notifications                                                             |
-| AD-22 | Add @fastify/under-pressure for load shedding                | 2026-02-10 | Auto-503 on event loop delay/heap pressure — prevents OOM crashes                                                                 |
-| AD-23 | Add @fastify/otel (replace deprecated OTel instrumentation)  | 2026-02-10 | Official Fastify OpenTelemetry plugin, W3C trace context                                                                          |
-| AD-24 | Add sveltekit-superforms for admin/workflow forms            | 2026-02-10 | Type-safe form validation, 52K weekly DL, Svelte 5 compatible, Zod integration                                                    |
-| AD-25 | Add LayerChart for admin dashboard visualization             | 2026-02-10 | D3-based charting, shadcn-svelte integration, cost comparison + workflow analytics                                                |
-| AD-26 | Skip Felte (prefer Superforms for forms)                     | 2026-02-10 | Superforms has 10x adoption, better Svelte 5 support, built-in Zod integration                                                    |
-| AD-27 | Skip SVAR DataGrid (evaluate later)                          | 2026-02-10 | Commercial licensing, limited Svelte 5 runes support. Revisit when enterprise tables needed                                       |
-| AD-28 | Use z.toJSONSchema() (Zod 4 built-in)                        | 2026-02-10 | Replace hand-rolled zodToJsonSchema() in portal-mcp-server.ts (~80 LOC savings)                                                   |
-| AD-29 | Consolidate MCP implementations (deprecate custom client)    | 2026-02-10 | Custom MCPClient/MCPManager unused. Mastra MCPConnectionManager is production. Deduplicate PortalMCPServer.                       |
-| AD-30 | Add cross-CSP MCP catalog entries (AWS, Azure, GCP)          | 2026-02-10 | Official MCP servers: awslabs/mcp (AWS), @azure/mcp, GCP managed. Add as admin catalog entries.                                   |
-| AD-31 | Adopt Generative UI (AI SDK tool → Svelte component)         | 2026-02-10 | Map tool results to rich components: InstanceTable, CostChart, TerraformViewer, ApprovalCard.                                     |
-| AD-32 | Defer A2A Agent Card to post-Phase E                         | 2026-02-10 | Mastra A2A has bugs (#8411). IBM ACP merged into A2A (dead). Oracle AgentSpec Python-only. Wait.                                  |
-| AD-33 | Skip IBM ACP (merged into A2A)                               | 2026-02-10 | ACP merged with A2A under Linux Foundation (Sep 2025). No independent implementation needed.                                      |
-| AD-34 | Skip Oracle Agent Spec (Python-only, no TS SDK)              | 2026-02-10 | WayFlow runtime Python-only. Monitor for TypeScript SDK. Mastra's programmatic approach preferred.                                |
-| AD-35 | Migrate agent_state from SQLite to Oracle (OracleStore)      | 2026-02-10 | Add org_id (VPD) + thread_id. Implement MastraStorage backed by Oracle. Drop SQLite dependency.                                   |
-| AD-36 | Adopt formsnap + @tanstack/table-core for admin views        | 2026-02-10 | formsnap: accessible Superforms companion (12K DL). @tanstack/table-core: headless table for data-heavy admin pages (800K DL).    |
-| AD-37 | Use paneforge for resizable panels in workflow designer      | 2026-02-10 | Split-view layout: canvas + inspector panel. Svelte 5 compatible, 6K DL. Better than custom CSS resize.                           |
-| AD-38 | Use svelte-dnd-action for drag-and-drop interactions         | 2026-02-10 | Kanban boards, node palette drag-to-canvas. 15K DL, Svelte 5 runes support, lightweight.                                          |
-| AD-39 | OCI Cache with Valkey for app-level caching (defer DBIM)     | 2026-02-10 | Valkey: MCP tool cache, OCI API responses, settings, agent context. ~$28-85/mo. DBIM deferred to 16+ ECPU phase. iovalkey client. |
-| AD-40 | SSE as primary streaming transport (defer WebSocket)         | 2026-02-10 | 95% of real-time needs are server→client. AI SDK + Mastra use SSE natively. Drop @fastify/websocket from Phase A scope.           |
-| AD-41 | Defer Vite 7 + ESLint 10 to post-Phase 10                    | 2026-02-10 | ESLint 10 BLOCKED: typescript-eslint 8.x has no ESLint 10 support. Vite 7 low-priority, monorepo risks. Wait for ecosystem.       |
-| AD-42 | Switch to @scalar/fastify-api-reference (replace Swagger UI) | 2026-02-10 | Modern API docs, dark mode, interactive playground, code generation. Drop-in replacement, 10 LOC change. Phase A.                 |
+| ID    | Decision                                                     | Date       | Rationale                                                                                                                                                                                                                                                             |
+| ----- | ------------------------------------------------------------ | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| AD-1  | Replace custom MCP client with @modelcontextprotocol/sdk     | 2026-02-10 | Official SDK, automatic protocol updates, 24K+ users                                                                                                                                                                                                                  |
+| AD-2  | Replace Terraform generator with terraform-generator         | 2026-02-10 | AST-based > string concat, CDKTF deprecated                                                                                                                                                                                                                           |
+| AD-3  | Gradual oci-sdk migration (hybrid CLI+SDK)                   | 2026-02-10 | 3-5x faster, typed, but 60+ tools need incremental migration                                                                                                                                                                                                          |
+| AD-4  | Keep OracleVectorStore (no alternative)                      | 2026-02-10 | No Oracle vector store exists in any framework                                                                                                                                                                                                                        |
+| AD-5  | Keep Better Auth (already external)                          | 2026-02-10 | No Fastify-native auth matches feature set                                                                                                                                                                                                                            |
+| AD-6  | Keep pricing service (no alternative)                        | 2026-02-10 | No multi-cloud pricing npm package exists                                                                                                                                                                                                                             |
+| AD-7  | Use Mastra workflow primitives for remaining node types      | 2026-02-10 | .then(), .parallel(), .foreach() map to designer node types                                                                                                                                                                                                           |
+| AD-8  | Split @portal/shared into 3 packages                         | 2026-02-10 | Faster builds, cleaner boundaries, framework isolation                                                                                                                                                                                                                |
+| AD-9  | Move Better Auth entirely to Fastify                         | 2026-02-10 | Single auth boundary, eliminates dual-runtime auth                                                                                                                                                                                                                    |
+| AD-10 | VPD for tenant isolation                                     | 2026-02-10 | Database-level security, defense-in-depth                                                                                                                                                                                                                             |
+| AD-11 | Direct Float32Array vector binding                           | 2026-02-10 | node-oracledb 6.5+ supports native TypedArrays                                                                                                                                                                                                                        |
+| AD-12 | Remove Inngest (use Mastra suspend/resume instead)           | 2026-02-10 | Mastra provides built-in durability, crash recovery, sleep                                                                                                                                                                                                            |
+| AD-13 | Better Auth Fastify via toWebRequest pattern                 | 2026-02-10 | Official integration pattern from Better Auth docs                                                                                                                                                                                                                    |
+| AD-14 | ~~Mastra Studio as debugging UI~~ → SUPERSEDED by AD-53      | 2026-02-10 | Studio can't be embedded (standalone Hono + React app). Replaced by self-built admin experience.                                                                                                                                                                      |
+| AD-15 | Add @mastra/sentry for AI-specific observability             | 2026-02-10 | Maps Mastra spans → Sentry AI operations (gen_ai.invoke_agent, etc.)                                                                                                                                                                                                  |
+| AD-16 | Add @mastra/evals for agent quality scoring                  | 2026-02-10 | Scorer framework with 10% production sampling, results visible in Studio                                                                                                                                                                                              |
+| AD-17 | Add Mastra Agent Guardrails (input/output processors)        | 2026-02-10 | PromptInjectionDetector, PIIDetector, ModerationProcessor for AI defense-in-depth                                                                                                                                                                                     |
+| AD-18 | Adopt Mastra workflow lifecycle callbacks                    | 2026-02-10 | onFinish/onError for audit logging, Sentry integration, admin notifications                                                                                                                                                                                           |
+| AD-19 | Use typed suspendSchema/resumeSchema for approvals           | 2026-02-10 | Runtime validation of suspend/resume payloads via Zod schemas                                                                                                                                                                                                         |
+| AD-20 | Adopt Mastra workflow streaming (writer argument)            | 2026-02-10 | Real-time step progress + agent stream piping to client                                                                                                                                                                                                               |
+| AD-21 | Add @fastify/websocket for real-time updates                 | 2026-02-10 | Workflow execution live updates, agent streaming, admin notifications                                                                                                                                                                                                 |
+| AD-22 | Add @fastify/under-pressure for load shedding                | 2026-02-10 | Auto-503 on event loop delay/heap pressure — prevents OOM crashes                                                                                                                                                                                                     |
+| AD-23 | Add @fastify/otel (replace deprecated OTel instrumentation)  | 2026-02-10 | Official Fastify OpenTelemetry plugin, W3C trace context                                                                                                                                                                                                              |
+| AD-24 | Add sveltekit-superforms for admin/workflow forms            | 2026-02-10 | Type-safe form validation, 52K weekly DL, Svelte 5 compatible, Zod integration                                                                                                                                                                                        |
+| AD-25 | Add LayerChart for admin dashboard visualization             | 2026-02-10 | D3-based charting, shadcn-svelte integration, cost comparison + workflow analytics                                                                                                                                                                                    |
+| AD-26 | Skip Felte (prefer Superforms for forms)                     | 2026-02-10 | Superforms has 10x adoption, better Svelte 5 support, built-in Zod integration                                                                                                                                                                                        |
+| AD-27 | Skip SVAR DataGrid (evaluate later)                          | 2026-02-10 | Commercial licensing, limited Svelte 5 runes support. Revisit when enterprise tables needed                                                                                                                                                                           |
+| AD-28 | Use z.toJSONSchema() (Zod 4 built-in)                        | 2026-02-10 | Replace hand-rolled zodToJsonSchema() in portal-mcp-server.ts (~80 LOC savings)                                                                                                                                                                                       |
+| AD-29 | Consolidate MCP implementations (deprecate custom client)    | 2026-02-10 | Custom MCPClient/MCPManager unused. Mastra MCPConnectionManager is production. Deduplicate PortalMCPServer.                                                                                                                                                           |
+| AD-30 | Add cross-CSP MCP catalog entries (AWS, Azure, GCP)          | 2026-02-10 | Official MCP servers: awslabs/mcp (AWS), @azure/mcp, GCP managed. Add as admin catalog entries.                                                                                                                                                                       |
+| AD-31 | Adopt Generative UI (AI SDK tool → Svelte component)         | 2026-02-10 | Map tool results to rich components: InstanceTable, CostChart, TerraformViewer, ApprovalCard.                                                                                                                                                                         |
+| AD-32 | Defer A2A Agent Card to post-Phase E                         | 2026-02-10 | Mastra A2A has bugs (#8411). IBM ACP merged into A2A (dead). Oracle AgentSpec Python-only. Wait.                                                                                                                                                                      |
+| AD-33 | Skip IBM ACP (merged into A2A)                               | 2026-02-10 | ACP merged with A2A under Linux Foundation (Sep 2025). No independent implementation needed.                                                                                                                                                                          |
+| AD-34 | Skip Oracle Agent Spec (Python-only, no TS SDK)              | 2026-02-10 | WayFlow runtime Python-only. Monitor for TypeScript SDK. Mastra's programmatic approach preferred.                                                                                                                                                                    |
+| AD-35 | Migrate agent_state from SQLite to Oracle (OracleStore)      | 2026-02-10 | Add org_id (VPD) + thread_id. Implement MastraStorage backed by Oracle. Drop SQLite dependency.                                                                                                                                                                       |
+| AD-36 | Adopt formsnap + @tanstack/table-core for admin views        | 2026-02-10 | formsnap: accessible Superforms companion (12K DL). @tanstack/table-core: headless table for data-heavy admin pages (800K DL).                                                                                                                                        |
+| AD-37 | Use paneforge for resizable panels in workflow designer      | 2026-02-10 | Split-view layout: canvas + inspector panel. Svelte 5 compatible, 6K DL. Better than custom CSS resize.                                                                                                                                                               |
+| AD-38 | Use svelte-dnd-action for drag-and-drop interactions         | 2026-02-10 | Kanban boards, node palette drag-to-canvas. 15K DL, Svelte 5 runes support, lightweight.                                                                                                                                                                              |
+| AD-39 | OCI Cache with Valkey for app-level caching (defer DBIM)     | 2026-02-10 | Valkey: MCP tool cache, OCI API responses, settings, agent context. ~$28-85/mo. DBIM deferred to 16+ ECPU phase. iovalkey client.                                                                                                                                     |
+| AD-40 | SSE as primary streaming transport (defer WebSocket)         | 2026-02-10 | 95% of real-time needs are server→client. AI SDK + Mastra use SSE natively. Drop @fastify/websocket from Phase A scope.                                                                                                                                               |
+| AD-41 | Defer Vite 7 + ESLint 10 to post-Phase 10                    | 2026-02-10 | ESLint 10 BLOCKED: typescript-eslint 8.x has no ESLint 10 support. Vite 7 low-priority, monorepo risks. Wait for ecosystem.                                                                                                                                           |
+| AD-42 | Switch to @scalar/fastify-api-reference (replace Swagger UI) | 2026-02-10 | Modern API docs, dark mode, interactive playground, code generation. Drop-in replacement, 10 LOC change. Phase A.                                                                                                                                                     |
+| AD-43 | Defer A2A Agent Card to post-Phase E                         | 2026-02-10 | Mastra A2A has known bugs (#8411). Wait for v1.0 stability. Low risk — no production consumers yet.                                                                                                                                                                   |
+| AD-44 | Deprecate custom MCP, keep Mastra MCPConnectionManager only  | 2026-02-10 | Custom MCPClient unused in production. MCPConnectionManager has Docker, Oracle, encryption, admin UI. Confirms AD-29.                                                                                                                                                 |
+| AD-45 | AWS + Azure MCP servers first in cross-cloud catalog         | 2026-02-10 | Both have mature MCP servers (awslabs/mcp, @azure/mcp). Covers 80%+ of multi-cloud customers. GCP deferred.                                                                                                                                                           |
+| AD-46 | All 8 Generative UI components at once                       | 2026-02-10 | InstanceTable, CostChart, MetricsChart, BucketGrid, TerraformViewer, AlarmPanel, ResourceList, ApprovalCard. Ship as a batch.                                                                                                                                         |
+| AD-47 | Clean agent_state SQLite → Oracle migration in Phase A       | 2026-02-10 | New OracleStore with org_id + thread_id columns. No data migration needed — sessions are ephemeral. Confirms AD-35.                                                                                                                                                   |
+| AD-48 | Grafana + Tempo for observability backend                    | 2026-02-10 | OSS stack. Full control. Self-hosted Grafana, Tempo, Prometheus. Most flexible option vs SaaS alternatives.                                                                                                                                                           |
+| AD-49 | Per-user rate limiting with Oracle store for LLM endpoints   | 2026-02-10 | rate-limiter-flexible with Oracle adapter. Different limits for chat (10/min) vs read endpoints (60/min). Phase A.                                                                                                                                                    |
+| AD-50 | @fastify/schedule + Oracle queue table for background jobs   | 2026-02-10 | Zero new infrastructure. Oracle table for job queue, toad-scheduler for cron. Avoids Redis/BullMQ dependency.                                                                                                                                                         |
+| AD-51 | Split @portal/shared into 3 packages (confirms AD-8)         | 2026-02-10 | Cleaner boundaries. @portal/types has 0 runtime deps. Faster builds. Framework isolation. Confirmed during dashboard Q&A.                                                                                                                                             |
+| AD-52 | All Oracle 26AI features (Phase F) in parallel               | 2026-02-10 | Migrations 015/016/017 are independent SQL. Can run together if tested well. Reduces Phase F timeline by ~40%.                                                                                                                                                        |
+| AD-53 | Self-built admin experience over Mastra Studio embedding     | 2026-02-11 | Studio is standalone (Hono + React on :4111), not embeddable. Custom SvelteKit pages consuming Mastra REST API give full control over UX, RBAC integration, and design system consistency. Supersedes AD-14.                                                          |
+| AD-54 | Browser feedback loops for frontend design iteration         | 2026-02-11 | Use claude-in-chrome MCP tools for visual feedback. Create multiple design iterations per admin page, branch per iteration, use browser screenshots to inform selection. Skills: shadcn-svelte, responsive-design, visual-design-foundations, svelte5-best-practices. |
+| AD-55 | OracleStore MastraStorage already complete — verify + test   | 2026-02-11 | OracleStore (1244 LOC) implements all 3 MastraStorage domains (workflows, memory, scores). No new implementation needed — add integration tests and verify edge cases. Drift detected from PRD Phase A which listed this as TODO.                                     |
 
 ---
 
@@ -2049,7 +2199,11 @@ The following was implemented on `main` before Phase A kickoff (11 commits, 2026
 - [ ] Deprecate custom MCPClient/MCPManager (AD-29) — add README notice, keep as reference
 - [ ] Deduplicate PortalMCPServer (remove packages/shared version, keep apps/api version with auth)
 - [ ] Migrate agent_state from SQLite to Oracle (AD-35) — add org_id, thread_id columns
-- [ ] Implement OracleStore (MastraStorage interface) for agent state persistence
+- [x] ~~Implement OracleStore (MastraStorage interface)~~ [DRIFT DETECTED] Already complete (1244 LOC, all 3 domains). Verify in Phase G (AD-55).
+- [ ] `pnpm add rate-limiter-flexible` to `apps/api` (AD-49) — per-user rate limiting with Oracle adapter
+- [ ] Configure rate-limiter-flexible: 10/min chat, 60/min read, Oracle persistence store
+- [ ] Set up Grafana + Tempo docker-compose observability stack (AD-48)
+- [ ] Configure @fastify/schedule with toad-scheduler + Oracle queue table (AD-50)
 - [ ] Run full test suite — verify no regressions
 
 ### Phase B: Package Split + Frontend Libraries
@@ -2078,29 +2232,61 @@ The following was implemented on `main` before Phase A kickoff (11 commits, 2026
 - [ ] Run `madge --circular` — verify no new circular deps
 - [ ] Run full test suite and type checks across all packages
 
-### Phase C: Fastify-First + Mastra Studio
+### Phase C: Fastify-First Migration [COMPLETE]
 
-- [ ] Implement Better Auth catch-all route in Fastify (toWebRequest pattern)
-- [ ] Configure `trustedOrigins` for cross-origin support
-- [ ] Register CORS before Better Auth handler
-- [ ] Migrate all 37 SvelteKit +server.ts routes to Fastify (batch by group)
-- [ ] Update SvelteKit hooks to cookie-forwarding only
-- [ ] Update +layout.server.ts to fetch session from Fastify /api/auth/session
-- [ ] `pnpm add @fastify/sse cache-manager @fastify/compress @fastify/schedule` to `apps/api`
-- [ ] Configure SSE endpoint for workflow progress streaming
-- [ ] Configure cache-manager for OCI API response caching (TTL-based)
-- [ ] Configure @fastify/compress (gzip + brotli, threshold: 1024 bytes)
-- [ ] Configure Mastra Studio at `/admin/studio` with `studioBase` config
-- [ ] Gate Studio routes behind RBAC admin role check in staging/production
-- [ ] Add Studio navigation link to admin console sidebar
-- [ ] Test OIDC flow end-to-end with OCI IDCS
-- [ ] Remove `FASTIFY_PROXY_ROUTES` and `FASTIFY_ENABLED` feature flags
-- [ ] Remove SvelteKit proxy middleware code
-- [ ] Update nginx config — all /api/\* routes direct to Fastify
-- [ ] Add AWS MCP server to catalog (awslabs/mcp CloudControl) (AD-30)
-- [ ] Add Azure MCP server to catalog (@azure/mcp) (AD-30)
-- [ ] Add GCP MCP server to catalog (managed endpoint or community) (AD-30)
-- [ ] Verify all 37 routes function correctly
+- [x] Implement Better Auth catch-all route in Fastify (toWebRequest pattern)
+- [x] Configure `trustedOrigins` for cross-origin support
+- [x] Register CORS before Better Auth handler
+- [x] Migrate every SvelteKit +server.ts route to Fastify (stubs deleted in 914450a5)
+- [x] Update SvelteKit hooks to cookie-forwarding only
+- [x] Update +layout.server.ts to fetch session from Fastify /api/auth/session
+- [x] Configure @fastify/compress (gzip + brotli, threshold: 1024 bytes)
+- [x] Verify raw SSE streaming works (no @fastify/sse plugin needed — raw `reply.raw.write()`)
+- [x] Test OIDC flow end-to-end with OCI IDCS
+- [x] Verify nginx config — /api/\* routes already direct to Fastify
+- [x] Add AWS MCP server to catalog (awslabs/mcp CloudControl) (AD-30/AD-45)
+- [x] Add Azure MCP server to catalog (@azure/mcp) (AD-30/AD-45)
+- [x] 59 integration tests for v1-tools + session continue
+- [x] CodeRabbit review + fix (6 Wave 3 findings addressed)
+- [x] Delete remaining 15 SvelteKit +server.ts stubs (all have Fastify equivalents)
+- [x] Remove `FASTIFY_PROXY_ROUTES` and `FASTIFY_ENABLED` feature flags (Fastify always on)
+- [x] Remove SvelteKit proxy middleware code (hooks.server.ts no longer proxies)
+- ~~Configure Mastra Studio~~ **DROPPED** (AD-53: Studio not embeddable, replaced by Phase G)
+- ~~Add GCP MCP server~~ **DEFERRED** (AD-45: AWS + Azure covers 80%+ multi-cloud)
+
+### Phase G: Self-Built Admin Experience (AD-53)
+
+- [ ] **G-1: Agent Playground** (`/admin/agents`)
+  - [ ] Agent list with model/status metadata
+  - [ ] Streaming chat playground using Mastra REST API (`POST /api/mastra/agents/:id/stream`)
+  - [ ] Real-time tool call visualization (SSE data parts)
+  - [ ] Token usage, latency, model metrics per interaction
+  - [ ] System prompt editor with parameter tuning
+- [ ] **G-2: Workflow Execution Monitor** (`/admin/workflows/runs`)
+  - [ ] Live SSE-powered step progress (`GET /api/mastra/workflows/:id/runs/:runId/stream`)
+  - [ ] Pause/resume/cancel controls
+  - [ ] Step-by-step inputs/outputs inspection
+  - [ ] Execution history with filtering/search
+- [ ] **G-3: Tool Tester** (`/admin/tools/playground`)
+  - [ ] Tool selection with category filter + fuzzy search (Fuse.js)
+  - [ ] Dynamic argument builder from tool schema
+  - [ ] Raw OCI response vs slimmed output comparison
+  - [ ] Approval flow preview for dangerous tools
+- [ ] **G-4: Observability Dashboard** (`/admin/observability`)
+  - [ ] Agent traces (tool calls, ordering, latency) via Grafana/Tempo API
+  - [ ] Workflow run timelines with LayerChart
+  - [ ] Error rates and latency percentiles
+  - [ ] Cost tracking per agent/workflow/model
+- [ ] **Design iteration** (AD-54): Multiple UI iterations per page
+  - [ ] Use shadcn-svelte, responsive-design, visual-design-foundations skills
+  - [ ] Browser feedback loops via claude-in-chrome for visual validation
+  - [ ] Branch per iteration, merge winner
+- [ ] **OracleStore verification** (AD-55): Verify MastraStorage compliance
+  - [ ] Add integration tests for OracleStore workflows domain
+  - [ ] Add integration tests for OracleStore memory domain
+  - [ ] Add integration tests for OracleStore scores domain
+  - [ ] Verify edge cases (empty results, large payloads, concurrent access)
+- [ ] All pages gated behind RBAC admin role
 
 ### Phase D: OCI SDK
 
@@ -2130,11 +2316,11 @@ The following was implemented on `main` before Phase A kickoff (11 commits, 2026
 - [ ] Update frontend editor components for new node types
 - [ ] (Post-E) Evaluate Mastra A2A stability; if stable, expose CloudAdvisor Agent Card (AD-32)
 
-### Phase F: Oracle 26AI
+### Phase F: Oracle 26AI (AD-52: all 3 migrations parallelizable)
 
-- [ ] Migration 015: HNSW DML indexes (neighbors=16, efConstruction=200)
-- [ ] Migration 016: JSON Duality Views for workflow definitions
-- [ ] Migration 017: VPD policies for tenant isolation
+- [ ] Migration 015: HNSW DML indexes (neighbors=16, efConstruction=200) — parallelizable
+- [ ] Migration 016: JSON Duality Views for workflow definitions — parallelizable
+- [ ] Migration 017: VPD policies for tenant isolation — parallelizable
 - [ ] Replace vectorToOracleString() with direct Float32Array binding
 - [ ] Update OracleVectorStore to use DB_TYPE_VECTOR
 - [ ] Benchmark vector search performance (3x target)
@@ -2148,7 +2334,7 @@ The following was implemented on `main` before Phase A kickoff (11 commits, 2026
 - [ ] Run `knip` — zero unused exports or dependencies
 - [ ] Run `syncpack lint` — zero version mismatches
 - [ ] Compare OpenAPI spec — no unintended changes
-- [ ] Verify Mastra Studio accessible at /admin/studio with admin auth
+- [ ] Verify self-built admin experience (agents, workflows, tools, observability) accessible with RBAC admin role
 - [ ] Verify Agent Guardrails block prompt injection attempts
 - [ ] Verify @mastra/evals scorers recording to database
 - [ ] Update CLAUDE.md with new package structure
@@ -2159,11 +2345,13 @@ The following was implemented on `main` before Phase A kickoff (11 commits, 2026
 
 ## 21. Changelog
 
-| Date       | Change Type | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| ---------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 2026-02-10 | Created     | Comprehensive Phase 10 PRD with dependency audit, build-vs-buy analysis, 6-phase roadmap                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| 2026-02-10 | Updated v2  | Full foundation rewrite coverage: separation of concerns, authn/authz, backend/frontend/middleware architecture, observability, testing, CI/CD, Mastra workflow API patterns, Oracle Float32Array binding, all 37 SvelteKit API routes enumerated                                                                                                                                                                                                                                                                        |
-| 2026-02-10 | Updated v3  | Ecosystem expansion: Mastra Studio elevated to admin tool (AD-14), @mastra/sentry (AD-15), @mastra/evals (AD-16), Agent Guardrails (AD-17), workflow lifecycle/streaming/snapshots (AD-18-20). Fastify plugins: websocket, under-pressure, otel, sse, compress, schedule, graceful-shutdown (AD-21-23). Frontend: sveltekit-superforms (AD-24), LayerChart (AD-25), fuse.js. DX: syncpack, z.toJSONSchema(), knip CI, zod-validation-error. Decisions AD-14 through AD-28. Updated all 6 phases and migration checklist. |
-| 2026-02-10 | Updated v4  | Agent interoperability: MCP consolidation (AD-29), cross-CSP MCP catalog (AD-30), Generative UI with AI SDK (AD-31), A2A deferred (AD-32), IBM ACP skip (AD-33), Oracle AgentSpec skip (AD-34), agent_state SQLite→Oracle migration (AD-35). Risks R16-R18. Updated Phase A (MCP dedup, OracleStore), Phase B (Generative UI components), Phase C (cross-CSP catalog), Phase E (A2A evaluation).                                                                                                                         |
-| 2026-02-10 | Updated v5  | [DRIFT DETECTED] MCP Server Management (11 commits) landed on main pre-Phase A — documented as Completed Work. [ADDED] Frontend libraries from Svelte 5 ecosystem research: formsnap (AD-36), @tanstack/table-core (AD-36), paneforge (AD-37), svelte-dnd-action (AD-38), @formkit/auto-animate. [ADDED] Decisions AD-36 through AD-38. [CHANGED] Phase B migration checklist expanded with 5 new dependency install steps. Header updated to Draft v5.                                                                  |
-| 2026-02-10 | Updated v5a | Architecture decisions from debated topics: OCI Cache with Valkey (AD-39), SSE primary transport (AD-40), Vite 7/ESLint 10 deferred (AD-41), Scalar API docs (AD-42). [CHANGED] @fastify/websocket demoted P0→P2, @fastify/sse elevated to primary. cache-manager removed (iovalkey direct). Scalar promoted P2→P0. Risks R19-R20. Phase A checklist updated with Valkey + Scalar + deferred Vite 7. Dependency inventory reorganized.                                                                                   |
+| Date       | Change Type | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ---------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-02-10 | Created     | Comprehensive Phase 10 PRD with dependency audit, build-vs-buy analysis, 6-phase roadmap                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 2026-02-10 | Updated v2  | Full foundation rewrite coverage: separation of concerns, authn/authz, backend/frontend/middleware architecture, observability, testing, CI/CD, Mastra workflow API patterns, Oracle Float32Array binding, all 37 SvelteKit API routes enumerated                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| 2026-02-10 | Updated v3  | Ecosystem expansion: Mastra Studio elevated to admin tool (AD-14), @mastra/sentry (AD-15), @mastra/evals (AD-16), Agent Guardrails (AD-17), workflow lifecycle/streaming/snapshots (AD-18-20). Fastify plugins: websocket, under-pressure, otel, sse, compress, schedule, graceful-shutdown (AD-21-23). Frontend: sveltekit-superforms (AD-24), LayerChart (AD-25), fuse.js. DX: syncpack, z.toJSONSchema(), knip CI, zod-validation-error. Decisions AD-14 through AD-28. Updated all 6 phases and migration checklist.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| 2026-02-10 | Updated v4  | Agent interoperability: MCP consolidation (AD-29), cross-CSP MCP catalog (AD-30), Generative UI with AI SDK (AD-31), A2A deferred (AD-32), IBM ACP skip (AD-33), Oracle AgentSpec skip (AD-34), agent_state SQLite→Oracle migration (AD-35). Risks R16-R18. Updated Phase A (MCP dedup, OracleStore), Phase B (Generative UI components), Phase C (cross-CSP catalog), Phase E (A2A evaluation).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| 2026-02-10 | Updated v5  | [DRIFT DETECTED] MCP Server Management (11 commits) landed on main pre-Phase A — documented as Completed Work. [ADDED] Frontend libraries from Svelte 5 ecosystem research: formsnap (AD-36), @tanstack/table-core (AD-36), paneforge (AD-37), svelte-dnd-action (AD-38), @formkit/auto-animate. [ADDED] Decisions AD-36 through AD-38. [CHANGED] Phase B migration checklist expanded with 5 new dependency install steps. Header updated to Draft v5.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 2026-02-10 | Updated v5a | Architecture decisions from debated topics: OCI Cache with Valkey (AD-39), SSE primary transport (AD-40), Vite 7/ESLint 10 deferred (AD-41), Scalar API docs (AD-42). [CHANGED] @fastify/websocket demoted P0→P2, @fastify/sse elevated to primary. cache-manager removed (iovalkey direct). Scalar promoted P2→P0. Risks R19-R20. Phase A checklist updated with Valkey + Scalar + deferred Vite 7. Dependency inventory reorganized.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
+| 2026-02-10 | Updated v6  | Dashboard Q&A decisions (AD-43 through AD-52): A2A deferred to post-Phase E (AD-43), MCP consolidated to Mastra only (AD-44), AWS+Azure first in cross-cloud catalog (AD-45), all 8 GenUI components shipped together (AD-46), clean agent_state Oracle migration (AD-47), Grafana+Tempo observability (AD-48), per-user rate limiting with Oracle (AD-49), Oracle job queue with @fastify/schedule (AD-50), package split confirmed (AD-51), Oracle 26AI parallel migrations (AD-52). [CHANGED] Phase A checklist +4 items (rate limiter, Grafana, schedule). Phase C GCP deferred. Phase E A2A explicit deferral. Phase F migrations marked parallelizable. Agent task plan companion document created with 107 atomic tasks across 6 phases.                                                                                                                                                                                                                                                                  |
+| 2026-02-11 | Updated v7  | [CHANGED] AD-14 superseded by AD-53: Mastra Studio can't be embedded (standalone Hono + React). Self-built admin experience replaces Studio embedding. [ADDED] Phase G: Self-Built Admin Experience (Agent Playground, Workflow Monitor, Tool Tester, Observability Dashboard) with 4 sub-phases. [ADDED] US-6 (Admin Experience), US-7 (Frontend Design Iteration). [ADDED] AD-53 (self-built admin), AD-54 (browser feedback loops), AD-55 (OracleStore already complete). [DRIFT DETECTED] OracleStore fully implements MastraStorage (1244 LOC, all 3 domains) — Phase A TODO marked as done. [DRIFT DETECTED] Phase C mostly complete (22/37 routes migrated, 15 stubs remain). [CHANGED] Phase C checklist updated with completion markers. [CHANGED] Phase dependencies DAG updated with Phase G. [REMOVED] R12 (Studio auth bypass — no longer applicable). [ADDED] R21 (Phase G scope creep), R22 (browser feedback latency). [CHANGED] Non-Goals: Studio embedding explicitly excluded with rationale. |
