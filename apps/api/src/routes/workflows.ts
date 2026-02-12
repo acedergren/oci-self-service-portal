@@ -473,11 +473,19 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 			});
 
 			// Timeout after 5 minutes
-			setTimeout(() => {
+			const timeoutId = setTimeout(() => {
 				clearInterval(pollInterval);
 				reply.raw.write(`data: ${JSON.stringify({ type: 'timeout' })}\n\n`);
 				reply.raw.end();
 			}, 300_000);
+
+			const cleanup = () => {
+				clearInterval(pollInterval);
+				clearTimeout(timeoutId);
+			};
+
+			request.raw.on('close', cleanup);
+			reply.raw.on('close', cleanup);
 		}
 	);
 

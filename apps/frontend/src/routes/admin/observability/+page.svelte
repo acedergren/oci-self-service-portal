@@ -95,6 +95,28 @@
 			<div class="spinner"></div>
 			<p>Loading metrics...</p>
 		</div>
+	{:else if metricsQuery.isError || healthQuery.isError}
+		<div class="error-state">
+			<h2>Unable to load observability data</h2>
+			<p>
+				{#if metricsQuery.isError}
+					Metrics: {(metricsQuery.error as Error | null)?.message ?? 'Unknown error'}
+				{/if}
+				{#if metricsQuery.isError && healthQuery.isError}
+					<br />
+				{/if}
+				{#if healthQuery.isError}
+					Health: {(healthQuery.error as Error | null)?.message ?? 'Unknown error'}
+				{/if}
+			</p>
+			<button
+				class="btn-secondary"
+				onclick={() => {
+					metricsQuery.refetch();
+					healthQuery.refetch();
+				}}>Retry</button
+			>
+		</div>
 	{:else}
 		<!-- Health Status Banner -->
 		{#if health}
@@ -243,6 +265,25 @@
 	.page-description {
 		font-size: var(--text-base);
 		color: var(--fg-secondary);
+	}
+
+	.error-state {
+		background: var(--surface-2);
+		border: 1px solid var(--border-subtle);
+		border-radius: var(--radius-lg);
+		padding: var(--space-xl);
+	}
+
+	.error-state h2 {
+		margin: 0 0 var(--space-sm) 0;
+		font-size: var(--text-lg);
+		color: var(--fg-primary);
+	}
+
+	.error-state p {
+		margin: 0 0 var(--space-lg) 0;
+		color: var(--fg-secondary);
+		line-height: 1.5;
 	}
 
 	.last-updated {
