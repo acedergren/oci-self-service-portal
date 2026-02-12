@@ -229,9 +229,7 @@ export async function toolRoutes(app: FastifyInstance): Promise<void> {
 			}
 		},
 		async (request, reply) => {
-			const { toolCallId, approved, _reason } = request.body as z.infer<
-				typeof ApproveToolBodySchema
-			>;
+			const { toolCallId, approved } = request.body as z.infer<typeof ApproveToolBodySchema>;
 
 			const pending = pendingApprovals.get(toolCallId);
 			const orgId = resolveOrgId(request);

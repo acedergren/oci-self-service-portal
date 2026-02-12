@@ -90,10 +90,10 @@ export async function generateEmbeddings(
 			if (batchResults) {
 				results.push(...batchResults);
 			} else {
-				results.push(...Array.from<null>({ length: batch.length }, () => null));
+				results.push(...Array.from({ length: batch.length }, () => null));
 			}
 		} catch {
-			results.push(...Array.from<null>({ length: batch.length }, () => null));
+			results.push(...Array.from({ length: batch.length }, () => null));
 		}
 	}
 
