@@ -187,22 +187,50 @@ reviews:
 
   # Tools configuration
   tools:
-    # Disable shellcheck - we use bash deliberately in scripts
+    # JavaScript/TypeScript linting and analysis
+    eslint:
+      enabled: true
+
+    biome:
+      enabled: true
+
+    # Security scanning
+    gitleaks:
+      enabled: true # Secret detection
+
+    semgrep:
+      enabled: true # Security vulnerabilities and code quality
+
+    trivy:
+      enabled: true # IaC security (Dockerfile, docker-compose)
+
+    # Dockerfile linting
+    hadolint:
+      enabled: true
+
+    # GitHub Actions workflow validation
+    actionlint:
+      enabled: true
+
+    # Markdown linting
+    markdownlint:
+      enabled: true
+
+    # YAML linting
+    yamllint:
+      enabled: true
+
+    # Disable tools not relevant to our stack
     shellcheck:
-      enabled: false
+      enabled: false # We use bash deliberately in scripts
+
+    ruff:
+      enabled: false # No Python code
 
     # Enable GitHub Checks integration
     github-checks:
       enabled: true
       timeout_ms: 90000
-
-    # Enable Ruff for Python (if any)
-    ruff:
-      enabled: true
-
-    # Enable Biome for additional JS/TS checks
-    biome:
-      enabled: true
 
   # Path filters - what to review
   path_filters:
