@@ -50,12 +50,11 @@
 	const runsQuery = createQuery<RunsResponse>(() => ({
 		queryKey: ['admin', 'workflow-runs', statusFilter, currentPage],
 		queryFn: async () => {
-			const params = new URLSearchParams({
-				limit: String(pageSize),
-				offset: String(currentPage * pageSize)
-			});
-			if (statusFilter) params.set('status', statusFilter);
-			const res = await fetch(`/api/v1/workflows/runs?${params.toString()}`);
+			const url = new URL('/api/v1/workflows/runs', window.location.origin);
+			url.searchParams.set('limit', String(pageSize));
+			url.searchParams.set('offset', String(currentPage * pageSize));
+			if (statusFilter) url.searchParams.set('status', statusFilter);
+			const res = await fetch(url.toString());
 			if (!res.ok) throw new Error('Failed to fetch runs');
 			return res.json();
 		},
