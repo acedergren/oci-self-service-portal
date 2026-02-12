@@ -98,7 +98,7 @@ export async function webhookRoutes(app: FastifyInstance): Promise<void> {
 
 			const body = request.body as z.infer<typeof CreateWebhookBody>;
 
-			if (!isValidWebhookUrl(body.url)) {
+			if (!(await isValidWebhookUrl(body.url))) {
 				return reply.status(400).send({ error: 'Invalid webhook URL (private IPs not allowed)' });
 			}
 
@@ -177,7 +177,7 @@ export async function webhookRoutes(app: FastifyInstance): Promise<void> {
 			const { id } = request.params as z.infer<typeof WebhookIdParam>;
 			const body = request.body as z.infer<typeof UpdateWebhookBody>;
 
-			if (body.url && !isValidWebhookUrl(body.url)) {
+			if (body.url && !(await isValidWebhookUrl(body.url))) {
 				return reply.status(400).send({ error: 'Invalid webhook URL (private IPs not allowed)' });
 			}
 

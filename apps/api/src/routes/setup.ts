@@ -162,7 +162,7 @@ export async function setupRoutes(app: FastifyInstance): Promise<void> {
 			const details: Record<string, unknown> = {};
 
 			if (input.discoveryUrl) {
-				if (!isValidExternalUrl(input.discoveryUrl)) {
+				if (!(await isValidExternalUrl(input.discoveryUrl))) {
 					return reply.send({
 						success: false,
 						message:
@@ -215,7 +215,7 @@ export async function setupRoutes(app: FastifyInstance): Promise<void> {
 
 				const urls = [input.authorizationUrl, input.tokenUrl, input.jwksUrl].filter(Boolean);
 				for (const url of urls) {
-					if (!isValidExternalUrl(url as string)) {
+					if (!(await isValidExternalUrl(url as string))) {
 						return reply.send({
 							success: false,
 							message:
