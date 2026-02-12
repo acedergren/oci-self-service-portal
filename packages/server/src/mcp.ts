@@ -13,7 +13,6 @@ import {
 	type ResourceContent
 } from './mcp-client/index.js';
 import { tool } from 'ai';
-import { z } from 'zod';
 import { homedir } from 'os';
 import { join } from 'path';
 import { existsSync, readFileSync } from 'fs';

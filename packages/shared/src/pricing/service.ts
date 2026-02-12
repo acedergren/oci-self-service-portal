@@ -7,14 +7,7 @@
  * - Static fallback data for when APIs are unavailable
  */
 
-import type {
-	CloudProvider,
-	WorkloadRequirements,
-	CostEstimate,
-	CloudComparison,
-	ComputePricing,
-	GenAIPricing
-} from './types.js';
+import type { WorkloadRequirements, CostEstimate, CloudComparison } from './types.js';
 import { createLogger } from '../server/logger';
 
 const log = createLogger('pricing');
@@ -23,7 +16,7 @@ const log = createLogger('pricing');
 const AZURE_PRICING_API = 'https://prices.azure.com/api/retail/prices';
 
 // OCI Pricing page (for reference/fallback)
-const OCI_PRICING_URL = 'https://www.oracle.com/cloud/price-list/';
+const _OCI_PRICING_URL = 'https://www.oracle.com/cloud/price-list/';
 
 /**
  * Fetch Azure pricing from the public Retail Prices API
@@ -268,7 +261,7 @@ export function findBestOCIInstance(
  */
 export function findBestAzureVM(
 	priceItems: AzurePriceItem[],
-	requirements: {
+	_requirements: {
 		vcpus: number;
 		memoryGB: number;
 		architecture?: 'x86' | 'arm' | 'gpu' | 'any';

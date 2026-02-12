@@ -6,8 +6,7 @@ import {
 	sessionUsageQueryOptions,
 	createSession,
 	deleteSession,
-	queryKeys,
-	type OciSession
+	queryKeys
 } from './index';
 
 /**

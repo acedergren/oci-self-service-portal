@@ -60,7 +60,7 @@ export class StdioTransport extends EventEmitter implements MCPTransport {
 				this.connected = false;
 				this.emit('close', code);
 				// Reject all pending requests
-				for (const [id, pending] of this.pendingRequests) {
+				for (const [_id, pending] of this.pendingRequests) {
 					clearTimeout(pending.timeout);
 					pending.reject(new Error(`Process closed with code ${code}`));
 				}

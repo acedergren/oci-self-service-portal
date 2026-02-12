@@ -35,7 +35,7 @@ function zodToJsonSchema(schema: z.ZodTypeAny): Record<string, unknown> {
 	try {
 		const jsonSchema = z.toJSONSchema(schema);
 		// Remove the $schema key since OpenAPI embeds schemas inline
-		const { $schema, ...rest } = jsonSchema as Record<string, unknown>;
+		const { $schema: _$schema, ...rest } = jsonSchema as Record<string, unknown>;
 		return rest;
 	} catch (err) {
 		log.warn({ err }, 'failed to convert Zod schema to JSON Schema');

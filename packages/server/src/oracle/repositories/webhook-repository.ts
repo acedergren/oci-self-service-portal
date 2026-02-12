@@ -17,9 +17,7 @@ import {
 } from '../../crypto';
 import type {
 	WebhookSubscriptionRow,
-	WebhookSubscription,
-	WebhookEventType,
-	WebhookStatus
+	WebhookSubscription
 } from '@portal/types/server/api/types.js';
 import { webhookRowToSubscription } from '@portal/types/server/api/types.js';
 

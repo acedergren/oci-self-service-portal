@@ -53,7 +53,7 @@ function zodToJsonSchema(schema: z.ZodTypeAny): Record<string, unknown> {
 		// Remove the $schema key since MCP embeds schemas inline
 		const { $schema: _$schema, ...rest } = jsonSchema as Record<string, unknown>;
 		return rest;
-	} catch (_err) {
+	} catch {
 		// Fallback to generic object schema if conversion fails
 		return { type: 'object', additionalProperties: true };
 	}

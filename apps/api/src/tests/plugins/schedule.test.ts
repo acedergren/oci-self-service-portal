@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi, beforeEach } from 'vitest';
+import { describe, it, expect, afterEach, vi } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 import fp from 'fastify-plugin';
 
@@ -62,7 +62,7 @@ describe('schedule plugin', () => {
 
 			// The scheduler should have 2 cron jobs registered
 			// @ts-expect-error — scheduler internals not typed
-			const jobCount = app.scheduler.getById ? 2 : undefined;
+			const _jobCount = app.scheduler.getById ? 2 : undefined;
 			expect(app.scheduler).toBeDefined();
 		});
 

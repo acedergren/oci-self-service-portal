@@ -402,7 +402,7 @@ export class WorkflowExecutor {
 	 */
 	private async executeToolNode(
 		node: WorkflowNode,
-		stepResults: Record<string, unknown>
+		_stepResults: Record<string, unknown>
 	): Promise<{ result: unknown }> {
 		const data = node.data as { toolName?: string; args?: Record<string, unknown> };
 		const toolName = data.toolName;

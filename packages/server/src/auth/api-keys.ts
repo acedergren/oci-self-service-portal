@@ -17,7 +17,7 @@
 import crypto from 'crypto';
 import { withConnection } from '../oracle/connection';
 import { createLogger } from '../logger';
-import { ValidationError, DatabaseError } from '../errors';
+import { ValidationError } from '../errors';
 import type {
 	ApiKeyContext,
 	ApiKeyInfo,

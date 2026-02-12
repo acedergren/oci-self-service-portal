@@ -17,9 +17,7 @@ import type {
 	WorkloadRequirements,
 	CostEstimate,
 	CloudComparison,
-	Region,
-	ServiceCategory,
-	PricingUnit
+	Region
 } from './types.js';
 
 // ============================================================================
