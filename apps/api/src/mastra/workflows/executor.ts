@@ -37,6 +37,34 @@ const MAX_DURATION_MS = 300_000; // 5 minutes
 const MAX_LOOP_ITERATIONS = 1000; // Safety cap for loop nodes without maxIterations
 
 // ============================================================================
+// Retry Policy
+// ============================================================================
+
+export interface RetryPolicy {
+	maxRetries: number; // default: 0 (no retries)
+	backoffMs: number; // initial delay, default: 1000
+	backoffMultiplier: number; // exponential factor, default: 2
+	maxBackoffMs?: number; // cap backoff at this, default: 30000
+}
+
+const DEFAULT_RETRY: RetryPolicy = {
+	maxRetries: 0,
+	backoffMs: 1000,
+	backoffMultiplier: 2,
+	maxBackoffMs: 30000
+};
+
+// ============================================================================
+// Execution Callbacks
+// ============================================================================
+
+export interface ExecutionCallbacks {
+	onNodeStart?: (nodeId: string, nodeType: string) => void;
+	onNodeComplete?: (nodeId: string, nodeType: string, result: unknown) => void;
+	onNodeError?: (nodeId: string, nodeType: string, error: string, willRetry: boolean) => void;
+}
+
+// ============================================================================
 // Execution Result Types
 // ============================================================================
 
@@ -64,7 +92,8 @@ export class WorkflowExecutor {
 	 */
 	async execute(
 		definition: WorkflowDefinition,
-		input: Record<string, unknown>
+		input: Record<string, unknown>,
+		callbacks?: ExecutionCallbacks
 	): Promise<ExecutionResult> {
 		// Validate: no cycles
 		if (detectCycles(definition.nodes, definition.edges)) {
@@ -74,7 +103,7 @@ export class WorkflowExecutor {
 		}
 
 		const sorted = topologicalSort(definition.nodes, definition.edges);
-		return this.executeNodes(sorted, definition.edges, input, new Set(), {});
+		return this.executeNodes(sorted, definition.edges, input, new Set(), {}, callbacks);
 	}
 
 	/**
@@ -83,7 +112,8 @@ export class WorkflowExecutor {
 	async resume(
 		definition: WorkflowDefinition,
 		engineState: EngineState,
-		_input: Record<string, unknown>
+		_input: Record<string, unknown>,
+		callbacks?: ExecutionCallbacks
 	): Promise<ExecutionResult> {
 		const sorted = topologicalSort(definition.nodes, definition.edges);
 		const completedSet = new Set(engineState.completedNodeIds);
@@ -95,7 +125,8 @@ export class WorkflowExecutor {
 			definition.edges,
 			engineState.stepResults,
 			completedSet,
-			engineState.stepResults
+			engineState.stepResults,
+			callbacks
 		);
 	}
 
@@ -107,7 +138,8 @@ export class WorkflowExecutor {
 		edges: WorkflowEdge[],
 		input: Record<string, unknown>,
 		completedNodeIds: Set<string>,
-		existingResults: Record<string, unknown>
+		existingResults: Record<string, unknown>,
+		callbacks?: ExecutionCallbacks
 	): Promise<ExecutionResult> {
 		const stepResults: Record<string, unknown> = { ...existingResults };
 		const skippedNodes = new Set<string>();
@@ -143,7 +175,16 @@ export class WorkflowExecutor {
 			}
 
 			try {
-				const nodeResult = await this.executeNode(node, edges, input, stepResults, skippedNodes);
+				callbacks?.onNodeStart?.(node.id, node.type);
+
+				const nodeResult = await this.executeNode(
+					node,
+					edges,
+					input,
+					stepResults,
+					skippedNodes,
+					callbacks
+				);
 
 				if (nodeResult.suspended) {
 					return {
@@ -158,6 +199,7 @@ export class WorkflowExecutor {
 				}
 
 				stepResults[node.id] = nodeResult.result;
+				callbacks?.onNodeComplete?.(node.id, node.type, nodeResult.result);
 
 				// Capture output from output nodes
 				if (node.type === 'output' && nodeResult.result) {
@@ -165,6 +207,7 @@ export class WorkflowExecutor {
 				}
 			} catch (err) {
 				const errorMsg = err instanceof Error ? err.message : String(err);
+				callbacks?.onNodeError?.(node.id, node.type, errorMsg, false);
 				return {
 					status: 'failed',
 					stepResults,
@@ -181,6 +224,35 @@ export class WorkflowExecutor {
 	}
 
 	/**
+	 * Retry wrapper for node execution with exponential backoff.
+	 */
+	private async withRetry<T>(
+		fn: () => Promise<T>,
+		nodeId: string,
+		nodeType: string,
+		policy: RetryPolicy,
+		callbacks?: ExecutionCallbacks
+	): Promise<T> {
+		let lastError: Error | undefined;
+		for (let attempt = 0; attempt <= policy.maxRetries; attempt++) {
+			try {
+				return await fn();
+			} catch (err) {
+				lastError = err instanceof Error ? err : new Error(String(err));
+				const willRetry = attempt < policy.maxRetries;
+				callbacks?.onNodeError?.(nodeId, nodeType, lastError.message, willRetry);
+				if (!willRetry) break;
+				const delay = Math.min(
+					policy.backoffMs * Math.pow(policy.backoffMultiplier, attempt),
+					policy.maxBackoffMs ?? 30000
+				);
+				await new Promise((resolve) => setTimeout(resolve, delay));
+			}
+		}
+		throw lastError!;
+	}
+
+	/**
 	 * Execute a single node based on its type.
 	 */
 	private async executeNode(
@@ -188,14 +260,24 @@ export class WorkflowExecutor {
 		edges: WorkflowEdge[],
 		input: Record<string, unknown>,
 		stepResults: Record<string, unknown>,
-		skippedNodes: Set<string>
+		skippedNodes: Set<string>,
+		callbacks?: ExecutionCallbacks
 	): Promise<{ result: unknown; suspended?: boolean }> {
 		switch (node.type) {
 			case 'input':
 				return { result: input };
 
-			case 'tool':
-				return this.executeToolNode(node, stepResults);
+			case 'tool': {
+				const retryPolicy =
+					(node.data as { retryPolicy?: RetryPolicy }).retryPolicy || DEFAULT_RETRY;
+				return this.withRetry(
+					() => this.executeToolNode(node, stepResults),
+					node.id,
+					node.type,
+					retryPolicy,
+					callbacks
+				);
+			}
 
 			case 'condition':
 				return this.executeConditionNode(node, edges, stepResults, skippedNodes);
@@ -209,8 +291,17 @@ export class WorkflowExecutor {
 			case 'parallel':
 				return this.executeParallelNode(node, stepResults);
 
-			case 'ai-step':
-				return this.executeAIStepNode(node, stepResults);
+			case 'ai-step': {
+				const retryPolicy =
+					(node.data as { retryPolicy?: RetryPolicy }).retryPolicy || DEFAULT_RETRY;
+				return this.withRetry(
+					() => this.executeAIStepNode(node, stepResults),
+					node.id,
+					node.type,
+					retryPolicy,
+					callbacks
+				);
+			}
 
 			case 'loop':
 				return this.executeLoopNode(node, stepResults);

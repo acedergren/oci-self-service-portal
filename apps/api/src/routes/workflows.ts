@@ -9,6 +9,7 @@
  * - DELETE /api/v1/workflows/:id        — delete workflow
  * - POST   /api/v1/workflows/:id/run    — execute workflow
  * - GET    /api/v1/workflows/:id/runs/:runId         — get run detail
+ * - GET    /api/v1/workflows/:id/runs/:runId/stream  — SSE stream for run progress
  * - POST   /api/v1/workflows/:id/runs/:runId/approve — approve suspended run
  *
  * All routes require authentication and `workflows:read` or `workflows:execute`.
@@ -17,7 +18,7 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import { WorkflowStatusSchema } from '@portal/shared/workflows/types.js';
+import { WorkflowStatusSchema, type WorkflowRun } from '@portal/shared/workflows/types.js';
 import { ValidationError, NotFoundError, toPortalError } from '@portal/server/errors.js';
 import {
 	createWorkflowRepository,
@@ -395,6 +396,89 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 		}
 	);
 
+	// ── GET /api/v1/workflows/:id/runs/:runId/stream ────────────────────
+
+	app.get(
+		'/api/v1/workflows/:id/runs/:runId/stream',
+		{
+			schema: { params: RunIdParamsSchema },
+			preHandler: requireAuth('workflows:read')
+		},
+		async (request, reply) => {
+			const { runs } = getRepos();
+			const orgId = resolveOrgId(request);
+			if (!orgId) return reply.code(400).send({ error: 'Organization context required' });
+
+			const userId = request.user?.id;
+			const run = userId
+				? await runs.getByIdForUser(request.params.runId, userId, orgId)
+				: await runs.getByIdForOrg(request.params.runId, orgId);
+
+			if (!run) return reply.code(404).send({ error: 'Workflow run not found' });
+			if (run.definitionId !== request.params.id) {
+				return reply.code(404).send({ error: 'Run not found for this workflow' });
+			}
+
+			// Set SSE headers
+			reply.raw.writeHead(200, {
+				'Content-Type': 'text/event-stream',
+				'Cache-Control': 'no-cache',
+				Connection: 'keep-alive'
+			});
+
+			// If run is already terminal, send final status and close
+			if (['completed', 'failed', 'suspended'].includes(run.status)) {
+				reply.raw.write(
+					`data: ${JSON.stringify({ type: 'status', status: run.status, output: run.output, error: run.error })}\n\n`
+				);
+				reply.raw.end();
+				return;
+			}
+
+			// For running workflows, poll status every 2 seconds
+			const pollInterval = setInterval(async () => {
+				try {
+					const current = userId
+						? await runs.getByIdForUser(request.params.runId, userId, orgId)
+						: await runs.getByIdForOrg(request.params.runId, orgId);
+
+					if (!current) {
+						clearInterval(pollInterval);
+						reply.raw.write(
+							`data: ${JSON.stringify({ type: 'error', error: 'Run not found' })}\n\n`
+						);
+						reply.raw.end();
+						return;
+					}
+
+					reply.raw.write(
+						`data: ${JSON.stringify({ type: 'status', status: current.status, output: current.output, error: current.error })}\n\n`
+					);
+
+					if (['completed', 'failed', 'suspended'].includes(current.status)) {
+						clearInterval(pollInterval);
+						reply.raw.end();
+					}
+				} catch {
+					clearInterval(pollInterval);
+					reply.raw.end();
+				}
+			}, 2000);
+
+			// Clean up on client disconnect
+			request.raw.on('close', () => {
+				clearInterval(pollInterval);
+			});
+
+			// Timeout after 5 minutes
+			setTimeout(() => {
+				clearInterval(pollInterval);
+				reply.raw.write(`data: ${JSON.stringify({ type: 'timeout' })}\n\n`);
+				reply.raw.end();
+			}, 300_000);
+		}
+	);
+
 	// ── POST /api/v1/workflows/:id/runs/:runId/approve ──────────────────
 
 	app.post(
@@ -505,6 +589,34 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 			}
 		}
 	);
+
+	// ── Crash Recovery ──────────────────────────────────────────────────
+	// On server start, mark any runs stuck in 'running' status as failed.
+	// These are runs that were interrupted by a server crash/restart.
+	fastify.addHook('onReady', async () => {
+		try {
+			if (!fastify.hasDecorator('oracle') || !fastify.oracle.isAvailable()) return;
+			const { runs } = getRepos();
+			// listStale may not exist yet — will be added to repository interface later
+			const staleRuns = await (
+				runs as typeof runs & {
+					listStale?: (status: string, timeoutMs: number) => Promise<WorkflowRun[]>;
+				}
+			).listStale?.('running', 300_000); // 5 min timeout
+			if (!staleRuns?.length) return;
+
+			for (const staleRun of staleRuns) {
+				await runs.updateStatus(staleRun.id, {
+					status: 'failed',
+					error: { message: 'Interrupted by server restart', code: 'CRASH_RECOVERY' }
+				});
+			}
+
+			fastify.log.info({ count: staleRuns.length }, 'Recovered stale workflow runs');
+		} catch (err) {
+			fastify.log.warn({ err }, 'Crash recovery check failed (non-critical)');
+		}
+	});
 };
 
 export default workflowRoutes;
