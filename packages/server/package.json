@@ -7,7 +7,9 @@
 		"build": "tsc",
 		"dev": "tsc --watch",
 		"check": "tsc --noEmit",
-		"lint": "eslint .",
+		"lint": "oxlint && eslint .",
+		"lint:oxlint": "oxlint",
+		"lint:eslint": "eslint .",
 		"lint:fix": "eslint . --fix"
 	},
 	"exports": {

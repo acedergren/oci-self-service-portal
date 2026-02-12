@@ -228,6 +228,14 @@ reviews:
     trufflehog:
       enabled: true # Complements Gitleaks with secret verification
 
+    # Fast JavaScript/TypeScript linting
+    oxlint:
+      enabled: true # Ultra-fast Rust-based linter (50-100x faster than ESLint)
+
+    # SQL linting
+    sqlfluff:
+      enabled: true # Oracle SQL migration files (17 .sql files)
+
     # Disable tools not relevant to our stack
     shellcheck:
       enabled: false # We use bash deliberately in scripts
