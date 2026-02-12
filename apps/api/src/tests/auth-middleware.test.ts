@@ -23,7 +23,7 @@ import { createApp } from '../app.js';
 import type { FastifyInstance } from 'fastify';
 
 // Mock auth and RBAC modules
-vi.mock('@portal/shared/server/oracle/connection', () => ({
+vi.mock('@portal/server/oracle/connection', () => ({
 	initPool: vi.fn().mockResolvedValue(undefined),
 	closePool: vi.fn().mockResolvedValue(undefined),
 	withConnection: vi.fn(async (fn: (conn: unknown) => unknown) =>
@@ -39,7 +39,7 @@ vi.mock('@portal/shared/server/oracle/connection', () => ({
 	getPool: vi.fn()
 }));
 
-vi.mock('@portal/shared/server/sentry', () => ({
+vi.mock('@portal/server/sentry', () => ({
 	wrapWithSpan: vi.fn((_name: string, _op: string, fn: () => unknown) => fn()),
 	captureError: vi.fn(),
 	isSentryEnabled: vi.fn(() => false),
@@ -47,7 +47,7 @@ vi.mock('@portal/shared/server/sentry', () => ({
 	closeSentry: vi.fn()
 }));
 
-vi.mock('@portal/shared/server/logger', () => ({
+vi.mock('@portal/server/logger', () => ({
 	createLogger: vi.fn(() => ({
 		info: vi.fn(),
 		warn: vi.fn(),
@@ -58,17 +58,17 @@ vi.mock('@portal/shared/server/logger', () => ({
 	}))
 }));
 
-vi.mock('@portal/shared/server/oracle/migrations', () => ({
+vi.mock('@portal/server/oracle/migrations', () => ({
 	runMigrations: vi.fn().mockResolvedValue(undefined)
 }));
 
-vi.mock('@portal/shared/server/oracle/repositories/webhook-repository', () => ({
+vi.mock('@portal/server/oracle/repositories/webhook-repository', () => ({
 	webhookRepository: {
 		migratePlaintextSecrets: vi.fn().mockResolvedValue({ migrated: 0, remaining: 0 })
 	}
 }));
 
-vi.mock('@portal/shared/server/auth/config', () => ({
+vi.mock('@portal/server/auth/config', () => ({
 	auth: {
 		api: {
 			getSession: vi.fn().mockResolvedValue(null)
@@ -78,7 +78,7 @@ vi.mock('@portal/shared/server/auth/config', () => ({
 
 // Use forwarding pattern for health mock so mockReset:true doesn't break it
 const mockRunHealthChecks = vi.fn();
-vi.mock('@portal/shared/server/health', () => ({
+vi.mock('@portal/server/health', () => ({
 	runHealthChecks: (...args: unknown[]) => mockRunHealthChecks(...args)
 }));
 
@@ -88,17 +88,17 @@ vi.mock('@portal/shared/server/health', () => ({
 
 describe('RBAC module (shared package)', () => {
 	it('should export getPermissionsForRole', async () => {
-		const { getPermissionsForRole } = await import('@portal/shared/server/auth/rbac');
+		const { getPermissionsForRole } = await import('@portal/server/auth/rbac');
 		expect(typeof getPermissionsForRole).toBe('function');
 	});
 
 	it('should export hasPermission', async () => {
-		const { hasPermission } = await import('@portal/shared/server/auth/rbac');
+		const { hasPermission } = await import('@portal/server/auth/rbac');
 		expect(typeof hasPermission).toBe('function');
 	});
 
 	it('viewer role should have read-only permissions', async () => {
-		const { getPermissionsForRole } = await import('@portal/shared/server/auth/rbac');
+		const { getPermissionsForRole } = await import('@portal/server/auth/rbac');
 		const perms = getPermissionsForRole('viewer');
 
 		expect(perms).toContain('tools:read');
@@ -109,7 +109,7 @@ describe('RBAC module (shared package)', () => {
 	});
 
 	it('operator role should have execute permissions', async () => {
-		const { getPermissionsForRole } = await import('@portal/shared/server/auth/rbac');
+		const { getPermissionsForRole } = await import('@portal/server/auth/rbac');
 		const perms = getPermissionsForRole('operator');
 
 		expect(perms).toContain('tools:read');
@@ -122,7 +122,7 @@ describe('RBAC module (shared package)', () => {
 	});
 
 	it('admin role should have all permissions', async () => {
-		const { getPermissionsForRole, PERMISSIONS } = await import('@portal/shared/server/auth/rbac');
+		const { getPermissionsForRole, PERMISSIONS } = await import('@portal/server/auth/rbac');
 		const perms = getPermissionsForRole('admin');
 		const allPerms = Object.keys(PERMISSIONS);
 
@@ -133,7 +133,7 @@ describe('RBAC module (shared package)', () => {
 	});
 
 	it('unknown role should fall back to viewer permissions', async () => {
-		const { getPermissionsForRole } = await import('@portal/shared/server/auth/rbac');
+		const { getPermissionsForRole } = await import('@portal/server/auth/rbac');
 		const perms = getPermissionsForRole('nonexistent-role');
 		const viewerPerms = getPermissionsForRole('viewer');
 
@@ -141,17 +141,17 @@ describe('RBAC module (shared package)', () => {
 	});
 
 	it('hasPermission should return true when permission exists', async () => {
-		const { hasPermission } = await import('@portal/shared/server/auth/rbac');
+		const { hasPermission } = await import('@portal/server/auth/rbac');
 		expect(hasPermission(['tools:read', 'tools:execute'], 'tools:execute')).toBe(true);
 	});
 
 	it('hasPermission should return false when permission is missing', async () => {
-		const { hasPermission } = await import('@portal/shared/server/auth/rbac');
+		const { hasPermission } = await import('@portal/server/auth/rbac');
 		expect(hasPermission(['tools:read'], 'tools:execute')).toBe(false);
 	});
 
 	it('should have exactly 13 permissions defined', async () => {
-		const { PERMISSIONS } = await import('@portal/shared/server/auth/rbac');
+		const { PERMISSIONS } = await import('@portal/server/auth/rbac');
 		const expectedPermissions = [
 			'tools:read',
 			'tools:execute',

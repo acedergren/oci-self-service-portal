@@ -34,7 +34,7 @@ export function asMock(fn: unknown): Mock {
  * Call in beforeEach when vitest's mockReset: true has cleared implementations.
  */
 export async function resetOracleMocks(): Promise<void> {
-	const mod = await import('@portal/shared/server/oracle/connection');
+	const mod = await import('@portal/server/oracle/connection');
 
 	asMock(mod.initPool).mockResolvedValue(undefined);
 	asMock(mod.closePool).mockResolvedValue(undefined);
@@ -59,7 +59,7 @@ export async function resetOracleMocks(): Promise<void> {
  * Re-setup the health check mock with default ok response.
  */
 export async function resetHealthMocks(): Promise<void> {
-	const mod = await import('@portal/shared/server/health');
+	const mod = await import('@portal/server/health');
 	asMock(mod.runHealthChecks).mockResolvedValue({
 		status: 'ok',
 		checks: {
@@ -79,10 +79,10 @@ export async function resetHealthMocks(): Promise<void> {
  * Re-setup the migration and webhook mocks with default no-op behavior.
  */
 export async function resetMigrationMocks(): Promise<void> {
-	const migrationMod = await import('@portal/shared/server/oracle/migrations');
+	const migrationMod = await import('@portal/server/oracle/migrations');
 	asMock(migrationMod.runMigrations).mockResolvedValue(undefined);
 
-	const webhookMod = await import('@portal/shared/server/oracle/repositories/webhook-repository');
+	const webhookMod = await import('@portal/server/oracle/repositories/webhook-repository');
 	asMock(webhookMod.webhookRepository.migratePlaintextSecrets).mockResolvedValue({
 		migrated: 0,
 		remaining: 0

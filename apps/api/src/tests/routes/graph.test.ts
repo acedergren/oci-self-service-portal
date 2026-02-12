@@ -6,7 +6,7 @@ const mockGetUserActivity = vi.fn();
 const mockGetToolAffinity = vi.fn();
 const mockGetOrgImpact = vi.fn();
 
-vi.mock('@portal/shared/server/oracle/graph-analytics', () => ({
+vi.mock('@portal/server/oracle/graph-analytics', () => ({
 	get getUserActivity() {
 		return mockGetUserActivity;
 	},
@@ -18,7 +18,7 @@ vi.mock('@portal/shared/server/oracle/graph-analytics', () => ({
 	}
 }));
 
-vi.mock('@portal/shared/server/logger', () => ({
+vi.mock('@portal/server/logger', () => ({
 	createLogger: () => ({
 		info: vi.fn(),
 		warn: vi.fn(),

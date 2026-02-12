@@ -25,13 +25,13 @@ const mockCollect = vi
 			'portal_http_requests_total{method="GET",status="200"} 42\n'
 	);
 
-vi.mock('@portal/shared/server/metrics', () => ({
+vi.mock('@portal/server/metrics', () => ({
 	registry: {
 		collect: (...args: unknown[]) => mockCollect(...args)
 	}
 }));
 
-vi.mock('@portal/shared/server/logger', () => ({
+vi.mock('@portal/server/logger', () => ({
 	createLogger: () => ({
 		info: vi.fn(),
 		warn: vi.fn(),

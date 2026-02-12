@@ -104,7 +104,7 @@ export function simulateDbUnavailable(app: FastifyInstance): void {
 // Common mock factories
 // ---------------------------------------------------------------------------
 
-/** Creates the standard logger mock shape expected by `@portal/shared/server/logger`. */
+/** Creates the standard logger mock shape expected by `@portal/server/logger`. */
 export function createLoggerMock(): Record<string, ReturnType<typeof vi.fn>> {
 	return {
 		info: vi.fn(),

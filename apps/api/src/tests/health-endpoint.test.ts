@@ -15,7 +15,7 @@ import { createApp } from '../app.js';
 import type { FastifyInstance } from 'fastify';
 
 // Mock dependencies
-vi.mock('@portal/shared/server/oracle/connection', () => ({
+vi.mock('@portal/server/oracle/connection', () => ({
 	initPool: vi.fn().mockResolvedValue(undefined),
 	closePool: vi.fn().mockResolvedValue(undefined),
 	withConnection: vi.fn(async (fn: (conn: unknown) => unknown) =>
@@ -36,7 +36,7 @@ vi.mock('@portal/shared/server/oracle/connection', () => ({
 	getPool: vi.fn()
 }));
 
-vi.mock('@portal/shared/server/sentry', () => ({
+vi.mock('@portal/server/sentry', () => ({
 	wrapWithSpan: vi.fn((_name: string, _op: string, fn: () => unknown) => fn()),
 	captureError: vi.fn(),
 	isSentryEnabled: vi.fn(() => false),
@@ -44,7 +44,7 @@ vi.mock('@portal/shared/server/sentry', () => ({
 	closeSentry: vi.fn()
 }));
 
-vi.mock('@portal/shared/server/logger', () => ({
+vi.mock('@portal/server/logger', () => ({
 	createLogger: vi.fn(() => ({
 		info: vi.fn(),
 		warn: vi.fn(),
@@ -55,17 +55,17 @@ vi.mock('@portal/shared/server/logger', () => ({
 	}))
 }));
 
-vi.mock('@portal/shared/server/oracle/migrations', () => ({
+vi.mock('@portal/server/oracle/migrations', () => ({
 	runMigrations: vi.fn().mockResolvedValue(undefined)
 }));
 
-vi.mock('@portal/shared/server/oracle/repositories/webhook-repository', () => ({
+vi.mock('@portal/server/oracle/repositories/webhook-repository', () => ({
 	webhookRepository: {
 		migratePlaintextSecrets: vi.fn().mockResolvedValue({ migrated: 0, remaining: 0 })
 	}
 }));
 
-vi.mock('@portal/shared/server/auth/config', () => ({
+vi.mock('@portal/server/auth/config', () => ({
 	auth: {
 		api: {
 			getSession: vi.fn().mockResolvedValue(null)
@@ -74,7 +74,7 @@ vi.mock('@portal/shared/server/auth/config', () => ({
 }));
 
 // Mock the entire health module to avoid OCI CLI dependency
-vi.mock('@portal/shared/server/health', () => ({
+vi.mock('@portal/server/health', () => ({
 	runHealthChecks: vi.fn().mockResolvedValue({
 		status: 'ok',
 		checks: {
@@ -99,7 +99,7 @@ describe('GET /health (basic)', () => {
 
 	beforeEach(async () => {
 		// Re-setup mocks cleared by mockReset: true
-		const oracleMod = await import('@portal/shared/server/oracle/connection');
+		const oracleMod = await import('@portal/server/oracle/connection');
 		(oracleMod.initPool as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 		(oracleMod.closePool as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 		(oracleMod.withConnection as ReturnType<typeof vi.fn>).mockImplementation(
@@ -119,7 +119,7 @@ describe('GET /health (basic)', () => {
 		});
 		(oracleMod.isPoolInitialized as ReturnType<typeof vi.fn>).mockReturnValue(true);
 
-		const healthMod = await import('@portal/shared/server/health');
+		const healthMod = await import('@portal/server/health');
 		(healthMod.runHealthChecks as ReturnType<typeof vi.fn>).mockResolvedValue({
 			status: 'ok',
 			checks: {
@@ -291,7 +291,7 @@ describe('runHealthChecks (shared package)', () => {
 	it('should export runHealthChecks function', async () => {
 		// The shared health module should be importable and callable
 		// This validates that the shared package properly exports health checks
-		const healthModule = await import('@portal/shared/server/health');
+		const healthModule = await import('@portal/server/health');
 		expect(typeof healthModule.runHealthChecks).toBe('function');
 	});
 });

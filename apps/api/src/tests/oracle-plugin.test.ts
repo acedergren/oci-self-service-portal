@@ -17,7 +17,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock Oracle connection module — initial factory sets up structure.
 // mockReset: true clears return values between tests, so we re-setup in beforeEach.
-vi.mock('@portal/shared/server/oracle/connection', () => ({
+vi.mock('@portal/server/oracle/connection', () => ({
 	initPool: vi.fn(),
 	closePool: vi.fn(),
 	withConnection: vi.fn(),
@@ -26,7 +26,7 @@ vi.mock('@portal/shared/server/oracle/connection', () => ({
 	isPoolInitialized: vi.fn()
 }));
 
-vi.mock('@portal/shared/server/sentry', () => ({
+vi.mock('@portal/server/sentry', () => ({
 	wrapWithSpan: vi.fn((_name: string, _op: string, fn: () => unknown) => fn()),
 	captureError: vi.fn(),
 	isSentryEnabled: vi.fn(() => false),
@@ -34,7 +34,7 @@ vi.mock('@portal/shared/server/sentry', () => ({
 	closeSentry: vi.fn()
 }));
 
-vi.mock('@portal/shared/server/logger', () => ({
+vi.mock('@portal/server/logger', () => ({
 	createLogger: vi.fn(() => ({
 		info: vi.fn(),
 		warn: vi.fn(),
@@ -62,7 +62,7 @@ describe('Oracle connection module (shared package)', () => {
 		};
 
 		// Re-setup mock implementations after mockReset clears them
-		const mod = await import('@portal/shared/server/oracle/connection');
+		const mod = await import('@portal/server/oracle/connection');
 		(mod.initPool as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 		(mod.closePool as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 		(mod.withConnection as ReturnType<typeof vi.fn>).mockImplementation(
@@ -78,22 +78,22 @@ describe('Oracle connection module (shared package)', () => {
 	});
 
 	it('should export initPool function', async () => {
-		const { initPool } = await import('@portal/shared/server/oracle/connection');
+		const { initPool } = await import('@portal/server/oracle/connection');
 		expect(typeof initPool).toBe('function');
 	});
 
 	it('should export closePool function', async () => {
-		const { closePool } = await import('@portal/shared/server/oracle/connection');
+		const { closePool } = await import('@portal/server/oracle/connection');
 		expect(typeof closePool).toBe('function');
 	});
 
 	it('should export withConnection function', async () => {
-		const { withConnection } = await import('@portal/shared/server/oracle/connection');
+		const { withConnection } = await import('@portal/server/oracle/connection');
 		expect(typeof withConnection).toBe('function');
 	});
 
 	it('withConnection should provide a connection and release it', async () => {
-		const { withConnection } = await import('@portal/shared/server/oracle/connection');
+		const { withConnection } = await import('@portal/server/oracle/connection');
 
 		const result = await withConnection(async (conn) => {
 			const res = await conn.execute('SELECT 1 FROM DUAL');
@@ -104,7 +104,7 @@ describe('Oracle connection module (shared package)', () => {
 	});
 
 	it('should export getPoolStats function', async () => {
-		const { getPoolStats } = await import('@portal/shared/server/oracle/connection');
+		const { getPoolStats } = await import('@portal/server/oracle/connection');
 		const stats = await getPoolStats();
 		expect(stats).toEqual({
 			connectionsOpen: 5,
@@ -115,7 +115,7 @@ describe('Oracle connection module (shared package)', () => {
 	});
 
 	it('should export isPoolInitialized function', async () => {
-		const { isPoolInitialized } = await import('@portal/shared/server/oracle/connection');
+		const { isPoolInitialized } = await import('@portal/server/oracle/connection');
 		expect(isPoolInitialized()).toBe(true);
 	});
 });
@@ -127,7 +127,7 @@ describe('Oracle connection module (shared package)', () => {
 describe('Oracle Fastify plugin (TDD contract)', () => {
 	beforeEach(async () => {
 		// Re-setup mock implementations for this describe block too
-		const mod = await import('@portal/shared/server/oracle/connection');
+		const mod = await import('@portal/server/oracle/connection');
 		(mod.initPool as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 		(mod.closePool as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 	});
@@ -170,7 +170,7 @@ describe('Oracle Fastify plugin (TDD contract)', () => {
 	});
 
 	it('should handle pool initialization failure gracefully', async () => {
-		const { initPool } = await import('@portal/shared/server/oracle/connection');
+		const { initPool } = await import('@portal/server/oracle/connection');
 
 		// Simulate failure
 		(initPool as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Oracle not reachable'));

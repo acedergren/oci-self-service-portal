@@ -3,7 +3,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 import fp from 'fastify-plugin';
 
 // Mock logger first (required in every test)
-vi.mock('@portal/shared/server/logger', () => ({
+vi.mock('@portal/server/logger', () => ({
 	createLogger: () => ({
 		info: vi.fn(),
 		warn: vi.fn(),

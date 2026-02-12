@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { runHealthChecks } from '@portal/shared/server/health';
+import { runHealthChecks } from '@portal/server/health';
 
 const HEALTH_CHECK_TIMEOUT_MS = 3_000;
 

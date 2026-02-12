@@ -11,7 +11,7 @@ import type { OracleConnection } from '@portal/server/oracle/connection';
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 // Mock logger
-vi.mock('@portal/shared/server/logger', () => ({
+vi.mock('@portal/server/logger', () => ({
 	createLogger: () => ({
 		info: vi.fn(),
 		warn: vi.fn(),
@@ -31,7 +31,7 @@ const mockConnection: OracleConnection = {
 	rollback: vi.fn().mockResolvedValue(undefined)
 };
 
-vi.mock('@portal/shared/server/oracle/connection', () => ({
+vi.mock('@portal/server/oracle/connection', () => ({
 	withConnection: vi.fn(async (fn: (conn: OracleConnection) => Promise<unknown>) =>
 		fn(mockConnection)
 	)
@@ -46,7 +46,7 @@ describe('OracleAgentStateRepository', () => {
 	beforeEach(async () => {
 		vi.clearAllMocks();
 		const { OracleAgentStateRepository } = await import(
-			'@portal/shared/server/agent-state/oracle-repository'
+			'@portal/server/agent-state/oracle-repository'
 		);
 		repository = new OracleAgentStateRepository();
 	});

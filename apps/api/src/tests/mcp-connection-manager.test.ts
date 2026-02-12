@@ -23,7 +23,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // VI.MOCK Registrations - factories populate a globalThis registry
 // ============================================================================
 
-vi.mock('@portal/shared/server/admin/mcp-repository', () => {
+vi.mock('@portal/server/admin/mcp-repository', () => {
 	// Initialize registry if needed (only happens once during hoisting)
 	if (!(globalThis as any).__testMocks) {
 		(globalThis as any).__testMocks = {
@@ -122,7 +122,7 @@ vi.mock('dockerode', () => {
 	};
 });
 
-vi.mock('@portal/shared/server/logger', () => ({
+vi.mock('@portal/server/logger', () => ({
 	createLogger: vi.fn(() => ({
 		info: vi.fn(),
 		warn: vi.fn(),

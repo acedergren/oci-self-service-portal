@@ -24,7 +24,7 @@ import type { FastifyInstance } from 'fastify';
 // Mocks — must be before app import
 // ---------------------------------------------------------------------------
 
-vi.mock('@portal/shared/server/oracle/connection', () => ({
+vi.mock('@portal/server/oracle/connection', () => ({
 	initPool: vi.fn().mockResolvedValue(undefined),
 	closePool: vi.fn().mockResolvedValue(undefined),
 	withConnection: vi.fn(async (fn: (conn: unknown) => unknown) =>
@@ -45,17 +45,17 @@ vi.mock('@portal/shared/server/oracle/connection', () => ({
 	getPool: vi.fn()
 }));
 
-vi.mock('@portal/shared/server/oracle/migrations', () => ({
+vi.mock('@portal/server/oracle/migrations', () => ({
 	runMigrations: vi.fn().mockResolvedValue(undefined)
 }));
 
-vi.mock('@portal/shared/server/oracle/repositories/webhook-repository', () => ({
+vi.mock('@portal/server/oracle/repositories/webhook-repository', () => ({
 	webhookRepository: {
 		migratePlaintextSecrets: vi.fn().mockResolvedValue({ migrated: 0, remaining: 0 })
 	}
 }));
 
-vi.mock('@portal/shared/server/sentry', () => ({
+vi.mock('@portal/server/sentry', () => ({
 	wrapWithSpan: vi.fn((_n: string, _o: string, fn: () => unknown) => fn()),
 	captureError: vi.fn(),
 	isSentryEnabled: vi.fn(() => false),
@@ -63,7 +63,7 @@ vi.mock('@portal/shared/server/sentry', () => ({
 	closeSentry: vi.fn()
 }));
 
-vi.mock('@portal/shared/server/logger', () => ({
+vi.mock('@portal/server/logger', () => ({
 	createLogger: () => ({
 		info: vi.fn(),
 		warn: vi.fn(),
@@ -74,7 +74,7 @@ vi.mock('@portal/shared/server/logger', () => ({
 	})
 }));
 
-vi.mock('@portal/shared/server/auth/config', () => ({
+vi.mock('@portal/server/auth/config', () => ({
 	auth: {
 		api: {
 			getSession: vi.fn().mockResolvedValue(null)
@@ -82,7 +82,7 @@ vi.mock('@portal/shared/server/auth/config', () => ({
 	}
 }));
 
-vi.mock('@portal/shared/server/health', () => ({
+vi.mock('@portal/server/health', () => ({
 	runHealthChecks: vi.fn().mockResolvedValue({
 		status: 'ok',
 		checks: {
@@ -107,7 +107,7 @@ import type { AppOptions } from '../app.js';
 // ---------------------------------------------------------------------------
 
 beforeEach(async () => {
-	const oracleMod = await import('@portal/shared/server/oracle/connection');
+	const oracleMod = await import('@portal/server/oracle/connection');
 	(oracleMod.initPool as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 	(oracleMod.closePool as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 	(oracleMod.withConnection as ReturnType<typeof vi.fn>).mockImplementation(
@@ -127,7 +127,7 @@ beforeEach(async () => {
 	});
 	(oracleMod.isPoolInitialized as ReturnType<typeof vi.fn>).mockReturnValue(true);
 
-	const healthMod = await import('@portal/shared/server/health');
+	const healthMod = await import('@portal/server/health');
 	(healthMod.runHealthChecks as ReturnType<typeof vi.fn>).mockResolvedValue({
 		status: 'ok',
 		checks: {
@@ -142,10 +142,10 @@ beforeEach(async () => {
 		version: '0.1.0'
 	});
 
-	const migrationMod = await import('@portal/shared/server/oracle/migrations');
+	const migrationMod = await import('@portal/server/oracle/migrations');
 	(migrationMod.runMigrations as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 
-	const webhookMod = await import('@portal/shared/server/oracle/repositories/webhook-repository');
+	const webhookMod = await import('@portal/server/oracle/repositories/webhook-repository');
 	(
 		webhookMod.webhookRepository.migratePlaintextSecrets as ReturnType<typeof vi.fn>
 	).mockResolvedValue({
@@ -175,7 +175,7 @@ describe('createApp', () => {
 
 	beforeEach(async () => {
 		// Re-setup mocks cleared by mockReset: true
-		const oracleMod = await import('@portal/shared/server/oracle/connection');
+		const oracleMod = await import('@portal/server/oracle/connection');
 		(oracleMod.initPool as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 		(oracleMod.closePool as ReturnType<typeof vi.fn>).mockResolvedValue(undefined);
 		(oracleMod.withConnection as ReturnType<typeof vi.fn>).mockImplementation(
@@ -195,7 +195,7 @@ describe('createApp', () => {
 		});
 		(oracleMod.isPoolInitialized as ReturnType<typeof vi.fn>).mockReturnValue(true);
 
-		const healthMod = await import('@portal/shared/server/health');
+		const healthMod = await import('@portal/server/health');
 		(healthMod.runHealthChecks as ReturnType<typeof vi.fn>).mockResolvedValue({
 			status: 'ok',
 			checks: {
@@ -417,7 +417,7 @@ describe('createApp – global error handler', () => {
 
 	it('should convert thrown PortalError to structured JSON response', async () => {
 		// Import error classes dynamically to avoid module resolution issues
-		const { ValidationError } = await import('@portal/shared/server/errors');
+		const { ValidationError } = await import('@portal/server/errors');
 
 		app = await buildApp();
 
@@ -460,7 +460,7 @@ describe('createApp – global error handler', () => {
 	});
 
 	it('should convert AuthError (401) properly', async () => {
-		const { AuthError } = await import('@portal/shared/server/errors');
+		const { AuthError } = await import('@portal/server/errors');
 
 		app = await buildApp();
 
@@ -481,7 +481,7 @@ describe('createApp – global error handler', () => {
 	});
 
 	it('should convert AuthError (403) properly', async () => {
-		const { AuthError } = await import('@portal/shared/server/errors');
+		const { AuthError } = await import('@portal/server/errors');
 
 		app = await buildApp();
 
@@ -500,7 +500,7 @@ describe('createApp – global error handler', () => {
 	});
 
 	it('should convert NotFoundError (404) properly', async () => {
-		const { NotFoundError } = await import('@portal/shared/server/errors');
+		const { NotFoundError } = await import('@portal/server/errors');
 
 		app = await buildApp();
 
@@ -521,7 +521,7 @@ describe('createApp – global error handler', () => {
 	});
 
 	it('should convert RateLimitError (429) properly', async () => {
-		const { RateLimitError } = await import('@portal/shared/server/errors');
+		const { RateLimitError } = await import('@portal/server/errors');
 
 		app = await buildApp();
 
@@ -542,7 +542,7 @@ describe('createApp – global error handler', () => {
 	});
 
 	it('should convert OCIError (502) properly', async () => {
-		const { OCIError } = await import('@portal/shared/server/errors');
+		const { OCIError } = await import('@portal/server/errors');
 
 		app = await buildApp();
 
@@ -563,7 +563,7 @@ describe('createApp – global error handler', () => {
 	});
 
 	it('should convert DatabaseError (503) properly', async () => {
-		const { DatabaseError } = await import('@portal/shared/server/errors');
+		const { DatabaseError } = await import('@portal/server/errors');
 
 		app = await buildApp();
 
@@ -785,7 +785,7 @@ describe('createApp – environment configuration', () => {
 
 describe('RATE_LIMIT_CONFIG shape', () => {
 	it('should export windowMs and maxRequests (not AUTHENTICATED)', async () => {
-		const { RATE_LIMIT_CONFIG } = await import('@portal/shared/server/rate-limiter');
+		const { RATE_LIMIT_CONFIG } = await import('@portal/server/rate-limiter');
 
 		// The shared module exports { windowMs, maxRequests: { chat, api } }
 		expect(RATE_LIMIT_CONFIG).toHaveProperty('windowMs');

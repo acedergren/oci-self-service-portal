@@ -29,7 +29,7 @@ const {
 	mockStripAiProviderSecrets: vi.fn((v) => v)
 }));
 
-vi.mock('@portal/shared/server/admin', () => ({
+vi.mock('@portal/server/admin', () => ({
 	settingsRepository: {
 		isSetupComplete: (...args: unknown[]) => mockIsSetupComplete(...args),
 		bulkSet: (...args: unknown[]) => mockBulkSet(...args),
@@ -64,7 +64,7 @@ vi.mock('@portal/shared/server/admin', () => ({
 	AiProviderTypeSchema: z.enum(['oci', 'openai', 'anthropic', 'google', 'azure-openai'])
 }));
 
-vi.mock('@portal/shared/server/url-validation', () => ({
+vi.mock('@portal/server/url-validation', () => ({
 	isValidExternalUrl: vi.fn(() => true)
 }));
 

@@ -25,7 +25,7 @@ vi.mock('@portal/shared/tools/executor', () => ({
 	toMidnightUTC: (...args: unknown[]) => mockToMidnightUTC(...args)
 }));
 
-vi.mock('@portal/shared/server/logger', () => ({
+vi.mock('@portal/server/logger', () => ({
 	createLogger: () => ({
 		info: vi.fn(),
 		warn: vi.fn(),

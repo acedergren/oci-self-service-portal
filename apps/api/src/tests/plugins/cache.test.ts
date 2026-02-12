@@ -4,7 +4,7 @@ import type { FastifyInstance } from 'fastify';
 import type Redis from 'iovalkey';
 
 // Mock logger
-vi.mock('@portal/shared/server/logger', () => ({
+vi.mock('@portal/server/logger', () => ({
 	createLogger: () => ({
 		info: vi.fn(),
 		warn: vi.fn(),

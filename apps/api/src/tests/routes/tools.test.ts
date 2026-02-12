@@ -49,7 +49,7 @@ const realPendingApprovals = new Map<
 	}
 >();
 
-vi.mock('@portal/shared/server/approvals', () => ({
+vi.mock('@portal/server/approvals', () => ({
 	consumeApproval: (...args: unknown[]) => mockConsumeApproval(...args),
 	recordApproval: (...args: unknown[]) => mockRecordApproval(...args),
 	pendingApprovals: realPendingApprovals
@@ -58,13 +58,13 @@ vi.mock('@portal/shared/server/approvals', () => ({
 const mockLogToolExecution = vi.fn();
 const mockLogToolApproval = vi.fn();
 
-vi.mock('@portal/shared/server/audit', () => ({
+vi.mock('@portal/server/audit', () => ({
 	logToolExecution: (...args: unknown[]) => mockLogToolExecution(...args),
 	logToolApproval: (...args: unknown[]) => mockLogToolApproval(...args)
 }));
 
 const mockCaptureError = vi.fn();
-vi.mock('@portal/shared/server/sentry', () => ({
+vi.mock('@portal/server/sentry', () => ({
 	captureError: (...args: unknown[]) => mockCaptureError(...args),
 	wrapWithSpan: vi.fn((_n: string, _o: string, fn: () => unknown) => fn()),
 	isSentryEnabled: vi.fn(() => false)
@@ -73,12 +73,12 @@ vi.mock('@portal/shared/server/sentry', () => ({
 const mockToolExecutionsInc = vi.fn();
 const mockToolDurationStartTimer = vi.fn().mockReturnValue(vi.fn());
 
-vi.mock('@portal/shared/server/metrics', () => ({
+vi.mock('@portal/server/metrics', () => ({
 	toolExecutions: { inc: (...args: unknown[]) => mockToolExecutionsInc(...args) },
 	toolDuration: { startTimer: (...args: unknown[]) => mockToolDurationStartTimer(...args) }
 }));
 
-vi.mock('@portal/shared/server/logger', () => ({
+vi.mock('@portal/server/logger', () => ({
 	createLogger: () => ({
 		info: vi.fn(),
 		warn: vi.fn(),
@@ -90,18 +90,18 @@ vi.mock('@portal/shared/server/logger', () => ({
 }));
 
 const mockValidateApiKey = vi.fn();
-vi.mock('@portal/shared/server/auth/api-keys', () => ({
+vi.mock('@portal/server/auth/api-keys', () => ({
 	validateApiKey: (...args: unknown[]) => mockValidateApiKey(...args)
 }));
 
-vi.mock('@portal/shared/server/auth/rbac', async () => {
-	const actual = await vi.importActual<typeof import('@portal/shared/server/auth/rbac')>(
-		'@portal/shared/server/auth/rbac'
+vi.mock('@portal/server/auth/rbac', async () => {
+	const actual = await vi.importActual<typeof import('@portal/server/auth/rbac')>(
+		'@portal/server/auth/rbac'
 	);
 	return actual;
 });
 
-vi.mock('@portal/shared/server/auth/config', () => ({
+vi.mock('@portal/server/auth/config', () => ({
 	auth: {
 		api: {
 			getSession: vi.fn().mockResolvedValue(null)

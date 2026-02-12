@@ -15,7 +15,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // Mock heavy dependencies so tests run without Oracle/Sentry
 // ---------------------------------------------------------------------------
 
-vi.mock('@portal/shared/server/oracle/connection', () => ({
+vi.mock('@portal/server/oracle/connection', () => ({
 	initPool: vi.fn().mockResolvedValue(undefined),
 	closePool: vi.fn().mockResolvedValue(undefined),
 	withConnection: vi.fn(async (fn: (conn: unknown) => unknown) =>
@@ -31,11 +31,11 @@ vi.mock('@portal/shared/server/oracle/connection', () => ({
 	getPool: vi.fn()
 }));
 
-vi.mock('@portal/shared/server/oracle/migrations', () => ({
+vi.mock('@portal/server/oracle/migrations', () => ({
 	runMigrations: vi.fn().mockResolvedValue(undefined)
 }));
 
-vi.mock('@portal/shared/server/sentry', () => ({
+vi.mock('@portal/server/sentry', () => ({
 	initSentry: vi.fn(),
 	closeSentry: vi.fn().mockResolvedValue(undefined),
 	wrapWithSpan: vi.fn((_name: string, _op: string, fn: () => unknown) => fn()),
@@ -43,7 +43,7 @@ vi.mock('@portal/shared/server/sentry', () => ({
 	isSentryEnabled: vi.fn(() => false)
 }));
 
-vi.mock('@portal/shared/server/logger', () => ({
+vi.mock('@portal/server/logger', () => ({
 	createLogger: vi.fn(() => ({
 		info: vi.fn(),
 		warn: vi.fn(),
@@ -69,7 +69,7 @@ describe('server lifecycle', () => {
 	// Note: module import test removed — app-factory.test.ts covers createApp() comprehensively
 
 	it('should handle Oracle pool initialization failure gracefully', async () => {
-		const { initPool } = await import('@portal/shared/server/oracle/connection');
+		const { initPool } = await import('@portal/server/oracle/connection');
 		(initPool as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('Oracle not available'));
 
 		// The server.ts main() should catch this and continue
@@ -83,8 +83,8 @@ describe('server lifecycle', () => {
 	});
 
 	it('should call runMigrations after successful pool init', async () => {
-		const { initPool } = await import('@portal/shared/server/oracle/connection');
-		const { runMigrations } = await import('@portal/shared/server/oracle/migrations');
+		const { initPool } = await import('@portal/server/oracle/connection');
+		const { runMigrations } = await import('@portal/server/oracle/migrations');
 
 		await initPool();
 		await runMigrations();
@@ -94,7 +94,7 @@ describe('server lifecycle', () => {
 	});
 
 	it('should init Sentry only when SENTRY_DSN is set', async () => {
-		const { initSentry } = await import('@portal/shared/server/sentry');
+		const { initSentry } = await import('@portal/server/sentry');
 
 		// Without DSN — should not init
 		delete process.env.SENTRY_DSN;
@@ -157,14 +157,14 @@ describe('server lifecycle', () => {
 
 describe('graceful shutdown', () => {
 	it('should close Oracle pool during shutdown', async () => {
-		const { closePool } = await import('@portal/shared/server/oracle/connection');
+		const { closePool } = await import('@portal/server/oracle/connection');
 
 		await closePool();
 		expect(closePool).toHaveBeenCalled();
 	});
 
 	it('should close Sentry during shutdown', async () => {
-		const { closeSentry } = await import('@portal/shared/server/sentry');
+		const { closeSentry } = await import('@portal/server/sentry');
 
 		await closeSentry();
 		expect(closeSentry).toHaveBeenCalled();

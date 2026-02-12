@@ -17,12 +17,12 @@ vi.mock('@portal/shared/tools/sdk-auth', () => ({
 	closeAllSDKClients: vi.fn()
 }));
 
-vi.mock('@portal/shared/server/sentry', () => ({
+vi.mock('@portal/server/sentry', () => ({
 	wrapWithSpan: vi.fn((_name: string, _op: string, fn: () => unknown) => fn()),
 	captureError: vi.fn()
 }));
 
-vi.mock('@portal/shared/server/logger', () => ({
+vi.mock('@portal/server/logger', () => ({
 	createLogger: () => ({
 		info: vi.fn(),
 		warn: vi.fn(),

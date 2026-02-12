@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── Mock Oracle connection module to provide DB_TYPE_VECTOR ─────────────
 // Factory is hoisted above const declarations (TDZ), so use literal value
-vi.mock('@portal/shared/server/oracle/connection', () => ({
+vi.mock('@portal/server/oracle/connection', () => ({
 	DB_TYPE_VECTOR: 2113
 }));
 

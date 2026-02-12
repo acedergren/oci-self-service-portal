@@ -13,7 +13,7 @@ import {
 	stripIdpSecrets,
 	validateSetupToken
 } from '@portal/server/admin';
-import { isValidExternalUrl } from '@portal/shared/server/url-validation';
+import { isValidExternalUrl } from '@portal/server/url-validation';
 
 const TestIdpInputSchema = z.object({
 	discoveryUrl: z.string().url().optional(),

@@ -23,11 +23,11 @@ const mockExecute = vi.fn();
 const mockCommit = vi.fn();
 const mockGetConnection = vi.fn();
 
-vi.mock('@portal/shared/server/oracle/connection', () => ({
+vi.mock('@portal/server/oracle/connection', () => ({
 	withConnection: (...args: unknown[]) => mockGetConnection(...args)
 }));
 
-vi.mock('@portal/shared/server/logger', () => ({
+vi.mock('@portal/server/logger', () => ({
 	createLogger: () => ({
 		info: vi.fn(),
 		warn: vi.fn(),
@@ -76,7 +76,7 @@ describe('portal_vpd_policy function', () => {
 		});
 
 		// Simulate repository code that sets org context before query
-		const { withConnection } = await import('@portal/shared/server/oracle/connection.js');
+		const { withConnection } = await import('@portal/server/oracle/connection.js');
 
 		await withConnection(async (conn) => {
 			// Set org context
@@ -113,7 +113,7 @@ describe('portal_vpd_policy function', () => {
 				]
 			});
 
-		const { withConnection } = await import('@portal/shared/server/oracle/connection.js');
+		const { withConnection } = await import('@portal/server/oracle/connection.js');
 
 		await withConnection(async (conn) => {
 			// Set admin bypass
@@ -141,7 +141,7 @@ describe('portal_vpd_policy function', () => {
 			rows: [] // No rows returned when 1=0 predicate is applied
 		});
 
-		const { withConnection } = await import('@portal/shared/server/oracle/connection.js');
+		const { withConnection } = await import('@portal/server/oracle/connection.js');
 
 		await withConnection(async (conn) => {
 			// Query WITHOUT setting context first
@@ -176,7 +176,7 @@ describe('VPD-aware repository helper', () => {
 			})
 			.mockResolvedValueOnce(undefined); // clear_context
 
-		const { withConnection } = await import('@portal/shared/server/oracle/connection.js');
+		const { withConnection } = await import('@portal/server/oracle/connection.js');
 
 		await withConnection(async (conn) => {
 			// Simulate VPD-aware repository pattern
@@ -206,7 +206,7 @@ describe('VPD-aware repository helper', () => {
 			.mockRejectedValueOnce(new Error('Query failed')) // SELECT fails
 			.mockResolvedValueOnce(undefined); // clear_context still called
 
-		const { withConnection } = await import('@portal/shared/server/oracle/connection.js');
+		const { withConnection } = await import('@portal/server/oracle/connection.js');
 
 		await expect(
 			withConnection(async (conn) => {
@@ -232,7 +232,7 @@ describe('VPD-aware repository helper', () => {
 	it('should handle set_org_id failure gracefully', async () => {
 		mockExecute.mockRejectedValueOnce(new Error('Context package not initialized'));
 
-		const { withConnection } = await import('@portal/shared/server/oracle/connection.js');
+		const { withConnection } = await import('@portal/server/oracle/connection.js');
 
 		await expect(
 			withConnection(async (conn) => {
@@ -261,7 +261,7 @@ describe('Multi-tenant data isolation', () => {
 			})
 			.mockResolvedValueOnce(undefined); // clear_context
 
-		const { withConnection } = await import('@portal/shared/server/oracle/connection.js');
+		const { withConnection } = await import('@portal/server/oracle/connection.js');
 
 		const resultA = await withConnection(async (conn) => {
 			await conn.execute(`BEGIN portal_ctx_pkg.set_org_id(:orgId); END;`, {
@@ -327,7 +327,7 @@ describe('Multi-tenant data isolation', () => {
 			})
 			.mockResolvedValueOnce(undefined); // clear_context
 
-		const { withConnection } = await import('@portal/shared/server/oracle/connection.js');
+		const { withConnection } = await import('@portal/server/oracle/connection.js');
 
 		const result = await withConnection(async (conn) => {
 			await conn.execute('BEGIN portal_ctx_pkg.set_admin_bypass; END;', []);
@@ -359,7 +359,7 @@ describe('Multi-tenant data isolation', () => {
 				new Error('ORA-28115: policy with check option violation') // VPD blocks INSERT
 			);
 
-		const { withConnection } = await import('@portal/shared/server/oracle/connection.js');
+		const { withConnection } = await import('@portal/server/oracle/connection.js');
 
 		await expect(
 			withConnection(async (conn) => {

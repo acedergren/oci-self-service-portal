@@ -3,8 +3,8 @@ import { z } from 'zod';
 import { randomUUID } from 'node:crypto';
 import { isWebhookEncryptionEnabled } from '@portal/server/crypto';
 import { webhookRepository } from '@portal/server/oracle/repositories/webhook-repository';
-import { CreateWebhookInputSchema, WebhookEventTypeSchema } from '@portal/shared/server/api/types';
-import { isValidWebhookUrl } from '@portal/shared/server/webhooks';
+import { CreateWebhookInputSchema, WebhookEventTypeSchema } from '@portal/types/server/api/types';
+import { isValidWebhookUrl } from '@portal/server/webhooks';
 import { createLogger } from '@portal/server/logger';
 import { requireAuth, resolveOrgId } from '../plugins/rbac.js';
 

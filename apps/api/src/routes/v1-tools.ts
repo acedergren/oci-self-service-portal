@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { logToolExecution } from '@portal/shared/server/audit';
+import { logToolExecution } from '@portal/server/audit';
 import {
 	getAllToolDefinitions,
 	getToolsByCategory,
@@ -9,7 +9,7 @@ import {
 	getToolWarning,
 	executeTool
 } from '@portal/shared/tools/index';
-import { hasPermission, type Permission } from '@portal/shared/server/auth/rbac';
+import { hasPermission, type Permission } from '@portal/server/auth/rbac';
 import { createLogger } from '@portal/server/logger';
 import { toPortalError } from '@portal/server/errors';
 import { captureError } from '@portal/server/sentry';

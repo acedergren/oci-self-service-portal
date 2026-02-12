@@ -37,9 +37,9 @@ vi.mock('../../mastra/agents/cloud-advisor.js', () => ({
 	DEFAULT_MODEL: 'google.gemini-2.5-flash'
 }));
 
-vi.mock('@portal/shared/server/errors.js', async () => {
-	const actual = await vi.importActual<typeof import('@portal/shared/server/errors.js')>(
-		'@portal/shared/server/errors.js'
+vi.mock('@portal/server/errors.js', async () => {
+	const actual = await vi.importActual<typeof import('@portal/server/errors.js')>(
+		'@portal/server/errors.js'
 	);
 	return actual;
 });

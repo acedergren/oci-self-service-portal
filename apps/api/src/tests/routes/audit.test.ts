@@ -3,7 +3,7 @@ import { buildTestApp, simulateSession } from './test-helpers.js';
 import { auditRoutes } from '../../routes/audit.js';
 
 const mockVerify = vi.fn();
-vi.mock('@portal/shared/server/oracle/repositories/blockchain-audit-repository', () => ({
+vi.mock('@portal/server/oracle/repositories/blockchain-audit-repository', () => ({
 	blockchainAuditRepository: {
 		get verify() {
 			return mockVerify;
@@ -11,7 +11,7 @@ vi.mock('@portal/shared/server/oracle/repositories/blockchain-audit-repository',
 	}
 }));
 
-vi.mock('@portal/shared/server/logger', () => ({
+vi.mock('@portal/server/logger', () => ({
 	createLogger: () => ({
 		info: vi.fn(),
 		warn: vi.fn(),

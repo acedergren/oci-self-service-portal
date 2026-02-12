@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { auth } from '@portal/server/auth/config';
-import { createLogger } from '@portal/shared/server/logger';
+import { createLogger } from '@portal/server/logger';
 
 const log = createLogger('auth-routes');
 

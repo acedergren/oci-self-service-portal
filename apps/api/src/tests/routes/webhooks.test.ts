@@ -25,7 +25,7 @@ const mockCreate = vi.fn();
 const mockUpdate = vi.fn();
 const mockDelete = vi.fn();
 
-vi.mock('@portal/shared/server/oracle/repositories/webhook-repository', () => ({
+vi.mock('@portal/server/oracle/repositories/webhook-repository', () => ({
 	webhookRepository: {
 		get list() {
 			return mockList;
@@ -47,20 +47,20 @@ vi.mock('@portal/shared/server/oracle/repositories/webhook-repository', () => ({
 
 // Mock SSRF validation
 const mockIsValidWebhookUrl = vi.fn();
-vi.mock('@portal/shared/server/webhooks', () => ({
+vi.mock('@portal/server/webhooks', () => ({
 	get isValidWebhookUrl() {
 		return mockIsValidWebhookUrl;
 	}
 }));
 
 const mockIsWebhookEncryptionEnabled = vi.fn();
-vi.mock('@portal/shared/server/crypto', () => ({
+vi.mock('@portal/server/crypto', () => ({
 	get isWebhookEncryptionEnabled() {
 		return mockIsWebhookEncryptionEnabled;
 	}
 }));
 
-vi.mock('@portal/shared/server/logger', () => ({
+vi.mock('@portal/server/logger', () => ({
 	createLogger: () => ({
 		info: vi.fn(),
 		warn: vi.fn(),

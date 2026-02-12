@@ -8,7 +8,7 @@ const { mockAuthHandler } = vi.hoisted(() => {
 	};
 });
 
-vi.mock('@portal/shared/server/auth/config', () => ({
+vi.mock('@portal/server/auth/config', () => ({
 	auth: {
 		handler: (...args: unknown[]) => mockAuthHandler(...args)
 	}

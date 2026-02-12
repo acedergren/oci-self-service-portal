@@ -22,7 +22,7 @@ import Fastify, { type FastifyInstance } from 'fastify';
 
 const mockGetSession = vi.fn();
 
-vi.mock('@portal/shared/server/auth/config', () => ({
+vi.mock('@portal/server/auth/config', () => ({
 	auth: {
 		api: {
 			getSession: (...args: unknown[]) => mockGetSession(...args)
@@ -30,14 +30,14 @@ vi.mock('@portal/shared/server/auth/config', () => ({
 	}
 }));
 
-vi.mock('@portal/shared/server/auth/rbac', async () => {
-	const actual = await vi.importActual<typeof import('@portal/shared/server/auth/rbac')>(
-		'@portal/shared/server/auth/rbac'
+vi.mock('@portal/server/auth/rbac', async () => {
+	const actual = await vi.importActual<typeof import('@portal/server/auth/rbac')>(
+		'@portal/server/auth/rbac'
 	);
 	return actual;
 });
 
-vi.mock('@portal/shared/server/logger', () => ({
+vi.mock('@portal/server/logger', () => ({
 	createLogger: () => ({
 		info: vi.fn(),
 		warn: vi.fn(),

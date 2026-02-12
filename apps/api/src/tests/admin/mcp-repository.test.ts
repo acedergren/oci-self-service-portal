@@ -25,16 +25,16 @@ const mockGetConnection = vi.fn();
 const mockEncrypt = vi.fn();
 const mockDecrypt = vi.fn();
 
-vi.mock('@portal/shared/server/oracle/connection', () => ({
+vi.mock('@portal/server/oracle/connection', () => ({
 	withConnection: (...args: any[]) => mockGetConnection(...args)
 }));
 
-vi.mock('@portal/shared/server/auth/crypto', () => ({
+vi.mock('@portal/server/auth/crypto', () => ({
 	encryptSecret: (...args: any[]) => mockEncrypt(...args),
 	decryptSecret: (...args: any[]) => mockDecrypt(...args)
 }));
 
-vi.mock('@portal/shared/server/logger', () => ({
+vi.mock('@portal/server/logger', () => ({
 	createLogger: vi.fn(() => ({
 		info: vi.fn(),
 		warn: vi.fn(),

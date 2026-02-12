@@ -10,7 +10,7 @@ vi.mock('../../mastra/models/index.js', () => ({
 }));
 
 const mockListActive = vi.fn();
-vi.mock('@portal/shared/server/admin', () => ({
+vi.mock('@portal/server/admin', () => ({
 	aiProviderRepository: {
 		get listActive() {
 			return mockListActive;
@@ -18,7 +18,7 @@ vi.mock('@portal/shared/server/admin', () => ({
 	}
 }));
 
-vi.mock('@portal/shared/server/logger', () => ({
+vi.mock('@portal/server/logger', () => ({
 	createLogger: () => ({
 		info: vi.fn(),
 		warn: vi.fn(),

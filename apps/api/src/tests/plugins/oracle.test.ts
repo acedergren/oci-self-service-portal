@@ -45,7 +45,7 @@ const mocks = {
 	migratePlaintextSecrets: vi.fn().mockResolvedValue({ migrated: 0, remaining: 0 })
 };
 
-vi.mock('@portal/shared/server/oracle/connection', () => ({
+vi.mock('@portal/server/oracle/connection', () => ({
 	initPool: (...args: unknown[]) => mocks.initPool(...args),
 	closePool: (...args: unknown[]) => mocks.closePool(...args),
 	withConnection: (...args: unknown[]) => mocks.withConnection(...args),
@@ -53,17 +53,17 @@ vi.mock('@portal/shared/server/oracle/connection', () => ({
 	isPoolInitialized: (...args: unknown[]) => mocks.isPoolInitialized(...args)
 }));
 
-vi.mock('@portal/shared/server/oracle/migrations', () => ({
+vi.mock('@portal/server/oracle/migrations', () => ({
 	runMigrations: (...args: unknown[]) => mocks.runMigrations(...args)
 }));
 
-vi.mock('@portal/shared/server/oracle/repositories/webhook-repository', () => ({
+vi.mock('@portal/server/oracle/repositories/webhook-repository', () => ({
 	webhookRepository: {
 		migratePlaintextSecrets: (...args: unknown[]) => mocks.migratePlaintextSecrets(...args)
 	}
 }));
 
-vi.mock('@portal/shared/server/logger', () => ({
+vi.mock('@portal/server/logger', () => ({
 	createLogger: () => ({
 		info: vi.fn(),
 		warn: vi.fn(),
@@ -74,7 +74,7 @@ vi.mock('@portal/shared/server/logger', () => ({
 	})
 }));
 
-vi.mock('@portal/shared/server/sentry', () => ({
+vi.mock('@portal/server/sentry', () => ({
 	wrapWithSpan: vi.fn((_n: string, _o: string, fn: () => unknown) => fn()),
 	captureError: vi.fn(),
 	isSentryEnabled: vi.fn(() => false),

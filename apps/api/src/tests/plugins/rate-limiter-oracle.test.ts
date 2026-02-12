@@ -4,13 +4,13 @@ import fp from 'fastify-plugin';
 
 // Mock the shared rate limiter BEFORE any imports
 const mockCheckRateLimit = vi.fn();
-vi.mock('@portal/shared/server/rate-limiter', () => ({
+vi.mock('@portal/server/rate-limiter', () => ({
 	checkRateLimit: (...args: unknown[]) => mockCheckRateLimit(...args),
 	RATE_LIMIT_CONFIG: { windowMs: 60000, maxRequests: { chat: 20, api: 60 } }
 }));
 
 // Mock logger
-vi.mock('@portal/shared/server/logger', () => ({
+vi.mock('@portal/server/logger', () => ({
 	createLogger: () => ({
 		info: vi.fn(),
 		warn: vi.fn(),

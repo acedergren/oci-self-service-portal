@@ -40,7 +40,7 @@ const mockListServerTools = vi.fn();
 const mockExecuteToolOnServer = vi.fn();
 const mockGetServerHealth = vi.fn();
 
-vi.mock('@portal/shared/server/admin/mcp-repository', () => ({
+vi.mock('@portal/server/admin/mcp-repository', () => ({
 	mcpServerRepository: {
 		get getCatalog() {
 			return mockGetCatalog;
@@ -101,7 +101,7 @@ vi.mock('../../services/mcp-connection-manager.js', () => ({
 	}
 }));
 
-vi.mock('@portal/shared/server/logger', () => ({
+vi.mock('@portal/server/logger', () => ({
 	createLogger: () => ({
 		info: vi.fn(),
 		warn: vi.fn(),

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { logToolExecution, logToolApproval } from '@portal/shared/server/audit';
+import { logToolExecution, logToolApproval } from '@portal/server/audit';
 import {
 	getToolDefinition,
 	requiresApproval,
