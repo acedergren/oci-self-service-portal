@@ -4,7 +4,7 @@
 	import MarkdownRenderer from '$lib/components/ui/MarkdownRenderer.svelte';
 	import { ThoughtPanel, ToolPanel, AgentWorkflowPanel } from '$lib/components/panels/index.js';
 	import type { AgentPlan } from '$lib/components/panels/index.js';
-	import type { ToolCall } from '@portal/shared/tools/types';
+	import type { ToolCall } from '@portal/types/tools/types';
 	import { inferApprovalLevel, requiresApproval } from '@portal/shared/tools/types';
 	import { useQueryClient } from '@tanstack/svelte-query';
 	import {

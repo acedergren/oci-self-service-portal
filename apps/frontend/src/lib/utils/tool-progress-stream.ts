@@ -12,7 +12,7 @@
  * but doesn't persist in message history.
  */
 import { getToolProgressMessage } from '@portal/shared/tools/types';
-import type { ToolProgressEvent } from '@portal/shared/tools/types';
+import type { ToolProgressEvent } from '@portal/types/tools/types';
 
 /** Chunk types we observe from the UI message stream */
 interface ToolInputAvailableChunk {

@@ -11,7 +11,7 @@ import {
 	getToolsByCategory
 } from '@portal/shared/tools/registry';
 import { requiresApproval } from '@portal/shared/tools/types';
-import type { ToolCategory, ToolDefinition } from '@portal/shared/tools/types';
+import type { ToolCategory, ToolDefinition } from '@portal/types/tools/types';
 
 // ============================================================================
 // OpenAPI Spec Generation

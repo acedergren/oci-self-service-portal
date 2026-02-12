@@ -1,7 +1,7 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getAllToolDefinitions, getToolsByCategory } from '@portal/shared/tools/registry';
-import type { ToolCategory } from '@portal/shared/tools/types';
+import type { ToolCategory } from '@portal/types/tools/types';
 import { requireApiAuth } from '@portal/shared/server/api/require-auth';
 import { ValidationError, errorResponse } from '@portal/server/errors';
 import { createLogger } from '@portal/server/logger';

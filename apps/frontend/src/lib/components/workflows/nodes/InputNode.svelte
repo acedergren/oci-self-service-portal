@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Handle, Position } from '@xyflow/svelte';
 	import type { NodeProps, Node } from '@xyflow/svelte';
-	import type { InputNodeData } from '@portal/shared/workflows/types';
+	import type { InputNodeData } from '@portal/types/workflows/types';
 
 	type InputNode = Node<InputNodeData, 'input'>;
 

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Handle, Position } from '@xyflow/svelte';
 	import type { NodeProps, Node } from '@xyflow/svelte';
-	import type { ApprovalNodeData } from '@portal/shared/workflows/types';
+	import type { ApprovalNodeData } from '@portal/types/workflows/types';
 
 	type ApprovalNode = Node<ApprovalNodeData, 'approval'>;
 

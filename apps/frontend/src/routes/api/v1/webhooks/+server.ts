@@ -11,7 +11,7 @@ import { requireApiAuth, resolveOrgId } from '@portal/shared/server/api/require-
 import { webhookRepository } from '@portal/server/oracle/repositories/webhook-repository';
 import { isValidWebhookUrl } from '@portal/shared/server/webhooks';
 import { isWebhookEncryptionEnabled } from '@portal/server/crypto';
-import { CreateWebhookInputSchema } from '@portal/shared/server/api/types';
+import { CreateWebhookInputSchema } from '@portal/types/server/api/types';
 import { createLogger } from '@portal/server/logger';
 
 const log = createLogger('api:webhooks');

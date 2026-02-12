@@ -8,7 +8,7 @@
  * Mocks: registry, audit, rbac, logger
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { ToolDefinition } from '@portal/shared/tools/types';
+import type { ToolDefinition } from '@portal/types/tools/types';
 
 // ── Mocks ──────────────────────────────────────────────────────────────────
 

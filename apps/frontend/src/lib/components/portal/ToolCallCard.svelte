@@ -2,7 +2,7 @@
 	import { getToolState, formatToolName } from '$lib/utils/message-parts.js';
 	import { getToolProgressMessage } from '@portal/shared/tools/types';
 	import type { ToolCallCardProps } from './types.js';
-	import type { ToolProgressEvent } from '@portal/shared/tools/types';
+	import type { ToolProgressEvent } from '@portal/types/tools/types';
 
 	interface Props extends ToolCallCardProps {
 		progress?: ToolProgressEvent;

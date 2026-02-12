@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Handle, Position } from '@xyflow/svelte';
 	import type { NodeProps, Node } from '@xyflow/svelte';
-	import type { ConditionNodeData } from '@portal/shared/workflows/types';
+	import type { ConditionNodeData } from '@portal/types/workflows/types';
 
 	type ConditionNode = Node<ConditionNodeData, 'condition'>;
 

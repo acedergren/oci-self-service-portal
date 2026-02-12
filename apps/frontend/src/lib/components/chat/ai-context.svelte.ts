@@ -2,7 +2,7 @@ import { Chat } from '@ai-sdk/svelte';
 import { DefaultChatTransport } from 'ai';
 import { z } from 'zod';
 import { setContext, getContext } from 'svelte';
-import type { ToolCall, PendingApproval, ToolProgressEvent } from '@portal/shared/tools/types';
+import type { ToolCall, PendingApproval, ToolProgressEvent } from '@portal/types/tools/types';
 import { extractToolParts, getToolState, formatToolName } from '$lib/utils/message-parts.js';
 
 const AI_CONTEXT_KEY = Symbol('ai-context');

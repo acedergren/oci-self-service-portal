@@ -9,7 +9,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types.js';
 import { requireApiAuth, resolveOrgId } from '@portal/shared/server/api/require-auth';
 import { webhookRepository } from '@portal/server/oracle/repositories/webhook-repository';
-import { WebhookEventTypeSchema } from '@portal/shared/server/api/types';
+import { WebhookEventTypeSchema } from '@portal/types/server/api/types';
 import { isValidWebhookUrl } from '@portal/shared/server/webhooks';
 import { createLogger } from '@portal/server/logger';
 import { z } from 'zod';

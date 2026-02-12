@@ -51,7 +51,7 @@ import {
 	detectCycles,
 	WorkflowExecutor
 } from '@portal/shared/server/workflows/executor';
-import type { WorkflowNode, WorkflowEdge } from '@portal/shared/workflows/types';
+import type { WorkflowNode, WorkflowEdge } from '@portal/types/workflows/types';
 
 beforeEach(() => {
 	vi.clearAllMocks();

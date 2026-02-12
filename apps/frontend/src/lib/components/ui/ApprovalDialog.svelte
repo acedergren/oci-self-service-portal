@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { PendingApproval } from '@portal/shared/tools/types';
+	import type { PendingApproval } from '@portal/types/tools/types';
 
 	interface Props {
 		approval: PendingApproval;

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Collapsible, Spinner, Badge } from '$lib/components/ui/index.js';
-	import type { ToolCall, PendingApproval } from '@portal/shared/tools/types';
+	import type { ToolCall, PendingApproval } from '@portal/types/tools/types';
 
 	interface Props {
 		isOpen?: boolean;
