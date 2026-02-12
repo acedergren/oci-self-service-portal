@@ -236,7 +236,7 @@
 
 **Key dependencies**: `fastify@5`, `@fastify/swagger`, `@fastify/cors`, `@fastify/cookie`, `@fastify/rate-limit`, `fastify-type-provider-zod`
 
-**Verified**: 1213+ tests passing across 100 test files. All routes migrated (9.1-9.14). Mastra framework integration complete (9.11-9.14). Feature flag proxy operational (9.15-9.20). Build succeeds. Cutover guide complete.
+**Verified**: 828 tests passing (113 test files, 3 failing due to decorator collision). All routes migrated (9.1-9.14). Mastra framework integration complete (9.11-9.14). Feature flag proxy operational (9.15-9.20). Build succeeds. Cutover guide complete.
 
 ---
 
@@ -397,9 +397,21 @@
 
 ### Phase E: Workflow Designer Completion + AI Hardening (2-3 weeks, 17 tasks)
 
-- [ ] 10E.1 Implement ai-step, loop, parallel workflow nodes
-- [ ] 10E.2 Add retry policies, compensation/saga, streaming, lifecycle callbacks
-- [ ] 10E.3 Add Agent Guardrails (PromptInjectionDetector, PIIDetector, TokenLimiter)
+**Wave 4** (6d2c3704):
+
+- [x] 10E.1 Implement ai-step, loop, parallel workflow nodes
+- [x] 10E.3 Add Agent Guardrails (PromptInjectionDetector, PIIDetector, TokenLimiter)
+
+**Wave 5** (dc20133e + b13283a6 + 516d8da0):
+
+- [x] 10E.2 Add retry policies, compensation/saga, streaming, lifecycle callbacks
+
+**Wave 6** (e5c3bfb8):
+
+- [x] 10E.7 Admin Developer Tools (4 pages: Agent Playground, Workflow Monitor, Tool Tester, Observability Dashboard)
+
+**Remaining**:
+
 - [ ] 10E.4 Configure @mastra/evals scorers on CloudAdvisor (10% sampling)
 - [ ] 10E.5 Update workflow editor for new node types
 - [ ] 10E.6 A2A Agent Card DEFERRED to post-Phase E (AD-43)
@@ -435,4 +447,4 @@
 
 ---
 
-Last updated: February 10, 2026
+Last updated: February 12, 2026

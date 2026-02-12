@@ -564,5 +564,5 @@ if (!valid) {
 
 ---
 
-**Last Updated**: February 9, 2026
-**Version**: 1.0
+**Last Updated**: February 12, 2026
+**Version**: 1.1
