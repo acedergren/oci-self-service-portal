@@ -63,16 +63,7 @@ vi.mock('@portal/server/sentry', () => ({
 	closeSentry: vi.fn()
 }));
 
-vi.mock('@portal/server/logger', () => ({
-	createLogger: () => ({
-		info: vi.fn(),
-		warn: vi.fn(),
-		error: vi.fn(),
-		fatal: vi.fn(),
-		debug: vi.fn(),
-		child: vi.fn().mockReturnThis()
-	})
-}));
+// Logger is mocked globally via src/tests/setup.ts
 
 vi.mock('@portal/server/auth/config', () => ({
 	auth: {
@@ -284,9 +275,10 @@ describe('createApp – CORS', () => {
 			}
 		});
 
-		// fastify/cors with origin:true reflects the request origin (safe for credentials:true)
+		// In dev, our app allows only known local frontend origins by default.
+		// So a random origin like example.com should NOT be reflected.
 		expect(response.statusCode).toBe(204);
-		expect(response.headers['access-control-allow-origin']).toBe('http://example.com');
+		expect(response.headers['access-control-allow-origin']).toBeUndefined();
 	});
 
 	it('should respect custom corsOrigin option', async () => {
