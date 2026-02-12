@@ -57,5 +57,7 @@ wallets/
 openapi.json
 
 # Misc
-.opencode/
+# NOTE: keep `.opencode/` checked in for OpenCode project commands/config.
+# Ignore volatile OpenCode artifacts if needed via more specific patterns.
 *.tgz
+.firecrawl/
