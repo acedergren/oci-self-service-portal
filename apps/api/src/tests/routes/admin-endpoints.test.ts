@@ -13,6 +13,12 @@ import { buildTestApp, simulateSession } from './test-helpers.js';
 const mockListByOrg = vi.fn();
 const mockListByWorkflowForOrg = vi.fn();
 const mockGetByIdForOrg = vi.fn();
+const mockGetRunByIdForOrg = vi.fn();
+const mockGetRunByIdForUser = vi.fn();
+const mockUpdateRunStatus = vi.fn();
+const mockListStepsByRun = vi.fn();
+
+const mockWorkflowExecutorResume = vi.fn();
 
 vi.mock('../../services/workflow-repository.js', () => ({
 	createWorkflowRepository: () => ({
@@ -20,10 +26,28 @@ vi.mock('../../services/workflow-repository.js', () => ({
 	}),
 	createWorkflowRunRepository: () => ({
 		listByOrg: (...args: unknown[]) => mockListByOrg(...args),
-		listByWorkflowForOrg: (...args: unknown[]) => mockListByWorkflowForOrg(...args)
+		listByWorkflowForOrg: (...args: unknown[]) => mockListByWorkflowForOrg(...args),
+		getByIdForOrg: (...args: unknown[]) => mockGetRunByIdForOrg(...args),
+		getByIdForUser: (...args: unknown[]) => mockGetRunByIdForUser(...args),
+		updateStatus: (...args: unknown[]) => mockUpdateRunStatus(...args)
 	}),
-	createWorkflowRunStepRepository: () => ({})
+	createWorkflowRunStepRepository: () => ({
+		listByRun: (...args: unknown[]) => mockListStepsByRun(...args)
+	})
 }));
+
+vi.mock('../../mastra/workflows/executor.js', () => {
+	class MockWorkflowExecutor {
+		execute: ReturnType<typeof vi.fn>;
+		constructor() {
+			this.execute = vi.fn();
+		}
+		resume(...args: unknown[]) {
+			return mockWorkflowExecutorResume(...args);
+		}
+	}
+	return { WorkflowExecutor: MockWorkflowExecutor };
+});
 
 vi.mock('@portal/shared/server/logger', () => ({
 	createLogger: () => ({
@@ -236,6 +260,219 @@ describe('GET /api/v1/workflows/:id/runs', () => {
 			offset: 0,
 			status: 'suspended'
 		});
+	});
+});
+
+// ── GET /api/v1/workflows/:id/runs/:runId ─────────────────────────────
+
+describe('GET /api/v1/workflows/:id/runs/:runId', () => {
+	const workflowId = '12345678-1234-4123-8123-123456789012';
+	const runId = '87654321-1234-4123-8123-123456789012';
+
+	it('returns run detail with steps when run belongs to workflow', async () => {
+		mockGetRunByIdForUser.mockResolvedValue({
+			id: runId,
+			definitionId: workflowId,
+			status: 'running',
+			input: { foo: 'bar' },
+			output: null,
+			error: null,
+			startedAt: new Date('2026-02-10T10:00:00Z'),
+			completedAt: null
+		});
+		mockListStepsByRun.mockResolvedValue([
+			{
+				nodeId: 'node-1',
+				nodeType: 'tool',
+				status: 'completed',
+				output: { result: 'ok' },
+				error: null,
+				startedAt: new Date('2026-02-10T10:00:00Z'),
+				completedAt: new Date('2026-02-10T10:01:00Z'),
+				durationMs: 60_000
+			}
+		]);
+
+		const res = await app.inject({
+			method: 'GET',
+			url: `/api/v1/workflows/${workflowId}/runs/${runId}`
+		});
+
+		const body = res.json();
+		expect(res.statusCode).toBe(200);
+		expect(body.id).toBe(runId);
+		expect(body.workflowId).toBe(workflowId);
+		expect(body.steps).toHaveLength(1);
+		expect(mockListStepsByRun).toHaveBeenCalledWith(runId);
+	});
+
+	it('returns 404 when run not found', async () => {
+		mockGetRunByIdForUser.mockResolvedValue(null);
+
+		const res = await app.inject({
+			method: 'GET',
+			url: `/api/v1/workflows/${workflowId}/runs/${runId}`
+		});
+
+		expect(res.statusCode).toBe(404);
+		expect(mockListStepsByRun).not.toHaveBeenCalled();
+	});
+
+	it('returns 404 when run belongs to another workflow', async () => {
+		mockGetRunByIdForUser.mockResolvedValue({
+			id: runId,
+			definitionId: 'different-workflow',
+			status: 'completed'
+		});
+
+		const res = await app.inject({
+			method: 'GET',
+			url: `/api/v1/workflows/${workflowId}/runs/${runId}`
+		});
+
+		expect(res.statusCode).toBe(404);
+	});
+});
+
+// ── POST /api/v1/workflows/:id/runs/:runId/cancel ─────────────────────
+
+describe('POST /api/v1/workflows/:id/runs/:runId/cancel', () => {
+	const workflowId = '12345678-1234-4123-8123-123456789012';
+	const runId = '87654321-1234-4123-8123-123456789012';
+
+	it('cancels a running workflow run', async () => {
+		mockGetRunByIdForOrg.mockResolvedValue({
+			id: runId,
+			definitionId: workflowId,
+			status: 'running'
+		});
+		mockUpdateRunStatus.mockResolvedValue({
+			id: runId,
+			definitionId: workflowId,
+			status: 'cancelled',
+			error: { message: 'cancelled' }
+		});
+
+		const res = await app.inject({
+			method: 'POST',
+			url: `/api/v1/workflows/${workflowId}/runs/${runId}/cancel`
+		});
+
+		expect(res.statusCode).toBe(200);
+		expect(mockUpdateRunStatus).toHaveBeenCalledWith(runId, {
+			status: 'cancelled',
+			error: expect.objectContaining({ code: 'RUN_CANCELLED' })
+		});
+		const body = res.json();
+		expect(body.run.status).toBe('cancelled');
+	});
+
+	it('rejects cancellation when run is already completed', async () => {
+		mockGetRunByIdForOrg.mockResolvedValue({
+			id: runId,
+			definitionId: workflowId,
+			status: 'completed'
+		});
+
+		const res = await app.inject({
+			method: 'POST',
+			url: `/api/v1/workflows/${workflowId}/runs/${runId}/cancel`
+		});
+
+		expect(res.statusCode).toBe(400);
+		expect(mockUpdateRunStatus).not.toHaveBeenCalled();
+	});
+
+	it('returns 404 when run not found', async () => {
+		mockGetRunByIdForOrg.mockResolvedValue(null);
+
+		const res = await app.inject({
+			method: 'POST',
+			url: `/api/v1/workflows/${workflowId}/runs/${runId}/cancel`
+		});
+
+		expect(res.statusCode).toBe(404);
+	});
+});
+
+// ── POST /api/v1/workflows/:id/runs/:runId/resume ─────────────────────
+
+describe('POST /api/v1/workflows/:id/runs/:runId/resume', () => {
+	const workflowId = '12345678-1234-4123-8123-123456789012';
+	const runId = '87654321-1234-4123-8123-123456789012';
+
+	it('resumes a suspended workflow run', async () => {
+		mockGetRunByIdForOrg.mockResolvedValue({
+			id: runId,
+			definitionId: workflowId,
+			status: 'suspended',
+			engineState: { step: 'tool' },
+			input: { foo: 'bar' }
+		});
+		mockGetByIdForOrg.mockResolvedValue({
+			id: workflowId,
+			name: 'Workflow'
+		});
+		mockWorkflowExecutorResume.mockResolvedValue({
+			status: 'completed',
+			output: { ok: true },
+			error: null,
+			engineState: null
+		});
+		mockUpdateRunStatus.mockResolvedValueOnce({
+			id: runId,
+			status: 'running'
+		});
+		mockUpdateRunStatus.mockResolvedValueOnce({
+			id: runId,
+			workflowId,
+			status: 'completed',
+			output: { ok: true }
+		});
+
+		const res = await app.inject({
+			method: 'POST',
+			url: `/api/v1/workflows/${workflowId}/runs/${runId}/resume`
+		});
+
+		const body = res.json();
+		expect(res.statusCode).toBe(200);
+		expect(mockUpdateRunStatus.mock.calls[0][1]).toEqual({ status: 'running' });
+		expect(mockWorkflowExecutorResume).toHaveBeenCalled();
+		expect(body.run.status).toBe('completed');
+	});
+
+	it('returns 400 when run is not suspended', async () => {
+		mockGetRunByIdForOrg.mockResolvedValue({
+			id: runId,
+			definitionId: workflowId,
+			status: 'running'
+		});
+
+		const res = await app.inject({
+			method: 'POST',
+			url: `/api/v1/workflows/${workflowId}/runs/${runId}/resume`
+		});
+
+		expect(res.statusCode).toBe(400);
+		expect(mockWorkflowExecutorResume).not.toHaveBeenCalled();
+	});
+
+	it('returns 404 when workflow definition missing', async () => {
+		mockGetRunByIdForOrg.mockResolvedValue({
+			id: runId,
+			definitionId: workflowId,
+			status: 'suspended',
+			engineState: {}
+		});
+		mockGetByIdForOrg.mockResolvedValue(null);
+
+		const res = await app.inject({
+			method: 'POST',
+			url: `/api/v1/workflows/${workflowId}/runs/${runId}/resume`
+		});
+
+		expect(res.statusCode).toBe(404);
 	});
 });
 

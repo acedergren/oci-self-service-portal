@@ -592,6 +592,165 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 		}
 	);
 
+	// ── POST /api/v1/workflows/:id/runs/:runId/cancel ─────────────────────
+	// Admin control to cancel pending/running/suspended runs.
+
+	app.post(
+		'/api/v1/workflows/:id/runs/:runId/cancel',
+		{
+			schema: { params: RunIdParamsSchema },
+			preHandler: requireAuth('workflows:execute')
+		},
+		async (request, reply) => {
+			const { runs } = getRepos();
+			const orgId = resolveOrgId(request);
+			if (!orgId) {
+				return reply.code(400).send({ error: 'Organization context required' });
+			}
+
+			const run = await runs.getByIdForOrg(request.params.runId, orgId);
+			if (!run) {
+				throw new NotFoundError('Workflow run not found', {
+					runId: request.params.runId
+				});
+			}
+
+			if (run.definitionId !== request.params.id) {
+				throw new NotFoundError('Workflow run not found for this workflow', {
+					workflowId: request.params.id,
+					runId: request.params.runId
+				});
+			}
+
+			const cancellableStatuses = new Set(['pending', 'running', 'suspended']);
+			if (!cancellableStatuses.has(run.status)) {
+				throw new ValidationError('Run cannot be cancelled in its current status', {
+					runId: request.params.runId,
+					currentStatus: run.status
+				});
+			}
+
+			const cancellationInfo = {
+				message: 'Run cancelled by administrator',
+				code: 'RUN_CANCELLED',
+				cancelledBy: request.user?.id ?? 'system'
+			};
+
+			const updated = await runs.updateStatus(run.id, {
+				status: 'cancelled',
+				error: cancellationInfo
+			});
+
+			return reply.send({
+				run: {
+					id: updated?.id ?? run.id,
+					workflowId: run.definitionId,
+					status: updated?.status ?? 'cancelled',
+					error: updated?.error ?? cancellationInfo
+				}
+			});
+		}
+	);
+
+	// ── POST /api/v1/workflows/:id/runs/:runId/resume ─────────────────────
+	// Admin control to resume suspended runs (without approval token flow).
+
+	app.post(
+		'/api/v1/workflows/:id/runs/:runId/resume',
+		{
+			schema: { params: RunIdParamsSchema },
+			preHandler: requireAuth('workflows:execute')
+		},
+		async (request, reply) => {
+			const { workflows, runs } = getRepos();
+			const orgId = resolveOrgId(request);
+			if (!orgId) {
+				return reply.code(400).send({ error: 'Organization context required' });
+			}
+
+			const run = await runs.getByIdForOrg(request.params.runId, orgId);
+			if (!run) {
+				throw new NotFoundError('Workflow run not found', {
+					runId: request.params.runId
+				});
+			}
+
+			if (run.definitionId !== request.params.id) {
+				throw new NotFoundError('Workflow run not found for this workflow', {
+					workflowId: request.params.id,
+					runId: request.params.runId
+				});
+			}
+
+			if (run.status !== 'suspended') {
+				throw new ValidationError('Only suspended runs can be resumed', {
+					runId: request.params.runId,
+					currentStatus: run.status
+				});
+			}
+
+			if (!run.engineState) {
+				throw new ValidationError('Run has no engine state — cannot resume', {
+					runId: request.params.runId
+				});
+			}
+
+			const definition = await workflows.getByIdForOrg(run.definitionId, orgId);
+			if (!definition) {
+				throw new NotFoundError('Workflow definition not found', {
+					workflowId: run.definitionId
+				});
+			}
+
+			const executor = new WorkflowExecutor();
+			try {
+				await runs.updateStatus(run.id, { status: 'running' });
+
+				const result = await executor.resume(
+					definition,
+					run.engineState as unknown as EngineState,
+					run.input ?? {}
+				);
+
+				const resumed = await runs.updateStatus(run.id, {
+					status:
+						result.status === 'completed'
+							? 'completed'
+							: result.status === 'suspended'
+								? 'suspended'
+								: 'failed',
+					output: result.output,
+					error: result.error ? { message: result.error } : undefined,
+					engineState: result.engineState as Record<string, unknown> | undefined
+				});
+
+				return reply.send({
+					run: {
+						id: run.id,
+						workflowId: definition.id,
+						status: resumed?.status ?? result.status,
+						output: resumed?.output ?? result.output,
+						error: resumed?.error ?? (result.error ? { message: result.error } : undefined)
+					}
+				});
+			} catch (err) {
+				const portalErr = toPortalError(err, 'Workflow resume failed');
+				fastify.log.error({ err: portalErr, runId: run.id }, 'Workflow resume failed');
+
+				try {
+					await runs.updateStatus(run.id, {
+						status: 'failed',
+						error: { message: portalErr.message, code: portalErr.code }
+					});
+				} catch (updateErr) {
+					fastify.log.error({ err: updateErr }, 'Failed to update run status after resume error');
+				}
+
+				throw portalErr;
+			}
+		}
+	);
+
 	// ── GET /api/v1/workflows/runs ──────────────────────────────────────
 	// Admin view: list all runs across all workflows for the org.
 
