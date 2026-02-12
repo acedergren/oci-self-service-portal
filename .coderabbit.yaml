@@ -1,0 +1,265 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+
+# ============================================================================
+# OCI Self-Service Portal - CodeRabbit Configuration
+# Last Updated: 2026-02-12
+# ============================================================================
+
+language: 'en-US'
+early_access: false
+enable_free_tier: true
+
+# ============================================================================
+# Review Settings
+# ============================================================================
+reviews:
+  # Use "assertive" for thorough code quality feedback
+  profile: 'assertive'
+
+  # Don't auto-approve - require manual review
+  request_changes_workflow: false
+
+  # Enable high-level summary in walkthrough
+  high_level_summary: true
+  high_level_summary_in_walkthrough: true
+  high_level_summary_instructions: |
+    Create concise release notes in the following format:
+    1. Brief summary of the main changes (1-2 sentences)
+    2. Bullet-point list of key additions, modifications, and deletions
+    3. Security implications (if any)
+    4. Breaking changes (if any)
+    5. Migration notes (if applicable)
+
+  # Auto-title PRs when "@coderabbitai" is in the title
+  auto_title_placeholder: '@coderabbitai'
+  auto_title_instructions: |
+    Generate a concise PR title following conventional commits format:
+    - type(scope): description
+    - Types: feat, fix, refactor, test, docs, chore, perf, security
+    - Scope: api, frontend, server, types, ui, workflows, agents, auth, database
+    - Keep description under 72 characters
+
+  # Show detailed review status
+  review_status: true
+  review_details: true
+
+  # Commit status integration
+  commit_status: true
+  fail_commit_status: true
+
+  # Walkthrough formatting
+  collapse_walkthrough: false
+  changed_files_summary: true
+  sequence_diagrams: true
+  estimate_code_review_effort: true
+
+  # Issue and PR linking
+  assess_linked_issues: true
+  related_issues: true
+  related_prs: true
+
+  # Label suggestions
+  suggested_labels: true
+  auto_apply_labels: false # Manual approval required
+
+  labeling_instructions:
+    - label: 'security'
+      instructions: 'Apply when changes affect authentication, authorization, encryption, input validation, SSRF prevention, or other security mechanisms'
+
+    - label: 'breaking-change'
+      instructions: 'Apply when changes break backward compatibility in API contracts, database schemas, or configuration'
+
+    - label: 'database'
+      instructions: 'Apply when changes modify Oracle migrations, repositories, or SQL queries'
+
+    - label: 'api'
+      instructions: 'Apply when changes affect Fastify routes, plugins, or API contracts'
+
+    - label: 'frontend'
+      instructions: 'Apply when changes affect SvelteKit pages, components, or UI logic'
+
+    - label: 'workflow-engine'
+      instructions: 'Apply when changes affect workflow executor, node types, or execution logic'
+
+    - label: 'ai-agent'
+      instructions: 'Apply when changes affect CloudAdvisor agent, RAG, or Mastra integration'
+
+    - label: 'test'
+      instructions: 'Apply when PR primarily adds or modifies tests'
+
+    - label: 'performance'
+      instructions: 'Apply when changes optimize database queries, reduce API latency, or improve resource usage'
+
+    - label: 'documentation'
+      instructions: 'Apply when changes update docs, add inline comments, or improve developer experience'
+
+  # Path-based review instructions
+  path_instructions:
+    # API routes - security and error handling
+    - path: 'apps/api/src/routes/**/*.ts'
+      instructions: |
+        - Verify all endpoints use Zod schema validation
+        - Check for proper error handling (PortalError hierarchy)
+        - Ensure rate limiting is applied
+        - Verify RBAC permission checks (requirePermission)
+        - Check for IDOR prevention (org_id/user_id scoping)
+        - Validate input sanitization (SQL injection, XSS prevention)
+        - Ensure proper logging with structured context
+
+    # Fastify plugins - registration order and lifecycle
+    - path: 'apps/api/src/plugins/**/*.ts'
+      instructions: |
+        - Verify plugin uses fastify-plugin wrapper with name and fastify version
+        - Check plugin registration order dependencies
+        - Ensure decorators use Symbol keys for reference types
+        - Validate error handling in plugin lifecycle hooks
+        - Check for proper graceful shutdown cleanup
+
+    # Oracle repositories - SQL safety and TOCTOU
+    - path: 'packages/server/src/oracle/**/*.ts'
+      instructions: |
+        - Verify all SQL uses bind parameters (:paramName), never string interpolation
+        - Check for LIKE injection prevention (ESCAPE clause)
+        - Ensure atomic operations use MERGE INTO (not SELECT then INSERT/UPDATE)
+        - Validate column/table name sanitization
+        - Check for proper org_id/user_id scoping (IDOR prevention)
+        - Verify connection pool usage patterns
+
+    # Frontend components - accessibility and reactivity
+    - path: 'apps/frontend/src/lib/components/**/*.svelte'
+      instructions: |
+        - Check for proper Svelte 5 runes usage ($state, $derived, $effect)
+        - Verify accessibility (ARIA labels, keyboard navigation, focus management)
+        - Ensure semantic HTML (not div soup)
+        - Check for proper error boundaries
+        - Validate responsive design patterns
+        - Ensure TanStack Query integration for server state
+
+    # Auth and RBAC - critical security review
+    - path: 'packages/server/src/auth/**/*.ts'
+      instructions: |
+        - CRITICAL: Verify no default permissions granted on auth failures
+        - Check constant-time comparisons for secrets (crypto.timingSafeEqual)
+        - Ensure session validation never trusts client input
+        - Validate RBAC permission checks are exhaustive
+        - Check for timing oracle vulnerabilities
+        - Verify OIDC flow follows best practices
+
+    # Workflow executor - cycle detection and security
+    - path: 'packages/server/src/workflows/**/*.ts'
+      instructions: |
+        - Verify cycle detection prevents infinite loops
+        - Check for proper expression sandboxing (no eval, Function constructor)
+        - Ensure retry logic has max attempts and exponential backoff
+        - Validate compensation/saga rollback correctness
+        - Check for race conditions in parallel execution
+        - Ensure proper error propagation and step isolation
+
+    # Mastra integration - agent safety and RAG quality
+    - path: 'apps/api/src/mastra/**/*.ts'
+      instructions: |
+        - Check agent guardrails (prompt injection, PII detection, token limits)
+        - Verify vector embeddings use proper normalization
+        - Ensure RAG context retrieval has size limits
+        - Validate tool execution has approval gates for dangerous operations
+        - Check for proper model provider error handling
+        - Ensure streaming responses handle backpressure
+
+    # Migrations - backward compatibility and safety
+    - path: 'packages/server/src/oracle/migrations/*.sql'
+      instructions: |
+        - Verify migration is idempotent (safe to run multiple times)
+        - Check for proper rollback strategy
+        - Ensure no data loss on schema changes
+        - Validate column constraints are production-safe
+        - Check for proper indexing strategy
+        - Ensure blockchain table constraints (NO DROP, NO DELETE) are correct
+
+    # Test files - coverage and patterns
+    - path: '**/*.test.ts'
+      instructions: |
+        - Check for mockReset: true compatibility (use forwarding pattern)
+        - Verify test isolation (no shared state between tests)
+        - Ensure proper async cleanup in afterEach
+        - Validate test names follow AAA pattern (Arrange, Act, Assert)
+        - Check for proper error case coverage
+        - Verify mock configurations match production behavior
+
+  # Tools configuration
+  tools:
+    # Disable shellcheck - we use bash deliberately in scripts
+    shellcheck:
+      enabled: false
+
+    # Enable GitHub Checks integration
+    github-checks:
+      enabled: true
+      timeout_ms: 90000
+
+    # Enable Ruff for Python (if any)
+    ruff:
+      enabled: true
+
+    # Enable Biome for additional JS/TS checks
+    biome:
+      enabled: true
+
+  # Path filters - what to review
+  path_filters:
+    # Include all source files
+    - 'apps/api/src/**/*.ts'
+    - 'apps/frontend/src/**/*.{ts,svelte,js}'
+    - 'packages/*/src/**/*.ts'
+
+    # Include important config files
+    - '*.config.{js,ts,mjs}'
+    - '.coderabbit.yaml'
+    - 'CLAUDE.md'
+    - 'tsconfig*.json'
+    - 'package.json'
+
+    # Exclude generated/build files
+    - '!**/dist/**'
+    - '!**/build/**'
+    - '!**/.svelte-kit/**'
+    - '!**/node_modules/**'
+
+    # Exclude lock files
+    - '!**/pnpm-lock.yaml'
+    - '!**/package-lock.json'
+
+    # Exclude snapshots and fixtures
+    - '!**/__snapshots__/**'
+    - '!**/fixtures/**'
+
+# ============================================================================
+# Chat Settings
+# ============================================================================
+chat:
+  auto_reply: true
+
+# ============================================================================
+# Knowledge Base
+# ============================================================================
+knowledge_base:
+  # Auto-detect CLAUDE.md and other guideline files
+  learnings:
+    scope: 'global'
+
+  # Code guidelines auto-detection
+  code_guidelines:
+    enabled: true
+    # Auto-detects CLAUDE.md, AGENTS.md, CODING_STANDARDS.md
+
+# ============================================================================
+# Code Generation
+# ============================================================================
+code_generation:
+  enabled: true
+  diff_limit: 2000 # Lines
+
+# ============================================================================
+# Issue Enrichment
+# ============================================================================
+issue_enrichment:
+  enabled: true
