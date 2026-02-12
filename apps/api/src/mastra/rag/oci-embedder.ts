@@ -33,7 +33,9 @@ export function createOCIEmbedder(config?: {
 			compartmentId
 		});
 		// Replace nulls with zero vectors (Mastra expects all embeddings)
-		const embeddings = results.map((r) => r ?? new Array(EMBEDDING_DIMENSIONS).fill(0));
+		const embeddings = results.map(
+			(r) => r ?? Array.from({ length: EMBEDDING_DIMENSIONS }, () => 0)
+		);
 		return { embeddings };
 	};
 }
@@ -88,10 +90,10 @@ export async function generateEmbeddings(
 			if (batchResults) {
 				results.push(...batchResults);
 			} else {
-				results.push(...new Array<null>(batch.length).fill(null));
+				results.push(...Array.from<null>({ length: batch.length }, () => null));
 			}
 		} catch {
-			results.push(...new Array<null>(batch.length).fill(null));
+			results.push(...Array.from<null>({ length: batch.length }, () => null));
 		}
 	}
 

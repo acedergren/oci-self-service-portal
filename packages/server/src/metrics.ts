@@ -177,7 +177,11 @@ export class Histogram {
 		const key = labelKey(labels);
 		let obs = this.observations.get(key);
 		if (!obs) {
-			obs = { bucketCounts: new Array(this.buckets.length).fill(0), sum: 0, count: 0 };
+			obs = {
+				bucketCounts: Array.from({ length: this.buckets.length }, () => 0),
+				sum: 0,
+				count: 0
+			};
 			this.observations.set(key, obs);
 		}
 		obs.sum += value;

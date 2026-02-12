@@ -68,11 +68,11 @@ export async function generateEmbeddings(texts: string[]): Promise<(Float32Array
 				if (batchResults) {
 					results.push(...batchResults);
 				} else {
-					results.push(...new Array(batch.length).fill(null));
+					results.push(...Array.from({ length: batch.length }, () => null));
 				}
 			} catch (err) {
 				log.warn({ err, batchStart: i, batchSize: batch.length }, 'batch embedding failed');
-				results.push(...new Array(batch.length).fill(null));
+				results.push(...Array.from({ length: batch.length }, () => null));
 			}
 		}
 

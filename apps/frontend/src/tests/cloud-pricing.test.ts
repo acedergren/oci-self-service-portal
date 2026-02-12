@@ -7,26 +7,17 @@
  * - AWS: awslabs.aws-pricing-mcp-server (requires AWS auth)
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 
 // Types we expect to implement
-import type {
-	CloudProvider,
-	WorkloadRequirements,
-	CostEstimate,
-	CloudComparison
-} from '@portal/shared/pricing/types';
+import type { WorkloadRequirements } from '@portal/shared/pricing/types';
 
 // Service we're going to implement (doesn't exist yet - TDD!)
 // These imports will fail until we implement the module
 import {
 	OCIPricingClient,
 	AzurePricingClient,
-	CloudPricingService,
-	type OCIComputePrice,
-	type OCIStoragePrice,
-	type AzureRetailPrice,
-	type PricingResult
+	CloudPricingService
 } from '@portal/shared/pricing/cloud-pricing-service';
 
 describe('OCIPricingClient', () => {

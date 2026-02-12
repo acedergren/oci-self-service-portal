@@ -59,7 +59,7 @@ describe('Chat Demo Session Persistence', () => {
 
 		it('lists sessions ordered by updated_at desc', () => {
 			const session1 = repo.createSession({ model: 'model-1', region: 'region-1' });
-			const session2 = repo.createSession({ model: 'model-2', region: 'region-2' });
+			const _session2 = repo.createSession({ model: 'model-2', region: 'region-2' });
 
 			// Add turn to session1 to make it more recent
 			repo.addTurn(session1.id, {

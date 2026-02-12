@@ -4,14 +4,14 @@
  * Tests the v1 tools API endpoints and OpenAPI spec generation.
  * Tests validate route handler logic, auth guards, and response shapes.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
 	getAllToolDefinitions,
 	getToolDefinition,
 	getToolsByCategory
 } from '@portal/shared/tools/registry';
 import { requiresApproval } from '@portal/shared/tools/types';
-import type { ToolCategory, ToolDefinition } from '@portal/types/tools/types';
+import type { ToolCategory } from '@portal/types/tools/types';
 
 // ============================================================================
 // OpenAPI Spec Generation

@@ -9,13 +9,7 @@ import {
 } from '@portal/shared/tools/index';
 import { consumeApproval, pendingApprovals, recordApproval } from '@portal/server/approvals';
 import { createLogger } from '@portal/server/logger';
-import {
-	ValidationError,
-	NotFoundError,
-	AuthError,
-	toPortalError,
-	errorResponse
-} from '@portal/server/errors';
+import { toPortalError } from '@portal/server/errors';
 import { captureError } from '@portal/server/sentry';
 import { toolExecutions, toolDuration } from '@portal/server/metrics';
 import { requireAuth, resolveOrgId } from '../plugins/rbac.js';
@@ -235,7 +229,7 @@ export async function toolRoutes(app: FastifyInstance): Promise<void> {
 			}
 		},
 		async (request, reply) => {
-			const { toolCallId, approved, reason } = request.body as z.infer<
+			const { toolCallId, approved, _reason } = request.body as z.infer<
 				typeof ApproveToolBodySchema
 			>;
 

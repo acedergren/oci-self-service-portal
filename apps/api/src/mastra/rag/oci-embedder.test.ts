@@ -44,7 +44,7 @@ describe('OCI GenAI Embedder', () => {
 
 	describe('generateEmbedding', () => {
 		it('returns a number[] of 1536 dimensions', async () => {
-			const fakeEmbedding = new Array(1536).fill(0.1);
+			const fakeEmbedding = Array.from({ length: 1536 }, () => 0.1);
 			mockExecFile.mockResolvedValueOnce({
 				stdout: JSON.stringify({
 					data: { embeddings: [fakeEmbedding] }
@@ -89,7 +89,7 @@ describe('OCI GenAI Embedder', () => {
 
 	describe('generateEmbeddings', () => {
 		it('returns embeddings for multiple texts', async () => {
-			const emb = new Array(1536).fill(0.1);
+			const emb = Array.from({ length: 1536 }, () => 0.1);
 			mockExecFile.mockResolvedValueOnce({
 				stdout: JSON.stringify({
 					data: { embeddings: [emb, emb] }
@@ -124,7 +124,7 @@ describe('OCI GenAI Embedder', () => {
 		});
 
 		it('returns { embeddings: number[][] } when called', async () => {
-			const emb = new Array(1536).fill(0.1);
+			const emb = Array.from({ length: 1536 }, () => 0.1);
 			mockExecFile.mockResolvedValueOnce({
 				stdout: JSON.stringify({ data: { embeddings: [emb] } })
 			});

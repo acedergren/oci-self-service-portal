@@ -61,19 +61,17 @@ function buildToolExecutePath(
 			summary: `Execute ${toolName}`,
 			description,
 			tags: [category],
-			parameters: [
-				...(requiresConfirmation
-					? [
-							{
-								name: 'X-Confirm',
-								in: 'header',
-								required: false,
-								description: 'Set to "true" to confirm execution of tools that require approval.',
-								schema: { type: 'string', enum: ['true'] }
-							}
-						]
-					: [])
-			],
+			parameters: requiresConfirmation
+				? [
+						{
+							name: 'X-Confirm',
+							in: 'header',
+							required: false,
+							description: 'Set to "true" to confirm execution of tools that require approval.',
+							schema: { type: 'string', enum: ['true'] }
+						}
+					]
+				: [],
 			requestBody: {
 				required: true,
 				content: {

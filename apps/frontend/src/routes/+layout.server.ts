@@ -22,9 +22,7 @@ export const load: LayoutServerLoad = async ({ request, locals, fetch }) => {
 		const cookieHeader = request.headers.get('cookie');
 
 		const sessionResponse = await fetch(`${FASTIFY_URL}/api/auth/session`, {
-			headers: {
-				...(cookieHeader ? { cookie: cookieHeader } : {})
-			}
+			headers: cookieHeader ? { cookie: cookieHeader } : {}
 		});
 
 		if (sessionResponse.ok) {

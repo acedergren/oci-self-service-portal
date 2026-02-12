@@ -41,8 +41,8 @@
 
 	$effect(() => {
 		// Reference reactive dependencies to trigger re-fetch
-		statusFilter;
-		searchQuery;
+		void statusFilter;
+		void searchQuery;
 		fetchWorkflows();
 	});
 
