@@ -14,5 +14,6 @@ Useful commands:
 - `oracle-migration`: generate a new migration file shell
 - `phase-kickoff`: scaffold a new phase branch + roadmap + test shell
 - `security-fuzz`: run CATS DAST against local API
+- `manage-secrets`: safely manage OCI Vault secrets (confirm + truncate)
 - `test-related`: run the most likely matching Vitest test for a given file
 - `circular-check`: run `madge --circular` for a workspace
