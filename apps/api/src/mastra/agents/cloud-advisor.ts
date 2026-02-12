@@ -16,6 +16,7 @@ import {
 	createAnswerRelevancyScorer
 } from '@mastra/evals/scorers/prebuilt';
 import { buildMastraTools } from '../tools/registry.js';
+import { promptInjectionDetector, piiDetector, createTokenLimiter } from './guardrails.js';
 
 // ── System Prompt ─────────────────────────────────────────────────────────
 
@@ -272,6 +273,8 @@ export function createCloudAdvisorAgent(config: CloudAdvisorConfig): Agent {
 		model: config.model,
 		tools,
 		memory: config.memory,
-		scorers
+		scorers,
+		inputProcessors: [promptInjectionDetector, createTokenLimiter()],
+		outputProcessors: [piiDetector]
 	});
 }
