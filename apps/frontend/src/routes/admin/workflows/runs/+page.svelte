@@ -82,11 +82,11 @@
 
 	const { data: runDetailData, refetch: refetchRunDetail } = runDetailQuery;
 
-	const runs = $derived($runsData?.runs ?? []);
-	const total = $derived($runsData?.total ?? 0);
+	const runs = $derived(runsData?.runs ?? []);
+	const total = $derived(runsData?.total ?? 0);
 	const totalPages = $derived(Math.ceil(total / pageSize));
-	const selectedRun = $derived(runs.find((run) => run.id === selectedRunId) ?? null);
-	const runDetail = $derived(detailOverride ?? $runDetailData ?? null);
+	const selectedRun = $derived(runs.find((run: WorkflowRun) => run.id === selectedRunId) ?? null);
+	const runDetail = $derived(detailOverride ?? runDetailData ?? null);
 
 	const statusOptions = ['', 'pending', 'running', 'completed', 'failed', 'suspended', 'cancelled'];
 
@@ -169,8 +169,10 @@
 	const resumeRunMutation = createMutation<void, Error, { definitionId: string; runId: string }>(
 		() => ({
 			mutationFn: async ({ definitionId, runId }) => {
-				const res = await fetch(`/api/v1/workflows/${definitionId}/runs/${runId}/resume`, {
-					method: 'POST'
+				const res = await fetch(`/api/v1/workflows/${definitionId}/runs/${runId}/approve`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ resumeData: {} })
 				});
 				if (!res.ok) {
 					const err = await res.json().catch(() => ({}));
@@ -187,8 +189,8 @@
 
 	const { isPending: cancelRunPending } = cancelRunMutation;
 	const { isPending: resumeRunPending } = resumeRunMutation;
-	const cancelButtonLabel = $derived($cancelRunPending ? 'Cancelling…' : 'Cancel');
-	const resumeButtonLabel = $derived($resumeRunPending ? 'Resuming…' : 'Resume');
+	const cancelButtonLabel = $derived(cancelRunPending ? 'Cancelling…' : 'Cancel');
+	const resumeButtonLabel = $derived(resumeRunPending ? 'Resuming…' : 'Resume');
 
 	function cancelSelectedRun() {
 		if (!selectedRunId || !selectedDefinitionId) return;
@@ -204,7 +206,6 @@
 		return JSON.stringify(value ?? {}, null, 2);
 	}
 
-	// TODO(phase10-task1.2): Merge SSE step diffs into detail panel to highlight live progress.
 	$effect(() => {
 		if (!browser) return;
 		const run = selectedRun;
@@ -217,16 +218,17 @@
 		source.onmessage = (event) => {
 			try {
 				const payload = JSON.parse(event.data);
+				const existingDetail = detailOverride ??
+					runDetailData ?? {
+						id: run.id,
+						workflowId: run.definitionId,
+						status: run.status,
+						steps: [],
+						startedAt: run.startedAt,
+						completedAt: run.completedAt
+					};
+
 				if (payload.type === 'status') {
-					const existingDetail = detailOverride ??
-						$runDetailData ?? {
-							id: run.id,
-							workflowId: run.definitionId,
-							status: run.status,
-							steps: [],
-							startedAt: run.startedAt,
-							completedAt: run.completedAt
-						};
 					detailOverride = {
 						...existingDetail,
 						status: payload.status ?? run.status,
@@ -240,6 +242,34 @@
 						refetchRunDetail();
 						detailOverride = null;
 					}
+				} else if (payload.type === 'step') {
+					// Merge step update into existing steps array
+					const existingSteps = existingDetail.steps ?? [];
+					const stepIndex = existingSteps.findIndex(
+						(s: WorkflowRunStep) => s.nodeId === payload.nodeId
+					);
+					const updatedStep: WorkflowRunStep = {
+						nodeId: payload.nodeId,
+						nodeType: payload.nodeType ?? 'unknown',
+						status: payload.status ?? 'pending',
+						output: payload.output,
+						error: payload.error,
+						startedAt: payload.startedAt ?? null,
+						completedAt: payload.completedAt ?? null,
+						durationMs: payload.durationMs ?? null
+					};
+
+					const updatedSteps =
+						stepIndex >= 0
+							? existingSteps.map((s: WorkflowRunStep, i: number) =>
+									i === stepIndex ? updatedStep : s
+								)
+							: [...existingSteps, updatedStep];
+
+					detailOverride = {
+						...existingDetail,
+						steps: updatedSteps
+					};
 				}
 			} catch (error) {
 				console.error('Failed to parse workflow SSE event', error);
@@ -277,12 +307,12 @@
 				<option value={opt}>{opt || 'All Statuses'}</option>
 			{/each}
 		</select>
-		{#if $runsFetching}
+		{#if runsFetching}
 			<span class="fetching-indicator">Refreshing...</span>
 		{/if}
 	</div>
 
-	{#if $runsLoading}
+	{#if runsLoading}
 		<div class="loading-state">
 			<div class="spinner"></div>
 			<p>Loading workflow runs...</p>
@@ -372,12 +402,12 @@
 					</p>
 				</div>
 				<div class="detail-actions">
-					{#if ['running', 'suspended'].includes(runDetail.status)}
+					{#if ['running', 'pending', 'suspended'].includes(runDetail.status)}
 						<button
 							type="button"
 							class="btn-outline"
 							onclick={cancelSelectedRun}
-							disabled={$cancelRunPending}
+							disabled={cancelRunPending}
 						>
 							{cancelButtonLabel}
 						</button>
@@ -387,7 +417,7 @@
 							type="button"
 							class="btn-primary"
 							onclick={resumeSelectedRun}
-							disabled={$resumeRunPending}
+							disabled={resumeRunPending}
 						>
 							{resumeButtonLabel}
 						</button>
