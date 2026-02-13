@@ -2,11 +2,14 @@
 	import { createQuery, createMutation } from '@tanstack/svelte-query';
 	import { browser } from '$app/environment';
 	import { fuzzySearch } from '$lib/utils/fuzzy-search.js';
+	import { buildResultViews, shouldShowApprovalWarning } from './result-view.js';
+	import type { ToolExecutionResult, OutputMode } from './result-view.js';
 
 	interface ToolDef {
 		name: string;
 		description: string;
 		category?: string;
+		approvalLevel?: string;
 		inputSchema?: {
 			properties?: Record<string, { type: string; description?: string; default?: unknown }>;
 			required?: string[];
@@ -22,6 +25,31 @@
 	let categoryFilter = $state('all');
 	let selectedTool = $state<ToolDef | null>(null);
 	let paramValues = $state<Record<string, string>>({});
+	let outputMode = $state<OutputMode>('slimmed');
+	let executionMs = $state<number | null>(null);
+
+	function safeParseJson(value: string): unknown {
+		try {
+			return JSON.parse(value);
+		} catch {
+			return null;
+		}
+	}
+
+	function resolveErrorMessage(payload: unknown, status: number): string {
+		if (!payload) return `Tool execution failed (HTTP ${status})`;
+		if (typeof payload === 'string' && payload.trim().length > 0) return payload;
+		if (typeof payload === 'object') {
+			const record = payload as Record<string, unknown>;
+			if (typeof record.error === 'string' && record.error.trim().length > 0) {
+				return record.error;
+			}
+			if (typeof record.message === 'string' && record.message.trim().length > 0) {
+				return record.message;
+			}
+		}
+		return `Tool execution failed (HTTP ${status})`;
+	}
 
 	const toolsQuery = createQuery<ToolsResponse>(() => ({
 		queryKey: ['admin', 'tools'],
@@ -34,21 +62,27 @@
 	}));
 
 	const executeMutation = createMutation<
-		unknown,
+		ToolExecutionResult,
 		Error,
 		{ name: string; args: Record<string, unknown> }
 	>(() => ({
 		mutationFn: async ({ name, args }) => {
-			const res = await fetch(`/api/v1/tools/${encodeURIComponent(name)}/execute`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(args)
-			});
-			if (!res.ok) {
-				const err = await res.json();
-				throw new Error(err.message || 'Tool execution failed');
+			const start = performance.now();
+			try {
+				const res = await fetch(`/api/v1/tools/${encodeURIComponent(name)}/execute`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(args)
+				});
+				const raw = await res.text();
+				const parsed = safeParseJson(raw) ?? raw;
+				if (!res.ok) {
+					throw new Error(resolveErrorMessage(parsed, res.status));
+				}
+				return { raw, parsed };
+			} finally {
+				executionMs = Math.round(performance.now() - start);
 			}
-			return res.json();
 		}
 	}));
 
@@ -73,6 +107,8 @@
 	function selectTool(tool: ToolDef) {
 		selectedTool = tool;
 		paramValues = {};
+		outputMode = 'slimmed';
+		executionMs = null;
 		// Prefill defaults
 		const props = tool.inputSchema?.properties ?? {};
 		for (const [key, schema] of Object.entries(props)) {
@@ -85,6 +121,8 @@
 
 	function executeSelected() {
 		if (!selectedTool) return;
+		executionMs = null;
+		outputMode = 'slimmed';
 		const args: Record<string, unknown> = {};
 		const props = selectedTool.inputSchema?.properties ?? {};
 		for (const [key, value] of Object.entries(paramValues)) {
@@ -96,6 +134,12 @@
 		}
 		$executeMutation.mutate({ name: selectedTool.name, args });
 	}
+
+	const approvalWarningVisible = $derived(
+		shouldShowApprovalWarning(selectedTool?.approvalLevel ?? null)
+	);
+	const resultViews = $derived(buildResultViews($executeMutation.data ?? null));
+	const displayedResult = $derived(outputMode === 'raw' ? resultViews.raw : resultViews.slimmed);
 </script>
 
 <svelte:head>
@@ -122,7 +166,7 @@
 					bind:value={searchQuery}
 				/>
 				<select class="filter-select" bind:value={categoryFilter}>
-					{#each categories as cat}
+					{#each categories as cat (cat)}
 						<option value={cat}>{cat === 'all' ? 'All Categories' : cat}</option>
 					{/each}
 				</select>
@@ -171,7 +215,7 @@
 					{#if selectedTool.inputSchema?.properties}
 						<div class="params-section">
 							<h3 class="section-label">Parameters</h3>
-							{#each Object.entries(selectedTool.inputSchema.properties) as [key, schema]}
+							{#each Object.entries(selectedTool.inputSchema.properties) as [key, schema] (key)}
 								<div class="param-field">
 									<label class="param-label" for="param-{key}">
 										{key}
@@ -203,6 +247,13 @@
 						</div>
 					{/if}
 
+					{#if approvalWarningVisible}
+						<div class="approval-warning">
+							This tool requires approval in production (level:
+							{selectedTool?.approvalLevel}). Playground execution bypasses the approval flow.
+						</div>
+					{/if}
+
 					<button
 						type="button"
 						class="btn-execute"
@@ -212,11 +263,36 @@
 						{$executeMutation.isPending ? 'Executing...' : 'Execute Tool'}
 					</button>
 
+					<div class="execution-metrics">
+						<span class="metric-key">Execution time</span>
+						<span class="metric-val">{executionMs != null ? `${executionMs}ms` : '—'}</span>
+					</div>
+
 					<!-- Result -->
 					{#if $executeMutation.data}
 						<div class="result-section success">
-							<h3 class="section-label">Result</h3>
-							<pre class="result-code">{JSON.stringify($executeMutation.data, null, 2)}</pre>
+							<div class="result-header">
+								<h3 class="section-label">Result</h3>
+								<div class="output-tabs" role="tablist">
+									<button
+										type="button"
+										class:selected={outputMode === 'slimmed'}
+										aria-pressed={outputMode === 'slimmed'}
+										onclick={() => (outputMode = 'slimmed')}
+									>
+										Slimmed
+									</button>
+									<button
+										type="button"
+										class:selected={outputMode === 'raw'}
+										aria-pressed={outputMode === 'raw'}
+										onclick={() => (outputMode = 'raw')}
+									>
+										Raw
+									</button>
+								</div>
+							</div>
+							<pre class="result-code">{displayedResult || 'No response payload returned.'}</pre>
 						</div>
 					{/if}
 
@@ -479,16 +555,52 @@
 	.result-section {
 		border-radius: var(--radius-md);
 		padding: var(--space-lg);
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-md);
 	}
 
 	.result-section.success {
-		background: oklch(0.2 0.03 155);
-		border: 1px solid oklch(0.4 0.08 155);
+		background: var(--bg-tertiary);
+		border: 1px solid color-mix(in oklch, var(--accent-primary) 30%, transparent);
 	}
 
 	.result-section.error {
-		background: oklch(0.2 0.03 30);
-		border: 1px solid oklch(0.4 0.08 30);
+		background: color-mix(in oklch, var(--status-error, oklch(0.7 0.25 30)) 10%, transparent);
+		border: 1px solid var(--status-error, oklch(0.7 0.25 30));
+	}
+
+	.result-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-md);
+		flex-wrap: wrap;
+	}
+
+	.output-tabs {
+		display: inline-flex;
+		gap: var(--space-xs);
+		background: var(--bg-secondary);
+		border-radius: var(--radius-md);
+		padding: 2px;
+	}
+
+	.output-tabs button {
+		border: none;
+		background: transparent;
+		padding: var(--space-xs) var(--space-md);
+		border-radius: var(--radius-sm);
+		font-size: var(--text-xs);
+		text-transform: uppercase;
+		letter-spacing: 0.05em;
+		cursor: pointer;
+		color: var(--fg-secondary);
+	}
+
+	.output-tabs button.selected {
+		background: var(--accent-primary);
+		color: var(--bg-primary);
 	}
 
 	.result-code {
@@ -503,7 +615,27 @@
 	}
 
 	.error-text {
-		color: oklch(0.8 0.15 30);
+		color: var(--status-error, oklch(0.8 0.15 30));
+	}
+
+	.approval-warning {
+		background: color-mix(in oklch, var(--status-warning, oklch(0.78 0.18 80)) 18%, transparent);
+		color: var(--status-warning, oklch(0.78 0.18 80));
+		padding: var(--space-md);
+		border-radius: var(--radius-md);
+		font-size: var(--text-sm);
+		border: 1px solid
+			color-mix(in oklch, var(--status-warning, oklch(0.78 0.18 80)) 40%, transparent);
+	}
+
+	.execution-metrics {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		font-size: var(--text-xs);
+		margin-top: var(--space-sm);
+		font-family: var(--font-mono, monospace);
+		color: var(--fg-secondary);
 	}
 
 	/* Empty & Loading */
