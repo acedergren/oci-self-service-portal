@@ -23,6 +23,16 @@
 		checks?: Record<string, { status: string; message?: string }>;
 	}
 
+	interface WorkflowRun {
+		id: string;
+		workflowId: string;
+		workflowName: string;
+		status: 'completed' | 'running' | 'failed' | 'suspended';
+		startedAt: string;
+		completedAt?: string;
+		duration?: number;
+	}
+
 	const metricsQuery = createQuery<MetricsSummary>(() => ({
 		queryKey: ['admin', 'metrics', 'summary'],
 		queryFn: async () => {
@@ -45,8 +55,20 @@
 		refetchInterval: 30_000
 	}));
 
+	const runsQuery = createQuery<{ runs: WorkflowRun[] }>(() => ({
+		queryKey: ['admin', 'recent-runs'],
+		queryFn: async () => {
+			const res = await fetch('/api/v1/workflows/runs?limit=20');
+			if (!res.ok) throw new Error('Failed to fetch runs');
+			return res.json();
+		},
+		enabled: browser,
+		refetchInterval: 15_000
+	}));
+
 	const metrics = $derived($metricsQuery.data);
 	const health = $derived($healthQuery.data);
+	const runs = $derived($runsQuery.data?.runs ?? []);
 
 	function formatUptime(seconds: number): string {
 		const days = Math.floor(seconds / 86400);
@@ -70,6 +92,30 @@
 		if (total === 0) return '0%';
 		const errors = (byStatus['error'] ?? 0) + (byStatus['timeout'] ?? 0);
 		return ((errors / total) * 100).toFixed(1) + '%';
+	}
+
+	function errorCount(byStatus: Record<string, number> | undefined): number {
+		if (!byStatus) return 0;
+		return (byStatus['error'] ?? 0) + (byStatus['timeout'] ?? 0);
+	}
+
+	function getStatusColor(status: WorkflowRun['status']): string {
+		const colors = {
+			completed: 'oklch(0.55 0.15 155)',
+			running: 'oklch(0.55 0.15 230)',
+			failed: 'oklch(0.55 0.15 30)',
+			suspended: 'oklch(0.55 0.15 80)'
+		};
+		return colors[status];
+	}
+
+	function formatDuration(ms: number | undefined): string {
+		if (!ms) return '—';
+		const seconds = Math.floor(ms / 1000);
+		const mins = Math.floor(seconds / 60);
+		const secs = seconds % 60;
+		if (mins > 0) return `${mins}m ${secs}s`;
+		return `${secs}s`;
 	}
 </script>
 
@@ -139,7 +185,7 @@
 				<div class="metric-label">Chat Requests</div>
 				<div class="metric-value">{metrics?.chat.totalRequests ?? 0}</div>
 				<div class="metric-detail">
-					{#each topEntries(metrics?.chat.byModel, 3) as [model, count]}
+					{#each topEntries(metrics?.chat.byModel, 3) as [model, count] (model)}
 						<span class="metric-tag">{model}: {count}</span>
 					{/each}
 				</div>
@@ -148,9 +194,9 @@
 			<div class="metric-card">
 				<div class="metric-label">Tool Executions</div>
 				<div class="metric-value">{metrics?.tools.totalExecutions ?? 0}</div>
-				<div class="metric-detail">
-					<span class="metric-tag error-rate">Error rate: {errorRate(metrics?.tools.byStatus)}</span
-					>
+				<div class="error-summary">
+					<span class="error-count">{errorCount(metrics?.tools.byStatus)} errors</span>
+					<span class="error-pct">({errorRate(metrics?.tools.byStatus)})</span>
 				</div>
 			</div>
 
@@ -176,12 +222,51 @@
 				<div class="metric-label">Auth Logins</div>
 				<div class="metric-value">{metrics?.auth.totalLogins ?? 0}</div>
 				<div class="metric-detail">
-					{#each topEntries(metrics?.auth.byStatus) as [status, count]}
+					{#each topEntries(metrics?.auth.byStatus) as [status, count] (status)}
 						<span class="metric-tag">{status}: {count}</span>
 					{/each}
 				</div>
 			</div>
+
+			<div class="metric-card placeholder">
+				<div class="metric-label">Cost Tracking</div>
+				<div class="metric-value placeholder-text">—</div>
+				<div class="metric-detail">
+					<span class="metric-tag">Coming soon — requires OCI Usage API</span>
+				</div>
+			</div>
 		</div>
+
+		<!-- Workflow Run Timeline -->
+		{#if runs.length > 0}
+			<section class="section">
+				<h2 class="section-title">Recent Workflow Runs</h2>
+				<div class="timeline-container">
+					{#each runs as run (run.id)}
+						<div class="timeline-bar" style="background: {getStatusColor(run.status)}">
+							<div class="timeline-tooltip">
+								<div class="tooltip-row">
+									<span class="tooltip-label">Run ID:</span>
+									<span class="tooltip-value">{run.id}</span>
+								</div>
+								<div class="tooltip-row">
+									<span class="tooltip-label">Workflow:</span>
+									<span class="tooltip-value">{run.workflowName}</span>
+								</div>
+								<div class="tooltip-row">
+									<span class="tooltip-label">Status:</span>
+									<span class="tooltip-value status-{run.status}">{run.status}</span>
+								</div>
+								<div class="tooltip-row">
+									<span class="tooltip-label">Duration:</span>
+									<span class="tooltip-value">{formatDuration(run.duration)}</span>
+								</div>
+							</div>
+						</div>
+					{/each}
+				</div>
+			</section>
+		{/if}
 
 		<!-- Tool Performance Table -->
 		{#if metrics && Object.keys(metrics.tools.byTool).length > 0}
@@ -197,7 +282,7 @@
 							</tr>
 						</thead>
 						<tbody>
-							{#each topEntries(metrics.tools.byTool) as [tool, count]}
+							{#each topEntries(metrics.tools.byTool) as [tool, count] (tool)}
 								<tr>
 									<td class="tool-name">{tool}</td>
 									<td>{count.toLocaleString()}</td>
@@ -230,7 +315,7 @@
 			<section class="section">
 				<h2 class="section-title">Registered Metrics ({metrics.raw.length})</h2>
 				<div class="raw-metrics">
-					{#each metrics.raw as metric}
+					{#each metrics.raw as metric (metric.name)}
 						<div class="raw-metric">
 							<span class="raw-name">{metric.name}</span>
 							<span class="raw-type">{metric.type}</span>
@@ -394,6 +479,33 @@
 		color: oklch(0.8 0.15 30);
 	}
 
+	.error-summary {
+		display: flex;
+		align-items: baseline;
+		gap: var(--space-xs);
+		font-size: var(--text-sm);
+		margin-top: var(--space-xs);
+	}
+
+	.error-count {
+		font-weight: 600;
+		color: oklch(0.8 0.15 30);
+	}
+
+	.error-pct {
+		color: var(--fg-tertiary);
+		font-size: var(--text-xs);
+	}
+
+	.metric-card.placeholder {
+		opacity: 0.6;
+		border-style: dashed;
+	}
+
+	.placeholder-text {
+		color: var(--fg-tertiary);
+	}
+
 	/* Sections */
 	.section {
 		margin-bottom: var(--space-xxl);
@@ -524,6 +636,102 @@
 		border-radius: 50%;
 		animation: spin 1s linear infinite;
 		margin-bottom: var(--space-md);
+	}
+
+	/* Timeline */
+	.timeline-container {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-sm);
+		padding: var(--space-lg);
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-default);
+		border-radius: var(--radius-md);
+	}
+
+	.timeline-bar {
+		position: relative;
+		height: 32px;
+		min-width: 40px;
+		border-radius: var(--radius-sm);
+		cursor: pointer;
+		transition: all var(--transition-fast);
+	}
+
+	.timeline-bar:hover {
+		transform: translateY(-2px);
+		box-shadow: 0 4px 12px oklch(0 0 0 / 0.15);
+	}
+
+	.timeline-bar:hover .timeline-tooltip {
+		opacity: 1;
+		visibility: visible;
+		transform: translateY(0);
+	}
+
+	.timeline-tooltip {
+		position: absolute;
+		bottom: calc(100% + 8px);
+		left: 50%;
+		transform: translateX(-50%) translateY(4px);
+		background: var(--bg-elevated);
+		border: 1px solid var(--border-default);
+		border-radius: var(--radius-md);
+		padding: var(--space-sm) var(--space-md);
+		font-size: var(--text-xs);
+		white-space: nowrap;
+		opacity: 0;
+		visibility: hidden;
+		transition: all var(--transition-fast);
+		z-index: 10;
+		box-shadow: 0 4px 12px oklch(0 0 0 / 0.15);
+	}
+
+	.timeline-tooltip::after {
+		content: '';
+		position: absolute;
+		top: 100%;
+		left: 50%;
+		transform: translateX(-50%);
+		border: 6px solid transparent;
+		border-top-color: var(--bg-elevated);
+	}
+
+	.tooltip-row {
+		display: flex;
+		justify-content: space-between;
+		gap: var(--space-md);
+		padding: var(--space-xs) 0;
+	}
+
+	.tooltip-row:not(:last-child) {
+		border-bottom: 1px solid var(--border-muted);
+	}
+
+	.tooltip-label {
+		color: var(--fg-tertiary);
+		font-weight: 500;
+	}
+
+	.tooltip-value {
+		color: var(--fg-primary);
+		font-weight: 600;
+	}
+
+	.tooltip-value.status-completed {
+		color: oklch(0.75 0.2 155);
+	}
+
+	.tooltip-value.status-running {
+		color: oklch(0.75 0.2 230);
+	}
+
+	.tooltip-value.status-failed {
+		color: oklch(0.75 0.2 30);
+	}
+
+	.tooltip-value.status-suspended {
+		color: oklch(0.75 0.2 80);
 	}
 
 	@keyframes spin {
