@@ -1,9 +1,9 @@
 # Self-Service Portal: MVP to Product Roadmap
 
-> **Status**: Phase 9 complete, Phase 10 PRD v6 finalized (107 agent tasks planned)
+> **Status**: Phase 9 complete, Phase 10 PRD v7 finalized (107 agent tasks planned; Wave 6 admin tools shipped)
 > **Standalone Repo**: [oci-self-service-portal](https://github.com/acedergren/oci-self-service-portal)
 > **Last Updated**: 2026-02-10
-> **Tests**: 1213+ passing across 100 test files (frontend + API + shared)
+> **Tests**: 848 passing in apps/api (55 files), frontend suite still running legacy Phase 4-8 tests (known failures)
 
 ---
 
@@ -99,6 +99,7 @@
 - [x] 5.8 Security fixes: H4/H5 (atomic MERGE INTO rate limiter), M6 (switchToSession ownership), M7 (session userId)
 
 **Verify**: Self-service page renders identically (or better). `+page.svelte` under 200 lines. Real activity feed.
+**Fastify Routes**: 19 modules (`activity`, `admin`, `audit`, `auth`, `chat`, `graph`, `health`, `mcp`, `metrics`, `models`, `openapi`, `schemas`, `search`, `sessions`, `setup`, `tools`, `v1-tools`, `webhooks`, `workflows`).
 
 ---
 
@@ -424,9 +425,9 @@
 - [x] 10F.4 Replace vectorToOracleString with Float32Array + DB_TYPE_VECTOR
 - [x] 10F.5 Benchmark vector search (3x target), test VPD isolation
 
-**Key decisions**: 52 architecture decisions (AD-1 through AD-52). See PRD v6.
+**Key decisions**: 52 architecture decisions (AD-1 through AD-52). See PRD v7.
 
-**Verify**: Zero +server.ts API routes. SDK p95 < 500ms. All 8 workflow nodes functional. Vector 3x improvement. VPD isolation verified. 100% test pass rate.
+**Verify**: Zero +server.ts API routes. SDK p95 < 500ms. All 8 workflow nodes functional. Vector 3x improvement. VPD isolation verified. 55/55 API files passing (848 tests). Frontend legacy suites still failing until Fastify-first cutover completes.
 
 ---
 
@@ -443,7 +444,7 @@
 - [ ] 11.7 E2E smoke tests
 - [ ] 11.8 Operational runbook
 
-**Verify**: `portal.solutionsedge.io/api/health` returns ok. Login flow works. CD deploys on merge.
+**Verify**: Cloudflare Tunnel healthy, `portal.solutionsedge.io/api/health` returns ok, login flow works, E2E smoke checklist passes, and CD deploys on merge.
 
 ---
 

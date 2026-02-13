@@ -1,61 +1,22 @@
-# Phase 9 Architecture: Fastify Backend Migration
+# Architecture Overview — Phase 10 Baseline
 
 ## Overview
 
 Phase 9 migrates the OCI Self-Service Portal from a monolithic SvelteKit application to a **monorepo** with a dedicated Fastify 5 backend. The migration follows a **shared-first extraction** strategy: business logic moves to `packages/shared`, then both `apps/frontend` (SvelteKit) and `apps/api` (Fastify) import from the shared package.
 
-## Monorepo Structure
+## Monorepo Structure (Phase 10)
 
 ```
 oci-self-service-portal/
 ├── apps/
-│   ├── api/                    # Fastify 5 backend
-│   │   └── src/
-│   │       ├── app.ts          # Factory: createApp(), startServer(), stopServer()
-│   │       ├── server.ts       # Entry point (creates app + listens)
-│   │       ├── config.ts       # Centralized env config with Zod validation
-│   │       ├── plugins/        # Fastify plugins (fp-wrapped)
-│   │       │   ├── oracle.ts   # Connection pool + migrations
-│   │       │   ├── auth.ts     # Better Auth session bridge
-│   │       │   ├── rbac.ts     # Permission guards + org resolution
-│   │       │   ├── mastra.ts   # Mastra framework (agents, RAG, MCP)
-│   │       │   ├── helmet.ts   # Security headers
-│   │       │   ├── cors.ts     # CORS configuration
-│   │       │   ├── rate-limit.ts       # Rate limiting
-│   │       │   ├── error-handler.ts    # Global error handler
-│   │       │   └── request-logger.ts   # Request logging
-│   │       ├── routes/         # HTTP route registrations
-│   │       │   ├── health.ts   # /healthz (liveness) + /health (deep)
-│   │       │   ├── sessions.ts # CRUD for chat sessions
-│   │       │   ├── activity.ts # Tool execution feed
-│   │       │   ├── tools/      # Tool execution + approval workflow
-│   │       │   ├── chat.ts     # AI chat streaming (POST /api/chat)
-│   │       │   ├── search.ts   # Semantic search (GET /api/v1/search)
-│   │       │   ├── mcp.ts      # MCP server endpoints
-│   │       │   ├── workflows.ts # Workflow CRUD + execution
-│   │       │   └── metrics.ts  # Prometheus /api/metrics
-│   │       ├── mastra/         # Mastra framework integration
-│   │       │   ├── agents/     # CloudAdvisor agent
-│   │       │   ├── models/     # Provider registry, model types
-│   │       │   ├── rag/        # OracleVectorStore, OCI embedder
-│   │       │   ├── mcp/        # MCP server (tool discovery + execution)
-│   │       │   ├── storage/    # OracleStore (MastraStorage impl)
-│   │       │   ├── tools/      # 60+ OCI tool wrappers for Mastra
-│   │       │   └── workflows/  # Workflow executor
-│   │       ├── services/       # approvals, tools adapter, workflow-repository
-│   │       └── tests/          # Integration tests
-│   └── frontend/               # SvelteKit app (existing)
-│       └── src/
-│           ├── hooks.server.ts # Feature-flag proxy to Fastify
-│           ├── lib/            # Components, tools, workflows
-│           └── routes/         # SvelteKit routes + API endpoints
+│   ├── api/                    # Fastify 5 backend (all API routes)
+│   └── frontend/               # SvelteKit UI (SSR + admin console)
 ├── packages/
-│   └── shared/                 # All business logic lives here
-│       └── src/
-│           ├── server/         # Auth, Oracle, errors, logger, metrics, etc.
-│           └── query/          # TanStack Query helpers
-└── infrastructure/
-    └── docker/phase9/          # Docker Compose + nginx + certbot
+│   ├── server/                 # @portal/server — backend business logic
+│   ├── types/                  # @portal/types — shared Zod schemas + TS types
+│   ├── ui/                     # @portal/ui — reusable Svelte components
+│   └── shared/                 # Legacy package (pending Phase 10 split)
+└── infrastructure/            # Docker, nginx, OCI deployment manifests
 ```
 
 ## Design Principles
@@ -297,4 +258,4 @@ All unknown errors are wrapped via `toPortalError()` → `INTERNAL_ERROR(500)`. 
 
 ## Observability
 
-| Signal  | Implementation                                         | Endpoint              |
+| Signal | Implementation | Endpoint |

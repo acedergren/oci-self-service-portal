@@ -1,9 +1,17 @@
-# Phase 9 Test Report — Fastify Backend Migration
+# Testing Strategy — Phase 10 Baseline
 
-**Date**: 2026-02-09
-**Branch**: `feature/backport-ai-chat-improvements`
-**Test Framework**: Vitest with `mockReset: true`
-**Total Tests**: 28 test files in `apps/api/src/` (tests/, plugins/, mastra/)
+**Date**: 2026-02-13
+**Branches**: `main` (API) + `main` (frontend)
+**Test Framework**: Vitest 4.0.18 with `mockReset: true`
+**Total Test Files**: 116 across all workspaces (55 API, 61 frontend)
+**Latest Run**:
+
+| Workspace | Command                                                            | Result                                                 |
+| --------- | ------------------------------------------------------------------ | ------------------------------------------------------ |
+| API       | `pnpm --filter ./apps/api exec vitest run --reporter=verbose`      | ✅ 55 files / 848 tests passed, 1 skipped              |
+| Frontend  | `pnpm --filter ./apps/frontend exec vitest run --reporter=verbose` | ❌ legacy Phase 4-8 tests still failing (pre-existing) |
+
+**Frontend legacy suites**: The failing tests live under `apps/frontend/src/tests/phase4`–`phase8` and still import deprecated SvelteKit `+server.ts` routes that were removed during the Fastify-first migration. They remain as documentation of historical requirements until the Fastify equivalents land; do not treat these failures as regressions in current work.
 
 ## Test Suite Summary
 

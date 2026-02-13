@@ -74,29 +74,31 @@ Role-Based Access Control with 3 roles and 13 permissions. Located in `packages/
 
 ### Roles
 
-| Role         | Permissions                                                             | Use Case                                             |
-| ------------ | ----------------------------------------------------------------------- | ---------------------------------------------------- |
-| **viewer**   | tools:read, sessions:read, workflows:read                               | Read-only access for stakeholders                    |
-| **operator** | tools:read/execute/approve, sessions:read/write, workflows:read/execute | Day-to-day operations (approve tools, run workflows) |
-| **admin**    | All 13 permissions                                                      | Full system access (user/org/audit management)       |
+| Role         | Permissions                                                                                 | Use Case                                             |
+| ------------ | ------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| **viewer**   | tools:read, sessions:read, workflows:read, models:read                                      | Read-only access for stakeholders                    |
+| **operator** | tools:read/execute/approve/danger, sessions:read/write, workflows:read/execute, models:read | Day-to-day operations (approve tools, run workflows) |
+| **admin**    | All permissions (15 total)                                                                  | Full system access (user/org/audit management)       |
 
 ### Permissions
 
-| Permission          | Description                                       |
-| ------------------- | ------------------------------------------------- |
-| `tools:read`        | View tool definitions and execution results       |
-| `tools:execute`     | Execute pre-approved tools (no approval gate)     |
-| `tools:approve`     | Approve/reject pending tool executions            |
-| `tools:danger`      | Execute danger-level tools (bypasses rate limits) |
-| `sessions:read`     | View chat sessions                                |
-| `sessions:write`    | Create/modify chat sessions                       |
-| `workflows:read`    | View workflow definitions and execution history   |
-| `workflows:write`   | Create/modify workflow definitions                |
-| `workflows:execute` | Execute workflows                                 |
-| `admin:users`       | Manage user accounts                              |
-| `admin:orgs`        | Manage organizations                              |
-| `admin:audit`       | View audit logs and analytics                     |
-| `admin:all`         | Full admin access (shortcut for all perms)        |
+| Permission          | Description                                            |
+| ------------------- | ------------------------------------------------------ |
+| `tools:read`        | View tool definitions and execution results            |
+| `tools:execute`     | Execute pre-approved tools (no approval gate)          |
+| `tools:approve`     | Approve/reject pending tool executions                 |
+| `tools:danger`      | Execute danger-level tools (bypasses rate limits)      |
+| `sessions:read`     | View chat sessions                                     |
+| `sessions:write`    | Create/modify chat sessions                            |
+| `workflows:read`    | View workflow definitions and execution history        |
+| `workflows:write`   | Create/modify workflow definitions                     |
+| `workflows:execute` | Execute workflows                                      |
+| `models:read`       | View model provider inventory                          |
+| `models:write`      | Manage model providers (create/update/delete)          |
+| `admin:users`       | Manage user accounts                                   |
+| `admin:orgs`        | Manage organizations                                   |
+| `admin:audit`       | View audit logs and analytics                          |
+| `admin:all`         | Full admin access (shortcut for all permissions above) |
 
 ### Permission Checks
 

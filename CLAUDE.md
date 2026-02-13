@@ -40,7 +40,7 @@ cd packages/shared && npx tsc --noEmit # Shared types check
 
 - This is a pnpm monorepo with apps/ and packages/ directories
 - Use `git mv` to preserve history when moving files
-- Shared types go in `packages/shared`
+- Shared types live in `packages/types`; backend logic goes in `packages/server`; reusable UI goes in `packages/ui`
 - Always update import paths across ALL consuming packages after moves
 - Run `pnpm -r build` and full test suite after structural changes
 
@@ -76,36 +76,10 @@ oci-self-service-portal/
 │           └── services/      # approvals, cache, mcp-connection-manager, tools adapter, workflow-repository
 │
 └── packages/
-    └── shared/                # Shared business logic across frontend and API
-        └── src/
-            ├── errors.ts            # PortalError hierarchy
-            ├── index.ts             # Re-exports
-            ├── api/types.ts         # API response types
-            ├── tools/               # 60+ OCI CLI tool wrappers, registry, types
-            ├── workflows/           # graph-utils.ts, types.ts
-            └── server/
-                ├── admin/           # IDP, AI provider, settings repositories, setup token, crypto
-                ├── agent-state/     # Oracle-backed agent state management
-                ├── api/             # API response types
-                ├── auth/            # auth-factory, Better Auth, RBAC, IDCS provisioning, API keys
-                ├── mcp/             # MCP portal server
-                ├── mcp-client/      # MCP client with stdio/SSE transports
-                ├── oracle/          # migrations/, connection pool, repositories
-                ├── workflows/       # graph-utils, workflow types
-                ├── approvals.ts     # Approval token management
-                ├── crypto.ts        # AES-256-GCM encryption utilities
-                ├── embeddings.ts    # OCI GenAI embedding helpers
-                ├── errors.ts        # PortalError hierarchy
-                ├── feature-flags.ts # Feature flag evaluation
-                ├── health.ts        # Deep health check runner
-                ├── logger.ts        # Pino logger factory
-                ├── metrics.ts       # Prometheus metrics
-                ├── rate-limiter.ts  # Rate limit config and utilities
-                ├── sentry.ts        # Sentry SDK integration
-                ├── session.ts       # Session repository
-                ├── tracing.ts       # Request ID generation
-                ├── url-validation.ts # SSRF prevention (webhook URL validation)
-                └── webhooks.ts      # Webhook signature and delivery
+    ├── server/               # @portal/server — Oracle repositories, auth, workflows, admin modules
+    ├── types/                # @portal/types — Zod schemas, PortalError hierarchy, shared TS types
+    ├── ui/                   # @portal/ui — shared Svelte components + design primitives
+    └── shared/               # Legacy bundle (being split during Phase 10; avoid new files here)
 ```
 
 ## Error Hierarchy
