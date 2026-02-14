@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { OracleConnection } from '@portal/server/oracle/connection.js';
 import { WorkflowsOracle, MemoryOracle, ScoresOracle } from '../../mastra/storage/oracle-store.js';
+import type { StorageResourceType, SaveScorePayload } from '@portal/types';
 
 /**
  * Mock connection factory with counter-based sequencing
@@ -61,14 +62,14 @@ describe('OracleStore Integration Tests', () => {
 
 				const workflows = new WorkflowsOracle(mockWithConnection);
 				const result = await workflows.getWorkflowRunById({
-					workflowRunId: '12345678-1234-4123-8123-123456789012'
+					runId: '12345678-1234-4123-8123-123456789012'
 				});
 
 				expect(result).toBeDefined();
 				expect(result?.runId).toBe('12345678-1234-4123-8123-123456789012');
 				expect(mockConn.mocks.execute).toHaveBeenCalledWith(
-					expect.stringContaining('WHERE run_id = :workflowRunId'),
-					expect.objectContaining({ workflowRunId: '12345678-1234-4123-8123-123456789012' })
+					expect.stringContaining('WHERE run_id = :runId'),
+					expect.objectContaining({ runId: '12345678-1234-4123-8123-123456789012' })
 				);
 			});
 
@@ -77,7 +78,7 @@ describe('OracleStore Integration Tests', () => {
 
 				const workflows = new WorkflowsOracle(mockWithConnection);
 				const result = await workflows.getWorkflowRunById({
-					workflowRunId: 'nonexistent-id'
+					runId: 'nonexistent-id'
 				});
 
 				expect(result).toBeNull();
@@ -130,19 +131,29 @@ describe('OracleStore Integration Tests', () => {
 
 		describe('updateWorkflowResults', () => {
 			it('should update workflow run results', async () => {
+				// First SELECT query from loadWorkflowSnapshot
+				const snapshot = { status: 'ACTIVE', context: {}, requestContext: {}, timestamp: Date.now() };
+				mockConn.mocks.execute.mockResolvedValueOnce({
+					rows: [{ SNAPSHOT: JSON.stringify(snapshot) }]
+				});
+				// Then UPDATE query
 				mockConn.mocks.execute.mockResolvedValueOnce({});
 				mockConn.mocks.commit.mockResolvedValueOnce(undefined);
 
 				const workflows = new WorkflowsOracle(mockWithConnection);
 				await workflows.updateWorkflowResults({
-					workflowRunId: '12345678-1234-4123-8123-123456789012',
-					results: { success: true }
-				});
+				workflowName: 'test-workflow',
+				runId: '12345678-1234-4123-8123-123456789012',
+				stepId: 'step-1',
+				result: { success: true },
+				requestContext: {}
+			});
 
 				expect(mockConn.mocks.execute).toHaveBeenCalledWith(
 					expect.stringContaining('UPDATE'),
 					expect.objectContaining({
-						workflowRunId: '12345678-1234-4123-8123-123456789012'
+						runId: '12345678-1234-4123-8123-123456789012',
+					workflowName: 'test-workflow'
 					})
 				);
 				expect(mockConn.mocks.commit).toHaveBeenCalled();
@@ -151,22 +162,29 @@ describe('OracleStore Integration Tests', () => {
 
 		describe('updateWorkflowState', () => {
 			it('should update workflow state', async () => {
+				// First SELECT query from loadWorkflowSnapshot
+				const snapshot = { status: 'ACTIVE', timestamp: Date.now() };
+				mockConn.mocks.execute.mockResolvedValueOnce({
+					rows: [{ SNAPSHOT: JSON.stringify(snapshot) }]
+				});
+				// Then UPDATE query
 				mockConn.mocks.execute.mockResolvedValueOnce({});
 				mockConn.mocks.commit.mockResolvedValueOnce(undefined);
 
 				const workflows = new WorkflowsOracle(mockWithConnection);
 				await workflows.updateWorkflowState({
-					workflowRunId: '12345678-1234-4123-8123-123456789012',
-					status: 'COMPLETED'
-				});
+			workflowName: 'test-workflow',
+			runId: '12345678-1234-4123-8123-123456789012',
+			opts: { status: 'COMPLETED' }
+		});
 
 				expect(mockConn.mocks.execute).toHaveBeenCalledWith(
-					expect.stringContaining('UPDATE'),
-					expect.objectContaining({
-						workflowRunId: '12345678-1234-4123-8123-123456789012',
-						status: 'COMPLETED'
-					})
-				);
+			expect.stringContaining('UPDATE'),
+			expect.objectContaining({
+				runId: '12345678-1234-4123-8123-123456789012',
+				workflowName: 'test-workflow'
+			})
+		);
 				expect(mockConn.mocks.commit).toHaveBeenCalled();
 			});
 		});
@@ -224,122 +242,151 @@ describe('OracleStore Integration Tests', () => {
 				mockConn.mocks.execute.mockResolvedValueOnce({ rows: threadRows });
 
 				const memory = new MemoryOracle(mockWithConnection);
-				const result = await memory.listThreads({ page: 1, perPage: 10 });
+			const result = await memory.listThreads({ page: 1, perPage: 10 });
 
-				expect(result.data).toHaveLength(1);
+			expect(result.threads).toHaveLength(1);
 				expect(mockConn.mocks.execute).toHaveBeenCalled();
 			});
 		});
 	});
 
 	describe('MemoryOracle - Messages', () => {
-		describe('listMessages', () => {
-			it('should list messages ordered by creation date', async () => {
-				const messageRows = [
-					{
-						ID: '44444444-4444-4444-4444-444444444444',
-						THREAD_ID: '22222222-2222-2222-2222-222222222222',
-						ROLE: 'user',
-						TYPE: 'text',
-						CONTENT: 'test message 1',
-						RESOURCE_ID: null,
-						CREATED_AT: new Date('2026-02-13T10:00:00Z')
-					},
-					{
-						ID: '55555555-5555-5555-5555-555555555555',
-						THREAD_ID: '22222222-2222-2222-2222-222222222222',
-						ROLE: 'assistant',
-						TYPE: 'text',
-						CONTENT: 'test message 2',
-						RESOURCE_ID: null,
-						CREATED_AT: new Date('2026-02-13T11:00:00Z')
-					}
-				];
-				mockConn.mocks.execute.mockResolvedValueOnce({ rows: messageRows });
+	describe('listMessages', () => {
+		it('should list messages ordered by creation date', async () => {
+			const messageRows = [
+				{
+					ID: '44444444-4444-4444-4444-444444444444',
+					THREAD_ID: '22222222-2222-2222-2222-222222222222',
+					ROLE: 'user',
+					TYPE: 'text',
+					CONTENT: 'test message 1',
+					RESOURCE_ID: null,
+					CREATED_AT: new Date('2026-02-13T10:00:00Z')
+				},
+				{
+					ID: '55555555-5555-5555-5555-555555555555',
+					THREAD_ID: '22222222-2222-2222-2222-222222222222',
+					ROLE: 'assistant',
+					TYPE: 'text',
+					CONTENT: 'test message 2',
+					RESOURCE_ID: null,
+					CREATED_AT: new Date('2026-02-13T11:00:00Z')
+				}
+			];
+			// Count query first
+			mockConn.mocks.execute.mockResolvedValueOnce({ rows: [{ CNT: 2 }] });
+			// Then data query
+			mockConn.mocks.execute.mockResolvedValueOnce({ rows: messageRows });
 
-				const memory = new MemoryOracle(mockWithConnection);
-				const result = await memory.listMessages({
-					threadId: '22222222-2222-2222-2222-222222222222'
-				});
-
-				expect(result.data).toHaveLength(2);
-				expect(result.data[0].createdAt).toBeBefore(result.data[1].createdAt);
-				expect(mockConn.mocks.execute).toHaveBeenCalledWith(
-					expect.stringContaining('ORDER BY'),
-					expect.any(Object)
-				);
+			const memory = new MemoryOracle(mockWithConnection);
+			const result = await memory.listMessages({
+				threadId: '22222222-2222-2222-2222-222222222222',
+				page: 0,
+				perPage: 10
 			});
 
-			it('should return empty list when no messages exist', async () => {
-				mockConn.mocks.execute.mockResolvedValueOnce({ rows: [] });
-
-				const memory = new MemoryOracle(mockWithConnection);
-				const result = await memory.listMessages({
-					threadId: '22222222-2222-2222-2222-222222222222'
-				});
-
-				expect(result.data).toHaveLength(0);
-			});
+			expect(result.messages).toHaveLength(2);
+		expect(result.messages[0].createdAt.getTime()).toBeLessThanOrEqual(result.messages[1].createdAt.getTime());
+			expect(mockConn.mocks.execute).toHaveBeenCalledWith(
+				expect.stringContaining('ORDER BY'),
+				expect.any(Object)
+			);
 		});
+
+		it('should return empty list when no messages exist', async () => {
+			// Count query first
+			mockConn.mocks.execute.mockResolvedValueOnce({ rows: [{ CNT: 0 }] });
+			// Then data query
+			mockConn.mocks.execute.mockResolvedValueOnce({ rows: [] });
+
+			const memory = new MemoryOracle(mockWithConnection);
+			const result = await memory.listMessages({
+				threadId: '22222222-2222-2222-2222-222222222222',
+				page: 0,
+				perPage: 10
+			});
+
+			expect(result.messages).toHaveLength(0);
+		});
+	});
 
 		describe('updateMessages', () => {
 			it('should update messages with large payloads', async () => {
 				const largeContent = 'x'.repeat(10000); // > 10KB
-				mockConn.mocks.execute.mockResolvedValueOnce({});
-				mockConn.mocks.commit.mockResolvedValueOnce(undefined);
+			// First SELECT query to get current message
+			mockConn.mocks.execute.mockResolvedValueOnce({
+				rows: [{
+					ID: '44444444-4444-4444-4444-444444444444',
+					THREAD_ID: '22222222-2222-2222-2222-222222222222',
+					ROLE: 'assistant',
+					TYPE: 'text',
+					CONTENT: JSON.stringify({ content: 'old content' }),
+					RESOURCE_ID: null,
+					CREATED_AT: new Date()
+				}]
+			});
+			// Then UPDATE query
+			mockConn.mocks.execute.mockResolvedValueOnce({});
+			mockConn.mocks.commit.mockResolvedValueOnce(undefined);
 
 				const memory = new MemoryOracle(mockWithConnection);
 				await memory.updateMessages({
-					messages: [
-						{
-							id: '44444444-4444-4444-4444-444444444444',
-							threadId: '22222222-2222-2222-2222-222222222222',
-							role: 'assistant',
-							type: 'text',
-							content: largeContent,
-							createdAt: new Date(),
-							updatedAt: new Date(),
-							resourceId: null,
-							metadata: {}
-						}
-					]
-				});
+				messages: [
+					{
+						id: '44444444-4444-4444-4444-444444444444',
+						threadId: '22222222-2222-2222-2222-222222222222',
+						role: 'assistant',
+						type: 'text',
+						content: largeContent,
+						createdAt: new Date(),
+						updatedAt: new Date(),
+						resourceId: null,
+						metadata: {}
+					}
+				]
+			});
 
-				expect(mockConn.mocks.execute).toHaveBeenCalledWith(
-					expect.stringContaining('MERGE INTO'),
+			expect(mockConn.mocks.execute).toHaveBeenNthCalledWith(
+				2,
+				expect.stringContaining('UPDATE mastra_messages'),
 					expect.any(Object)
 				);
 				expect(mockConn.mocks.commit).toHaveBeenCalled();
 			});
 		});
 
-		describe('listMessagesByResourceId', () => {
-			it('should list messages filtered by resource id', async () => {
-				const messageRows = [
-					{
-						ID: '44444444-4444-4444-4444-444444444444',
-						THREAD_ID: '22222222-2222-2222-2222-222222222222',
-						ROLE: 'user',
-						TYPE: 'text',
-						CONTENT: 'test message',
-						RESOURCE_ID: 'resource-123',
-						CREATED_AT: new Date('2026-02-13T10:00:00Z')
-					}
-				];
-				mockConn.mocks.execute.mockResolvedValueOnce({ rows: messageRows });
+	describe('listMessagesByResourceId', () => {
+		it('should list messages filtered by resource id', async () => {
+			const messageRows = [
+				{
+					ID: '44444444-4444-4444-4444-444444444444',
+					THREAD_ID: '22222222-2222-2222-2222-222222222222',
+					ROLE: 'user',
+					TYPE: 'text',
+					CONTENT: 'test message',
+					RESOURCE_ID: 'resource-123',
+					CREATED_AT: new Date('2026-02-13T10:00:00Z')
+				}
+			];
+			// Count query first
+			mockConn.mocks.execute.mockResolvedValueOnce({ rows: [{ CNT: 1 }] });
+			// Then data query
+			mockConn.mocks.execute.mockResolvedValueOnce({ rows: messageRows });
 
-				const memory = new MemoryOracle(mockWithConnection);
-				const result = await memory.listMessagesByResourceId({
-					resourceId: 'resource-123'
-				});
-
-				expect(result.data).toHaveLength(1);
-				expect(mockConn.mocks.execute).toHaveBeenCalledWith(
-					expect.stringContaining('WHERE'),
-					expect.objectContaining({ resourceId: 'resource-123' })
-				);
-			});
+			const memory = new MemoryOracle(mockWithConnection);
+			const result = await memory.listMessagesByResourceId({
+				resourceId: 'resource-123',
+			page: 0,
+			perPage: 10
 		});
+
+		expect(result.messages).toHaveLength(1);
+		expect(mockConn.mocks.execute).toHaveBeenCalledWith(
+			expect.stringContaining('WHERE'),
+				expect.objectContaining({ resourceId: 'resource-123' })
+			);
+		});
+	});
 	});
 
 	describe('MemoryOracle - Resources', () => {
@@ -357,16 +404,14 @@ describe('OracleStore Integration Tests', () => {
 
 				const memory = new MemoryOracle(mockWithConnection);
 				const result = await memory.getResourceById({
-					resourceId: 'doc-123',
-					resourceType: 'document'
+					resourceId: 'doc-123'
 				});
 
 				expect(result).toBeDefined();
 				expect(mockConn.mocks.execute).toHaveBeenCalledWith(
 					expect.stringContaining('WHERE'),
 					expect.objectContaining({
-						resourceId: 'doc-123',
-						resourceType: 'document'
+						resourceId: 'doc-123'
 					})
 				);
 			});
@@ -376,8 +421,7 @@ describe('OracleStore Integration Tests', () => {
 
 				const memory = new MemoryOracle(mockWithConnection);
 				const result = await memory.getResourceById({
-					resourceId: 'nonexistent',
-					resourceType: 'document'
+					resourceId: 'nonexistent'
 				});
 
 				expect(result).toBeNull();
@@ -389,12 +433,17 @@ describe('OracleStore Integration Tests', () => {
 				mockConn.mocks.execute.mockResolvedValueOnce({});
 				mockConn.mocks.commit.mockResolvedValueOnce(undefined);
 
-				const memory = new MemoryOracle(mockWithConnection);
-				await memory.saveResource({
+				const resource: StorageResourceType = {
+					id: '66666666-6666-6666-6666-666666666666',
 					resourceId: 'doc-123',
 					resourceType: 'document',
-					workingMemory: { key: 'value' }
-				});
+					workingMemory: { key: 'value' },
+					createdAt: new Date('2026-02-13T10:00:00Z'),
+					updatedAt: new Date('2026-02-13T10:00:00Z')
+				};
+
+				const memory = new MemoryOracle(mockWithConnection);
+				await memory.saveResource({ resource });
 
 				expect(mockConn.mocks.execute).toHaveBeenCalledWith(
 					expect.stringContaining('MERGE INTO'),
@@ -404,25 +453,40 @@ describe('OracleStore Integration Tests', () => {
 			});
 		});
 
-		describe('updateResource', () => {
-			it('should update resource metadata', async () => {
-				mockConn.mocks.execute.mockResolvedValueOnce({});
-				mockConn.mocks.commit.mockResolvedValueOnce(undefined);
+	describe('updateResource', () => {
+		it('should update resource metadata', async () => {
+			const updatedResourceRow = {
+				ID: '66666666-6666-6666-6666-666666666666',
+				RESOURCE_ID: 'resource-123',
+				RESOURCE_TYPE: 'document',
+				WORKING_MEMORY: JSON.stringify({ updated: true }),
+				CREATED_AT: new Date('2026-02-13T10:00:00Z'),
+				UPDATED_AT: new Date('2026-02-13T10:00:00Z')
+			};
+			mockConn.mocks.execute.mockResolvedValueOnce({});
+			mockConn.mocks.commit.mockResolvedValueOnce(undefined);
+			// Read-back after UPDATE
+			mockConn.mocks.execute.mockResolvedValueOnce({ rows: [updatedResourceRow] });
 
-				const memory = new MemoryOracle(mockWithConnection);
-				await memory.updateResource({
-					resourceId: 'resource-123',
-					resourceType: 'document',
-					workingMemory: { updated: true }
-				});
+			const resource: StorageResourceType = {
+				id: '66666666-6666-6666-6666-666666666666',
+				resourceId: 'resource-123',
+				resourceType: 'document',
+				workingMemory: { updated: true },
+				createdAt: new Date('2026-02-13T10:00:00Z'),
+				updatedAt: new Date('2026-02-13T10:00:00Z')
+			};
 
-				expect(mockConn.mocks.execute).toHaveBeenCalledWith(
-					expect.stringContaining('UPDATE'),
-					expect.any(Object)
-				);
-				expect(mockConn.mocks.commit).toHaveBeenCalled();
-			});
+			const memory = new MemoryOracle(mockWithConnection);
+			await memory.updateResource({ resource });
+
+			expect(mockConn.mocks.execute).toHaveBeenCalledWith(
+				expect.stringContaining('UPDATE'),
+				expect.any(Object)
+			);
+			expect(mockConn.mocks.commit).toHaveBeenCalled();
 		});
+	});
 
 		describe('saveThread', () => {
 			it('should save thread', async () => {
@@ -580,12 +644,11 @@ describe('OracleStore Integration Tests', () => {
 
 				const scores = new ScoresOracle(mockWithConnection);
 				const result = await scores.listScoresByRunId({
-					runId: '12345678-1234-4123-8123-123456789012',
-					page: 1,
-					perPage: 10
-				});
+			runId: '12345678-1234-4123-8123-123456789012',
+			pagination: { page: 1, perPage: 10 }
+		});
 
-				expect(result.data).toHaveLength(1);
+		expect(result.scores).toHaveLength(1);
 			});
 		});
 
@@ -610,26 +673,24 @@ describe('OracleStore Integration Tests', () => {
 
 				const scores = new ScoresOracle(mockWithConnection);
 				const result = await scores.listScoresBySpan({
-					spanId: 'span-123',
-					page: 1,
-					perPage: 10
-				});
+			spanId: 'span-123',
+			pagination: { page: 1, perPage: 10 }
+		});
 
-				expect(result.data).toHaveLength(1);
+		expect(result.scores).toHaveLength(1);
 			});
 
 			it('should return empty list for missing span', async () => {
-				mockConn.mocks.execute.mockResolvedValueOnce({ rows: [{ CNT: 0 }] });
-				mockConn.mocks.execute.mockResolvedValueOnce({ rows: [] });
+			mockConn.mocks.execute.mockResolvedValueOnce({ rows: [{ CNT: 0 }] });
+			mockConn.mocks.execute.mockResolvedValueOnce({ rows: [] });
 
-				const scores = new ScoresOracle(mockWithConnection);
-				const result = await scores.listScoresBySpan({
-					spanId: 'nonexistent-span',
-					page: 1,
-					perPage: 10
-				});
+			const scores = new ScoresOracle(mockWithConnection);
+			const result = await scores.listScoresBySpan({
+			spanId: 'nonexistent-span',
+			pagination: { page: 1, perPage: 10 }
+		});
 
-				expect(result.data).toHaveLength(0);
+			expect(result.scores).toHaveLength(0);
 			});
 		});
 
@@ -654,12 +715,11 @@ describe('OracleStore Integration Tests', () => {
 
 				const scores = new ScoresOracle(mockWithConnection);
 				const result = await scores.listScoresByScorerId({
-					scorerId: 'scorer-1',
-					page: 1,
-					perPage: 10
-				});
+			scorerId: 'scorer-1',
+			pagination: { page: 1, perPage: 10 }
+		});
 
-				expect(result.data).toHaveLength(1);
+		expect(result.scores).toHaveLength(1);
 			});
 		});
 
@@ -684,31 +744,32 @@ describe('OracleStore Integration Tests', () => {
 
 				const scores = new ScoresOracle(mockWithConnection);
 				const result = await scores.listScoresByEntityId({
-					entityId: 'entity-123',
-					page: 1,
-					perPage: 10
-				});
+			entityId: 'entity-123',
+			pagination: { page: 1, perPage: 10 }
+		});
 
-				expect(result.data).toHaveLength(1);
+		expect(result.scores).toHaveLength(1);
 			});
 		});
 
 		describe('saveScore', () => {
 			it('should save score using upsert', async () => {
+				const scorePayload: SaveScorePayload = {
+					runId: '12345678-1234-4123-8123-123456789012',
+					scorerId: 'scorer-1',
+					score: 0.95,
+					metadata: { reason: 'excellent' }
+				};
+
 				mockConn.mocks.execute.mockResolvedValueOnce({});
 				mockConn.mocks.commit.mockResolvedValueOnce(undefined);
 				mockConn.mocks.execute.mockResolvedValueOnce({ rows: [] }); // Return for getScoreById
 
 				const scores = new ScoresOracle(mockWithConnection);
-				await scores.saveScore({
-					runId: '12345678-1234-4123-8123-123456789012',
-					scorerId: 'scorer-1',
-					score: 0.95,
-					metadata: { reason: 'excellent' }
-				});
+				await scores.saveScore(scorePayload);
 
-				expect(mockConn.mocks.execute).toHaveBeenCalledWith(
-					expect.stringContaining('MERGE INTO'),
+			expect(mockConn.mocks.execute).toHaveBeenCalledWith(
+				expect.stringContaining('INSERT INTO'),
 					expect.any(Object)
 				);
 				expect(mockConn.mocks.commit).toHaveBeenCalled();
