@@ -103,7 +103,7 @@
 </script>
 
 <svelte:head>
-	<title>Run {runId} | OCI Self-Service Portal</title>
+	<title>Run {runId} | CloudNow</title>
 </svelte:head>
 
 <div class="run-page">

@@ -2,7 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { getEnabledModelIds } from '../mastra/models/index.js';
 import { aiProviderRepository } from '@portal/server/admin';
-import { FALLBACK_MODEL_ALLOWLIST, DEFAULT_MODEL } from '../mastra/agents/cloud-advisor.js';
+import { FALLBACK_MODEL_ALLOWLIST, DEFAULT_MODEL } from '../mastra/agents/charlie.js';
 import { createLogger } from '@portal/server/logger';
 
 const log = createLogger('api:models');

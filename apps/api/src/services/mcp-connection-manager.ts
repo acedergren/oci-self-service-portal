@@ -18,7 +18,7 @@
  * - mcpServerRepository: Read/write server state and credentials
  * - Dockerode: Container orchestration for catalog servers
  * - @mastra/mcp: MCP protocol client implementation
- * - Mastra framework: Provides toolsets to CloudAdvisor agent
+ * - Mastra framework: Provides toolsets to Charlie agent
  */
 
 import { InternalMastraMCPClient } from '@mastra/mcp';
@@ -26,11 +26,7 @@ import type { MastraMCPServerDefinition } from '@mastra/mcp';
 import type { Tool } from '@mastra/core/tools';
 import Dockerode from 'dockerode';
 import { mcpServerRepository } from '@portal/server/admin/mcp-repository.js';
-import type {
-	McpServer,
-	DecryptedCredential,
-	CachedTool
-} from '@portal/server/admin/mcp-types.js';
+import type { McpServer, DecryptedCredential, CachedTool } from '@portal/server/admin/mcp-types.js';
 import { createLogger } from '@portal/server/logger.js';
 
 const log = createLogger('mcp-connection-manager');

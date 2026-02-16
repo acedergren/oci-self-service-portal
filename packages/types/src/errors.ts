@@ -1,5 +1,5 @@
 /**
- * Structured error hierarchy for the OCI Self-Service Portal.
+ * Structured error hierarchy for CloudNow.
  *
  * Every error carries a machine-readable `code`, an HTTP `statusCode`,
  * and an arbitrary `context` bag for structured logging. All errors

@@ -15,7 +15,7 @@
 			<div class="logo-diamond">&#9670;</div>
 		</div>
 
-		<h1 class="login-title">OCI Self-Service Portal</h1>
+		<h1 class="login-title">CloudNow</h1>
 		<p class="login-subtitle">Cloud operations powered by AI</p>
 
 		<button class="btn btn-primary login-btn" onclick={signInWithOCI}>

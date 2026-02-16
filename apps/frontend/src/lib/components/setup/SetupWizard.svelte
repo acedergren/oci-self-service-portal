@@ -86,7 +86,7 @@
 			<div class="logo-diamond">&#9670;</div>
 		</div>
 		<h1 class="wizard-title">Admin Console Setup</h1>
-		<p class="wizard-subtitle">Configure your OCI Self-Service Portal</p>
+		<p class="wizard-subtitle">Configure your CloudNow portal</p>
 	</div>
 
 	<div class="wizard-container">

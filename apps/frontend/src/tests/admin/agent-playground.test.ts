@@ -87,7 +87,7 @@ describe('buildChatRequestPayload', () => {
 			{
 				agentId: 'agent-123',
 				model: 'oci.gpt-4o',
-				systemPrompt: 'You are CloudAdvisor',
+				systemPrompt: 'You are Charlie',
 				temperature: 0.6,
 				topP: 0.9
 			}
@@ -96,7 +96,7 @@ describe('buildChatRequestPayload', () => {
 		expect(payload).toEqual({
 			agentId: 'agent-123',
 			model: 'oci.gpt-4o',
-			system: 'You are CloudAdvisor',
+			system: 'You are Charlie',
 			temperature: 0.6,
 			topP: 0.9,
 			messages: [

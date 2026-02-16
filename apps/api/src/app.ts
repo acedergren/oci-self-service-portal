@@ -391,7 +391,7 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 		await app.register(fastifySwagger, {
 			openapi: {
 				info: {
-					title: 'OCI Self-Service Portal API',
+					title: 'CloudNow API',
 					version: process.env.npm_package_version || '0.1.0'
 				}
 			}

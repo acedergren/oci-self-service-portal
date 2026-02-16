@@ -21,7 +21,7 @@ import { Observability } from '@mastra/observability';
 import { OracleStore } from '../mastra/storage/oracle-store.js';
 import { OracleVectorStore } from '../mastra/rag/oracle-vector-store.js';
 import { buildMastraTools } from '../mastra/tools/registry.js';
-import { createCloudAdvisorAgent, DEFAULT_MODEL } from '../mastra/agents/cloud-advisor.js';
+import { createCharlieAgent, DEFAULT_MODEL } from '../mastra/agents/charlie.js';
 import { mcpConnectionManager } from '../services/mcp-connection-manager.js';
 
 declare module 'fastify' {
@@ -77,9 +77,9 @@ const mastraPlugin: FastifyPluginAsync = async (fastify) => {
 		}
 	});
 
-	// ── Create CloudAdvisor agent ──────────────────────────────────────
+	// ── Create Charlie agent ──────────────────────────────────────────
 	const compartmentId = process.env.OCI_COMPARTMENT_ID;
-	const cloudAdvisor = createCloudAdvisorAgent({
+	const charlie = createCharlieAgent({
 		model: DEFAULT_MODEL,
 		memory,
 		compartmentId
@@ -107,10 +107,10 @@ const mastraPlugin: FastifyPluginAsync = async (fastify) => {
 
 	// ── Create Mastra instance ─────────────────────────────────────────
 	const mastra = new Mastra({
-		agents: { 'cloud-advisor': cloudAdvisor },
+		agents: { charlie },
 		tools,
 		storage,
-		memory: { 'cloud-advisor': memory },
+		memory: { charlie: memory },
 		observability
 	});
 
@@ -164,7 +164,7 @@ const mastraPlugin: FastifyPluginAsync = async (fastify) => {
 	});
 
 	fastify.log.info(
-		`Mastra plugin registered: ${Object.keys(tools).length} tools, 1 agent (CloudAdvisor), ` +
+		`Mastra plugin registered: ${Object.keys(tools).length} tools, 1 agent (Charlie), ` +
 			`vector=${!!vectorStore}, semanticRecall=${!!vectorStore} at ${MASTRA_PREFIX}`
 	);
 };

@@ -1,11 +1,11 @@
 /**
- * CloudAdvisor — Mastra Agent for OCI cloud infrastructure assistance.
+ * Charlie — Mastra Agent for OCI cloud infrastructure assistance.
  *
  * Replaces the 387 LOC chat endpoint with a declarative agent definition.
  * The system prompt, tools, and memory are composed at creation time.
  *
  * Usage:
- *   const agent = createCloudAdvisorAgent({ model, memory, compartmentId });
+ *   const agent = createCharlieAgent({ model, memory, compartmentId });
  *   const result = await agent.stream(messages, { threadId, resourceId });
  */
 import { Agent } from '@mastra/core/agent';
@@ -25,7 +25,7 @@ export function getSystemPrompt(compartmentId?: string): string {
 		? `\n\nDEFAULT COMPARTMENT: When a tool requires a compartmentId and the user doesn't specify one, use this default: ${compartmentId}`
 		: `\n\nNOTE: No default compartment is configured. You should first call listCompartments to find available compartments and ask the user which one to use.`;
 
-	return `You are **CloudAdvisor**, an expert Oracle Cloud Infrastructure (OCI) assistant and multi-cloud advisor embedded in a self-service portal.
+	return `You are **Charlie**, an expert Oracle Cloud Infrastructure (OCI) assistant and multi-cloud advisor embedded in CloudNow.
 
 ## PERSONA & TONE
 - Professional, proactive, and cost-conscious. Security-first mindset.
@@ -229,7 +229,7 @@ export const DEFAULT_MODEL = 'google.gemini-2.5-flash';
 
 // ── Agent Factory ─────────────────────────────────────────────────────────
 
-export interface CloudAdvisorConfig {
+export interface CharlieConfig {
 	/** Model identifier (e.g. 'google.gemini-2.5-flash') */
 	model: string;
 	/** Mastra Memory instance for conversation persistence */
@@ -238,7 +238,7 @@ export interface CloudAdvisorConfig {
 	compartmentId?: string;
 }
 
-export function createCloudAdvisorAgent(config: CloudAdvisorConfig): Agent {
+export function createCharlieAgent(config: CharlieConfig): Agent {
 	const tools = buildMastraTools();
 
 	// ── Configure eval scorers (A-2.07) ────────────────────────────────
@@ -267,8 +267,8 @@ export function createCloudAdvisorAgent(config: CloudAdvisorConfig): Agent {
 		: undefined;
 
 	return new Agent({
-		id: 'cloud-advisor',
-		name: 'CloudAdvisor',
+		id: 'charlie',
+		name: 'Charlie',
 		instructions: getSystemPrompt(config.compartmentId),
 		model: config.model,
 		tools,

@@ -42,7 +42,7 @@ describe('OpenAPI Spec Generation (Phase 8.4)', () => {
 		const spec = generateOpenAPISpec() as Record<string, unknown>;
 		expect(spec.openapi).toBe('3.1.0');
 		expect(spec.info).toBeDefined();
-		expect((spec.info as Record<string, unknown>).title).toBe('OCI Self-Service Portal API');
+		expect((spec.info as Record<string, unknown>).title).toBe('CloudNow API');
 		expect((spec.info as Record<string, unknown>).version).toBe('1.0.0');
 	});
 

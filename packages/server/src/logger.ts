@@ -1,5 +1,5 @@
 /**
- * Structured Pino logger factory for the OCI Self-Service Portal.
+ * Structured Pino logger factory for CloudNow.
  *
  * Every server-side module creates a child logger via `createLogger(module)`.
  * The child automatically binds `{ module }` to every log line so you can

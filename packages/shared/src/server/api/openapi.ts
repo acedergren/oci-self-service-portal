@@ -169,10 +169,10 @@ export function generateOpenAPISpec(): OpenAPIDocument {
 	const spec: OpenAPIDocument = {
 		openapi: '3.1.0',
 		info: {
-			title: 'OCI Self-Service Portal API',
+			title: 'CloudNow API',
 			version: '1.0.0',
 			description:
-				'REST API for the OCI Self-Service Portal. Provides tool discovery, execution, ' +
+				'REST API for CloudNow. Provides tool discovery, execution, ' +
 				'and management for Oracle Cloud Infrastructure operations.'
 		},
 		servers: [{ url: '/api/v1', description: 'Portal API v1' }],

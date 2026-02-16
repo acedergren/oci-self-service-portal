@@ -3,8 +3,8 @@
 </script>
 
 <svelte:head>
-	<title>Setup - OCI Self-Service Portal</title>
-	<meta name="description" content="Configure your OCI Self-Service Portal admin console" />
+	<title>Setup - CloudNow</title>
+	<meta name="description" content="Configure your CloudNow admin console" />
 </svelte:head>
 
 <SetupWizard />

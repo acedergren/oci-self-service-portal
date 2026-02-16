@@ -1,5 +1,5 @@
 /**
- * Chat route — streams AI responses via Mastra CloudAdvisor agent.
+ * Chat route — streams AI responses via Mastra Charlie agent.
  *
  * POST /api/chat
  *   Body: { messages: ChatMessage[], model?: string, threadId?: string }
@@ -14,7 +14,7 @@ import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { ValidationError } from '@portal/server/errors.js';
-import { FALLBACK_MODEL_ALLOWLIST, DEFAULT_MODEL } from '../mastra/agents/cloud-advisor.js';
+import { FALLBACK_MODEL_ALLOWLIST, DEFAULT_MODEL } from '../mastra/agents/charlie.js';
 import { getProviderRegistry, getEnabledModelIds } from '../mastra/models/index.js';
 import { requireAuth, resolveOrgId } from '../plugins/rbac.js';
 
@@ -78,8 +78,8 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
 				throw new ValidationError('No AI models available');
 			}
 
-			// ── Get CloudAdvisor agent ──────────────────────────────────────
-			const agent = fastify.mastra.getAgent('cloud-advisor');
+			// ── Get Charlie agent ──────────────────────────────────────────
+			const agent = fastify.mastra.getAgent('charlie');
 
 			// ── Load MCP toolsets for org (non-blocking — chat works without them)
 			let mcpToolsets: Record<string, unknown> | undefined;

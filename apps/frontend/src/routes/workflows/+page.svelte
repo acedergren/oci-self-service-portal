@@ -64,7 +64,7 @@
 </script>
 
 <svelte:head>
-	<title>Workflows | OCI Self-Service Portal</title>
+	<title>Workflows | CloudNow</title>
 </svelte:head>
 
 <div class="workflows-page">

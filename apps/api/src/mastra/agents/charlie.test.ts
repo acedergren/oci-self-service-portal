@@ -25,11 +25,11 @@ vi.mock('../tools/registry.js', () => ({
 
 import {
 	getSystemPrompt,
-	createCloudAdvisorAgent,
+	createCharlieAgent,
 	FALLBACK_MODEL_ALLOWLIST,
 	DEFAULT_MODEL,
-	type CloudAdvisorConfig
-} from './cloud-advisor.js';
+	type CharlieConfig
+} from './charlie.js';
 import { Agent } from '@mastra/core/agent';
 
 const MockAgent = vi.mocked(Agent);
@@ -37,9 +37,9 @@ const MockAgent = vi.mocked(Agent);
 // ── getSystemPrompt ──────────────────────────────────────────────────
 
 describe('getSystemPrompt', () => {
-	it('includes CloudAdvisor persona', () => {
+	it('includes Charlie persona', () => {
 		const prompt = getSystemPrompt();
-		expect(prompt).toContain('CloudAdvisor');
+		expect(prompt).toContain('Charlie');
 		expect(prompt).toContain('Oracle Cloud Infrastructure');
 	});
 
@@ -107,25 +107,25 @@ describe('constants', () => {
 	});
 });
 
-// ── createCloudAdvisorAgent ──────────────────────────────────────────
+// ── createCharlieAgent ──────────────────────────────────────────
 
-describe('createCloudAdvisorAgent', () => {
+describe('createCharlieAgent', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 	});
 
 	it('creates an Agent with correct id and name', () => {
-		const config: CloudAdvisorConfig = { model: 'google.gemini-2.5-flash' };
-		createCloudAdvisorAgent(config);
+		const config: CharlieConfig = { model: 'google.gemini-2.5-flash' };
+		createCharlieAgent(config);
 
 		expect(MockAgent).toHaveBeenCalledOnce();
 		const agentConfig = MockAgent.mock.calls[0][0];
-		expect(agentConfig.id).toBe('cloud-advisor');
-		expect(agentConfig.name).toBe('CloudAdvisor');
+		expect(agentConfig.id).toBe('charlie');
+		expect(agentConfig.name).toBe('Charlie');
 	});
 
 	it('passes the model from config', () => {
-		createCloudAdvisorAgent({ model: 'cohere.command-r-plus' });
+		createCharlieAgent({ model: 'cohere.command-r-plus' });
 
 		const agentConfig = MockAgent.mock.calls[0][0];
 		expect(agentConfig.model).toBe('cohere.command-r-plus');
@@ -133,7 +133,7 @@ describe('createCloudAdvisorAgent', () => {
 
 	it('passes memory when provided', () => {
 		const mockMemory = { recall: vi.fn() };
-		createCloudAdvisorAgent({
+		createCharlieAgent({
 			model: DEFAULT_MODEL,
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			memory: mockMemory as any
@@ -144,7 +144,7 @@ describe('createCloudAdvisorAgent', () => {
 	});
 
 	it('generates system prompt with compartmentId', () => {
-		createCloudAdvisorAgent({
+		createCharlieAgent({
 			model: DEFAULT_MODEL,
 			compartmentId: 'ocid1.test.compartment'
 		});
@@ -154,7 +154,7 @@ describe('createCloudAdvisorAgent', () => {
 	});
 
 	it('includes tools from buildMastraTools()', () => {
-		createCloudAdvisorAgent({ model: DEFAULT_MODEL });
+		createCharlieAgent({ model: DEFAULT_MODEL });
 
 		const agentConfig = MockAgent.mock.calls[0][0];
 		expect(agentConfig.tools).toHaveProperty('list-instances');

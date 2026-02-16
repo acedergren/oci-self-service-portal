@@ -87,7 +87,7 @@
 </script>
 
 <svelte:head>
-	<title>Cloud Self-Service Portal | OCI</title>
+	<title>CloudNow</title>
 	<link rel="preconnect" href="https://fonts.googleapis.com" />
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
 	<link

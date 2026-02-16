@@ -1,5 +1,5 @@
 /**
- * Deep health check runner for the OCI Self-Service Portal.
+ * Deep health check runner for CloudNow.
  *
  * Checks each subsystem independently and returns a composite status.
  * Critical checks (database) drive overall status to 'error' on failure.

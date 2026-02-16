@@ -25,7 +25,7 @@
 	{#if data.user}
 		<header class="app-header">
 			<div class="header-left">
-				<a href={resolve('/')} class="app-title">OCI Self-Service Portal</a>
+				<a href={resolve('/')} class="app-title">CloudNow</a>
 				<nav class="header-nav">
 					<a href={resolve('/workflows')} class="nav-link">Workflows</a>
 				</nav>

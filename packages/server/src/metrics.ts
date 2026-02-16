@@ -1,5 +1,5 @@
 /**
- * Prometheus-compatible metrics collector for the OCI Self-Service Portal.
+ * Prometheus-compatible metrics collector for CloudNow.
  *
  * Provides Counter, Histogram, and Gauge metric types with a central Registry
  * that exposes metrics in Prometheus text exposition format.

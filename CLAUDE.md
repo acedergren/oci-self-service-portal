@@ -1,6 +1,6 @@
-# OCI Self-Service Portal
+# CloudNow
 
-Monorepo for the OCI self-service portal: SvelteKit frontend + Fastify 5 API + shared packages.
+Monorepo for CloudNow: SvelteKit frontend + Fastify 5 API + shared packages. Cloud operations powered by Charlie, your AI cloud advisor.
 
 ## Agent Behavior
 

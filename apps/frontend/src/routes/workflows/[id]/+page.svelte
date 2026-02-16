@@ -314,7 +314,7 @@
 </script>
 
 <svelte:head>
-	<title>{isNew ? 'New Workflow' : workflowName} | OCI Self-Service Portal</title>
+	<title>{isNew ? 'New Workflow' : workflowName} | CloudNow</title>
 </svelte:head>
 
 {#if loading}

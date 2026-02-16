@@ -1,5 +1,5 @@
 /**
- * AI guardrail processors for the CloudAdvisor agent.
+ * AI guardrail processors for the Charlie agent.
  *
  * Implements three safety layers using Mastra's Processor interface:
  * - PromptInjectionDetector: blocks common injection patterns in user input

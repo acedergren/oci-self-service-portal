@@ -2,7 +2,7 @@
  * Tests for Chat streaming route (Mastra agent-based).
  *
  * Tests the route at apps/api/src/routes/chat.ts:
- * - POST /api/chat — AI-powered chat via Mastra CloudAdvisor agent SSE streaming
+ * - POST /api/chat — AI-powered chat via Mastra Charlie agent SSE streaming
  *
  * Security contract:
  * - Requires 'tools:execute' permission
@@ -28,7 +28,7 @@ vi.mock('../../mastra/models/index.js', () => ({
 	getEnabledModelIds: (...args: unknown[]) => mockGetEnabledModelIds(...args)
 }));
 
-vi.mock('../../mastra/agents/cloud-advisor.js', () => ({
+vi.mock('../../mastra/agents/charlie.js', () => ({
 	FALLBACK_MODEL_ALLOWLIST: [
 		'google.gemini-2.5-flash',
 		'cohere.command-r-plus',
