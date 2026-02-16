@@ -427,13 +427,13 @@ describe('Webhook SSRF Prevention (Phase 8.4)', () => {
 			'https://webhook.site/test-uuid'
 		];
 
-		it('rejects private IP addresses', () => {
+		it('rejects private IP addresses', async () => {
 			if (!webhooksModule) return;
 
 			// The module should export a URL validation function or the create
 			// function should reject private IPs
 			const isValidWebhookUrl = (webhooksModule.isValidWebhookUrl ??
-				webhooksModule.validateWebhookUrl) as ((url: string) => boolean) | undefined;
+				webhooksModule.validateWebhookUrl) as ((url: string) => Promise<boolean>) | undefined;
 
 			if (!isValidWebhookUrl) {
 				// If no explicit validator, the create function should reject
@@ -458,16 +458,18 @@ describe('Webhook SSRF Prevention (Phase 8.4)', () => {
 				return;
 			}
 
+			// Test all private IPs with async validation
 			for (const url of privateIPs) {
-				expect(isValidWebhookUrl(url)).toBe(false);
+				const result = await isValidWebhookUrl(url);
+				expect(result).toBe(false);
 			}
 		});
 
-		it('accepts public URLs', () => {
+		it('accepts public URLs', async () => {
 			if (!webhooksModule) return;
 
 			const isValidWebhookUrl = (webhooksModule.isValidWebhookUrl ??
-				webhooksModule.validateWebhookUrl) as ((url: string) => boolean) | undefined;
+				webhooksModule.validateWebhookUrl) as ((url: string) => Promise<boolean>) | undefined;
 
 			if (!isValidWebhookUrl) {
 				// Verify URLs are public by pattern
@@ -481,15 +483,16 @@ describe('Webhook SSRF Prevention (Phase 8.4)', () => {
 			}
 
 			for (const url of publicURLs) {
-				expect(isValidWebhookUrl(url)).toBe(true);
+				const result = await isValidWebhookUrl(url);
+				expect(result).toBe(true);
 			}
 		});
 
-		it('requires HTTPS for webhook URLs', () => {
+		it('requires HTTPS for webhook URLs', async () => {
 			if (!webhooksModule) return;
 
 			const isValidWebhookUrl = (webhooksModule.isValidWebhookUrl ??
-				webhooksModule.validateWebhookUrl) as ((url: string) => boolean) | undefined;
+				webhooksModule.validateWebhookUrl) as ((url: string) => Promise<boolean>) | undefined;
 
 			if (!isValidWebhookUrl) {
 				// Contract: webhook URLs must use HTTPS
@@ -499,8 +502,11 @@ describe('Webhook SSRF Prevention (Phase 8.4)', () => {
 				return;
 			}
 
-			expect(isValidWebhookUrl('http://example.com/webhook')).toBe(false);
-			expect(isValidWebhookUrl('https://example.com/webhook')).toBe(true);
+			const httpResult = await isValidWebhookUrl('http://example.com/webhook');
+			expect(httpResult).toBe(false);
+
+			const httpsResult = await isValidWebhookUrl('https://example.com/webhook');
+			expect(httpsResult).toBe(true);
 		});
 
 		it('rejects cloud metadata endpoints', () => {
