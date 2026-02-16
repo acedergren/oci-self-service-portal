@@ -10,8 +10,10 @@ export default defineConfig({
 	ssr: {
 		noExternal: ['@tanstack/svelte-query'],
 		// Externalize native binaries and heavy server deps to prevent SSR bundling.
-		// Note: workspace packages with .ts exports (@portal/shared, @portal/types)
-		// get bundled regardless since Vite can't emit bare imports for .ts sources.
+		// @portal/shared and @portal/server have .ts exports so Vite inlines them
+		// regardless, but listing them here documents intent for future reference.
+		// @portal/types is NOT listed: it has compiled .js exports which Vite would
+		// emit as bare imports, breaking Docker deployment (Dockerfile doesn't copy it).
 		external: [
 			// Database drivers (native binaries)
 			'oracledb',
@@ -25,8 +27,7 @@ export default defineConfig({
 			'@modelcontextprotocol/sdk',
 			// Workspace packages (contain server-only code + native deps)
 			'@portal/server',
-			'@portal/shared',
-			'@portal/types'
+			'@portal/shared'
 		]
 	},
 	build: {
