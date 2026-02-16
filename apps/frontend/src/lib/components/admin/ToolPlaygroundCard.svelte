@@ -1,19 +1,18 @@
 <script lang="ts">
 	import type { CachedTool } from '@portal/server/admin/mcp-types';
-	import Collapsible from '$lib/components/ui/Collapsible.svelte';
 
 	interface Props {
 		tool: CachedTool;
 		serverId: string;
-		onExecute: (args: Record<string, any>) => void;
+		onExecute: (args: Record<string, unknown>) => void;
 		isPending?: boolean;
 	}
 
-	let { tool, serverId, onExecute, isPending = false }: Props = $props();
+	let { tool, serverId: _serverId, onExecute, isPending = false }: Props = $props();
 
 	let isExpanded = $state(false);
-	let formArgs = $state<Record<string, any>>({});
-	let result = $state<any>(null);
+	let formArgs = $state<Record<string, unknown>>({});
+	let result = $state<unknown>(null);
 	let duration = $state<number | null>(null);
 
 	const schema = $derived(tool.inputSchema);
@@ -33,9 +32,9 @@
 		duration = Math.round(endTime - startTime);
 	}
 
-	function renderInputField(key: string, propSchema: any) {
+	function renderInputField(key: string, propSchema: Record<string, unknown>) {
 		const type = propSchema.type;
-		const isRequired = required.includes(key);
+		const _isRequired = required.includes(key);
 
 		if (type === 'boolean') {
 			return {
@@ -67,8 +66,8 @@
 	}
 
 	function initializeFormArgs() {
-		const args: Record<string, any> = {};
-		Object.entries(properties).forEach(([key, propSchema]: [string, any]) => {
+		const args: Record<string, unknown> = {};
+		Object.entries(properties).forEach(([key, propSchema]) => {
 			const field = renderInputField(key, propSchema);
 			args[key] = field.defaultValue;
 		});

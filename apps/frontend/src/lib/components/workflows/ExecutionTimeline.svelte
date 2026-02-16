@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Badge } from '$lib/components/ui/index.js';
-	import type { ExecutionTimelineProps, WorkflowRunView, StepExecution } from './types.js';
+	import type { ExecutionTimelineProps } from './types.js';
 
 	let {
 		runs,

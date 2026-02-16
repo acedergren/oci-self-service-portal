@@ -227,7 +227,7 @@
 		}
 	}
 
-	async function handleDeleteSession(id: string) {
+	async function _handleDeleteSession(id: string) {
 		await deleteSessionMutation.mutateAsync(id);
 
 		if (id === localSessionId) {
@@ -235,7 +235,7 @@
 		}
 	}
 
-	function toggleSidebar() {
+	function _toggleSidebar() {
 		sidebarOpen = !sidebarOpen;
 	}
 
@@ -261,7 +261,7 @@
 		if (id === 'tools') toolDrawerOpen = true;
 	}
 
-	async function handleToolApprove(toolCallId: string) {
+	async function handleToolApprove(_toolCallId: string) {
 		if (!ctx.pendingApproval || ctx.isExecutingApproval) return;
 
 		ctx.isExecutingApproval = true;
@@ -302,7 +302,7 @@
 		}
 	}
 
-	async function handleToolReject(toolCallId: string) {
+	async function handleToolReject(_toolCallId: string) {
 		if (!ctx.pendingApproval) return;
 
 		// Log the rejection

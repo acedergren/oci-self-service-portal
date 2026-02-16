@@ -47,7 +47,7 @@
 	const {
 		form: formData,
 		errors,
-		validate,
+		validate: _validate,
 		reset
 	} = superForm(idpDefaults, {
 		SPA: true,

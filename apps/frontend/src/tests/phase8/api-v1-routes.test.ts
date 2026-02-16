@@ -4,7 +4,7 @@
  * Tests the v1 tools API endpoints and OpenAPI spec generation.
  * Tests validate route handler logic, auth guards, and response shapes.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
 	getAllToolDefinitions,
 	getToolDefinition,
@@ -165,7 +165,7 @@ describe('Dual Auth Helper (require-auth)', () => {
 			url: { pathname: '/api/v1/tools' }
 		};
 
-		expect(() => requireApiAuth(event as any, 'tools:read')).not.toThrow();
+		expect(() => requireApiAuth(event as unknown, 'tools:read')).not.toThrow();
 	});
 
 	it('allows admin users regardless of specific permission', () => {
@@ -178,7 +178,7 @@ describe('Dual Auth Helper (require-auth)', () => {
 			url: { pathname: '/api/v1/tools' }
 		};
 
-		expect(() => requireApiAuth(event as any, 'tools:execute')).not.toThrow();
+		expect(() => requireApiAuth(event as unknown, 'tools:execute')).not.toThrow();
 	});
 
 	it('allows API key authenticated requests with correct permissions', () => {
@@ -196,7 +196,7 @@ describe('Dual Auth Helper (require-auth)', () => {
 			url: { pathname: '/api/v1/tools' }
 		};
 
-		expect(() => requireApiAuth(event as any, 'tools:read')).not.toThrow();
+		expect(() => requireApiAuth(event as unknown, 'tools:read')).not.toThrow();
 	});
 
 	it('throws 401 when neither session nor API key is present', () => {
@@ -209,7 +209,7 @@ describe('Dual Auth Helper (require-auth)', () => {
 			url: { pathname: '/api/v1/tools' }
 		};
 
-		expect(() => requireApiAuth(event as any, 'tools:read')).toThrow();
+		expect(() => requireApiAuth(event as unknown, 'tools:read')).toThrow();
 	});
 
 	it('throws 403 when session user lacks required permission', () => {
@@ -222,7 +222,7 @@ describe('Dual Auth Helper (require-auth)', () => {
 			url: { pathname: '/api/v1/tools' }
 		};
 
-		expect(() => requireApiAuth(event as any, 'tools:execute')).toThrow();
+		expect(() => requireApiAuth(event as unknown, 'tools:execute')).toThrow();
 	});
 
 	it('throws 403 when API key lacks required permission', () => {
@@ -240,7 +240,7 @@ describe('Dual Auth Helper (require-auth)', () => {
 			url: { pathname: '/api/v1/tools' }
 		};
 
-		expect(() => requireApiAuth(event as any, 'tools:execute')).toThrow();
+		expect(() => requireApiAuth(event as unknown, 'tools:execute')).toThrow();
 	});
 });
 

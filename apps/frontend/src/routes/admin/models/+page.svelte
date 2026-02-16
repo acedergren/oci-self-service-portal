@@ -155,9 +155,9 @@
 		onUpdate({ form: f }) {
 			if (!f.valid) return;
 			if (editingProvider) {
-				updateMutation.mutate({ id: editingProvider.id, ...f.data } as any);
+				updateMutation.mutate({ id: editingProvider.id, ...f.data } as Record<string, unknown>);
 			} else {
-				createProviderMutation.mutate(f.data as any);
+				createProviderMutation.mutate(f.data as Record<string, unknown>);
 			}
 		}
 	});

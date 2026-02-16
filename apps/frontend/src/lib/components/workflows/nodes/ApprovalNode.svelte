@@ -5,7 +5,7 @@
 
 	type ApprovalNode = Node<ApprovalNodeData, 'approval'>;
 
-	let { id, data, selected }: NodeProps<ApprovalNode> = $props();
+	let { id: _id, data, selected }: NodeProps<ApprovalNode> = $props();
 </script>
 
 <div class="approval-node" class:selected>

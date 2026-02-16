@@ -19,7 +19,7 @@
 		onNodeSelect?: (nodeId: string | null) => void;
 	}
 
-	let { workflow, readonly = false, onSave, onNodeSelect }: Props = $props();
+	let { workflow, readonly = false, onSave: _onSave, onNodeSelect }: Props = $props();
 
 	const nodeTypes: NodeTypes = {
 		tool: ToolNode,

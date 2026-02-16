@@ -5,7 +5,7 @@
 
 	type ConditionNode = Node<ConditionNodeData, 'condition'>;
 
-	let { id, data, selected }: NodeProps<ConditionNode> = $props();
+	let { id: _id, data, selected }: NodeProps<ConditionNode> = $props();
 </script>
 
 <div class="condition-node" class:selected>

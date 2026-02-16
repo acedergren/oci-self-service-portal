@@ -130,21 +130,21 @@ describe('crypto.ts - AES-256-GCM Encryption', () => {
 
 		it('throws error when encrypted component is missing', async () => {
 			const { iv, tag } = await encryptSecret('test');
-			await expect(decryptSecret(null as any, iv, tag)).rejects.toThrow(
+			await expect(decryptSecret(null as unknown as Buffer, iv, tag)).rejects.toThrow(
 				'Missing required decryption components'
 			);
 		});
 
 		it('throws error when IV is missing', async () => {
 			const { encrypted, tag } = await encryptSecret('test');
-			await expect(decryptSecret(encrypted, null as any, tag)).rejects.toThrow(
+			await expect(decryptSecret(encrypted, null as unknown as Buffer, tag)).rejects.toThrow(
 				'Missing required decryption components'
 			);
 		});
 
 		it('throws error when tag is missing', async () => {
 			const { encrypted, iv } = await encryptSecret('test');
-			await expect(decryptSecret(encrypted, iv, null as any)).rejects.toThrow(
+			await expect(decryptSecret(encrypted, iv, null as unknown as Buffer)).rejects.toThrow(
 				'Missing required decryption components'
 			);
 		});

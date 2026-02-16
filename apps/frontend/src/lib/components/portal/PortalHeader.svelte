@@ -2,10 +2,10 @@
 	import type { PortalHeaderProps } from './types.js';
 
 	let {
-		selectedModel,
-		availableModels,
+		selectedModel: _selectedModel,
+		availableModels: _availableModels,
 		notificationCount = 3,
-		onModelChange
+		onModelChange: _onModelChange
 	}: PortalHeaderProps = $props();
 </script>
 

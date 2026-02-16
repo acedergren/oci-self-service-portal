@@ -5,7 +5,7 @@
 
 	type InputNode = Node<InputNodeData, 'input'>;
 
-	let { id, data, selected }: NodeProps<InputNode> = $props();
+	let { id: _id, data, selected }: NodeProps<InputNode> = $props();
 </script>
 
 <div class="input-node" class:selected>

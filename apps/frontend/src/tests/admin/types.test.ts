@@ -307,7 +307,7 @@ describe('types.ts - Admin Zod Schemas', () => {
 			it('rejects invalid providerId or provider type', () => {
 				expectInvalid(CreateAiProviderInputSchema, [
 					{ ...validInput, providerId: 'OpenAI-1' },
-					{ ...validInput, providerType: 'invalid' as any }
+					{ ...validInput, providerType: 'invalid' as unknown }
 				]);
 			});
 
@@ -621,7 +621,7 @@ describe('types.ts - Admin Zod Schemas', () => {
 
 			it('rejects non-string model names', () => {
 				const input = {
-					'openai-1': [123 as any]
+					'openai-1': [123 as unknown]
 				};
 
 				expect(() => ModelAllowlistSchema.parse(input)).toThrow();
@@ -638,9 +638,9 @@ describe('types.ts - Admin Zod Schemas', () => {
 			type SetSettingType = ReturnType<typeof SetSettingInputSchema.parse>;
 
 			// Type assertions to verify structure
-			const _idp: CreateIdpType = {} as any;
-			const _ai: CreateAiProviderType = {} as any;
-			const _setting: SetSettingType = {} as any;
+			const _idp: CreateIdpType = {} as unknown as CreateIdpType;
+			const _ai: CreateAiProviderType = {} as unknown as CreateAiProviderType;
+			const _setting: SetSettingType = {} as unknown as SetSettingType;
 
 			expect(_idp).toBeDefined();
 			expect(_ai).toBeDefined();

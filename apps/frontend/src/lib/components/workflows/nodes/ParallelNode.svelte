@@ -5,7 +5,7 @@
 
 	type ParallelNode = Node<ParallelNodeData, 'parallel'>;
 
-	let { id, data, selected }: NodeProps<ParallelNode> = $props();
+	let { id: _id, data, selected }: NodeProps<ParallelNode> = $props();
 
 	const branchCount = $derived(data.branchNodeIds?.length ?? 0);
 	const strategy = $derived(data.mergeStrategy ?? 'all');

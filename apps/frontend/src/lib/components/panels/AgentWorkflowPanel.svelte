@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Collapsible, Spinner, Badge } from '$lib/components/ui/index.js';
-	import type { WorkflowStep, AgentPlan, WorkflowStepStatus } from './types.js';
+	import type { AgentPlan, WorkflowStepStatus } from './types.js';
 
 	interface Props {
 		isOpen?: boolean;

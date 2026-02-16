@@ -5,7 +5,7 @@
 
 	type OutputNode = Node<OutputNodeData, 'output'>;
 
-	let { id, data, selected }: NodeProps<OutputNode> = $props();
+	let { id: _id, data, selected }: NodeProps<OutputNode> = $props();
 </script>
 
 <div class="output-node" class:selected>

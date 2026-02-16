@@ -5,7 +5,7 @@
 
 	type LoopNode = Node<LoopNodeData, 'loop'>;
 
-	let { id, data, selected }: NodeProps<LoopNode> = $props();
+	let { id: _id, data, selected }: NodeProps<LoopNode> = $props();
 
 	const mode = $derived(data.executionMode ?? 'sequential');
 	const iterVar = $derived(data.iterationVariable ?? 'item');

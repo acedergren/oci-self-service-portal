@@ -5,7 +5,7 @@
 
 	type AIStepNode = Node<AIStepNodeData, 'ai-step'>;
 
-	let { id, data, selected }: NodeProps<AIStepNode> = $props();
+	let { id: _id, data, selected }: NodeProps<AIStepNode> = $props();
 
 	const modelLabel = $derived(data.model?.split('.').pop() ?? 'default');
 	const truncatedPrompt = $derived(

@@ -8,6 +8,7 @@
 	import MCPServerModal from '$lib/components/admin/MCPServerModal.svelte';
 	import ToolPlaygroundCard from '$lib/components/admin/ToolPlaygroundCard.svelte';
 	import { fuzzySearch } from '$lib/utils/fuzzy-search.js';
+	import type { McpCatalogItem, McpServer } from '@portal/server/admin/mcp-types';
 
 	let { data }: { data: PageData } = $props();
 
@@ -20,8 +21,8 @@
 	let categoryFilter = $state('all');
 	let showModal = $state(false);
 	let modalMode = $state<'install' | 'custom' | 'edit'>('install');
-	let selectedCatalogItem = $state<any>(null);
-	let editingServer = $state<any>(null);
+	let selectedCatalogItem = $state<McpCatalogItem | null>(null);
+	let editingServer = $state<McpServer | null>(null);
 	let selectedServerId = $state<string | null>(null);
 
 	// Queries
@@ -61,7 +62,7 @@
 
 	// Mutations
 	const installMutation = createMutation(() => ({
-		mutationFn: async (data: any) => {
+		mutationFn: async (data: Record<string, unknown>) => {
 			const res = await fetch('/api/admin/mcp/servers/install', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -84,7 +85,7 @@
 	}));
 
 	const createServerMutation = createMutation(() => ({
-		mutationFn: async (data: any) => {
+		mutationFn: async (data: Record<string, unknown>) => {
 			const res = await fetch('/api/admin/mcp/servers', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
@@ -107,7 +108,7 @@
 	}));
 
 	const updateMutation = createMutation(() => ({
-		mutationFn: async ({ id, data }: { id: string; data: any }) => {
+		mutationFn: async ({ id, data }: { id: string; data: Record<string, unknown> }) => {
 			const res = await fetch(`/api/admin/mcp/servers/${id}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
@@ -216,7 +217,7 @@
 		}: {
 			serverId: string;
 			toolName: string;
-			args: any;
+			args: Record<string, unknown>;
 		}) => {
 			const res = await fetch(`/api/admin/mcp/servers/${serverId}/tools/${toolName}/test`, {
 				method: 'POST',
@@ -243,7 +244,7 @@
 		const categoryFiltered =
 			categoryFilter === 'all'
 				? catalogItems
-				: catalogItems.filter((item: any) => item.category === categoryFilter);
+				: catalogItems.filter((item: McpCatalogItem) => item.category === categoryFilter);
 		return fuzzySearch(categoryFiltered, searchQuery, [
 			{ name: 'displayName', weight: 2 },
 			{ name: 'description', weight: 1 },
@@ -251,10 +252,13 @@
 		]);
 	});
 
-	const categories = $derived(['all', ...new Set(catalogItems.map((item: any) => item.category))]);
+	const categories = $derived([
+		'all',
+		...new Set(catalogItems.map((item: McpCatalogItem) => item.category))
+	]);
 
 	// Actions
-	function openInstallModal(item: any) {
+	function openInstallModal(item: McpCatalogItem) {
 		selectedCatalogItem = item;
 		editingServer = null;
 		modalMode = 'install';
@@ -268,7 +272,7 @@
 		showModal = true;
 	}
 
-	function openEditModal(server: any) {
+	function openEditModal(server: McpServer) {
 		selectedCatalogItem = null;
 		editingServer = server;
 		modalMode = 'edit';
@@ -281,7 +285,7 @@
 		editingServer = null;
 	}
 
-	function handleModalSubmit(data: any) {
+	function handleModalSubmit(data: Record<string, unknown>) {
 		if (modalMode === 'install') {
 			$installMutation.mutate(data);
 		} else if (modalMode === 'custom') {
@@ -309,7 +313,7 @@
 		}
 	}
 
-	function handleTestTool(serverId: string, toolName: string, args: any) {
+	function handleTestTool(serverId: string, toolName: string, args: Record<string, unknown>) {
 		$testToolMutation.mutate({ serverId, toolName, args });
 	}
 </script>
@@ -451,7 +455,7 @@
 			<div class="toolbar">
 				<select class="filter-select" bind:value={selectedServerId}>
 					<option value={null}>Select a server...</option>
-					{#each servers.filter((s: any) => s.status === 'connected') as server (server.id)}
+					{#each servers.filter((s: McpServer) => s.status === 'connected') as server (server.id)}
 						<option value={server.id}>{server.displayName}</option>
 					{/each}
 				</select>

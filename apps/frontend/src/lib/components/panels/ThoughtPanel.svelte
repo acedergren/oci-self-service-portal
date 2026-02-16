@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Collapsible, Spinner, Badge } from '$lib/components/ui/index.js';
+	import { Collapsible, Spinner } from '$lib/components/ui/index.js';
 
 	interface Props {
 		isOpen?: boolean;

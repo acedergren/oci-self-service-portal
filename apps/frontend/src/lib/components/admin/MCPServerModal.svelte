@@ -10,7 +10,7 @@
 		catalogItem?: McpCatalogItem | null;
 		server?: McpServer | null;
 		onClose: () => void;
-		onSubmit: (data: any) => void;
+		onSubmit: (data: Record<string, unknown>) => void;
 		isPending?: boolean;
 	}
 
@@ -66,7 +66,7 @@
 		resetForm: false,
 		onUpdate({ form: f }) {
 			if (!f.valid) return;
-			const d = f.data as Record<string, any>;
+			const d = f.data as Record<string, unknown>;
 			// Convert flat form data to structured API payload
 			onSubmit({
 				catalogItemId: d.catalogItemId,

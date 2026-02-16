@@ -5,7 +5,7 @@
 
 	type ToolNode = Node<ToolNodeData, 'tool'>;
 
-	let { id, data, selected }: NodeProps<ToolNode> = $props();
+	let { id: _id, data, selected }: NodeProps<ToolNode> = $props();
 
 	const approvalColors: Record<string, { bg: string; border: string; text: string }> = {
 		auto: {

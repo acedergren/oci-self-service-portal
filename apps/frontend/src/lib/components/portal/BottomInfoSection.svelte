@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { BottomInfoSectionProps, ServiceIconId } from './types.js';
+	import type { BottomInfoSectionProps } from './types.js';
 
 	let { recentActivity, resourceLinks, onAskAI, onViewAllActivity }: BottomInfoSectionProps =
 		$props();
