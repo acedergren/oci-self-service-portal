@@ -23,6 +23,7 @@ import { RATE_LIMIT_CONFIG } from '@portal/server/rate-limiter';
 import { generateRequestId } from '@portal/server/tracing';
 import { getAuthCookieAttributes } from '@portal/server/auth/cookies';
 import { initSetupToken } from '@portal/server/admin';
+import otelPlugin from './plugins/otel.js';
 import underPressurePlugin from './plugins/under-pressure.js';
 import cachePlugin from './plugins/cache.js';
 import oraclePlugin from './plugins/oracle.js';
@@ -222,16 +223,7 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 	// ── OpenTelemetry (MUST be first plugin) ─────────────────────────────
 	// @fastify/otel must register before all other plugins to properly instrument
 	// the request lifecycle. No-op if OTEL_EXPORTER_OTLP_ENDPOINT is not configured.
-	const otelEndpoint = process.env.OTEL_EXPORTER_OTLP_ENDPOINT;
-	if (otelEndpoint) {
-		const serviceName = process.env.OTEL_SERVICE_NAME ?? 'oci-portal-api';
-		log.info({ serviceName, endpoint: otelEndpoint }, '[otel] Registering OpenTelemetry');
-		// @fastify/otel type definitions are incorrect - default export is a plugin function at runtime
-		const fastifyOtel = (await import('@fastify/otel')).default as any;
-		await app.register(fastifyOtel, { serviceName });
-	} else {
-		log.info('[otel] OTEL_EXPORTER_OTLP_ENDPOINT not set, skipping OpenTelemetry setup');
-	}
+	await app.register(otelPlugin);
 
 	// Register Helmet.js — security headers matching SvelteKit hooks.server.ts
 	if (enableHelmet) {

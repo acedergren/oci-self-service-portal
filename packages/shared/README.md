@@ -34,6 +34,26 @@ packages/shared/src/
 └── query/              # OCI GenAI query utilities
 ```
 
+## ⚠️ Deprecations
+
+### MCPClient & MCPManager (Phase 11)
+
+The custom `MCPClient` and `MCPManager` classes in `@portal/shared/server/mcp-client/` have been moved to `@portal/server` and are deprecated.
+
+**Migration Guide:**
+
+```typescript
+// ❌ Old (deprecated)
+import { MCPClient } from '@portal/shared/server/mcp-client/client';
+import { MCPManager } from '@portal/shared/server/mcp-client/manager';
+
+// ✅ New
+import { MCPClient } from '@portal/server/mcp-client/client';
+import { MCPManager } from '@portal/server/mcp-client/manager';
+```
+
+These modules will be removed in Phase 11. Update your imports to use `@portal/server` directly.
+
 ## Exports
 
 ### Server Modules
