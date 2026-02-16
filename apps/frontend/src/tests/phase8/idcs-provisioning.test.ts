@@ -11,13 +11,13 @@ import { describe, test, expect, vi, beforeEach } from 'vitest';
 
 // Mock Oracle connection before importing modules
 const mockExecute = vi.fn();
-vi.mock('$lib/server/oracle/connection.js', () => ({
+vi.mock('@portal/server/oracle/connection', () => ({
 	withConnection: vi.fn(async (fn: (conn: { execute: typeof mockExecute }) => unknown) => {
 		return fn({ execute: mockExecute });
 	})
 }));
 
-vi.mock('$lib/server/logger.js', () => ({
+vi.mock('@portal/server/logger', () => ({
 	createLogger: () => ({
 		info: vi.fn(),
 		error: vi.fn(),
@@ -35,7 +35,7 @@ describe('mapIdcsGroupsToRole', () => {
 	let mapIdcsGroupsToRole: (groups: string[]) => 'admin' | 'operator' | 'viewer';
 
 	beforeEach(async () => {
-		const mod = await import('$lib/server/auth/config.js');
+		const mod = await import('@portal/server/auth/idcs-provisioning');
 		mapIdcsGroupsToRole = mod.mapIdcsGroupsToRole;
 	});
 
@@ -67,7 +67,7 @@ describe('idcsProfileCache', () => {
 	let consumeIdcsProfile: (sub: string) => { groups: string[]; tenantName?: string } | null;
 
 	beforeEach(async () => {
-		const mod = await import('$lib/server/auth/idcs-provisioning.js');
+		const mod = await import('@portal/server/auth/idcs-provisioning');
 		stashIdcsProfile = mod.stashIdcsProfile;
 		consumeIdcsProfile = mod.consumeIdcsProfile;
 	});
@@ -103,7 +103,7 @@ describe('resolveIdcsOrg', () => {
 		vi.clearAllMocks();
 		delete process.env.OCI_IAM_TENANT_ORG_MAP;
 		delete process.env.OCI_IAM_DEFAULT_ORG_ID;
-		const mod = await import('$lib/server/auth/idcs-provisioning.js');
+		const mod = await import('@portal/server/auth/idcs-provisioning');
 		resolveIdcsOrg = mod.resolveIdcsOrg;
 	});
 
@@ -154,7 +154,7 @@ describe('provisionFromIdcsGroups', () => {
 
 	beforeEach(async () => {
 		vi.clearAllMocks();
-		const mod = await import('$lib/server/auth/idcs-provisioning.js');
+		const mod = await import('@portal/server/auth/idcs-provisioning');
 		provisionFromIdcsGroups = mod.provisionFromIdcsGroups;
 	});
 
@@ -165,7 +165,8 @@ describe('provisionFromIdcsGroups', () => {
 		expect(role).toBe('admin');
 		expect(mockExecute).toHaveBeenCalledWith(
 			expect.stringContaining('MERGE INTO org_members'),
-			expect.objectContaining({ userId: 'user-1', orgId: 'org-1', role: 'admin' })
+			expect.objectContaining({ userId: 'user-1', orgId: 'org-1', role: 'admin' }),
+			expect.objectContaining({ autoCommit: true })
 		);
 	});
 

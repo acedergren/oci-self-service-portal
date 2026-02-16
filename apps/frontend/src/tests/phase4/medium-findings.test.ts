@@ -9,94 +9,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ── M-3: switchToSessionFallback ownership ─────────────────────────────
-
-const mockGetSession = vi.fn();
-const mockUpdateSession = vi.fn();
-const mockCreateSession = vi.fn().mockReturnValue({ id: 'new-session', status: 'active' });
-
-vi.mock('$lib/server/db.js', () => ({
-	getRepository: () => ({
-		getSession: mockGetSession,
-		updateSession: mockUpdateSession,
-		createSession: mockCreateSession
-	})
-}));
-
-vi.mock('$lib/server/oracle/repositories/session-repository.js', () => ({
-	sessionRepository: {
-		getById: vi.fn().mockResolvedValue(null),
-		create: vi.fn().mockRejectedValue(new Error('force fallback')),
-		update: vi.fn().mockResolvedValue(null)
-	}
-}));
-
-vi.mock('$lib/server/logger.js', () => ({
-	createLogger: () => ({
-		info: vi.fn(),
-		warn: vi.fn(),
-		error: vi.fn(),
-		debug: vi.fn()
-	})
-}));
-
-describe('M-3: switchToSessionFallback ownership verification', () => {
-	let sessionModule: Record<string, unknown>;
-	const mockCookies = {
-		get: vi.fn().mockReturnValue('session-123'),
-		set: vi.fn()
-	};
-
-	beforeEach(async () => {
-		vi.clearAllMocks();
-		sessionModule = await import('$lib/server/session.js');
-	});
-
-	it('switchToSession passes userId to fallback path', async () => {
-		const switchToSession = sessionModule.switchToSession as (
-			cookies: unknown,
-			sessionId: string,
-			userId?: string
-		) => Promise<boolean>;
-
-		// Force fallback (Oracle throws)
-		const { sessionRepository } =
-			await import('$lib/server/oracle/repositories/session-repository.js');
-		vi.mocked(sessionRepository.getById).mockRejectedValueOnce(new Error('DB down'));
-
-		// SQLite session belongs to different user
-		mockGetSession.mockReturnValueOnce({
-			id: 'other-session',
-			status: 'active',
-			userId: 'user-B'
-		});
-
-		const result = await switchToSession(mockCookies, 'other-session', 'user-A');
-		// Should reject: session belongs to user-B, not user-A
-		expect(result).toBe(false);
-	});
-
-	it('switchToSessionFallback allows session without userId check when no userId given', async () => {
-		const switchToSession = sessionModule.switchToSession as (
-			cookies: unknown,
-			sessionId: string,
-			userId?: string
-		) => Promise<boolean>;
-
-		const { sessionRepository } =
-			await import('$lib/server/oracle/repositories/session-repository.js');
-		vi.mocked(sessionRepository.getById).mockRejectedValueOnce(new Error('DB down'));
-
-		mockGetSession.mockReturnValueOnce({
-			id: 'session-abc',
-			status: 'active',
-			userId: 'user-X'
-		});
-
-		// No userId provided — should allow (backward compat)
-		const result = await switchToSession(mockCookies, 'session-abc');
-		expect(result).toBe(true);
-	});
-});
+// REMOVED: Session management moved to Fastify API during Phase C migration.
+// The session switching logic now lives in apps/api/src/routes/sessions.ts
+// at the POST /api/sessions/:id/continue endpoint.
+// Ownership verification is handled at lines 216-223 in sessions.ts:
+//   - Verifies session exists and belongs to the authenticated user
+//   - Legacy sessions without userId are allowed (backward compat)
+//   - Returns 403 Forbidden if session belongs to a different user
 
 // ── M-4: Model allowlist ───────────────────────────────────────────────
 
