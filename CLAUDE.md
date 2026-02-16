@@ -66,7 +66,7 @@ oci-self-service-portal/
 │           ├── plugins/       # auth, cache, cors, error-handler, helmet, mastra, oracle, otel, rate-limit, rate-limiter-oracle, rbac, request-logger, under-pressure
 │           ├── routes/        # activity, admin/, audit, auth, chat, graph, health, mcp, metrics, models, openapi, schemas, search, sessions, setup, tools/, tools, webhooks, workflows
 │           ├── mastra/        # Mastra framework integration
-│           │   ├── agents/          # CloudAdvisor agent
+│           │   ├── agents/          # Charlie AI agent
 │           │   ├── models/          # Provider registry, model types
 │           │   ├── rag/             # OracleVectorStore, OCI embedder
 │           │   ├── mcp/             # MCP server (tool discovery + execution)
