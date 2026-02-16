@@ -6,7 +6,7 @@ import type { Permission } from '@portal/server/auth/rbac.js';
 export const load: LayoutServerLoad = async ({ locals }) => {
 	const session = await locals.auth();
 
-	if (!session?.user) {
+	if (!session || !locals.user) {
 		throw redirect(303, '/login');
 	}
 
@@ -17,6 +17,6 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 	}
 
 	return {
-		user: session.user
+		user: locals.user
 	};
 };

@@ -1,4 +1,3 @@
-import type { QueryKey } from '@tanstack/query-core';
 import { queryKeys } from './keys.js';
 import { fetchModels, fetchSessions, fetchSessionDetail, fetchSessionUsage } from './fetchers.js';
 import type {
@@ -8,6 +7,12 @@ import type {
 	SessionDetailResponse,
 	SessionUsage
 } from './types.js';
+
+/**
+ * QueryKey type compatible with TanStack Query
+ * Avoids importing from @tanstack/query-core (peer dependency)
+ */
+export type QueryKey = ReadonlyArray<unknown>;
 
 /**
  * Query options shape compatible with TanStack Query v5

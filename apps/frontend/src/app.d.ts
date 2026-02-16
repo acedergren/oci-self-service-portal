@@ -12,6 +12,7 @@ declare global {
 			permissions: Permission[];
 			requestId: string;
 			apiKeyContext?: ApiKeyContext;
+			auth(): Promise<Session | null>;
 		}
 	}
 }

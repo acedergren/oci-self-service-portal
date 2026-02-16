@@ -8,7 +8,11 @@ const config = {
 		adapter: adapter({
 			out: 'build',
 			precompress: true
-		})
+		}),
+		alias: {
+			'@portal/shared': '../../packages/shared/src/index.ts',
+			'@portal/shared/*': '../../packages/shared/src/*'
+		}
 	}
 };
 

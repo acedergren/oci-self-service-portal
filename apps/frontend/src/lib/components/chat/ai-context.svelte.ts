@@ -32,7 +32,7 @@ const toolProgressSchema = z.object({
  * reading a field will re-render when that specific value changes.
  */
 export class ChatContext {
-	chat: Chat;
+	chat!: Chat; // Initialized in constructor
 
 	// Agent state
 	currentThought = $state<string | undefined>(undefined);
