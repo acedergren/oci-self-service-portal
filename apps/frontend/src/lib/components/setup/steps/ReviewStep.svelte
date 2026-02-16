@@ -52,12 +52,16 @@
 	const enabledProviders = $derived(data.aiProviders?.filter((p) => p.enabled) || []);
 	const enabledFeatures = $derived(
 		data.settings?.portalFeatures
-			? Object.keys(data.settings.portalFeatures).filter((key) => data.settings.portalFeatures[key])
+			? Object.keys(data.settings.portalFeatures).filter(
+					(key) => data.settings!.portalFeatures[key]
+				)
 			: []
 	);
 	const enabledCategories = $derived(
 		data.settings?.toolCategories
-			? Object.keys(data.settings.toolCategories).filter((key) => data.settings.toolCategories[key])
+			? Object.keys(data.settings.toolCategories).filter(
+					(key) => data.settings!.toolCategories[key]
+				)
 			: []
 	);
 </script>
@@ -147,7 +151,7 @@
 									{#if provider.config.compartmentId}
 										<div class="detail-item">
 											<span>Compartment:</span>
-											<span>{provider.config.compartmentId.slice(0, 30)}...</span>
+											<span>{String(provider.config.compartmentId).slice(0, 30)}...</span>
 										</div>
 									{/if}
 								</div>

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { McpCatalogItem, McpServer } from '@portal/server/admin/mcp-types';
 	import { superForm, defaults } from 'sveltekit-superforms';
-	import { zodClient } from 'sveltekit-superforms/adapters';
+	import { zod4, zod4Client } from 'sveltekit-superforms/adapters';
 	import { mcpServerFormSchema } from '$lib/schemas/admin.js';
 
 	interface Props {
@@ -54,7 +54,7 @@
 		return headers;
 	}
 
-	const mcpDefaults = defaults(mcpServerFormSchema);
+	const mcpDefaults = defaults(zod4(mcpServerFormSchema));
 
 	const {
 		form: formData,
@@ -62,11 +62,11 @@
 		reset
 	} = superForm(mcpDefaults, {
 		SPA: true,
-		validators: zodClient(mcpServerFormSchema),
+		validators: zod4Client(mcpServerFormSchema),
 		resetForm: false,
 		onUpdate({ form: f }) {
 			if (!f.valid) return;
-			const d = f.data as Record<string, unknown>;
+			const d = f.data as Record<string, string>;
 			// Convert flat form data to structured API payload
 			onSubmit({
 				catalogItemId: d.catalogItemId,

@@ -13,10 +13,48 @@
 	let completedSteps = $state<Set<number>>(new Set());
 	let redirectTimeout: ReturnType<typeof setTimeout> | null = null;
 
+	interface IDPConfig {
+		type: 'idcs' | 'oidc';
+		tenantUrl: string;
+		clientId: string;
+		clientSecret: string;
+		scopes: string;
+		pkce: boolean;
+		adminGroups: string;
+		operatorGroups: string;
+	}
+
+	interface AIProvider {
+		type: 'oci' | 'openai' | 'anthropic' | 'google';
+		enabled: boolean;
+		config: Record<string, string>;
+		models: string[];
+	}
+
+	interface FeaturesConfig {
+		portalFeatures: {
+			workflows: boolean;
+			vectorSearch: boolean;
+			blockchainAudit: boolean;
+			cspComparison: boolean;
+			mcpServer: boolean;
+		};
+		toolCategories: {
+			compute: boolean;
+			networking: boolean;
+			database: boolean;
+			storage: boolean;
+			iam: boolean;
+			monitoring: boolean;
+			security: boolean;
+			genai: boolean;
+		};
+	}
+
 	let stepData = $state<{
-		idp: unknown;
-		aiProviders: unknown[];
-		settings: unknown;
+		idp: IDPConfig | null;
+		aiProviders: AIProvider[];
+		settings: FeaturesConfig | null;
 	}>({
 		idp: null,
 		aiProviders: [],

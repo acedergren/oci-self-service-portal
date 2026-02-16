@@ -6,7 +6,7 @@
 	interface AIProvider {
 		type: 'oci' | 'openai' | 'anthropic' | 'google';
 		enabled: boolean;
-		config: Record<string, unknown>;
+		config: Record<string, string>;
 		models: string[];
 	}
 

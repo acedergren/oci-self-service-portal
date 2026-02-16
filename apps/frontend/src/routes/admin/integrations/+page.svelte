@@ -26,7 +26,7 @@
 	let selectedServerId = $state<string | null>(null);
 
 	// Queries
-	const catalogQuery = createQuery(() => ({
+	const catalogQuery = createQuery<{ items: McpCatalogItem[] }>(() => ({
 		queryKey: ['admin', 'mcp', 'catalog'],
 		queryFn: async () => {
 			const res = await fetch('/api/admin/mcp/catalog');
@@ -483,7 +483,7 @@
 					{#each tools as tool (tool.id)}
 						<ToolPlaygroundCard
 							{tool}
-							onExecute={(args) => handleTestTool(selectedServerId, tool.toolName, args)}
+							onExecute={(args) => handleTestTool(selectedServerId!, tool.toolName, args)}
 							isPending={testToolMutation.isPending}
 						/>
 					{/each}

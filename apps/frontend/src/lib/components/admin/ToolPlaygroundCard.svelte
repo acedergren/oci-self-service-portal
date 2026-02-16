@@ -10,11 +10,17 @@
 	let { tool, onExecute, isPending = false }: Props = $props();
 
 	let isExpanded = $state(false);
-	let formArgs = $state<Record<string, unknown>>({});
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic JSON Schema form, values are heterogeneous
+	let formArgs = $state<Record<string, any>>({});
 	let result = $state<unknown>(null);
 	let duration = $state<number | null>(null);
 
-	const schema = $derived(tool.inputSchema);
+	const schema = $derived(
+		tool.inputSchema as {
+			properties?: Record<string, Record<string, unknown>>;
+			required?: string[];
+		}
+	);
 	const properties = $derived(schema.properties || {});
 	const required = $derived(schema.required || []);
 
@@ -36,19 +42,20 @@
 
 		if (type === 'boolean') {
 			return {
-				type: 'checkbox',
+				type: 'checkbox' as const,
 				defaultValue: false
 			};
 		} else if (type === 'number' || type === 'integer') {
 			return {
-				type: 'number',
+				type: 'number' as const,
 				defaultValue: 0
 			};
 		} else if (propSchema.enum) {
+			const options = propSchema.enum as string[];
 			return {
-				type: 'select',
-				options: propSchema.enum,
-				defaultValue: propSchema.enum[0]
+				type: 'select' as const,
+				options,
+				defaultValue: options[0]
 			};
 		} else if (type === 'object' || type === 'array') {
 			return {
@@ -180,7 +187,7 @@
 									id={`${tool.id}-${key}`}
 									bind:value={formArgs[key]}
 									required={isRequired}
-									placeholder={propSchema.description || ''}
+									placeholder={String(propSchema.description || '')}
 									class="form-input"
 								/>
 							{/if}

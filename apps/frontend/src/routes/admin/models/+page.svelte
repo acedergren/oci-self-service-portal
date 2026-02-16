@@ -139,10 +139,10 @@
 
 	// Superforms setup
 	import { superForm, defaults } from 'sveltekit-superforms';
-	import { zodClient } from 'sveltekit-superforms/adapters';
+	import { zod4, zod4Client } from 'sveltekit-superforms/adapters';
 	import { aiProviderFormSchema } from '$lib/schemas/admin.js';
 
-	const providerDefaults = defaults(aiProviderFormSchema);
+	const providerDefaults = defaults(zod4(aiProviderFormSchema));
 
 	const {
 		form,
@@ -150,7 +150,7 @@
 		reset: resetSuperform
 	} = superForm(providerDefaults, {
 		SPA: true,
-		validators: zodClient(aiProviderFormSchema),
+		validators: zod4Client(aiProviderFormSchema),
 		resetForm: false,
 		onUpdate({ form: f }) {
 			if (!f.valid) return;
@@ -159,7 +159,7 @@
 					id: string;
 				});
 			} else {
-				createProviderMutation.mutate(f.data as Omit<AIProvider, 'id'>);
+				createProviderMutation.mutate(f.data as unknown as Omit<AIProvider, 'id'>);
 			}
 		}
 	});
@@ -458,7 +458,7 @@
 
 				<div class="form-group">
 					<label class="form-checkbox">
-						<input type="checkbox" bind:checked={$form.enabled} />
+						<input type="checkbox" bind:checked={$form.enabled as boolean} />
 						<span>Enable this provider</span>
 					</label>
 				</div>

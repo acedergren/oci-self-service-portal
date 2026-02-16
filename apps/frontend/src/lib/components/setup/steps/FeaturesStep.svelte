@@ -22,7 +22,7 @@
 	}
 
 	interface FeaturesStepProps {
-		data: FeaturesConfig;
+		data: FeaturesConfig | null;
 		onNext: () => void;
 		onSkip: () => void;
 	}

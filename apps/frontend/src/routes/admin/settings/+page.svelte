@@ -2,7 +2,7 @@
 	import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 	import { toast } from 'svelte-sonner';
 	import { superForm, defaults } from 'sveltekit-superforms';
-	import { zodClient } from 'sveltekit-superforms/adapters';
+	import { zod4, zod4Client } from 'sveltekit-superforms/adapters';
 	import { portalSettingsFormSchema } from '$lib/schemas/admin.js';
 	import type { PageData } from './$types';
 
@@ -63,11 +63,11 @@
 	}));
 
 	// Superforms for validated editing
-	const settingsDefaults = defaults(portalSettingsFormSchema);
+	const settingsDefaults = defaults(zod4(portalSettingsFormSchema));
 
 	const { form, errors, reset } = superForm(settingsDefaults, {
 		SPA: true,
-		validators: zodClient(portalSettingsFormSchema),
+		validators: zod4Client(portalSettingsFormSchema),
 		resetForm: false,
 		onUpdate({ form: f }) {
 			if (!f.valid) return;
@@ -204,14 +204,14 @@
 					<div class="form-grid">
 						<div class="form-group">
 							<label class="form-checkbox">
-								<input type="checkbox" bind:checked={$form.signupEnabled} />
+								<input type="checkbox" bind:checked={$form.signupEnabled as boolean} />
 								<span>Enable self-service signup</span>
 							</label>
 						</div>
 
 						<div class="form-group">
 							<label class="form-checkbox">
-								<input type="checkbox" bind:checked={$form.requireEmailVerification} />
+								<input type="checkbox" bind:checked={$form.requireEmailVerification as boolean} />
 								<span>Require email verification</span>
 							</label>
 						</div>
@@ -269,7 +269,7 @@
 					<div class="form-grid">
 						<div class="form-group">
 							<label class="form-checkbox">
-								<input type="checkbox" bind:checked={$form.maintenanceMode} />
+								<input type="checkbox" bind:checked={$form.maintenanceMode as boolean} />
 								<span>Enable maintenance mode</span>
 							</label>
 						</div>

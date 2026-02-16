@@ -3,7 +3,7 @@
 	import { toast } from 'svelte-sonner';
 	import { browser } from '$app/environment';
 	import { superForm, defaults } from 'sveltekit-superforms';
-	import { zodClient } from 'sveltekit-superforms/adapters';
+	import { zod4, zod4Client } from 'sveltekit-superforms/adapters';
 	import { idpFormSchema, type IdpFormData } from '$lib/schemas/admin.js';
 	import type { PageData } from './$types';
 
@@ -42,7 +42,7 @@
 	let editingIdp = $state<IDP | null>(null);
 
 	// Superforms setup — client-side validation with Zod
-	const idpDefaults = defaults(idpFormSchema);
+	const idpDefaults = defaults(zod4(idpFormSchema));
 
 	const {
 		form: formData,
@@ -51,7 +51,7 @@
 		reset
 	} = superForm(idpDefaults, {
 		SPA: true,
-		validators: zodClient(idpFormSchema),
+		validators: zod4Client(idpFormSchema),
 		resetForm: false,
 		onUpdate({ form }) {
 			if (!form.valid) return;

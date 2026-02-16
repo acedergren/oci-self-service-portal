@@ -5,7 +5,7 @@
 		disabled?: boolean;
 		required?: boolean;
 		name?: string;
-		autocomplete?: string;
+		autocomplete?: HTMLInputElement['autocomplete'];
 		onInput: (value: string) => void;
 	}
 
