@@ -13,13 +13,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mock dependencies
 const mockIsSetupComplete = vi.fn().mockResolvedValue(false);
 
-vi.mock('@portal/shared/server/admin/settings-repository.js', () => ({
+vi.mock('@portal/server/admin/settings-repository.js', () => ({
 	settingsRepository: {
 		isSetupComplete: () => mockIsSetupComplete()
 	}
 }));
 
-vi.mock('@portal/shared/server/logger.js', () => ({
+vi.mock('@portal/server/logger.js', () => ({
 	createLogger: () => ({
 		info: vi.fn(),
 		warn: vi.fn(),

@@ -13,7 +13,7 @@ import type {
 	ProcessOutputResultArgs
 } from '@mastra/core/processors';
 import type { MastraDBMessage } from '@mastra/core/agent';
-import { createLogger } from '@portal/shared/server/logger';
+import { createLogger } from '@portal/server/logger';
 
 const log = createLogger('guardrails');
 

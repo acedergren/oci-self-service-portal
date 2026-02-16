@@ -15,7 +15,7 @@ const mockConn = {
 	close: vi.fn()
 };
 
-vi.mock('@portal/shared/server/oracle/connection.js', () => ({
+vi.mock('@portal/server/oracle/connection.js', () => ({
 	withConnection: vi.fn(async (fn: (conn: typeof mockConn) => Promise<unknown>) => fn(mockConn))
 }));
 
@@ -23,13 +23,13 @@ vi.mock('@portal/shared/server/oracle/connection.js', () => ({
 const mockEncryptSecret = vi.fn();
 const mockDecryptSecret = vi.fn();
 
-vi.mock('@portal/shared/server/auth/crypto.js', () => ({
+vi.mock('@portal/server/auth/crypto.js', () => ({
 	encryptSecret: (...args: unknown[]) => mockEncryptSecret(...args),
 	decryptSecret: (...args: unknown[]) => mockDecryptSecret(...args)
 }));
 
 // Mock logger
-vi.mock('@portal/shared/server/logger.js', () => ({
+vi.mock('@portal/server/logger.js', () => ({
 	createLogger: () => ({
 		info: vi.fn(),
 		warn: vi.fn(),

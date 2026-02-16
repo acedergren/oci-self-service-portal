@@ -1,5 +1,5 @@
 import type { LayoutServerLoad } from './$types';
-import { createLogger } from '@portal/shared/server/logger';
+import { createLogger } from '@portal/server/logger';
 
 // Fastify backend URL for session fetch during SSR
 const FASTIFY_URL = process.env.FASTIFY_URL || 'http://localhost:3001';
