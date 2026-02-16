@@ -30,7 +30,6 @@
 		"@fastify/sensible": "^6.0.4",
 		"@fastify/sse": "^0.4.0",
 		"@fastify/swagger": "^9.6.1",
-		"@fastify/swagger-ui": "^5.2.5",
 		"@fastify/under-pressure": "^9.0.3",
 		"@mastra/core": "^1.2.0",
 		"@mastra/evals": "^1.1.0",
