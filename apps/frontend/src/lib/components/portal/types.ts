@@ -85,14 +85,8 @@ export interface ResourceLink {
 // ---------------------------------------------------------------------------
 
 export interface PortalHeaderProps {
-	/** Currently selected model ID */
-	selectedModel: string;
-	/** Available models from the API */
-	availableModels: Array<{ id: string; name: string; description: string }>;
 	/** Notification count badge */
 	notificationCount?: number;
-	/** Callback when model is changed */
-	onModelChange?: (modelId: string) => void;
 }
 
 // ---------------------------------------------------------------------------

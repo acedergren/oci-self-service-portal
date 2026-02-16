@@ -1,12 +1,7 @@
 <script lang="ts">
 	import type { PortalHeaderProps } from './types.js';
 
-	let {
-		selectedModel: _selectedModel,
-		availableModels: _availableModels,
-		notificationCount = 3,
-		onModelChange: _onModelChange
-	}: PortalHeaderProps = $props();
+	let { notificationCount = 3 }: PortalHeaderProps = $props();
 </script>
 
 <header class="header">

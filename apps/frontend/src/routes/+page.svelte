@@ -7,12 +7,7 @@
 	import type { ToolCall } from '@portal/types/tools/types';
 	import { inferApprovalLevel, requiresApproval } from '@portal/shared/tools/types';
 	import { useQueryClient } from '@tanstack/svelte-query';
-	import {
-		useModels,
-		useSessions,
-		useCreateSession,
-		useDeleteSession
-	} from '@portal/shared/query/hooks';
+	import { useModels, useSessions, useCreateSession } from '@portal/shared/query/hooks';
 	import { queryKeys, fetchSessionDetail } from '@portal/shared/query';
 	import { BottomNav, Drawer } from '$lib/components/mobile/index.js';
 	import { createChatContext } from '$lib/components/chat/ai-context.svelte.js';
@@ -24,7 +19,6 @@
 	const modelsQuery = useModels();
 	const sessionsQuery = useSessions();
 	const createSessionMutation = useCreateSession();
-	const deleteSessionMutation = useDeleteSession();
 
 	// Derived state from queries (v6: runes — no $ prefix needed)
 	const availableModels = $derived(modelsQuery.data?.models ?? []);
@@ -225,18 +219,6 @@
 		} catch (error) {
 			console.error('Failed to load session:', error);
 		}
-	}
-
-	async function _handleDeleteSession(id: string) {
-		await deleteSessionMutation.mutateAsync(id);
-
-		if (id === localSessionId) {
-			await handleNewSession();
-		}
-	}
-
-	function _toggleSidebar() {
-		sidebarOpen = !sidebarOpen;
 	}
 
 	function toggleSidePanel() {
@@ -446,6 +428,43 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
+{#snippet sessionItem(
+	session: { id: string; title: string | null; model: string },
+	onSelect: (id: string) => void
+)}
+	<button
+		onclick={() => onSelect(session.id)}
+		class="w-full text-left px-3 py-2 text-sm rounded-lg transition-fast group {localSessionId ===
+		session.id
+			? 'bg-elevated border border-focused'
+			: 'hover:bg-hover border border-transparent'}"
+	>
+		<div class="flex items-center justify-between">
+			<span class="truncate text-primary">{session.title || 'New Chat'}</span>
+			{#if localSessionId === session.id}
+				<span class="text-accent">●</span>
+			{/if}
+		</div>
+		<div class="flex items-center gap-2 mt-1">
+			<Badge variant="default">{session.model.split('.').pop()}</Badge>
+		</div>
+	</button>
+{/snippet}
+
+{#snippet sessionsList(onSelect: (id: string) => void)}
+	{#if sessionsQuery.isPending}
+		<div class="flex items-center justify-center py-4">
+			<Spinner variant="dots" />
+		</div>
+	{:else if sessionsQuery.isError}
+		<div class="text-error text-sm px-3 py-2">Failed to load sessions</div>
+	{:else}
+		{#each sessions as session (session.id)}
+			{@render sessionItem(session, onSelect)}
+		{/each}
+	{/if}
+{/snippet}
+
 <div class="flex h-[calc(100dvh-1.5rem)] bg-primary text-primary overflow-hidden">
 	<!-- Session sidebar (desktop only) -->
 	{#if sidebarOpen && !isMobile}
@@ -483,33 +502,7 @@
 
 			<!-- Sessions List -->
 			<div class="flex-1 overflow-y-auto p-2 space-y-1">
-				{#if sessionsQuery.isPending}
-					<div class="flex items-center justify-center py-4">
-						<Spinner variant="dots" />
-					</div>
-				{:else if sessionsQuery.isError}
-					<div class="text-error text-sm px-3 py-2">Failed to load sessions</div>
-				{:else}
-					{#each sessions as session (session.id)}
-						<button
-							onclick={() => handleSelectSession(session.id)}
-							class="w-full text-left px-3 py-2 text-sm rounded-lg transition-fast group {localSessionId ===
-							session.id
-								? 'bg-elevated border border-focused'
-								: 'hover:bg-hover border border-transparent'}"
-						>
-							<div class="flex items-center justify-between">
-								<span class="truncate text-primary">{session.title || 'New Chat'}</span>
-								{#if localSessionId === session.id}
-									<span class="text-accent">●</span>
-								{/if}
-							</div>
-							<div class="flex items-center gap-2 mt-1">
-								<Badge variant="default">{session.model.split('.').pop()}</Badge>
-							</div>
-						</button>
-					{/each}
-				{/if}
+				{@render sessionsList(handleSelectSession)}
 			</div>
 		</aside>
 	{/if}
@@ -547,36 +540,10 @@
 
 		<!-- Sessions List -->
 		<div class="flex-1 overflow-y-auto p-2 space-y-1">
-			{#if sessionsQuery.isPending}
-				<div class="flex items-center justify-center py-4">
-					<Spinner variant="dots" />
-				</div>
-			{:else if sessionsQuery.isError}
-				<div class="text-error text-sm px-3 py-2">Failed to load sessions</div>
-			{:else}
-				{#each sessions as session (session.id)}
-					<button
-						onclick={() => {
-							handleSelectSession(session.id);
-							sessionDrawerOpen = false;
-						}}
-						class="w-full text-left px-3 py-2 text-sm rounded-lg transition-fast group {localSessionId ===
-						session.id
-							? 'bg-elevated border border-focused'
-							: 'hover:bg-hover border border-transparent'}"
-					>
-						<div class="flex items-center justify-between">
-							<span class="truncate text-primary">{session.title || 'New Chat'}</span>
-							{#if localSessionId === session.id}
-								<span class="text-accent">●</span>
-							{/if}
-						</div>
-						<div class="flex items-center gap-2 mt-1">
-							<Badge variant="default">{session.model.split('.').pop()}</Badge>
-						</div>
-					</button>
-				{/each}
-			{/if}
+			{@render sessionsList((id) => {
+				handleSelectSession(id);
+				sessionDrawerOpen = false;
+			})}
 		</div>
 	</Drawer>
 

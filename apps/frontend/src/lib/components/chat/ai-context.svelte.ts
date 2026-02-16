@@ -42,7 +42,7 @@ export class ChatContext {
 	fetchingApprovalFor = $state<string | null>(null);
 
 	// Tool progress tracking — populated by server-sent data-tool-progress parts
-	toolProgress = $state(new SvelteMap<string, ToolProgressEvent>());
+	toolProgress = new SvelteMap<string, ToolProgressEvent>();
 
 	// Derived status flags from Chat instance
 	readonly isLoading = $derived(
@@ -94,10 +94,7 @@ export class ChatContext {
 			onData: (part) => {
 				if (part.type === 'data-tool-progress') {
 					const event = part.data as ToolProgressEvent;
-					// Reactive map update: create new Map to trigger reactivity
-					const next = new SvelteMap(this.toolProgress);
-					next.set(event.toolCallId, event);
-					this.toolProgress = next;
+					this.toolProgress.set(event.toolCallId, event);
 				}
 			}
 		});

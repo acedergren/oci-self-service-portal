@@ -155,9 +155,11 @@
 		onUpdate({ form: f }) {
 			if (!f.valid) return;
 			if (editingProvider) {
-				updateMutation.mutate({ id: editingProvider.id, ...f.data } as Record<string, unknown>);
+				updateMutation.mutate({ id: editingProvider.id, ...f.data } as Partial<AIProvider> & {
+					id: string;
+				});
 			} else {
-				createProviderMutation.mutate(f.data as Record<string, unknown>);
+				createProviderMutation.mutate(f.data as Omit<AIProvider, 'id'>);
 			}
 		}
 	});

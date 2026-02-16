@@ -483,7 +483,6 @@
 					{#each tools as tool (tool.id)}
 						<ToolPlaygroundCard
 							{tool}
-							serverId={selectedServerId}
 							onExecute={(args) => handleTestTool(selectedServerId, tool.toolName, args)}
 							isPending={$testToolMutation.isPending}
 						/>

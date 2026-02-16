@@ -18,6 +18,8 @@ describe('otel plugin', () => {
 	let originalEnv: Record<string, string | undefined>;
 
 	beforeEach(() => {
+		vi.resetModules();
+
 		// Save original environment variables
 		originalEnv = {
 			OTEL_EXPORTER_OTLP_ENDPOINT: process.env.OTEL_EXPORTER_OTLP_ENDPOINT,

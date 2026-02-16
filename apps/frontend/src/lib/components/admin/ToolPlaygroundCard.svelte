@@ -3,12 +3,11 @@
 
 	interface Props {
 		tool: CachedTool;
-		serverId: string;
 		onExecute: (args: Record<string, unknown>) => void;
 		isPending?: boolean;
 	}
 
-	let { tool, serverId: _serverId, onExecute, isPending = false }: Props = $props();
+	let { tool, onExecute, isPending = false }: Props = $props();
 
 	let isExpanded = $state(false);
 	let formArgs = $state<Record<string, unknown>>({});
@@ -34,7 +33,6 @@
 
 	function renderInputField(key: string, propSchema: Record<string, unknown>) {
 		const type = propSchema.type;
-		const _isRequired = required.includes(key);
 
 		if (type === 'boolean') {
 			return {

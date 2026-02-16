@@ -209,6 +209,7 @@ describe('Dual Auth Helper (require-auth)', () => {
 			url: { pathname: '/api/v1/tools' }
 		};
 
+		// SvelteKit HttpError: status 401 — 'Authentication required'
 		expect(() => requireApiAuth(event as unknown, 'tools:read')).toThrow();
 	});
 
@@ -222,6 +223,7 @@ describe('Dual Auth Helper (require-auth)', () => {
 			url: { pathname: '/api/v1/tools' }
 		};
 
+		// SvelteKit HttpError: status 403 — 'Insufficient permissions'
 		expect(() => requireApiAuth(event as unknown, 'tools:execute')).toThrow();
 	});
 
@@ -240,6 +242,7 @@ describe('Dual Auth Helper (require-auth)', () => {
 			url: { pathname: '/api/v1/tools' }
 		};
 
+		// SvelteKit HttpError: status 403 — 'Insufficient permissions'
 		expect(() => requireApiAuth(event as unknown, 'tools:execute')).toThrow();
 	});
 });

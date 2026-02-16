@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { useModels } from '@portal/shared/query/hooks';
 	import { createChatContext } from '$lib/components/chat/ai-context.svelte.js';
 	import {
 		WORKFLOW_TEMPLATES,
@@ -23,10 +22,6 @@
 		RESOURCE_LINKS,
 		FEATURED_WORKFLOW_IDS
 	} from '$lib/components/portal/data.js';
-
-	// ── Models ──────────────────────────────────────────────────────────────
-	const modelsQuery = useModels();
-	const availableModels = $derived(modelsQuery.data?.models ?? []);
 
 	// ── Chat state ──────────────────────────────────────────────────────────
 	let selectedModel = $state('meta.llama-3.3-70b-instruct');
@@ -102,13 +97,7 @@
 </svelte:head>
 
 <div class="portal" onkeydown={handleKeyDown}>
-	<PortalHeader
-		{selectedModel}
-		{availableModels}
-		onModelChange={(id) => {
-			selectedModel = id;
-		}}
-	/>
+	<PortalHeader />
 
 	<HeroSection
 		userName="Alex"
