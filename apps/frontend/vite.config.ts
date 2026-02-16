@@ -9,11 +9,15 @@ export default defineConfig({
 	},
 	ssr: {
 		noExternal: ['@tanstack/svelte-query'],
-		// Externalize server-only dependencies and workspace packages to prevent bundling
+		// Externalize native binaries and heavy server deps to prevent SSR bundling.
+		// Note: workspace packages with .ts exports (@portal/shared, @portal/types)
+		// get bundled regardless since Vite can't emit bare imports for .ts sources.
 		external: [
 			// Database drivers (native binaries)
 			'oracledb',
 			'better-sqlite3',
+			// Heavy server SDKs
+			'oci-sdk',
 			// Server utilities
 			'pino',
 			'ws',
@@ -31,7 +35,9 @@ export default defineConfig({
 		// Reduce memory usage during minification
 		minify: 'esbuild',
 		rollupOptions: {
-			// Prevent native/heavy server deps from entering the client bundle
+			// Prevent native/heavy server deps from entering the client bundle.
+			// @portal/shared and @portal/types are intentionally omitted here:
+			// client-side .svelte files import isomorphic modules from them.
 			external: [
 				'ws',
 				'@sentry/node',
@@ -43,7 +49,7 @@ export default defineConfig({
 				'@portal/server'
 			],
 			output: {
-				// Manual chunking to prevent memory exhaustion
+				// Split SSR server bundle vendors to reduce Rollup memory pressure
 				manualChunks(id) {
 					// Vendor chunks for large dependencies
 					if (id.includes('node_modules')) {
