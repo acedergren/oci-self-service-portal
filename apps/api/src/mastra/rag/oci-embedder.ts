@@ -8,7 +8,7 @@
  * Graceful degradation: returns null when OCI GenAI is unavailable.
  */
 
-import { OCIError, ValidationError } from '@portal/shared';
+import { OCIError, ValidationError } from '@portal/types';
 
 const EMBEDDING_MODEL = 'cohere.embed-english-v3.0';
 const EMBEDDING_DIMENSIONS = 1536;

@@ -7,7 +7,7 @@ import {
 	RateLimitError,
 	OCIError,
 	DatabaseError
-} from '@portal/shared';
+} from '@portal/types';
 import errorHandlerPlugin from './error-handler.js';
 
 function buildTestApp() {

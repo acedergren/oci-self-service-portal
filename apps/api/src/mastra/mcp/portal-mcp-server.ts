@@ -10,7 +10,7 @@
 
 import { getAllToolDefinitions, executeTool } from '../tools/registry.js';
 import type { ToolDefinition } from '../tools/types.js';
-import { AuthError, NotFoundError } from '@portal/shared';
+import { AuthError, NotFoundError } from '@portal/types';
 import { z } from 'zod';
 
 /** MCP Tool representation */

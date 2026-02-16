@@ -1,6 +1,6 @@
 import { execFileSync, execFile } from 'child_process';
 import { promisify } from 'util';
-import { OCIError } from '@portal/shared';
+import { OCIError } from '@portal/types';
 
 // No-op sentry wrappers for API-side tools (Fastify handles logging/tracing)
 async function wrapWithSpan<T>(_name: string, _op: string, fn: () => Promise<T>): Promise<T> {

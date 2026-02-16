@@ -1,5 +1,5 @@
 import fp from 'fastify-plugin';
-import { isPortalError, toPortalError } from '@portal/shared';
+import { isPortalError, toPortalError } from '@portal/types';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 
 async function errorHandler(app: FastifyInstance): Promise<void> {

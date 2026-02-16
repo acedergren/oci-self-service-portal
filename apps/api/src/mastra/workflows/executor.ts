@@ -22,7 +22,7 @@ import {
 	resolveOutputMapping,
 	resolvePath
 } from '@portal/shared/workflows';
-import { ValidationError } from '@portal/shared';
+import { ValidationError } from '@portal/types';
 import { executeTool } from '../tools/registry.js';
 import { generateText } from 'ai';
 import { getProviderRegistry } from '../models/provider-registry.js';
