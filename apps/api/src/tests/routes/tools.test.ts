@@ -157,7 +157,7 @@ function simulateSession(
 	permissions: string[]
 ) {
 	app.addHook('onRequest', async (request) => {
-		(request as FastifyRequest).user = user as any;
+		(request as Record<string, unknown>).user = user;
 		(request as FastifyRequest).permissions = permissions;
 	});
 }

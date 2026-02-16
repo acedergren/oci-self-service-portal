@@ -91,7 +91,7 @@ beforeEach(async () => {
 
 	// Add org context via apiKeyContext
 	app.addHook('onRequest', async (request) => {
-		(request as any).session = { activeOrganizationId: 'org-1' };
+		(request as Record<string, unknown>).session = { activeOrganizationId: 'org-1' };
 	});
 
 	// Register routes

@@ -26,12 +26,12 @@ const mockEncrypt = vi.fn();
 const mockDecrypt = vi.fn();
 
 vi.mock('@portal/server/oracle/connection', () => ({
-	withConnection: (...args: any[]) => mockGetConnection(...args)
+	withConnection: (...args: unknown[]) => mockGetConnection(...args)
 }));
 
 vi.mock('@portal/server/auth/crypto', () => ({
-	encryptSecret: (...args: any[]) => mockEncrypt(...args),
-	decryptSecret: (...args: any[]) => mockDecrypt(...args)
+	encryptSecret: (...args: unknown[]) => mockEncrypt(...args),
+	decryptSecret: (...args: unknown[]) => mockDecrypt(...args)
 }));
 
 vi.mock('@portal/server/logger', () => ({
@@ -60,7 +60,7 @@ beforeEach(() => {
 	};
 
 	// withConnection implementation: receives callback, passes connection to it
-	mockGetConnection.mockImplementation((fn: any) => fn(mockConn));
+	mockGetConnection.mockImplementation((fn: (conn: unknown) => unknown) => fn(mockConn));
 
 	// Encryption/decryption defaults
 	mockEncrypt.mockResolvedValue({

@@ -216,7 +216,7 @@ describe('GET /api/v1/tools', () => {
 		expect(body.tools).toHaveLength(2);
 		expect(body.total).toBe(2);
 		expect(mockGetToolsByCategory).toHaveBeenCalledWith('compute');
-		expect(body.tools.every((t: any) => t.category === 'compute')).toBe(true);
+		expect(body.tools.every((t: Record<string, unknown>) => t.category === 'compute')).toBe(true);
 	});
 
 	it('returns empty list when category has no tools', async () => {

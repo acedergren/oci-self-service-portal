@@ -86,7 +86,7 @@ export function simulateSession(
 	permissions: string[]
 ): void {
 	app.addHook('onRequest', async (request) => {
-		(request as FastifyRequest).user = user as any;
+		(request as Record<string, unknown>).user = user;
 		(request as FastifyRequest).permissions = permissions;
 	});
 }
@@ -96,7 +96,7 @@ export function simulateSession(
  */
 export function simulateDbUnavailable(app: FastifyInstance): void {
 	app.addHook('onRequest', async (request) => {
-		(request as any).dbAvailable = false;
+		(request as Record<string, unknown>).dbAvailable = false;
 	});
 }
 

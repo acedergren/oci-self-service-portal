@@ -111,7 +111,7 @@ function simulateSession(
 	permissions: string[]
 ) {
 	app.addHook('onRequest', async (request) => {
-		(request as FastifyRequest).user = user as any;
+		(request as Record<string, unknown>).user = user;
 		(request as FastifyRequest).permissions = permissions;
 	});
 }
@@ -200,7 +200,7 @@ describe('GET /api/activity', () => {
 		app = await buildApp();
 		simulateSession(app, { id: 'user-1' }, ['tools:read']);
 		app.addHook('onRequest', async (request) => {
-			(request as any).dbAvailable = false;
+			(request as Record<string, unknown>).dbAvailable = false;
 		});
 		await app.ready();
 

@@ -123,7 +123,7 @@ function simulateSession(
 	permissions: string[]
 ) {
 	app.addHook('onRequest', async (request) => {
-		(request as FastifyRequest).user = user as any;
+		(request as Record<string, unknown>).user = user;
 		(request as FastifyRequest).permissions = permissions;
 	});
 }
@@ -246,7 +246,7 @@ describe('GET /api/sessions', () => {
 		simulateSession(app, { id: 'user-1' }, ['sessions:read']);
 		// Override dbAvailable to false
 		app.addHook('onRequest', async (request) => {
-			(request as any).dbAvailable = false;
+			(request as Record<string, unknown>).dbAvailable = false;
 		});
 		await app.ready();
 
@@ -357,7 +357,7 @@ describe('POST /api/sessions', () => {
 		app = await buildApp();
 		simulateSession(app, { id: 'user-1' }, ['sessions:write']);
 		app.addHook('onRequest', async (request) => {
-			(request as any).dbAvailable = false;
+			(request as Record<string, unknown>).dbAvailable = false;
 		});
 		await app.ready();
 
@@ -500,7 +500,7 @@ describe('DELETE /api/sessions/:id', () => {
 		app = await buildApp();
 		simulateSession(app, { id: 'user-1' }, ['sessions:write']);
 		app.addHook('onRequest', async (request) => {
-			(request as any).dbAvailable = false;
+			(request as Record<string, unknown>).dbAvailable = false;
 		});
 		await app.ready();
 
@@ -713,7 +713,7 @@ describe('POST /api/sessions/:id/continue', () => {
 		app = await buildApp();
 		simulateSession(app, { id: 'user-1' }, ['sessions:write']);
 		app.addHook('onRequest', async (request) => {
-			(request as any).dbAvailable = false;
+			(request as Record<string, unknown>).dbAvailable = false;
 		});
 		await app.ready();
 

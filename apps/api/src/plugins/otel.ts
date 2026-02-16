@@ -19,6 +19,7 @@ export default fp(
 			log.info({ serviceName, endpoint: otelEndpoint }, 'Registering OpenTelemetry');
 
 			// @fastify/otel type definitions are incorrect - default export is a plugin function at runtime
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any -- @fastify/otel types mismatch runtime
 			const fastifyOtel = (await import('@fastify/otel')).default as any;
 			await app.register(fastifyOtel, { serviceName });
 		} else {

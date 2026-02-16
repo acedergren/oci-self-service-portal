@@ -93,10 +93,10 @@ function simulateSession(
 	session?: Record<string, unknown>
 ) {
 	app.addHook('onRequest', async (request) => {
-		(request as FastifyRequest).user = user as any;
+		(request as Record<string, unknown>).user = user;
 		(request as FastifyRequest).permissions = permissions;
 		if (session) {
-			(request as FastifyRequest).session = session as any;
+			(request as Record<string, unknown>).session = session;
 		}
 	});
 }
