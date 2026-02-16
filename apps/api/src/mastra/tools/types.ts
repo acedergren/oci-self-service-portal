@@ -37,21 +37,6 @@ export type ToolStatus =
 	| 'error';
 
 /**
- * Tool call representation
- */
-export interface ToolCall {
-	id: string;
-	name: string;
-	args: Record<string, unknown>;
-	status: ToolStatus;
-	result?: unknown;
-	error?: string;
-	startedAt: number;
-	completedAt?: number;
-	approvalLevel?: ApprovalLevel;
-}
-
-/**
  * Tool definition for registration
  */
 export interface ToolDefinition {
@@ -69,44 +54,6 @@ export interface ToolDefinition {
 export interface ToolEntry extends ToolDefinition {
 	execute?: (args: Record<string, unknown>) => unknown;
 	executeAsync?: (args: Record<string, unknown>) => Promise<unknown>;
-}
-
-/**
- * Pending approval request sent to client
- */
-export interface PendingApproval {
-	toolCallId: string;
-	toolName: string;
-	category: ToolCategory;
-	approvalLevel: ApprovalLevel;
-	args: Record<string, unknown>;
-	description: string;
-	warningMessage?: string;
-	estimatedImpact?: string;
-	createdAt: number;
-}
-
-/**
- * Approval decision from client
- */
-export interface ApprovalDecision {
-	toolCallId: string;
-	approved: boolean;
-	reason?: string;
-	approvedBy?: string;
-	approvedAt: number;
-}
-
-/**
- * Tool result for streaming
- */
-export interface ToolResult {
-	toolCallId: string;
-	toolName: string;
-	success: boolean;
-	result?: unknown;
-	error?: string;
-	duration: number;
 }
 
 /**

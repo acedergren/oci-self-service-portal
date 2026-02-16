@@ -20,26 +20,16 @@ export interface ToolWarning {
 }
 
 // ---------------------------------------------------------------------------
-// Tool registry — extensible via registerToolHandler()
+// Tool registry — unimplemented stubs pending Mastra migration
 // ---------------------------------------------------------------------------
 
 type ToolHandler = (toolName: string, args: Record<string, unknown>) => Promise<unknown>;
 type ToolDefinitionProvider = (toolName: string) => ToolDefinition | undefined;
 type ToolWarningProvider = (toolName: string) => ToolWarning | undefined;
 
-let _executeHandler: ToolHandler | null = null;
-let _definitionProvider: ToolDefinitionProvider | null = null;
-let _warningProvider: ToolWarningProvider | null = null;
-
-export function registerToolHandlers(handlers: {
-	execute: ToolHandler;
-	getDefinition: ToolDefinitionProvider;
-	getWarning?: ToolWarningProvider;
-}) {
-	_executeHandler = handlers.execute;
-	_definitionProvider = handlers.getDefinition;
-	_warningProvider = handlers.getWarning ?? null;
-}
+const _executeHandler: ToolHandler | null = null;
+const _definitionProvider: ToolDefinitionProvider | null = null;
+const _warningProvider: ToolWarningProvider | null = null;
 
 export function getToolDefinition(toolName: string): ToolDefinition | undefined {
 	return _definitionProvider?.(toolName);
@@ -61,11 +51,4 @@ export async function executeTool(
 		throw new Error(`No tool handler registered for execution`);
 	}
 	return _executeHandler(toolName, args);
-}
-
-/** Reset handlers (for testing). */
-export function _resetToolHandlers() {
-	_executeHandler = null;
-	_definitionProvider = null;
-	_warningProvider = null;
 }

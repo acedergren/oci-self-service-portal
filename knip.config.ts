@@ -115,10 +115,7 @@ const config: KnipConfig = {
 		// CLI tools used via npm scripts
 		'tsx',
 		'typescript',
-		'prettier',
-		'eslint',
-		'vitest',
-		'vite'
+		'vitest'
 	],
 
 	// Don't report unused exports in test files

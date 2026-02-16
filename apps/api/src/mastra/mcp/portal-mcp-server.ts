@@ -35,12 +35,6 @@ export interface MCPAuthContext {
 	permissions: string[];
 }
 
-/** MCP Tool execution result */
-export interface MCPToolResult {
-	content: Array<{ type: string; text: string }>;
-	isError?: boolean;
-}
-
 /**
  * Convert a Zod schema to JSON Schema using Zod 4's built-in converter.
  *

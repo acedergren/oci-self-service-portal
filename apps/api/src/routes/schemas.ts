@@ -73,30 +73,6 @@ export type SessionListResponse = z.infer<typeof SessionListResponseSchema>;
 // Activity
 // ---------------------------------------------------------------------------
 
-export const ActivityQuerySchema = z.object({
-	limit: z.coerce.number().int().min(1).max(100).default(20),
-	offset: z.coerce.number().int().min(0).default(0)
-});
-
-export type ActivityQuery = z.infer<typeof ActivityQuerySchema>;
-
-export const ActivityItemSchema = z.object({
-	id: z.string(),
-	type: z.string(),
-	action: z.string(),
-	time: z.string().datetime(),
-	status: z.enum(['completed', 'pending', 'failed'])
-});
-
-export type ActivityItem = z.infer<typeof ActivityItemSchema>;
-
-export const ActivityResponseSchema = z.object({
-	items: z.array(ActivityItemSchema),
-	total: z.number()
-});
-
-export type ActivityResponse = z.infer<typeof ActivityResponseSchema>;
-
 // ---------------------------------------------------------------------------
 // Tools — Execute
 // ---------------------------------------------------------------------------

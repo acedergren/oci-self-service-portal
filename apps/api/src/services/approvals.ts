@@ -12,7 +12,6 @@
 
 const PENDING_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 const CLEANUP_INTERVAL_MS = 60 * 1000; // sweep every 60s
-const MAX_PENDING = 1000; // cap to prevent DoS
 
 interface PendingApproval {
 	toolName: string;
@@ -24,33 +23,6 @@ interface PendingApproval {
 }
 
 export const pendingApprovals = new Map<string, PendingApproval>();
-
-export function addPendingApproval(
-	toolCallId: string,
-	toolName: string,
-	args: Record<string, unknown>,
-	sessionId: string | undefined,
-	orgId: string | null | undefined,
-	resolve: (approved: boolean) => void
-) {
-	// Evict stale entries before adding (R-6)
-	sweepStale();
-
-	// Cap map size to prevent memory exhaustion
-	if (pendingApprovals.size >= MAX_PENDING) {
-		resolve(false); // reject immediately if at capacity
-		return;
-	}
-
-	pendingApprovals.set(toolCallId, {
-		toolName,
-		args,
-		sessionId,
-		orgId: orgId ?? null,
-		createdAt: Date.now(),
-		resolve
-	});
-}
 
 // ---------------------------------------------------------------------------
 // Server-side approval records — single-use, 5-min expiry
@@ -113,7 +85,8 @@ function sweepStale() {
 // Run cleanup on an interval so abandoned entries don't accumulate
 let cleanupTimer: ReturnType<typeof setInterval> | null = null;
 
-export function startCleanupTimer() {
+// Auto-start cleanup timer on import
+function startCleanupTimer() {
 	if (cleanupTimer) return;
 	cleanupTimer = setInterval(sweepStale, CLEANUP_INTERVAL_MS);
 	// Don't block process exit
@@ -122,14 +95,6 @@ export function startCleanupTimer() {
 	}
 }
 
-export function stopCleanupTimer() {
-	if (cleanupTimer) {
-		clearInterval(cleanupTimer);
-		cleanupTimer = null;
-	}
-}
-
-// Auto-start cleanup timer on import
 startCleanupTimer();
 
 /** Reset all state (for testing). */
