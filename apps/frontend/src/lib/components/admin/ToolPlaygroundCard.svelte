@@ -52,6 +52,12 @@
 			};
 		} else if (propSchema.enum) {
 			const options = propSchema.enum as string[];
+			if (options.length === 0) {
+				return {
+					type: 'text' as const,
+					defaultValue: ''
+				};
+			}
 			return {
 				type: 'select' as const,
 				options,

@@ -159,7 +159,15 @@
 					id: string;
 				});
 			} else {
-				createProviderMutation.mutate(f.data as unknown as Omit<AIProvider, 'id'>);
+				createProviderMutation.mutate({
+					displayName: f.data.displayName,
+					providerType: f.data.providerType,
+					apiEndpoint: f.data.apiEndpoint,
+					modelId: f.data.modelId,
+					enabled: f.data.enabled,
+					compartmentId: f.data.compartmentId || undefined,
+					isDefault: false
+				});
 			}
 		}
 	});
