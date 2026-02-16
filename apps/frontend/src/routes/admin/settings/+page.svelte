@@ -79,8 +79,8 @@
 	let isEditing = $state(false);
 
 	function startEditing() {
-		if ($settingsQuery.data) {
-			reset({ data: { ...$settingsQuery.data } });
+		if (settingsQuery.data) {
+			reset({ data: { ...settingsQuery.data } });
 			isEditing = true;
 		}
 	}
@@ -90,9 +90,9 @@
 	}
 
 	function handleToggleMaintenance() {
-		if ($settingsQuery.data) {
+		if (settingsQuery.data) {
 			updateMutation.mutate({
-				maintenanceMode: !$settingsQuery.data.maintenanceMode
+				maintenanceMode: !settingsQuery.data.maintenanceMode
 			});
 		}
 	}
@@ -112,17 +112,17 @@
 		{/if}
 	</div>
 
-	{#if $settingsQuery.isLoading}
+	{#if settingsQuery.isLoading}
 		<div class="loading-state">
 			<div class="spinner"></div>
 			<p>Loading portal settings...</p>
 		</div>
-	{:else if $settingsQuery.error}
+	{:else if settingsQuery.error}
 		<div class="error-state">
-			<p class="error-message">❌ {$settingsQuery.error.message}</p>
-			<button class="btn-secondary" onclick={() => $settingsQuery.refetch()}>Try Again</button>
+			<p class="error-message">❌ {settingsQuery.error.message}</p>
+			<button class="btn-secondary" onclick={() => settingsQuery.refetch()}>Try Again</button>
 		</div>
-	{:else if $settingsQuery.data}
+	{:else if settingsQuery.data}
 		{#if isEditing}
 			<form class="settings-form" method="POST">
 				<div class="settings-section">
@@ -328,8 +328,8 @@
 
 				<div class="form-actions">
 					<button type="button" class="btn-secondary" onclick={cancelEditing}>Cancel</button>
-					<button type="submit" class="btn-primary" disabled={$updateMutation.isPending}>
-						{#if $updateMutation.isPending}
+					<button type="submit" class="btn-primary" disabled={updateMutation.isPending}>
+						{#if updateMutation.isPending}
 							Saving...
 						{:else}
 							Save Settings
@@ -344,19 +344,19 @@
 					<div class="info-grid">
 						<div class="info-item">
 							<span class="info-label">Portal Name</span>
-							<span class="info-value">{$settingsQuery.data.portalName}</span>
+							<span class="info-value">{settingsQuery.data.portalName}</span>
 						</div>
-						{#if $settingsQuery.data.logoUrl}
+						{#if settingsQuery.data.logoUrl}
 							<div class="info-item">
 								<span class="info-label">Logo URL</span>
 								<!-- eslint-disable svelte/no-navigation-without-resolve -- external link -->
 								<a
-									href={$settingsQuery.data.logoUrl}
+									href={settingsQuery.data.logoUrl}
 									class="info-link"
 									target="_blank"
 									rel="noopener noreferrer"
 								>
-									{$settingsQuery.data.logoUrl}
+									{settingsQuery.data.logoUrl}
 								</a>
 								<!-- eslint-enable svelte/no-navigation-without-resolve -->
 							</div>
@@ -372,9 +372,9 @@
 							<div class="color-preview">
 								<div
 									class="color-swatch"
-									style="background-color: {$settingsQuery.data.primaryColor}"
+									style="background-color: {settingsQuery.data.primaryColor}"
 								></div>
-								<span class="info-value">{$settingsQuery.data.primaryColor}</span>
+								<span class="info-value">{settingsQuery.data.primaryColor}</span>
 							</div>
 						</div>
 						<div class="info-item">
@@ -382,9 +382,9 @@
 							<div class="color-preview">
 								<div
 									class="color-swatch"
-									style="background-color: {$settingsQuery.data.accentColor}"
+									style="background-color: {settingsQuery.data.accentColor}"
 								></div>
-								<span class="info-value">{$settingsQuery.data.accentColor}</span>
+								<span class="info-value">{settingsQuery.data.accentColor}</span>
 							</div>
 						</div>
 					</div>
@@ -396,31 +396,31 @@
 						<div class="info-item">
 							<span class="info-label">Self-service Signup</span>
 							<span
-								class="badge {$settingsQuery.data.signupEnabled
+								class="badge {settingsQuery.data.signupEnabled
 									? 'badge-success'
 									: 'badge-disabled'}"
 							>
-								{$settingsQuery.data.signupEnabled ? 'Enabled' : 'Disabled'}
+								{settingsQuery.data.signupEnabled ? 'Enabled' : 'Disabled'}
 							</span>
 						</div>
 						<div class="info-item">
 							<span class="info-label">Email Verification</span>
 							<span
-								class="badge {$settingsQuery.data.requireEmailVerification
+								class="badge {settingsQuery.data.requireEmailVerification
 									? 'badge-success'
 									: 'badge-disabled'}"
 							>
-								{$settingsQuery.data.requireEmailVerification ? 'Required' : 'Optional'}
+								{settingsQuery.data.requireEmailVerification ? 'Required' : 'Optional'}
 							</span>
 						</div>
 						<div class="info-item">
 							<span class="info-label">Session Timeout</span>
-							<span class="info-value">{$settingsQuery.data.sessionTimeout} minutes</span>
+							<span class="info-value">{settingsQuery.data.sessionTimeout} minutes</span>
 						</div>
-						{#if $settingsQuery.data.allowedDomains}
+						{#if settingsQuery.data.allowedDomains}
 							<div class="info-item">
 								<span class="info-label">Allowed Email Domains</span>
-								<span class="info-value">{$settingsQuery.data.allowedDomains}</span>
+								<span class="info-value">{settingsQuery.data.allowedDomains}</span>
 							</div>
 						{/if}
 					</div>
@@ -431,7 +431,7 @@
 					<div class="info-grid">
 						<div class="info-item">
 							<span class="info-label">Max Upload Size</span>
-							<span class="info-value">{$settingsQuery.data.maxUploadSize} MB</span>
+							<span class="info-value">{settingsQuery.data.maxUploadSize} MB</span>
 						</div>
 					</div>
 				</div>
@@ -441,28 +441,28 @@
 						<h2 class="section-title">Maintenance Mode</h2>
 						<button
 							class="btn-toggle"
-							class:active={$settingsQuery.data.maintenanceMode}
+							class:active={settingsQuery.data.maintenanceMode}
 							onclick={handleToggleMaintenance}
-							disabled={$updateMutation.isPending}
+							disabled={updateMutation.isPending}
 						>
-							{$settingsQuery.data.maintenanceMode ? 'Disable' : 'Enable'}
+							{settingsQuery.data.maintenanceMode ? 'Disable' : 'Enable'}
 						</button>
 					</div>
 					<div class="info-grid">
 						<div class="info-item">
 							<span class="info-label">Status</span>
 							<span
-								class="badge {$settingsQuery.data.maintenanceMode
+								class="badge {settingsQuery.data.maintenanceMode
 									? 'badge-warning'
 									: 'badge-success'}"
 							>
-								{$settingsQuery.data.maintenanceMode ? 'Active' : 'Inactive'}
+								{settingsQuery.data.maintenanceMode ? 'Active' : 'Inactive'}
 							</span>
 						</div>
-						{#if $settingsQuery.data.maintenanceMessage}
+						{#if settingsQuery.data.maintenanceMessage}
 							<div class="info-item">
 								<span class="info-label">Message</span>
-								<span class="info-value">{$settingsQuery.data.maintenanceMessage}</span>
+								<span class="info-value">{settingsQuery.data.maintenanceMessage}</span>
 							</div>
 						{/if}
 					</div>
@@ -471,32 +471,32 @@
 				<div class="settings-section">
 					<h2 class="section-title">Legal</h2>
 					<div class="info-grid">
-						{#if $settingsQuery.data.termsOfServiceUrl}
+						{#if settingsQuery.data.termsOfServiceUrl}
 							<div class="info-item">
 								<span class="info-label">Terms of Service</span>
 								<!-- eslint-disable svelte/no-navigation-without-resolve -- external link -->
 								<a
-									href={$settingsQuery.data.termsOfServiceUrl}
+									href={settingsQuery.data.termsOfServiceUrl}
 									class="info-link"
 									target="_blank"
 									rel="noopener noreferrer"
 								>
-									{$settingsQuery.data.termsOfServiceUrl}
+									{settingsQuery.data.termsOfServiceUrl}
 								</a>
 								<!-- eslint-enable svelte/no-navigation-without-resolve -->
 							</div>
 						{/if}
-						{#if $settingsQuery.data.privacyPolicyUrl}
+						{#if settingsQuery.data.privacyPolicyUrl}
 							<div class="info-item">
 								<span class="info-label">Privacy Policy</span>
 								<!-- eslint-disable svelte/no-navigation-without-resolve -- external link -->
 								<a
-									href={$settingsQuery.data.privacyPolicyUrl}
+									href={settingsQuery.data.privacyPolicyUrl}
 									class="info-link"
 									target="_blank"
 									rel="noopener noreferrer"
 								>
-									{$settingsQuery.data.privacyPolicyUrl}
+									{settingsQuery.data.privacyPolicyUrl}
 								</a>
 								<!-- eslint-enable svelte/no-navigation-without-resolve -->
 							</div>

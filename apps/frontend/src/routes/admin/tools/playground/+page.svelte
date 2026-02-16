@@ -86,7 +86,7 @@
 		}
 	}));
 
-	const tools = $derived($toolsQuery.data?.tools ?? []);
+	const tools = $derived(toolsQuery.data?.tools ?? []);
 	const categories = $derived([
 		'all',
 		...new Set(tools.map((t: ToolDef) => t.category ?? 'uncategorized'))
@@ -116,7 +116,7 @@
 				paramValues[key] = String(schema.default);
 			}
 		}
-		$executeMutation.reset();
+		executeMutation.reset();
 	}
 
 	function executeSelected() {
@@ -132,13 +132,13 @@
 			else if (propType === 'boolean') args[key] = value === 'true';
 			else args[key] = value;
 		}
-		$executeMutation.mutate({ name: selectedTool.name, args });
+		executeMutation.mutate({ name: selectedTool.name, args });
 	}
 
 	const approvalWarningVisible = $derived(
 		shouldShowApprovalWarning(selectedTool?.approvalLevel ?? null)
 	);
-	const resultViews = $derived(buildResultViews($executeMutation.data ?? null));
+	const resultViews = $derived(buildResultViews(executeMutation.data ?? null));
 	const displayedResult = $derived(outputMode === 'raw' ? resultViews.raw : resultViews.slimmed);
 </script>
 
@@ -172,7 +172,7 @@
 				</select>
 			</div>
 
-			{#if $toolsQuery.isLoading}
+			{#if toolsQuery.isLoading}
 				<div class="loading-state">
 					<div class="spinner"></div>
 				</div>
@@ -257,10 +257,10 @@
 					<button
 						type="button"
 						class="btn-execute"
-						disabled={$executeMutation.isPending}
+						disabled={executeMutation.isPending}
 						onclick={executeSelected}
 					>
-						{$executeMutation.isPending ? 'Executing...' : 'Execute Tool'}
+						{executeMutation.isPending ? 'Executing...' : 'Execute Tool'}
 					</button>
 
 					<div class="execution-metrics">
@@ -269,7 +269,7 @@
 					</div>
 
 					<!-- Result -->
-					{#if $executeMutation.data}
+					{#if executeMutation.data}
 						<div class="result-section success">
 							<div class="result-header">
 								<h3 class="section-label">Result</h3>
@@ -296,10 +296,10 @@
 						</div>
 					{/if}
 
-					{#if $executeMutation.error}
+					{#if executeMutation.error}
 						<div class="result-section error">
 							<h3 class="section-label">Error</h3>
-							<pre class="result-code error-text">{$executeMutation.error.message}</pre>
+							<pre class="result-code error-text">{executeMutation.error.message}</pre>
 						</div>
 					{/if}
 				</div>

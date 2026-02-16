@@ -236,9 +236,9 @@
 	}));
 
 	// Derived state
-	const catalogItems = $derived($catalogQuery.data?.items || []);
-	const servers = $derived($serversQuery.data?.servers || []);
-	const tools = $derived($toolsQuery.data?.tools || []);
+	const catalogItems = $derived(catalogQuery.data?.items || []);
+	const servers = $derived(serversQuery.data?.servers || []);
+	const tools = $derived(toolsQuery.data?.tools || []);
 
 	const filteredCatalogItems = $derived.by(() => {
 		const categoryFiltered =
@@ -287,34 +287,34 @@
 
 	function handleModalSubmit(data: Record<string, unknown>) {
 		if (modalMode === 'install') {
-			$installMutation.mutate(data);
+			installMutation.mutate(data);
 		} else if (modalMode === 'custom') {
-			$createServerMutation.mutate(data);
+			createServerMutation.mutate(data);
 		} else if (modalMode === 'edit' && editingServer) {
-			$updateMutation.mutate({ id: editingServer.id, data });
+			updateMutation.mutate({ id: editingServer.id, data });
 		}
 	}
 
 	function handleConnect(id: string) {
-		$connectMutation.mutate(id);
+		connectMutation.mutate(id);
 	}
 
 	function handleDisconnect(id: string) {
-		$disconnectMutation.mutate(id);
+		disconnectMutation.mutate(id);
 	}
 
 	function handleRestart(id: string) {
-		$restartMutation.mutate(id);
+		restartMutation.mutate(id);
 	}
 
 	function handleDelete(id: string) {
 		if (confirm('Are you sure you want to delete this MCP server?')) {
-			$deleteMutation.mutate(id);
+			deleteMutation.mutate(id);
 		}
 	}
 
 	function handleTestTool(serverId: string, toolName: string, args: Record<string, unknown>) {
-		$testToolMutation.mutate({ serverId, toolName, args });
+		testToolMutation.mutate({ serverId, toolName, args });
 	}
 </script>
 
@@ -399,7 +399,7 @@
 				</select>
 			</div>
 
-			{#if $catalogQuery.isLoading}
+			{#if catalogQuery.isLoading}
 				<div class="loading-state">
 					<div class="spinner"></div>
 					<p>Loading catalog...</p>
@@ -420,7 +420,7 @@
 		</div>
 	{:else if activeTab === 'servers'}
 		<div class="tab-content">
-			{#if $serversQuery.isLoading}
+			{#if serversQuery.isLoading}
 				<div class="loading-state">
 					<div class="spinner"></div>
 					<p>Loading servers...</p>
@@ -467,7 +467,7 @@
 					<h2>Select a server</h2>
 					<p>Choose a connected server to explore its tools</p>
 				</div>
-			{:else if $toolsQuery.isLoading}
+			{:else if toolsQuery.isLoading}
 				<div class="loading-state">
 					<div class="spinner"></div>
 					<p>Loading tools...</p>
@@ -484,7 +484,7 @@
 						<ToolPlaygroundCard
 							{tool}
 							onExecute={(args) => handleTestTool(selectedServerId, tool.toolName, args)}
-							isPending={$testToolMutation.isPending}
+							isPending={testToolMutation.isPending}
 						/>
 					{/each}
 				</div>
@@ -502,9 +502,9 @@
 		server={editingServer}
 		onClose={closeModal}
 		onSubmit={handleModalSubmit}
-		isPending={$installMutation.isPending ||
-			$createServerMutation.isPending ||
-			$updateMutation.isPending}
+		isPending={installMutation.isPending ||
+			createServerMutation.isPending ||
+			updateMutation.isPending}
 	/>
 {/if}
 

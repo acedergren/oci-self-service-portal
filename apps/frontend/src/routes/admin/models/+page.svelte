@@ -244,17 +244,17 @@
 		</button>
 	</div>
 
-	{#if $providersQuery.isLoading}
+	{#if providersQuery.isLoading}
 		<div class="loading-state">
 			<div class="spinner"></div>
 			<p>Loading AI providers...</p>
 		</div>
-	{:else if $providersQuery.error}
+	{:else if providersQuery.error}
 		<div class="error-state">
-			<p class="error-message">❌ {$providersQuery.error.message}</p>
-			<button class="btn-secondary" onclick={() => $providersQuery.refetch()}>Try Again</button>
+			<p class="error-message">❌ {providersQuery.error.message}</p>
+			<button class="btn-secondary" onclick={() => providersQuery.refetch()}>Try Again</button>
 		</div>
-	{:else if $providersQuery.data && $providersQuery.data.length === 0}
+	{:else if providersQuery.data && providersQuery.data.length === 0}
 		<div class="empty-state">
 			<div class="empty-icon">🤖</div>
 			<h2 class="empty-title">No AI providers configured</h2>
@@ -266,7 +266,7 @@
 		</div>
 	{:else}
 		<div class="providers-grid">
-			{#each $providersQuery.data as provider (provider.id)}
+			{#each providersQuery.data as provider (provider.id)}
 				<div class="provider-card" class:disabled={!provider.enabled}>
 					<div class="card-header">
 						<div class="provider-title">
@@ -470,9 +470,9 @@
 					<button
 						type="submit"
 						class="btn-primary"
-						disabled={$createProviderMutation.isPending || $updateMutation.isPending}
+						disabled={createProviderMutation.isPending || updateMutation.isPending}
 					>
-						{#if $createProviderMutation.isPending || $updateMutation.isPending}
+						{#if createProviderMutation.isPending || updateMutation.isPending}
 							Saving...
 						{:else}
 							{editingProvider ? 'Update Provider' : 'Create Provider'}

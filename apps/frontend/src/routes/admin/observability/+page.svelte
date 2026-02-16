@@ -66,9 +66,9 @@
 		refetchInterval: 15_000
 	}));
 
-	const metrics = $derived($metricsQuery.data);
-	const health = $derived($healthQuery.data);
-	const runs = $derived($runsQuery.data?.runs ?? []);
+	const metrics = $derived(metricsQuery.data);
+	const health = $derived(healthQuery.data);
+	const runs = $derived(runsQuery.data?.runs ?? []);
 
 	function formatUptime(seconds: number): string {
 		const days = Math.floor(seconds / 86400);
@@ -136,7 +136,7 @@
 		{/if}
 	</div>
 
-	{#if $metricsQuery.isLoading && $healthQuery.isLoading}
+	{#if metricsQuery.isLoading && healthQuery.isLoading}
 		<div class="loading-state">
 			<div class="spinner"></div>
 			<p>Loading metrics...</p>

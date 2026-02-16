@@ -56,9 +56,9 @@
 		onUpdate({ form }) {
 			if (!form.valid) return;
 			if (editingIdp) {
-				$updateIdpMutation.mutate({ id: editingIdp.id, data: form.data });
+				updateIdpMutation.mutate({ id: editingIdp.id, data: form.data });
 			} else {
-				$createIdpMutation.mutate(form.data);
+				createIdpMutation.mutate(form.data);
 			}
 		}
 	});
@@ -205,16 +205,16 @@
 
 	function handleDelete(id: string) {
 		if (confirm('Are you sure you want to delete this identity provider?')) {
-			$deleteIdpMutation.mutate(id);
+			deleteIdpMutation.mutate(id);
 		}
 	}
 
 	function handleToggle(id: string, currentEnabled: boolean) {
-		$toggleIdpMutation.mutate({ id, enabled: !currentEnabled });
+		toggleIdpMutation.mutate({ id, enabled: !currentEnabled });
 	}
 
-	const isLoading = $derived($idpsQuery.isLoading);
-	const idps = $derived($idpsQuery.data || []);
+	const isLoading = $derived(idpsQuery.isLoading);
+	const idps = $derived(idpsQuery.data || []);
 </script>
 
 <svelte:head>
@@ -479,9 +479,9 @@
 				<button
 					type="submit"
 					class="btn-primary"
-					disabled={$createIdpMutation.isPending || $updateIdpMutation.isPending}
+					disabled={createIdpMutation.isPending || updateIdpMutation.isPending}
 				>
-					{#if $createIdpMutation.isPending || $updateIdpMutation.isPending}
+					{#if createIdpMutation.isPending || updateIdpMutation.isPending}
 						Saving...
 					{:else}
 						{editingIdp ? 'Update' : 'Create'}

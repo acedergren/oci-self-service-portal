@@ -1,7 +1,7 @@
 import type { KnipConfig } from 'knip';
 
 /**
- * Knip configuration for OCI Self-Service Portal monorepo
+ * Knip configuration for CloudNow monorepo
  *
  * Detects:
  * - Unused dependencies (both prod and dev)
