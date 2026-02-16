@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { SvelteSet } from 'svelte/reactivity';
+
 	export type ChangeAction = 'create' | 'update' | 'delete' | 'no-op' | 'read';
 
 	export interface TerraformResourceChange {
@@ -17,16 +19,14 @@
 
 	let { changes, title = 'Terraform Plan' }: Props = $props();
 
-	let expandedSet = $state(new Set<string>());
+	let expandedSet = new SvelteSet<string>();
 
 	function toggleExpanded(address: string): void {
-		const next = new Set(expandedSet);
-		if (next.has(address)) {
-			next.delete(address);
+		if (expandedSet.has(address)) {
+			expandedSet.delete(address);
 		} else {
-			next.add(address);
+			expandedSet.add(address);
 		}
-		expandedSet = next;
 	}
 
 	function actionSymbol(action: ChangeAction): string {

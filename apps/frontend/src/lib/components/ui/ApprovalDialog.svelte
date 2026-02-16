@@ -112,7 +112,7 @@
 				<div class="tool-args">
 					<span class="label">Parameters:</span>
 					<div class="args-list">
-						{#each formattedArgs as { key, value }}
+						{#each formattedArgs as { key, value } (key)}
 							<div class="arg-item">
 								<span class="arg-key">{key}:</span>
 								<code class="arg-value">{value}</code>

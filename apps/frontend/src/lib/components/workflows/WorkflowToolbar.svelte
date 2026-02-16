@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { Badge } from '$lib/components/ui/index.js';
+	import { resolve } from '$app/paths';
 	import type { WorkflowToolbarProps } from './types.js';
 
 	let {
@@ -47,7 +48,7 @@
 
 <div class="workflow-toolbar">
 	<div class="toolbar-left">
-		<a href="/workflows" class="back-link" title="Back to workflows">
+		<a href={resolve('/workflows')} class="back-link" title="Back to workflows">
 			<svg
 				viewBox="0 0 24 24"
 				fill="none"

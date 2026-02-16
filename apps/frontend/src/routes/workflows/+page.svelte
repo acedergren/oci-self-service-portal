@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { Badge } from '$lib/components/ui/index.js';
+	import { resolve } from '$app/paths';
+	import { SvelteURLSearchParams } from 'svelte/reactivity';
 
 	interface WorkflowSummary {
 		id: string;
@@ -24,7 +26,7 @@
 		loading = true;
 		error = null;
 		try {
-			const params = new URLSearchParams();
+			const params = new SvelteURLSearchParams();
 			if (statusFilter) params.set('status', statusFilter);
 			if (searchQuery) params.set('search', searchQuery);
 
@@ -71,7 +73,7 @@
 			<h1 class="page-title">Workflows</h1>
 			<p class="page-subtitle">Create and manage automated OCI infrastructure workflows</p>
 		</div>
-		<a href="/workflows/new" class="new-workflow-btn">
+		<a href={resolve('/workflows/new')} class="new-workflow-btn">
 			<svg
 				viewBox="0 0 24 24"
 				fill="none"
@@ -132,7 +134,7 @@
 				</div>
 				<h2 class="empty-title">No workflows yet</h2>
 				<p class="empty-text">Create your first workflow to automate OCI infrastructure tasks</p>
-				<a href="/workflows/new" class="new-workflow-btn">Create Workflow</a>
+				<a href={resolve('/workflows/new')} class="new-workflow-btn">Create Workflow</a>
 			{:else}
 				<p class="empty-text">No workflows match your search</p>
 			{/if}
@@ -140,7 +142,7 @@
 	{:else}
 		<div class="workflows-grid">
 			{#each workflows as wf (wf.id)}
-				<a href="/workflows/{wf.id}" class="workflow-card">
+				<a href={resolve(`/workflows/${wf.id}`)} class="workflow-card">
 					<div class="card-header">
 						<h3 class="card-name">{wf.name}</h3>
 						<Badge variant={statusVariant[wf.status] ?? 'default'}>{wf.status}</Badge>

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { Badge } from '$lib/components/ui/index.js';
+	import { resolve } from '$app/paths';
 	import { toast } from 'svelte-sonner';
 
 	const runId = $derived($page.params.id);
@@ -107,7 +108,7 @@
 
 <div class="run-page">
 	<div class="page-header">
-		<a href="/workflows" class="back-link">
+		<a href={resolve('/workflows')} class="back-link">
 			<svg
 				viewBox="0 0 24 24"
 				fill="none"
@@ -152,7 +153,8 @@
 			</div>
 			{#if run.definitionId}
 				<div class="overview-item">
-					<a href="/workflows/{run.definitionId}" class="overview-link">View Workflow</a>
+					<a href={resolve(`/workflows/${run.definitionId}`)} class="overview-link">View Workflow</a
+					>
 				</div>
 			{/if}
 		</div>

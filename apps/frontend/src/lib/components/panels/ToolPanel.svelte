@@ -91,7 +91,7 @@
 
 				<div class="bg-tertiary p-2 rounded text-sm mb-3 max-h-32 overflow-y-auto">
 					<p class="text-tertiary mb-1">Arguments:</p>
-					{#each Object.entries(pendingApproval.args) as [key, value]}
+					{#each Object.entries(pendingApproval.args) as [key, value] (key)}
 						<div class="flex gap-2">
 							<span class="text-secondary">{key}:</span>
 							<span class="text-primary truncate">

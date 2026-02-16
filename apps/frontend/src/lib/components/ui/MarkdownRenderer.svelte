@@ -31,6 +31,7 @@
 </script>
 
 <div class="markdown-content {className}">
+	<!-- eslint-disable-next-line svelte/no-at-html-tags -- safe: DOMPurify sanitized -->
 	{@html rendered}
 </div>
 

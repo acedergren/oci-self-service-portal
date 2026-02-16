@@ -27,7 +27,7 @@
 
 	<div class="overflow-auto" style:max-height={maxHeight}>
 		<pre class="p-0 m-0"><code class="block p-3"
-				>{#each lines as line, i}<span class="flex"
+				>{#each lines as line, i (i)}<span class="flex"
 						><span
 							class="text-tertiary select-none pr-3 text-right"
 							class:hidden={!showLineNumbers}

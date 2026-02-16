@@ -132,7 +132,7 @@
 				{#if Object.keys(properties).length === 0}
 					<p class="no-params">This tool doesn't require any parameters</p>
 				{:else}
-					{#each Object.entries(properties) as [key, propSchema]}
+					{#each Object.entries(properties) as [key, propSchema] (key)}
 						{@const field = renderInputField(key, propSchema)}
 						{@const isRequired = required.includes(key)}
 
@@ -156,7 +156,7 @@
 									required={isRequired}
 									class="form-input"
 								>
-									{#each field.options as option}
+									{#each field.options as option (option)}
 										<option value={option}>{option}</option>
 									{/each}
 								</select>

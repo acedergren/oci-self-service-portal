@@ -387,7 +387,7 @@
 					bind:value={searchQuery}
 				/>
 				<select class="filter-select" bind:value={categoryFilter}>
-					{#each categories as category}
+					{#each categories as category (category)}
 						<option value={category}>
 							{category === 'all' ? 'All Categories' : category}
 						</option>
@@ -451,7 +451,7 @@
 			<div class="toolbar">
 				<select class="filter-select" bind:value={selectedServerId}>
 					<option value={null}>Select a server...</option>
-					{#each servers.filter((s: any) => s.status === 'connected') as server}
+					{#each servers.filter((s: any) => s.status === 'connected') as server (server.id)}
 						<option value={server.id}>{server.displayName}</option>
 					{/each}
 				</select>

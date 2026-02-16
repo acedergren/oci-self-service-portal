@@ -516,70 +516,68 @@
 
 	<!-- Mobile Session Drawer -->
 	<Drawer isOpen={sessionDrawerOpen} side="left" onclose={() => (sessionDrawerOpen = false)}>
-		{#snippet children()}
-			<div class="p-4 border-b border-muted">
-				<div class="flex items-center gap-3">
-					<div
-						class="h-10 w-10 rounded-lg bg-accent flex items-center justify-center text-primary font-bold"
-					>
-						◆
-					</div>
-					<div>
-						<h1 class="font-bold text-lg text-primary">OCI GenAI</h1>
-						<p class="text-xs text-tertiary">Agentic Chat</p>
-					</div>
+		<div class="p-4 border-b border-muted">
+			<div class="flex items-center gap-3">
+				<div
+					class="h-10 w-10 rounded-lg bg-accent flex items-center justify-center text-primary font-bold"
+				>
+					◆
+				</div>
+				<div>
+					<h1 class="font-bold text-lg text-primary">OCI GenAI</h1>
+					<p class="text-xs text-tertiary">Agentic Chat</p>
 				</div>
 			</div>
+		</div>
 
-			<!-- New Chat Button -->
-			<div class="p-3">
-				<button
-					onclick={handleNewSession}
-					class="w-full btn btn-secondary"
-					disabled={createSessionMutation.isPending}
-				>
-					{#if createSessionMutation.isPending}
-						<Spinner variant="ring" size="sm" />
-					{:else}
-						+ New Chat
-					{/if}
-				</button>
-			</div>
-
-			<!-- Sessions List -->
-			<div class="flex-1 overflow-y-auto p-2 space-y-1">
-				{#if sessionsQuery.isPending}
-					<div class="flex items-center justify-center py-4">
-						<Spinner variant="dots" />
-					</div>
-				{:else if sessionsQuery.isError}
-					<div class="text-error text-sm px-3 py-2">Failed to load sessions</div>
+		<!-- New Chat Button -->
+		<div class="p-3">
+			<button
+				onclick={handleNewSession}
+				class="w-full btn btn-secondary"
+				disabled={createSessionMutation.isPending}
+			>
+				{#if createSessionMutation.isPending}
+					<Spinner variant="ring" size="sm" />
 				{:else}
-					{#each sessions as session (session.id)}
-						<button
-							onclick={() => {
-								handleSelectSession(session.id);
-								sessionDrawerOpen = false;
-							}}
-							class="w-full text-left px-3 py-2 text-sm rounded-lg transition-fast group {localSessionId ===
-							session.id
-								? 'bg-elevated border border-focused'
-								: 'hover:bg-hover border border-transparent'}"
-						>
-							<div class="flex items-center justify-between">
-								<span class="truncate text-primary">{session.title || 'New Chat'}</span>
-								{#if localSessionId === session.id}
-									<span class="text-accent">●</span>
-								{/if}
-							</div>
-							<div class="flex items-center gap-2 mt-1">
-								<Badge variant="default">{session.model.split('.').pop()}</Badge>
-							</div>
-						</button>
-					{/each}
+					+ New Chat
 				{/if}
-			</div>
-		{/snippet}
+			</button>
+		</div>
+
+		<!-- Sessions List -->
+		<div class="flex-1 overflow-y-auto p-2 space-y-1">
+			{#if sessionsQuery.isPending}
+				<div class="flex items-center justify-center py-4">
+					<Spinner variant="dots" />
+				</div>
+			{:else if sessionsQuery.isError}
+				<div class="text-error text-sm px-3 py-2">Failed to load sessions</div>
+			{:else}
+				{#each sessions as session (session.id)}
+					<button
+						onclick={() => {
+							handleSelectSession(session.id);
+							sessionDrawerOpen = false;
+						}}
+						class="w-full text-left px-3 py-2 text-sm rounded-lg transition-fast group {localSessionId ===
+						session.id
+							? 'bg-elevated border border-focused'
+							: 'hover:bg-hover border border-transparent'}"
+					>
+						<div class="flex items-center justify-between">
+							<span class="truncate text-primary">{session.title || 'New Chat'}</span>
+							{#if localSessionId === session.id}
+								<span class="text-accent">●</span>
+							{/if}
+						</div>
+						<div class="flex items-center gap-2 mt-1">
+							<Badge variant="default">{session.model.split('.').pop()}</Badge>
+						</div>
+					</button>
+				{/each}
+			{/if}
+		</div>
 	</Drawer>
 
 	<!-- Main content area -->
@@ -810,18 +808,16 @@
 
 	<!-- Mobile Tools Drawer -->
 	<Drawer isOpen={toolDrawerOpen} side="bottom" onclose={() => (toolDrawerOpen = false)}>
-		{#snippet children()}
-			<div class="p-3">
-				<ToolPanel
-					isOpen={true}
-					tools={ctx.toolCalls}
-					pendingApproval={ctx.pendingApproval}
-					ontoggle={() => {}}
-					onapprove={handleToolApprove}
-					onreject={handleToolReject}
-				/>
-			</div>
-		{/snippet}
+		<div class="p-3">
+			<ToolPanel
+				isOpen={true}
+				tools={ctx.toolCalls}
+				pendingApproval={ctx.pendingApproval}
+				ontoggle={() => {}}
+				onapprove={handleToolApprove}
+				onreject={handleToolReject}
+			/>
+		</div>
 	</Drawer>
 
 	<!-- Mobile Bottom Navigation -->

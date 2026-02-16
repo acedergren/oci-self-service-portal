@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
+	import { SvelteMap } from 'svelte/reactivity';
 	import { toast } from 'svelte-sonner';
 	import WorkflowCanvas from '$lib/components/workflows/WorkflowCanvas.svelte';
 	import WorkflowToolbar from '$lib/components/workflows/WorkflowToolbar.svelte';
@@ -45,7 +47,7 @@
 	// Build palette from tool registry
 	const paletteGroups = $derived.by((): PaletteGroup[] => {
 		const toolDefs = data.toolDefs;
-		const grouped = new Map<string, PaletteItem[]>();
+		const grouped = new SvelteMap<string, PaletteItem[]>();
 
 		for (const def of toolDefs) {
 			const cat = def.category;
@@ -143,7 +145,7 @@
 			if (!res.ok) {
 				if (res.status === 404) {
 					toast.error('Workflow not found');
-					goto('/workflows');
+					goto(resolve('/workflows'));
 					return;
 				}
 				throw new Error(`Failed to load: ${res.status}`);
@@ -211,7 +213,7 @@
 				if (!res.ok) throw new Error(`Save failed: ${res.status}`);
 				const data = await res.json();
 				toast.success('Workflow created');
-				goto(`/workflows/${data.workflow.id}`, { replaceState: true });
+				goto(resolve(`/workflows/${data.workflow.id}`), { replaceState: true });
 			} else {
 				const res = await fetch(`/api/workflows/${workflowId}`, {
 					method: 'PUT',

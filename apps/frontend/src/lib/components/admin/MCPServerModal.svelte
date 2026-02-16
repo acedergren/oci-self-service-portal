@@ -286,7 +286,7 @@
 				<div class="form-divider"></div>
 				<h3 class="section-title">Required Credentials</h3>
 
-				{#each catalogItem.requiredCredentials as cred}
+				{#each catalogItem.requiredCredentials as cred (cred.key)}
 					<div class="form-group">
 						<label for={`cred-${cred.key}`}>{cred.displayName}</label>
 						<input

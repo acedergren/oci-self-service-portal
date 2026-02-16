@@ -35,6 +35,7 @@
 					<div class="activity-item">
 						<div class="activity-icon" data-type={item.type}>
 							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+								<!-- eslint-disable-next-line svelte/no-at-html-tags -- safe: hardcoded SVG lookup -->
 								{@html getIconForType(item.type)}
 							</svg>
 						</div>

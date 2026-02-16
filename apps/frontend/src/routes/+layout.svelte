@@ -2,6 +2,7 @@
 	import '../app.css';
 	import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
 	import { Toaster } from 'svelte-sonner';
+	import { resolve } from '$app/paths';
 	import UserMenu from '$lib/components/UserMenu.svelte';
 
 	// Create query client with OCI AI Chat defaults
@@ -24,11 +25,9 @@
 	{#if data.user}
 		<header class="app-header">
 			<div class="header-left">
-				<a href="/" class="app-title">OCI Self-Service Portal</a>
-				<!-- eslint-disable-line svelte/no-navigation-without-resolve -->
+				<a href={resolve('/')} class="app-title">OCI Self-Service Portal</a>
 				<nav class="header-nav">
-					<a href="/workflows" class="nav-link">Workflows</a>
-					<!-- eslint-disable-line svelte/no-navigation-without-resolve -->
+					<a href={resolve('/workflows')} class="nav-link">Workflows</a>
 				</nav>
 			</div>
 			<div class="header-right">

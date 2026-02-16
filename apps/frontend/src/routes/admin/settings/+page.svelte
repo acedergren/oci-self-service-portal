@@ -349,15 +349,16 @@
 						{#if $settingsQuery.data.logoUrl}
 							<div class="info-item">
 								<span class="info-label">Logo URL</span>
-								<!-- External link - no SvelteKit navigation needed -->
+								<!-- eslint-disable svelte/no-navigation-without-resolve -- external link -->
 								<a
 									href={$settingsQuery.data.logoUrl}
 									class="info-link"
 									target="_blank"
 									rel="noopener noreferrer"
-									><!-- eslint-disable-line svelte/no-navigation-without-resolve -->
+								>
 									{$settingsQuery.data.logoUrl}
 								</a>
+								<!-- eslint-enable svelte/no-navigation-without-resolve -->
 							</div>
 						{/if}
 					</div>
@@ -473,29 +474,31 @@
 						{#if $settingsQuery.data.termsOfServiceUrl}
 							<div class="info-item">
 								<span class="info-label">Terms of Service</span>
-								<!-- External link - no SvelteKit navigation needed -->
+								<!-- eslint-disable svelte/no-navigation-without-resolve -- external link -->
 								<a
 									href={$settingsQuery.data.termsOfServiceUrl}
 									class="info-link"
 									target="_blank"
 									rel="noopener noreferrer"
-									><!-- eslint-disable-line svelte/no-navigation-without-resolve -->
+								>
 									{$settingsQuery.data.termsOfServiceUrl}
 								</a>
+								<!-- eslint-enable svelte/no-navigation-without-resolve -->
 							</div>
 						{/if}
 						{#if $settingsQuery.data.privacyPolicyUrl}
 							<div class="info-item">
 								<span class="info-label">Privacy Policy</span>
-								<!-- External link - no SvelteKit navigation needed -->
+								<!-- eslint-disable svelte/no-navigation-without-resolve -- external link -->
 								<a
 									href={$settingsQuery.data.privacyPolicyUrl}
 									class="info-link"
 									target="_blank"
 									rel="noopener noreferrer"
-									><!-- eslint-disable-line svelte/no-navigation-without-resolve -->
+								>
 									{$settingsQuery.data.privacyPolicyUrl}
 								</a>
+								<!-- eslint-enable svelte/no-navigation-without-resolve -->
 							</div>
 						{/if}
 					</div>

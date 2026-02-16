@@ -45,7 +45,7 @@
 
 	{#if item.tags && item.tags.length > 0}
 		<div class="card-tags">
-			{#each item.tags.slice(0, 3) as tag}
+			{#each item.tags.slice(0, 3) as tag (tag)}
 				<span class="tag">{tag}</span>
 			{/each}
 			{#if item.tags.length > 3}
@@ -72,6 +72,7 @@
 			Install
 		</button>
 		{#if item.documentationUrl}
+			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- external link -->
 			<a href={item.documentationUrl} target="_blank" rel="noopener noreferrer" class="btn-docs">
 				Docs
 			</a>

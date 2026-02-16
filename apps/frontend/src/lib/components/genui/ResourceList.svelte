@@ -91,7 +91,7 @@
 					</div>
 					{#if item.metadata && Object.keys(item.metadata).length > 0}
 						<div class="item-metadata">
-							{#each Object.entries(item.metadata) as [key, value]}
+							{#each Object.entries(item.metadata) as [key, value] (key)}
 								<span class="meta-tag">
 									<span class="meta-key">{key}:</span>
 									<span class="meta-value">{value}</span>

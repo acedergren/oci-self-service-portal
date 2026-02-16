@@ -82,9 +82,9 @@
 		<div class="table-scroll">
 			<table class="instance-table">
 				<thead>
-					{#each table.getHeaderGroups() as headerGroup}
+					{#each table.getHeaderGroups() as headerGroup (headerGroup.id)}
 						<tr>
-							{#each headerGroup.headers as header}
+							{#each headerGroup.headers as header (header.id)}
 								<th
 									class:sortable={header.column.getCanSort()}
 									onclick={header.column.getToggleSortingHandler()}
@@ -103,9 +103,9 @@
 					{/each}
 				</thead>
 				<tbody>
-					{#each table.getRowModel().rows as row}
+					{#each table.getRowModel().rows as row (row.id)}
 						<tr>
-							{#each row.getVisibleCells() as cell}
+							{#each row.getVisibleCells() as cell (cell.id)}
 								<td
 									class:state-cell={cell.column.id === 'lifecycleState'}
 									class={cell.column.id === 'lifecycleState'

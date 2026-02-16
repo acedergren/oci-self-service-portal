@@ -2,6 +2,7 @@ import { Chat } from '@ai-sdk/svelte';
 import { DefaultChatTransport } from 'ai';
 import { z } from 'zod';
 import { setContext, getContext } from 'svelte';
+import { SvelteMap } from 'svelte/reactivity';
 import type { ToolCall, PendingApproval, ToolProgressEvent } from '@portal/types/tools/types';
 import { extractToolParts, getToolState, formatToolName } from '$lib/utils/message-parts.js';
 
@@ -41,7 +42,7 @@ export class ChatContext {
 	fetchingApprovalFor = $state<string | null>(null);
 
 	// Tool progress tracking — populated by server-sent data-tool-progress parts
-	toolProgress = $state<Map<string, ToolProgressEvent>>(new Map());
+	toolProgress = $state(new SvelteMap<string, ToolProgressEvent>());
 
 	// Derived status flags from Chat instance
 	readonly isLoading = $derived(
@@ -94,7 +95,7 @@ export class ChatContext {
 				if (part.type === 'data-tool-progress') {
 					const event = part.data as ToolProgressEvent;
 					// Reactive map update: create new Map to trigger reactivity
-					const next = new Map(this.toolProgress);
+					const next = new SvelteMap(this.toolProgress);
 					next.set(event.toolCallId, event);
 					this.toolProgress = next;
 				}
@@ -115,7 +116,7 @@ export class ChatContext {
 		this.currentThought = undefined;
 		this.reasoningSteps = [];
 		this.pendingApproval = undefined;
-		this.toolProgress = new Map();
+		this.toolProgress = new SvelteMap();
 	}
 }
 

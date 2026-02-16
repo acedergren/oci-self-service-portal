@@ -2,6 +2,7 @@
 	import { onDestroy } from 'svelte';
 	import { toast } from 'svelte-sonner';
 	import { goto } from '$app/navigation';
+	import { resolve } from '$app/paths';
 	import SetupStepper from './SetupStepper.svelte';
 	import IdentityStep from './steps/IdentityStep.svelte';
 	import AIModelsStep from './steps/AIModelsStep.svelte';
@@ -70,7 +71,7 @@
 
 			// Redirect to login page after 1 second
 			redirectTimeout = setTimeout(() => {
-				goto('/login', { replaceState: true });
+				goto(resolve('/login'), { replaceState: true });
 			}, 1000);
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : 'Failed to complete setup');

@@ -356,7 +356,6 @@
 </div>
 
 {#if showModal}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="modal-overlay"
 		role="button"

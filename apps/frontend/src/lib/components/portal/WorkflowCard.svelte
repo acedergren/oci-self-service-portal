@@ -7,6 +7,7 @@
 
 <button class="workflow-card" onclick={() => onStart(workflow)}>
 	<div class="workflow-icon">
+		<!-- eslint-disable-next-line svelte/no-at-html-tags -- safe: hardcoded SVG lookup -->
 		{@html getWorkflowIconSvg(workflow.icon)}
 	</div>
 	<div class="workflow-content">

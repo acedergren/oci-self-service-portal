@@ -22,6 +22,7 @@
 <article class="service-card" data-color={category.color}>
 	<div class="service-icon">
 		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+			<!-- eslint-disable-next-line svelte/no-at-html-tags -- safe: hardcoded SVG lookup -->
 			{@html iconPaths[category.icon] || iconPaths.server}
 		</svg>
 	</div>
