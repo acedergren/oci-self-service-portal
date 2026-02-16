@@ -7,10 +7,13 @@ import {
 	SessionConfigSchema,
 	type Turn,
 	TurnSchema,
-	type Message,
 	MessageSchema,
-	type ToolCall,
-	ToolCallSchema
+	ToolCallSchema,
+	type CreateSessionInput,
+	type UpdateSessionInput,
+	type AddTurnInput,
+	type UpdateTurnInput,
+	type ListSessionsOptions
 } from './types';
 import { z } from 'zod';
 
@@ -117,39 +120,6 @@ function buildUpdateQuery(
 // ============================================================================
 // Input Types
 // ============================================================================
-
-export interface CreateSessionInput {
-	id?: string;
-	model: string;
-	region: string;
-	title?: string;
-	status?: 'active' | 'completed' | 'error';
-	config?: Record<string, unknown>;
-}
-
-export interface UpdateSessionInput {
-	title?: string;
-	status?: 'active' | 'completed' | 'error';
-	config?: Record<string, unknown>;
-}
-
-export interface AddTurnInput {
-	turnNumber: number;
-	userMessage: Message;
-}
-
-export interface UpdateTurnInput {
-	assistantResponse?: Message;
-	toolCalls?: ToolCall[];
-	tokensUsed?: number;
-	costUsd?: number;
-	error?: string | null;
-}
-
-export interface ListSessionsOptions {
-	limit?: number;
-	status?: 'active' | 'completed' | 'error';
-}
 
 export class StateRepository {
 	constructor(private db: Database.Database) {}

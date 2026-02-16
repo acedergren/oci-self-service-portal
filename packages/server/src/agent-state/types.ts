@@ -95,3 +95,45 @@ export const TurnSchema = z.object({
 });
 
 export type Turn = z.infer<typeof TurnSchema>;
+
+// ============================================================================
+// Input/Option Types (for repository methods)
+// ============================================================================
+
+/** Input for creating a new session */
+export interface CreateSessionInput {
+	id?: string;
+	model: string;
+	region: string;
+	title?: string;
+	status?: SessionStatus;
+	config?: Record<string, unknown>;
+}
+
+/** Input for updating a session */
+export interface UpdateSessionInput {
+	title?: string;
+	status?: SessionStatus;
+	config?: Record<string, unknown>;
+}
+
+/** Input for adding a turn to a session */
+export interface AddTurnInput {
+	turnNumber: number;
+	userMessage: Message;
+}
+
+/** Input for updating a turn */
+export interface UpdateTurnInput {
+	assistantResponse?: Message;
+	toolCalls?: ToolCall[];
+	tokensUsed?: number;
+	costUsd?: number;
+	error?: string | null;
+}
+
+/** Options for listing sessions */
+export interface ListSessionsOptions {
+	limit?: number;
+	status?: SessionStatus;
+}

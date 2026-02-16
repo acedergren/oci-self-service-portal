@@ -21,10 +21,13 @@ import {
 	SessionConfigSchema,
 	type Turn,
 	TurnSchema,
-	type Message,
 	MessageSchema,
-	type ToolCall,
-	ToolCallSchema
+	ToolCallSchema,
+	type CreateSessionInput,
+	type UpdateSessionInput,
+	type AddTurnInput,
+	type UpdateTurnInput,
+	type ListSessionsOptions
 } from './types';
 import { withConnection } from '../oracle/connection';
 import { DatabaseError } from '../errors';
@@ -144,42 +147,17 @@ function buildOracleUpdateQuery(
 }
 
 // ============================================================================
-// Input Types (extended from base StateRepository)
+// Extended Input Types (Oracle-specific with org/thread support)
 // ============================================================================
 
-export interface CreateSessionInput {
-	id?: string;
-	model: string;
-	region: string;
-	title?: string;
-	status?: 'active' | 'completed' | 'error';
-	config?: Record<string, unknown>;
+/** Oracle CreateSessionInput: extends base with orgId/threadId for multi-tenancy */
+export interface OracleCreateSessionInput extends CreateSessionInput {
 	orgId?: string;
 	threadId?: string;
 }
 
-export interface UpdateSessionInput {
-	title?: string;
-	status?: 'active' | 'completed' | 'error';
-	config?: Record<string, unknown>;
-}
-
-export interface AddTurnInput {
-	turnNumber: number;
-	userMessage: Message;
-}
-
-export interface UpdateTurnInput {
-	assistantResponse?: Message;
-	toolCalls?: ToolCall[];
-	tokensUsed?: number;
-	costUsd?: number;
-	error?: string | null;
-}
-
-export interface ListSessionsOptions {
-	limit?: number;
-	status?: 'active' | 'completed' | 'error';
+/** Oracle ListSessionsOptions: extends base with orgId for multi-tenancy filtering */
+export interface OracleListSessionsOptions extends ListSessionsOptions {
 	orgId?: string;
 }
 
@@ -230,7 +208,7 @@ export class OracleAgentStateRepository {
 	// Session Methods
 	// ============================================================================
 
-	async createSession(input: CreateSessionInput): Promise<Session> {
+	async createSession(input: OracleCreateSessionInput): Promise<Session> {
 		try {
 			const now = new Date();
 			const id = input.id ?? uuidv4();
@@ -295,7 +273,7 @@ export class OracleAgentStateRepository {
 		}
 	}
 
-	async listSessions(options: ListSessionsOptions = {}): Promise<Session[]> {
+	async listSessions(options: OracleListSessionsOptions = {}): Promise<Session[]> {
 		try {
 			const limit = options.limit ?? 50;
 			const conditions: string[] = [];
