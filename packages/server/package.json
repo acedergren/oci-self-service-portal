@@ -41,7 +41,7 @@
 		"./*": "./src/*.ts"
 	},
 	"dependencies": {
-		"@portal/types": "0.0.1",
+		"@portal/types": "workspace:*",
 		"ipaddr.js": "^2.2.0",
 		"@acedergren/oci-genai-provider": "^0.2.0",
 		"@modelcontextprotocol/sdk": "^1.26.0",
