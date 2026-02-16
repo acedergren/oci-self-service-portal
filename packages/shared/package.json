@@ -52,8 +52,8 @@
 		"./stubs/*": "./src/stubs/*.ts"
 	},
 	"dependencies": {
-		"@portal/server": "workspace:*",
-		"@portal/types": "workspace:*",
+		"@portal/server": "0.0.1",
+		"@portal/types": "0.0.1",
 		"@acedergren/oci-genai-provider": "^0.2.0",
 		"@modelcontextprotocol/sdk": "^1.26.0",
 		"ai": "^6.0.69",
