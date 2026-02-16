@@ -123,7 +123,7 @@ export async function fetchOCIPricing(): Promise<OCIPriceItem[]> {
 	// For actual usage costs, use the Usage API
 	const ociComputeData = await import('./data/oci-compute.json');
 
-	return ociComputeData.instances.map((instance: any) => ({
+	return ociComputeData.instances.map((instance: Record<string, unknown>) => ({
 		id: instance.id,
 		name: instance.name,
 		displayName: instance.displayName,
