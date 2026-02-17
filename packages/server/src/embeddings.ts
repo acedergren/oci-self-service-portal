@@ -9,9 +9,10 @@
  * so callers can skip embedding without breaking the request path.
  */
 
-import { createLogger } from './logger';
-import { OCIError, ValidationError } from './errors';
-import { wrapWithSpan } from './sentry';
+import * as oci from 'oci-sdk';
+import { createLogger } from './logger.js';
+import { OCIError, ValidationError } from './errors.js';
+import { wrapWithSpan } from './sentry.js';
 
 const log = createLogger('embeddings');
 
@@ -19,13 +20,70 @@ const EMBEDDING_MODEL = 'cohere.embed-english-v3.0';
 const EMBEDDING_DIMENSIONS = 1536;
 const MAX_BATCH_SIZE = 96; // OCI GenAI batch limit
 
+/** Cached GenAI inference client (lazily created per region) */
+let cachedClient: oci.generativeaiinference.GenerativeAiInferenceClient | null = null;
+let cachedClientRegion: string | null = null;
+
+/**
+ * Get (or create) the cached OCI GenAI inference client.
+ * Lazily initialised on first use; re-created if region changes.
+ */
+function getGenAiClient(region: string): oci.generativeaiinference.GenerativeAiInferenceClient {
+	if (cachedClient && cachedClientRegion === region) {
+		return cachedClient;
+	}
+
+	// Auto-detect auth strategy following the same pattern as sdk-auth.ts
+	let provider: oci.common.AuthenticationDetailsProvider;
+
+	if (process.env.OCI_RESOURCE_PRINCIPAL_VERSION) {
+		// Resource principal — async init required; for now fall through to config-file
+		// (resource principal async init handled at startup via initOCIAuth())
+		provider = new oci.common.ConfigFileAuthenticationDetailsProvider();
+	} else if (process.env.OCI_INSTANCE_PRINCIPAL) {
+		provider = new oci.common.ConfigFileAuthenticationDetailsProvider();
+	} else {
+		const profile = process.env.OCI_CLI_PROFILE ?? 'DEFAULT';
+		provider = new oci.common.ConfigFileAuthenticationDetailsProvider(undefined, profile);
+	}
+
+	cachedClient = new oci.generativeaiinference.GenerativeAiInferenceClient({
+		authenticationDetailsProvider: provider
+	});
+	(cachedClient as unknown as { region: string }).region = region;
+	cachedClientRegion = region;
+
+	return cachedClient;
+}
+
+/**
+ * Reset the cached GenAI client (for testing).
+ */
+export function resetGenAiClient(): void {
+	cachedClient = null;
+	cachedClientRegion = null;
+}
+
+/**
+ * Inject a mock GenAI client (for testing only).
+ * Must be called before generateEmbedding/generateEmbeddings.
+ * Use resetGenAiClient() to clear the injected client after tests.
+ */
+export function __setGenAiClientForTesting(
+	client: oci.generativeaiinference.GenerativeAiInferenceClient,
+	region: string
+): void {
+	cachedClient = client;
+	cachedClientRegion = region;
+}
+
 /**
  * Generate a single text embedding via OCI GenAI.
  *
  * @param text  The text to embed.
  * @returns A Float32Array of 1536 dimensions, or null if OCI GenAI is unavailable.
  * @throws ValidationError if text is empty.
- * @throws OCIError if the OCI CLI call fails with a non-transient error.
+ * @throws OCIError if the OCI SDK call fails with a non-transient error.
  */
 export async function generateEmbedding(text: string): Promise<Float32Array | null> {
 	if (!text || text.trim().length === 0) {
@@ -81,60 +139,43 @@ export async function generateEmbeddings(texts: string[]): Promise<(Float32Array
 }
 
 /**
- * Call OCI GenAI embed-text API via OCI CLI.
+ * Call OCI GenAI embed-text API via the OCI SDK (GenerativeAiInferenceClient).
  *
- * Uses `oci generative-ai-inference embed-text` with the cohere model.
+ * Uses the cohere.embed-english-v3.0 model with ON_DEMAND serving mode.
  * Returns array of Float32Arrays, one per input text.
  */
 async function callOCIEmbedAPI(texts: string[]): Promise<Float32Array[] | null> {
-	const { execFile } = await import('child_process');
-	const { promisify } = await import('util');
-	const execFileAsync = promisify(execFile);
-
 	const compartmentId = process.env.OCI_COMPARTMENT_ID;
 	if (!compartmentId) {
 		log.warn('OCI_COMPARTMENT_ID not set, skipping embedding generation');
 		return null;
 	}
 
-	const region = process.env.OCI_REGION || 'eu-frankfurt-1';
-
-	// Build the embed-text input JSON
-	const inputPayload = JSON.stringify({
-		inputs: texts,
-		servingMode: {
-			servingType: 'ON_DEMAND',
-			modelId: EMBEDDING_MODEL
-		},
-		truncate: 'END',
-		inputType: 'SEARCH_DOCUMENT',
-		compartmentId
-	});
+	const region = process.env.OCI_REGION ?? process.env.OCI_CLI_REGION ?? 'eu-frankfurt-1';
 
 	try {
-		const { stdout } = await execFileAsync(
-			'oci',
-			[
-				'generative-ai-inference',
-				'embed-text',
-				'--embed-text-details',
-				inputPayload,
-				'--region',
-				region,
-				'--output',
-				'json'
-			],
-			{
-				timeout: 30000,
-				maxBuffer: 10 * 1024 * 1024 // 10MB for large batch responses
-			}
-		);
+		const client = getGenAiClient(region);
 
-		const response = JSON.parse(stdout);
-		const embeddings = response.data?.embeddings ?? response.embeddings;
+		const response = await client.embedText({
+			embedTextDetails: {
+				inputs: texts,
+				servingMode: {
+					servingType: 'ON_DEMAND',
+					modelId: EMBEDDING_MODEL
+				} as oci.generativeaiinference.models.OnDemandServingMode,
+				compartmentId,
+				truncate: oci.generativeaiinference.models.EmbedTextDetails.Truncate.End,
+				inputType: oci.generativeaiinference.models.EmbedTextDetails.InputType.SearchDocument
+			}
+		});
+
+		const embeddings = response.embedTextResult?.embeddings;
 
 		if (!embeddings || !Array.isArray(embeddings)) {
-			log.warn({ responseKeys: Object.keys(response) }, 'unexpected embedding response shape');
+			log.warn(
+				{ resultKeys: Object.keys(response.embedTextResult ?? {}) },
+				'unexpected embedding response shape'
+			);
 			return null;
 		}
 
@@ -148,23 +189,34 @@ async function callOCIEmbedAPI(texts: string[]): Promise<Float32Array[] | null> 
 			return new Float32Array(emb);
 		});
 	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
+		const sdkError = err as {
+			statusCode?: number;
+			serviceCode?: string;
+			message?: string;
+			opcRequestId?: string;
+		};
 
-		// Check for specific OCI errors
-		if (message.includes('NotAuthorized') || message.includes('403')) {
+		const statusCode = sdkError.statusCode;
+		const message = sdkError.message ?? String(err);
+
+		// 401/403 — authorization errors are non-transient, throw
+		if (statusCode === 401 || statusCode === 403 || message.includes('NotAuthorized')) {
 			throw new OCIError(
 				'Not authorized to call OCI GenAI embedding API',
 				{
 					service: 'generative-ai-inference',
 					model: EMBEDDING_MODEL,
-					region
+					region,
+					statusCode,
+					opcRequestId: sdkError.opcRequestId
 				},
 				err instanceof Error ? err : undefined
 			);
 		}
 
-		if (message.includes('ServiceUnavailable') || message.includes('503')) {
-			log.warn({ region }, 'OCI GenAI embedding service unavailable');
+		// 503 — transient, degrade gracefully
+		if (statusCode === 503 || message.includes('ServiceUnavailable')) {
+			log.warn({ region, statusCode }, 'OCI GenAI embedding service unavailable');
 			return null;
 		}
 
@@ -174,6 +226,9 @@ async function callOCIEmbedAPI(texts: string[]): Promise<Float32Array[] | null> 
 				service: 'generative-ai-inference',
 				model: EMBEDDING_MODEL,
 				region,
+				statusCode,
+				serviceCode: sdkError.serviceCode,
+				opcRequestId: sdkError.opcRequestId,
 				errorMessage: message
 			},
 			err instanceof Error ? err : undefined
