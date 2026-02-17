@@ -245,7 +245,7 @@
 		return 'Running…';
 	}
 
-	const totalTokens = $derived(() => (tokenUsage ? tokenUsage.prompt + tokenUsage.completion : 0));
+	const totalTokens = $derived(tokenUsage ? tokenUsage.prompt + tokenUsage.completion : 0);
 </script>
 
 <svelte:head>

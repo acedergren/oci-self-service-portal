@@ -27,7 +27,7 @@
 		id: string;
 		workflowId: string;
 		workflowName: string;
-		status: 'completed' | 'running' | 'failed' | 'suspended';
+		status: 'completed' | 'running' | 'failed' | 'suspended' | 'cancelled';
 		startedAt: string;
 		completedAt?: string;
 		duration?: number;
@@ -100,13 +100,23 @@
 	}
 
 	function getStatusColor(status: WorkflowRun['status']): string {
-		const colors = {
+		const colors: Record<WorkflowRun['status'], string> = {
 			completed: 'oklch(0.55 0.15 155)',
 			running: 'oklch(0.55 0.15 230)',
 			failed: 'oklch(0.55 0.15 30)',
-			suspended: 'oklch(0.55 0.15 80)'
+			suspended: 'oklch(0.55 0.15 80)',
+			cancelled: 'oklch(0.55 0.1 0)'
 		};
-		return colors[status];
+		return colors[status] ?? 'oklch(0.55 0.1 0)';
+	}
+
+	const maxRunDuration = $derived(
+		runs.length > 0 ? Math.max(...runs.map((r) => r.duration ?? 0), 1) : 1
+	);
+
+	function runBarWidth(duration: number | undefined): string {
+		const pct = ((duration ?? 0) / maxRunDuration) * 100;
+		return `max(40px, ${pct.toFixed(1)}%)`;
 	}
 
 	function formatDuration(ms: number | undefined): string {
@@ -243,7 +253,10 @@
 				<h2 class="section-title">Recent Workflow Runs</h2>
 				<div class="timeline-container">
 					{#each runs as run (run.id)}
-						<div class="timeline-bar" style="background: {getStatusColor(run.status)}">
+						<div
+							class="timeline-bar"
+							style="background: {getStatusColor(run.status)}; width: {runBarWidth(run.duration)}"
+						>
 							<div class="timeline-tooltip">
 								<div class="tooltip-row">
 									<span class="tooltip-label">Run ID:</span>
@@ -652,10 +665,10 @@
 	.timeline-bar {
 		position: relative;
 		height: 32px;
-		min-width: 40px;
 		border-radius: var(--radius-sm);
 		cursor: pointer;
 		transition: all var(--transition-fast);
+		flex-shrink: 0;
 	}
 
 	.timeline-bar:hover {
@@ -732,6 +745,10 @@
 
 	.tooltip-value.status-suspended {
 		color: oklch(0.75 0.2 80);
+	}
+
+	.tooltip-value.status-cancelled {
+		color: oklch(0.65 0.05 0);
 	}
 
 	@keyframes spin {
