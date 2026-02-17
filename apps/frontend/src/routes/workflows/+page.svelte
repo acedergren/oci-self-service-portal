@@ -30,7 +30,7 @@
 			if (statusFilter) params.set('status', statusFilter);
 			if (searchQuery) params.set('search', searchQuery);
 
-			const res = await fetch(`/api/workflows?${params}`);
+			const res = await fetch(`/api/v1/workflows?${params}`);
 			if (!res.ok) throw new Error(`Failed to load workflows: ${res.status}`);
 			const data = await res.json();
 			workflows = data.workflows ?? [];

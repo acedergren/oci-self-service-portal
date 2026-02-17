@@ -42,7 +42,7 @@
 		loading = true;
 		error = null;
 		try {
-			const res = await fetch(`/api/workflows/runs/${runId}`);
+			const res = await fetch(`/api/v1/workflows/runs/${runId}`);
 			if (!res.ok) throw new Error(`Failed to load run: ${res.status}`);
 			const data = await res.json();
 			run = data.run;
@@ -60,7 +60,7 @@
 
 	async function approveStep(stepId: string) {
 		try {
-			const res = await fetch(`/api/workflows/runs/${runId}/approve`, {
+			const res = await fetch(`/api/v1/workflows/runs/${runId}/approve`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ stepId })

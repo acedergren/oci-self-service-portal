@@ -69,7 +69,7 @@
 
 	async function testProvider(provider: AIProvider) {
 		try {
-			const response = await fetch('/api/setup/ai-providers/test', {
+			const response = await fetch('/api/setup/ai-provider/test', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(provider)
@@ -117,7 +117,7 @@
 		saving = true;
 
 		try {
-			const response = await fetch('/api/setup/ai-providers', {
+			const response = await fetch('/api/setup/ai-provider', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify(data)

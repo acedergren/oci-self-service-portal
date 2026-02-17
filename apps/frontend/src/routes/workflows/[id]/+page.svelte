@@ -141,7 +141,7 @@
 
 		loading = true;
 		try {
-			const res = await fetch(`/api/workflows/${workflowId}`);
+			const res = await fetch(`/api/v1/workflows/${workflowId}`);
 			if (!res.ok) {
 				if (res.status === 404) {
 					toast.error('Workflow not found');
@@ -205,7 +205,7 @@
 
 		try {
 			if (isNew) {
-				const res = await fetch('/api/workflows', {
+				const res = await fetch('/api/v1/workflows', {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify(body)
@@ -215,7 +215,7 @@
 				toast.success('Workflow created');
 				goto(resolve(`/workflows/${data.workflow.id}`), { replaceState: true });
 			} else {
-				const res = await fetch(`/api/workflows/${workflowId}`, {
+				const res = await fetch(`/api/v1/workflows/${workflowId}`, {
 					method: 'PUT',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify(body)
@@ -238,7 +238,7 @@
 		}
 
 		try {
-			const res = await fetch(`/api/workflows/${workflowId}`, {
+			const res = await fetch(`/api/v1/workflows/${workflowId}`, {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ status: 'published' })
@@ -258,7 +258,7 @@
 		}
 
 		try {
-			const res = await fetch(`/api/workflows/${workflowId}/run`, {
+			const res = await fetch(`/api/v1/workflows/${workflowId}/run`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({})

@@ -907,6 +907,161 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 		}
 	);
 
+	// ── GET /api/v1/workflows/runs/:runId ───────────────────────────────
+	// Convenience: get a single run by ID without requiring workflowId in the URL.
+	// Used by the frontend runs detail page which only has the runId in its route.
+
+	app.get(
+		'/api/v1/workflows/runs/:runId',
+		{
+			schema: { params: z.object({ runId: z.string().uuid() }) },
+			preHandler: requireAuth('workflows:read')
+		},
+		async (request, reply) => {
+			const { runs, steps } = getRepos();
+			const orgId = resolveOrgId(request);
+			if (!orgId) {
+				return reply.code(400).send({ error: 'Organization context required' });
+			}
+
+			const userId = request.user?.id;
+			const run = userId
+				? await runs.getByIdForUser(request.params.runId, userId, orgId)
+				: await runs.getByIdForOrg(request.params.runId, orgId);
+
+			if (!run) {
+				return reply.code(404).send({ error: 'Workflow run not found' });
+			}
+
+			const runSteps = await steps.listByRun(request.params.runId);
+
+			return reply.send({
+				run: {
+					id: run.id,
+					definitionId: run.definitionId,
+					status: run.status,
+					input: run.input,
+					output: run.output,
+					error: run.error,
+					startedAt: run.startedAt?.toISOString() ?? null,
+					completedAt: run.completedAt?.toISOString() ?? null,
+					steps: runSteps.map((s) => ({
+						id: s.id,
+						nodeId: s.nodeId,
+						nodeType: s.nodeType,
+						stepNumber: s.stepNumber,
+						status: s.status,
+						input: s.input,
+						output: s.output,
+						error: s.error,
+						startedAt: s.startedAt?.toISOString() ?? null,
+						completedAt: s.completedAt?.toISOString() ?? null,
+						durationMs: s.durationMs
+					}))
+				}
+			});
+		}
+	);
+
+	// ── POST /api/v1/workflows/runs/:runId/approve ──────────────────────
+	// Convenience: approve a suspended run without requiring workflowId in the URL.
+
+	app.post(
+		'/api/v1/workflows/runs/:runId/approve',
+		{
+			schema: { params: z.object({ runId: z.string().uuid() }) },
+			preHandler: requireAuth('workflows:execute')
+		},
+		async (request, reply) => {
+			const { workflows, runs } = getRepos();
+			const orgId = resolveOrgId(request);
+			if (!orgId) {
+				return reply.code(400).send({ error: 'Organization context required' });
+			}
+
+			const userId = request.user?.id;
+			if (!userId) {
+				return reply.code(400).send({ error: 'User context required' });
+			}
+
+			const run = await runs.getByIdForUser(request.params.runId, userId, orgId);
+			if (!run) {
+				throw new NotFoundError('Workflow run not found', { runId: request.params.runId });
+			}
+
+			if (run.status !== 'suspended') {
+				throw new ValidationError('Run is not suspended — cannot approve', {
+					runId: request.params.runId,
+					currentStatus: run.status
+				});
+			}
+
+			if (!run.engineState) {
+				throw new ValidationError('Run has no engine state — cannot resume', {
+					runId: request.params.runId
+				});
+			}
+
+			const definition = await workflows.getByIdForUser(run.definitionId, userId, orgId);
+			if (!definition) {
+				throw new NotFoundError('Workflow definition not found', {
+					workflowId: run.definitionId
+				});
+			}
+
+			const executor = new WorkflowExecutor({
+				progressEmitter: createProgressEmitter(run.id)
+			});
+			try {
+				await runs.updateStatus(run.id, { status: 'running' });
+				emitRunStatus(run.id, 'running');
+
+				const result = await executor.resume(
+					definition,
+					run.engineState as unknown as EngineState,
+					run.input ?? {}
+				);
+
+				await runs.updateStatus(run.id, {
+					status:
+						result.status === 'completed'
+							? 'completed'
+							: result.status === 'suspended'
+								? 'suspended'
+								: 'failed',
+					output: result.output,
+					error: result.error ? { message: result.error } : undefined,
+					engineState: result.engineState as Record<string, unknown> | undefined
+				});
+
+				return reply.send({
+					run: {
+						id: run.id,
+						workflowId: definition.id,
+						status: result.status,
+						output: result.output,
+						error: result.error
+					}
+				});
+			} catch (err) {
+				const portalErr = toPortalError(err, 'Workflow resume failed');
+				fastify.log.error({ err: portalErr, runId: run.id }, 'Workflow resume failed');
+
+				try {
+					await runs.updateStatus(run.id, {
+						status: 'failed',
+						error: { message: portalErr.message, code: portalErr.code }
+					});
+					emitRunStatus(run.id, 'failed', { error: portalErr.message });
+				} catch (updateErr) {
+					fastify.log.error({ err: updateErr }, 'Failed to update run status after error');
+				}
+
+				throw portalErr;
+			}
+		}
+	);
+
 	// ── GET /api/v1/workflows/:id/runs ──────────────────────────────────
 	// List all runs for a specific workflow (org-scoped).
 
