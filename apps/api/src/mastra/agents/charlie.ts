@@ -271,8 +271,7 @@ export function createCharlieAgent(config: CharlieConfig): Agent {
 						options: { scale: 10 }
 					}),
 					sampling: { type: 'ratio' as const, rate: evalSampleRate }
-				}
-				,
+				},
 				toxicity: {
 					scorer: createToxicityScorer({
 						model: config.model as MastraModelConfig,
