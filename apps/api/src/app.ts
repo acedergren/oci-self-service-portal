@@ -29,6 +29,7 @@ import cachePlugin from './plugins/cache.js';
 import oraclePlugin from './plugins/oracle.js';
 import authPlugin from './plugins/auth.js';
 import rbacPlugin, { requireAuth } from './plugins/rbac.js';
+import vpdPlugin from './plugins/vpd.js';
 import { rateLimiterOraclePlugin } from './plugins/rate-limiter-oracle.js';
 import schedulePlugin from './plugins/schedule.js';
 import mastraPlugin from './plugins/mastra.js';
@@ -368,6 +369,10 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 		]
 	});
 	await app.register(rbacPlugin);
+
+	// VPD plugin: decorates request.withVPD for Oracle tenant isolation.
+	// Must come after auth so request.user, request.session, and request.apiKeyContext are set.
+	await app.register(vpdPlugin);
 
 	// Oracle-backed rate limiter: per-user, per-endpoint limits (L2 layer).
 	// Must come after auth chain so request.user and request.apiKeyContext are populated.
