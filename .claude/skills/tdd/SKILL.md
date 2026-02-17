@@ -29,7 +29,56 @@ Locate or create the test file following project conventions:
 
 If no test file exists, create one with proper imports and `describe()` block.
 
-### 3. Write Failing Tests FIRST (Red Phase)
+### 3. Verify Mock Setup (Bootstrap Phase)
+
+Before writing any tests, validate that your mocks will work correctly:
+
+1. **Check vitest config** for `mockReset`/`mockClear` settings:
+
+```bash
+grep -n 'mockReset\|mockClear\|restoreMocks' apps/api/vitest.config.ts apps/frontend/vitest.config.ts
+```
+
+If `mockReset: true` is set, mocks are reset between tests — you MUST reconfigure return values in `beforeEach`, not at module scope. Chaining `mockResolvedValueOnce` will silently break.
+
+2. **Write ONE minimal test** that imports the module under test and verifies mocks resolve correctly:
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const mocks = vi.hoisted(() => ({
+	myDep: vi.fn()
+}));
+
+vi.mock('../path/to/dependency', () => ({
+	myDep: (...args: unknown[]) => mocks.myDep(...args)
+}));
+
+describe('bootstrap', () => {
+	beforeEach(() => {
+		mocks.myDep.mockResolvedValue({ ok: true });
+	});
+
+	it('mock resolves correctly', async () => {
+		const { myDep } = await import('../path/to/dependency');
+		expect(await myDep()).toEqual({ ok: true });
+	});
+});
+```
+
+3. **Run it** and confirm it passes:
+
+```bash
+npx vitest run <test-file> --reporter=verbose
+```
+
+4. **Only then** proceed to write the full test suite following that proven mock pattern.
+
+**Why this matters**: `vi.hoisted()` moves mock declarations above `vi.mock()` hoisting, avoiding temporal dead zone issues. Validating one mock round-trip before writing 20 tests saves significant debugging time.
+
+### 4. Write Failing Tests FIRST (Red Phase)
+
+> Remove the bootstrap test once you've confirmed the mock pattern works.
 
 Write test cases that describe the expected behavior. Include:
 
@@ -43,7 +92,7 @@ npx vitest run <test-file> --reporter=verbose
 
 **Checkpoint**: All new tests MUST fail. If any pass, the tests are not testing new behavior — revise them. If tests fail for the wrong reason (import errors, missing modules), fix the test setup first.
 
-### 4. Implement Minimum Code (Green Phase)
+### 5. Implement Minimum Code (Green Phase)
 
 Write the **minimum** code to make all tests pass. Do NOT:
 
@@ -58,7 +107,7 @@ npx vitest run <test-file> --reporter=verbose
 
 **Checkpoint**: All tests (new and existing) MUST pass.
 
-### 5. Run the FULL Test Suite
+### 6. Run the FULL Test Suite
 
 This is critical — never skip this step:
 
@@ -72,7 +121,7 @@ If any tests outside your file fail:
 2. If yes → fix it before proceeding
 3. If no (pre-existing failure) → note it but continue
 
-### 6. Refactor (Optional)
+### 7. Refactor (Optional)
 
 If the implementation can be cleaner, refactor now while tests are green:
 
@@ -82,7 +131,7 @@ If the implementation can be cleaner, refactor now while tests are green:
 
 Re-run the full suite after any refactor to confirm nothing broke.
 
-### 7. Quality Gates
+### 8. Quality Gates
 
 Run lint and type checks on affected workspaces:
 
@@ -99,7 +148,7 @@ cd packages/shared && npx tsc --noEmit
 
 Fix any issues before committing.
 
-### 8. Commit
+### 9. Commit
 
 Stage only the files you changed and commit:
 
@@ -120,7 +169,8 @@ Use `test` type if the commit is primarily tests, `feat` if it's a new feature w
 ## Key Rules
 
 1. **Never write implementation before tests** — this is the whole point of TDD
-2. **Never skip step 5** — the full suite must pass, not just your file
-3. **Tests should fail for the RIGHT reason** — a test that fails because of a missing import isn't a valid "red" test
-4. **One logical change per cycle** — don't batch multiple features into one TDD cycle
-5. **When tests fail after refactor, question the TESTS first** — they may have bad assumptions
+2. **Never skip step 3** — validate your mock pattern with ONE test before writing 20
+3. **Never skip step 6** — the full suite must pass, not just your file
+4. **Tests should fail for the RIGHT reason** — a test that fails because of a missing import isn't a valid "red" test
+5. **One logical change per cycle** — don't batch multiple features into one TDD cycle
+6. **When tests fail after refactor, question the TESTS first** — they may have bad assumptions
