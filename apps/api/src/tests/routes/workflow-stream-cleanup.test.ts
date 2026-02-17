@@ -14,21 +14,23 @@ describe('Workflow run SSE stream cleanup', () => {
 		global.clearTimeout = realClearTimeout;
 	});
 
-	it('clears the 5-minute timeout when the stream closes normally', async () => {
+	it('clears the timeout and unsubscribes when the stream closes normally', () => {
 		const clearTimeoutSpy = vi.fn();
 		global.clearTimeout = clearTimeoutSpy as unknown as typeof global.clearTimeout;
 
-		// Inline the handler logic used by the workflow stream route:
-		// create timeoutId then clear it in cleanup.
-		const pollInterval = setInterval(() => {}, 2000);
+		const unsubscribe = vi.fn();
 		const timeoutId = setTimeout(() => {}, 300_000);
+		let closed = false;
 		const cleanup = () => {
-			clearInterval(pollInterval);
+			if (closed) return;
+			closed = true;
+			unsubscribe();
 			clearTimeout(timeoutId);
 		};
 
 		cleanup();
 
-		expect(clearTimeoutSpy).toHaveBeenCalledTimes(1);
+		expect(unsubscribe).toHaveBeenCalledTimes(1);
+		expect(clearTimeoutSpy).toHaveBeenCalledWith(timeoutId);
 	});
 });

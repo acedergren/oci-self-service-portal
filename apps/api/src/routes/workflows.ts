@@ -27,8 +27,17 @@ import {
 	createWorkflowRunRepository,
 	createWorkflowRunStepRepository
 } from '../services/workflow-repository.js';
-import { WorkflowExecutor, type EngineState } from '../mastra/workflows/executor.js';
+import {
+	WorkflowExecutor,
+	type EngineState,
+	type WorkflowProgressEmitter
+} from '@portal/shared/server/workflows/executor.js';
 import { requireAuth, resolveOrgId } from '../plugins/rbac.js';
+import {
+	emitWorkflowStream,
+	getLatestWorkflowStatus,
+	subscribeWorkflowStream
+} from '../services/workflow-stream-bus.js';
 
 // ── Zod schemas for route validation ────────────────────────────────────
 
@@ -86,6 +95,64 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 			workflows: createWorkflowRepository(fastify.oracle.withConnection),
 			runs: createWorkflowRunRepository(fastify.oracle.withConnection),
 			steps: createWorkflowRunStepRepository(fastify.oracle.withConnection)
+		};
+	}
+
+	const TERMINAL_RUN_STATUSES = new Set<WorkflowRun['status']>([
+		'completed',
+		'failed',
+		'suspended'
+	]);
+
+	function emitRunStatus(
+		runId: string,
+		status: WorkflowRun['status'],
+		options: { output?: Record<string, unknown> | null; error?: string | null } = {}
+	): void {
+		emitWorkflowStream({
+			type: 'status',
+			runId,
+			status,
+			output: options.output ?? null,
+			error: options.error ?? null
+		});
+	}
+
+	function isTerminalStatus(status: WorkflowRun['status']): boolean {
+		return TERMINAL_RUN_STATUSES.has(status);
+	}
+
+	function normalizeRunError(error: unknown): string | null {
+		if (!error) return null;
+		if (typeof error === 'string') return error;
+		if (typeof error === 'object' && 'message' in (error as Record<string, unknown>)) {
+			return String((error as Record<string, unknown>).message);
+		}
+		try {
+			return JSON.stringify(error);
+		} catch {
+			return 'unknown error';
+		}
+	}
+
+	function createProgressEmitter(runId: string): WorkflowProgressEmitter {
+		return (event) => {
+			if (event.type === 'status') {
+				emitRunStatus(runId, event.status, {
+					output: event.output ?? null,
+					error: event.error ?? null
+				});
+				return;
+			}
+
+			emitWorkflowStream({
+				type: 'step',
+				runId,
+				stage: event.stage,
+				nodeId: event.nodeId,
+				nodeType: event.nodeType,
+				payload: event.payload
+			});
 		};
 	}
 
@@ -300,9 +367,12 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 			});
 
 			// Execute
-			const executor = new WorkflowExecutor();
+			const executor = new WorkflowExecutor({
+				progressEmitter: createProgressEmitter(run.id)
+			});
 			try {
 				await runs.updateStatus(run.id, { status: 'running' });
+				emitRunStatus(run.id, 'running');
 
 				const result = await executor.execute(definition, input);
 
@@ -334,6 +404,7 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 						status: 'failed',
 						error: { message: portalErr.message, code: portalErr.code }
 					});
+					emitRunStatus(run.id, 'failed', { error: portalErr.message });
 				} catch (updateErr) {
 					fastify.log.error({ err: updateErr }, 'Failed to update run status after error');
 				}
@@ -428,61 +499,89 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 				Connection: 'keep-alive'
 			});
 
-			// If run is already terminal, send final status and close
-			if (['completed', 'failed', 'suspended'].includes(run.status)) {
-				reply.raw.write(
-					`data: ${JSON.stringify({ type: 'status', status: run.status, output: run.output, error: run.error })}\n\n`
-				);
+			const writeEvent = (event: string, payload: Record<string, unknown>) => {
+				reply.raw.write(`event: ${event}\n`);
+				reply.raw.write(`data: ${JSON.stringify(payload)}\n\n`);
+			};
+
+			const sendStatus = (
+				status: WorkflowRun['status'],
+				options: { output?: Record<string, unknown> | null; error?: string | null } = {}
+			) => {
+				writeEvent('status', {
+					status,
+					output: options.output ?? null,
+					error: options.error ?? null
+				});
+			};
+
+			const sendStep = (event: {
+				stage: 'start' | 'complete' | 'error';
+				nodeId: string;
+				nodeType: string;
+				payload?: unknown;
+			}) => {
+				writeEvent('step', {
+					stage: event.stage,
+					nodeId: event.nodeId,
+					nodeType: event.nodeType,
+					payload: event.payload ?? null
+				});
+			};
+
+			const latest = getLatestWorkflowStatus(run.id) ?? {
+				type: 'status' as const,
+				runId: run.id,
+				status: run.status,
+				output: run.output ?? null,
+				error: normalizeRunError(run.error)
+			};
+
+			sendStatus(latest.status, {
+				output: (latest.output as Record<string, unknown> | null) ?? null,
+				error: normalizeRunError(latest.error)
+			});
+
+			if (isTerminalStatus(latest.status)) {
 				reply.raw.end();
 				return;
 			}
 
-			// For running workflows, poll status every 2 seconds
-			const pollInterval = setInterval(async () => {
-				try {
-					const current = userId
-						? await runs.getByIdForUser(request.params.runId, userId, orgId)
-						: await runs.getByIdForOrg(request.params.runId, orgId);
-
-					if (!current) {
-						clearInterval(pollInterval);
-						reply.raw.write(
-							`data: ${JSON.stringify({ type: 'error', error: 'Run not found' })}\n\n`
-						);
-						reply.raw.end();
-						return;
-					}
-
-					reply.raw.write(
-						`data: ${JSON.stringify({ type: 'status', status: current.status, output: current.output, error: current.error })}\n\n`
-					);
-
-					if (['completed', 'failed', 'suspended'].includes(current.status)) {
-						clearInterval(pollInterval);
-						reply.raw.end();
-					}
-				} catch {
-					clearInterval(pollInterval);
-					reply.raw.end();
-				}
-			}, 2000);
-
-			// Clean up on client disconnect
-			request.raw.on('close', () => {
-				clearInterval(pollInterval);
-			});
-
-			// Timeout after 5 minutes
-			const timeoutId = setTimeout(() => {
-				clearInterval(pollInterval);
-				reply.raw.write(`data: ${JSON.stringify({ type: 'timeout' })}\n\n`);
-				reply.raw.end();
-			}, 300_000);
+			let closed = false;
+			// eslint-disable-next-line prefer-const -- assigned after cleanup closure is defined
+			let timeoutId: NodeJS.Timeout | undefined;
+			let unsubscribe: () => void = () => {};
 
 			const cleanup = () => {
-				clearInterval(pollInterval);
-				clearTimeout(timeoutId);
+				if (closed) return;
+				closed = true;
+				unsubscribe();
+				if (timeoutId) {
+					clearTimeout(timeoutId);
+				}
+				reply.raw.end();
 			};
+
+			unsubscribe = subscribeWorkflowStream(run.id, (event) => {
+				if (event.type === 'status') {
+					sendStatus(event.status, {
+						output: event.output ?? null,
+						error: normalizeRunError(event.error)
+					});
+					if (isTerminalStatus(event.status)) {
+						cleanup();
+					}
+					return;
+				}
+
+				sendStep(event);
+			});
+
+			timeoutId = setTimeout(() => {
+				if (closed) return;
+				writeEvent('timeout', {});
+				cleanup();
+			}, 300_000);
 
 			request.raw.on('close', cleanup);
 			reply.raw.on('close', cleanup);
@@ -551,9 +650,12 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 			}
 
 			// Resume execution
-			const executor = new WorkflowExecutor();
+			const executor = new WorkflowExecutor({
+				progressEmitter: createProgressEmitter(run.id)
+			});
 			try {
 				await runs.updateStatus(run.id, { status: 'running' });
+				emitRunStatus(run.id, 'running');
 
 				const result = await executor.resume(
 					definition,
@@ -591,6 +693,7 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 						status: 'failed',
 						error: { message: portalErr.message, code: portalErr.code }
 					});
+					emitRunStatus(run.id, 'failed', { error: portalErr.message });
 				} catch (updateErr) {
 					fastify.log.error({ err: updateErr }, 'Failed to update run status after error');
 				}
@@ -710,9 +813,12 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 				});
 			}
 
-			const executor = new WorkflowExecutor();
+			const executor = new WorkflowExecutor({
+				progressEmitter: createProgressEmitter(run.id)
+			});
 			try {
 				await runs.updateStatus(run.id, { status: 'running' });
+				emitRunStatus(run.id, 'running');
 
 				const result = await executor.resume(
 					definition,
@@ -750,6 +856,7 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 						status: 'failed',
 						error: { message: portalErr.message, code: portalErr.code }
 					});
+					emitRunStatus(run.id, 'failed', { error: portalErr.message });
 				} catch (updateErr) {
 					fastify.log.error({ err: updateErr }, 'Failed to update run status after resume error');
 				}

@@ -12,9 +12,91 @@
 import { createLogger } from '../logger';
 import { executeTool } from '../../tools/registry';
 import { ValidationError } from '../errors';
-import type { WorkflowNode, WorkflowEdge, WorkflowDefinition } from '../../workflows/types';
+import type {
+	AIStepNodeData,
+	LoopNodeData,
+	ParallelNodeData,
+	WorkflowDefinition,
+	WorkflowEdge,
+	WorkflowNode
+} from '../../workflows/types';
 
 const log = createLogger('workflow-executor');
+
+const DEFAULT_MAX_STEPS = 100;
+const DEFAULT_MAX_DURATION_MS = 5 * 60 * 1000; // 5 minutes
+const DEFAULT_NODE_TIMEOUT_MS = 120_000; // 2 minutes per node
+const DEFAULT_LOOP_ITERATIONS = 1000;
+const DEFAULT_LOOP_RETRY_LIMIT = 2;
+const INITIAL_RETRY_DELAY_MS = 100;
+const MAX_RETRY_DELAY_MS = 5_000;
+
+type WaitFn = (ms: number) => Promise<void>;
+
+export type WorkflowProgressEvent =
+	| {
+			type: 'step';
+			stage: 'start' | 'complete' | 'error';
+			nodeId: string;
+			nodeType: WorkflowNode['type'];
+			payload?: unknown;
+	  }
+	| {
+			type: 'status';
+			status: ExecutionResult['status'];
+			output?: Record<string, unknown>;
+			error?: string;
+	  };
+
+export type WorkflowProgressEmitter = (event: WorkflowProgressEvent) => void;
+
+export interface WorkflowExecutorOptions {
+	aiStepHandler?: (payload: AIStepHandlerPayload) => Promise<unknown>;
+	loopHandler?: (payload: LoopIterationContext) => Promise<unknown>;
+	parallelHandler?: (payload: ParallelBranchContext) => Promise<unknown>;
+	progressEmitter?: WorkflowProgressEmitter;
+	maxSteps?: number;
+	maxDurationMs?: number;
+	maxLoopIterations?: number;
+	nodeTimeoutMs?: number;
+	loopRetryLimit?: number;
+	now?: () => number;
+	wait?: WaitFn;
+}
+
+export interface AIStepHandlerPayload {
+	nodeId: string;
+	node: WorkflowNode;
+	prompt: string;
+	systemPrompt?: string;
+	temperature?: number;
+	maxTokens?: number;
+	outputSchema?: Record<string, unknown>;
+	input: Record<string, unknown>;
+	stepResults: Record<string, unknown>;
+}
+
+export interface LoopIterationContext {
+	nodeId: string;
+	node: WorkflowNode;
+	iteration: number;
+	item: unknown;
+	stepResults: Record<string, unknown>;
+}
+
+export interface ParallelBranchContext {
+	nodeId: string;
+	node: WorkflowNode;
+	branchIndex: number;
+	branchKey: string;
+	branchNodeIds: string[];
+	stepResults: Record<string, unknown>;
+}
+
+const defaultWait: WaitFn = (ms) =>
+	new Promise((resolve) => {
+		setTimeout(resolve, ms).unref?.();
+	});
 
 // ============================================================================
 // Execution Result Types
@@ -251,6 +333,37 @@ function resolveOutputMapping(
 // ============================================================================
 
 export class WorkflowExecutor {
+	private readonly options: Required<
+		Pick<
+			WorkflowExecutorOptions,
+			| 'maxSteps'
+			| 'maxDurationMs'
+			| 'maxLoopIterations'
+			| 'nodeTimeoutMs'
+			| 'loopRetryLimit'
+			| 'now'
+			| 'wait'
+		>
+	> &
+		WorkflowExecutorOptions;
+
+	constructor(options: WorkflowExecutorOptions = {}) {
+		this.options = {
+			maxSteps: options.maxSteps ?? DEFAULT_MAX_STEPS,
+			maxDurationMs: options.maxDurationMs ?? DEFAULT_MAX_DURATION_MS,
+			maxLoopIterations: options.maxLoopIterations ?? DEFAULT_LOOP_ITERATIONS,
+			nodeTimeoutMs: options.nodeTimeoutMs ?? DEFAULT_NODE_TIMEOUT_MS,
+			loopRetryLimit: options.loopRetryLimit ?? DEFAULT_LOOP_RETRY_LIMIT,
+			now: options.now ?? (() => Date.now()),
+			wait: options.wait ?? defaultWait,
+			...options
+		};
+	}
+
+	run(definition: WorkflowDefinition, input: Record<string, unknown>): Promise<ExecutionResult> {
+		return this.execute(definition, input);
+	}
+
 	/**
 	 * Execute a workflow definition from the beginning.
 	 */
@@ -311,19 +424,22 @@ export class WorkflowExecutor {
 		const stepResults: Record<string, unknown> = { ...existingResults };
 		const skippedNodes = new Set<string>();
 		let output: Record<string, unknown> | undefined;
+		let executedSteps = 0;
+		const startedAt = this.options.now();
 
 		for (const node of sortedNodes) {
-			// Skip already completed nodes (from resume)
 			if (completedNodeIds.has(node.id)) continue;
-
-			// Skip nodes that were excluded by condition branching
 			if (skippedNodes.has(node.id)) continue;
+
+			this.ensureBudgets(startedAt, executedSteps + 1);
+			executedSteps += 1;
+			this.emitStepEvent('start', node);
 
 			try {
 				const nodeResult = await this.executeNode(node, edges, input, stepResults, skippedNodes);
 
 				if (nodeResult.suspended) {
-					return {
+					const suspended: ExecutionResult = {
 						status: 'suspended',
 						stepResults,
 						engineState: {
@@ -332,31 +448,39 @@ export class WorkflowExecutor {
 							stepResults
 						}
 					};
+					this.emitStepEvent('complete', node, { suspended: true });
+					this.emitStatus(suspended);
+					return suspended;
 				}
 
 				stepResults[node.id] = nodeResult.result;
+				this.emitStepEvent('complete', node, nodeResult.result);
 
-				// Capture output from output nodes
 				if (node.type === 'output' && nodeResult.result) {
 					output = nodeResult.result as Record<string, unknown>;
 				}
 			} catch (err) {
 				const errorMsg = err instanceof Error ? err.message : String(err);
 				log.error({ nodeId: node.id, error: errorMsg }, 'Node execution failed');
+				this.emitStepEvent('error', node, { error: errorMsg });
 
-				return {
+				const failed: ExecutionResult = {
 					status: 'failed',
 					stepResults,
 					error: errorMsg
 				};
+				this.emitStatus(failed);
+				return failed;
 			}
 		}
 
-		return {
+		const completed: ExecutionResult = {
 			status: 'completed',
 			stepResults,
 			output
 		};
+		this.emitStatus(completed);
+		return completed;
 	}
 
 	/**
@@ -386,11 +510,13 @@ export class WorkflowExecutor {
 				return this.executeOutputNode(node, stepResults);
 
 			case 'ai-step':
+				return this.executeAiStepNode(node, input, stepResults);
+
 			case 'loop':
+				return this.executeLoopNode(node, input, stepResults);
+
 			case 'parallel':
-				// Placeholder: return empty result for not-yet-implemented types
-				log.warn({ nodeId: node.id, type: node.type }, 'Node type not yet implemented');
-				return { result: null };
+				return this.executeParallelNode(node, input, stepResults);
 
 			default:
 				return { result: null };
@@ -496,5 +622,292 @@ export class WorkflowExecutor {
 		}
 
 		return { result: stepResults };
+	}
+
+	private async executeAiStepNode(
+		node: WorkflowNode,
+		input: Record<string, unknown>,
+		stepResults: Record<string, unknown>
+	): Promise<{ result: unknown }> {
+		const data = node.data as AIStepNodeData | undefined;
+		if (!data?.prompt) {
+			throw new ValidationError('AI step missing prompt', { nodeId: node.id });
+		}
+
+		if (!this.options.aiStepHandler) {
+			throw new ValidationError('AI step handler not configured', { nodeId: node.id });
+		}
+
+		const context = this.createTemplateContext(input, stepResults);
+		const prompt = this.interpolateTemplate(data.prompt, context);
+		const payload: AIStepHandlerPayload = {
+			nodeId: node.id,
+			node,
+			prompt,
+			systemPrompt: data.systemPrompt,
+			temperature: data.temperature,
+			maxTokens: data.maxTokens,
+			outputSchema: data.outputSchema,
+			input,
+			stepResults
+		};
+
+		const result = await this.runWithTimeout(
+			() => this.options.aiStepHandler!(payload),
+			data.timeoutMs ?? this.options.nodeTimeoutMs
+		);
+		return { result };
+	}
+
+	private async executeLoopNode(
+		node: WorkflowNode,
+		input: Record<string, unknown>,
+		stepResults: Record<string, unknown>
+	): Promise<{ result: unknown }> {
+		const data = node.data as LoopNodeData | undefined;
+		if (!data?.iteratorExpression) {
+			throw new ValidationError('Loop node missing iterator expression', { nodeId: node.id });
+		}
+
+		const context = this.createTemplateContext(input, stepResults);
+		const source = resolvePath(data.iteratorExpression, context);
+		if (!Array.isArray(source)) {
+			throw new ValidationError('Loop iterator must resolve to an array', {
+				nodeId: node.id,
+				iteratorExpression: data.iteratorExpression
+			});
+		}
+
+		const iterationVariable = data.iterationVariable ?? 'item';
+		const indexVariable = data.indexVariable ?? 'index';
+		const maxIterations = Math.min(
+			source.length,
+			data.maxIterations ?? this.options.maxLoopIterations
+		);
+		const loopHandler =
+			this.options.loopHandler ?? (async ({ item }: LoopIterationContext) => item);
+
+		const results: unknown[] = [];
+		let breakTriggered = false;
+
+		const templateContextBase = this.createTemplateContext(input, stepResults);
+		const runIteration = async (item: unknown, index: number) => {
+			if (breakTriggered) return;
+			const iterationContext = {
+				...templateContextBase,
+				[iterationVariable]: item,
+				[indexVariable]: index
+			} as Record<string, unknown>;
+
+			if (data.breakCondition) {
+				const shouldBreak = safeEvaluateExpression(data.breakCondition, iterationContext);
+				if (shouldBreak) {
+					breakTriggered = true;
+					return;
+				}
+			}
+
+			const handlerContext: LoopIterationContext = {
+				nodeId: node.id,
+				node,
+				iteration: index,
+				item,
+				stepResults
+			};
+
+			const value = await this.withRetry(
+				() => this.runWithTimeout(() => loopHandler(handlerContext)),
+				this.options.loopRetryLimit ?? DEFAULT_LOOP_RETRY_LIMIT
+			);
+			results.push(value);
+		};
+
+		if (data.executionMode === 'parallel') {
+			await Promise.all(
+				source.slice(0, maxIterations).map((item, index) => runIteration(item, index))
+			);
+		} else {
+			for (let i = 0; i < maxIterations; i++) {
+				await runIteration(source[i], i);
+				if (breakTriggered) break;
+			}
+		}
+
+		return {
+			result: {
+				items: results,
+				totalIterations: results.length,
+				breakTriggered,
+				executionMode: data.executionMode ?? 'sequential',
+				resumeToken: breakTriggered ? { nextIndex: results.length } : undefined
+			}
+		};
+	}
+
+	private async executeParallelNode(
+		node: WorkflowNode,
+		input: Record<string, unknown>,
+		stepResults: Record<string, unknown>
+	): Promise<{ result: unknown }> {
+		const data = node.data as ParallelNodeData | undefined;
+		if (!data?.branchNodeIds || data.branchNodeIds.length === 0) {
+			throw new ValidationError('Parallel node missing branches', { nodeId: node.id });
+		}
+
+		const branchPromises = data.branchNodeIds.map((branchNodeIds, index) => {
+			const branchKey = this.resolveBranchKey(branchNodeIds, index);
+			const context: ParallelBranchContext = {
+				nodeId: node.id,
+				node,
+				branchIndex: index,
+				branchKey,
+				branchNodeIds,
+				stepResults
+			};
+			return this.runParallelBranch(context, data.timeoutMs ?? this.options.nodeTimeoutMs);
+		});
+
+		if (data.errorHandling === 'collect-all') {
+			const settled = await Promise.allSettled(branchPromises);
+			const branches: Record<string, unknown> = {};
+			settled.forEach((result, idx) => {
+				const branchKey = this.resolveBranchKey(data.branchNodeIds[idx], idx);
+				if (result.status === 'fulfilled') {
+					branches[branchKey] = result.value;
+				} else {
+					branches[branchKey] = { error: this.serializeError(result.reason) };
+				}
+			});
+			return { result: { branches } };
+		}
+
+		if (data.mergeStrategy === 'first' || data.mergeStrategy === 'any') {
+			const value = await Promise.any(branchPromises);
+			return {
+				result: {
+					branches: {
+						[this.resolveBranchKey(data.branchNodeIds[0], 0)]: value
+					}
+				}
+			};
+		}
+
+		const branchResults = await Promise.all(branchPromises);
+		const branches: Record<string, unknown> = {};
+		branchResults.forEach((value, idx) => {
+			const branchKey = this.resolveBranchKey(data.branchNodeIds[idx], idx);
+			branches[branchKey] = value;
+		});
+		return { result: { branches } };
+	}
+
+	private resolveBranchKey(branchNodeIds: string[], index: number): string {
+		return branchNodeIds[0] ?? `branch-${index + 1}`;
+	}
+
+	private ensureBudgets(startedAt: number, executedSteps: number): void {
+		if (executedSteps > this.options.maxSteps) {
+			throw new ValidationError('Workflow exceeded maximum step budget', {
+				maxSteps: this.options.maxSteps
+			});
+		}
+
+		const elapsed = this.options.now() - startedAt;
+		if (elapsed > this.options.maxDurationMs) {
+			throw new ValidationError('Workflow exceeded maximum duration', {
+				maxDurationMs: this.options.maxDurationMs,
+				elapsed
+			});
+		}
+	}
+
+	private emitStepEvent(
+		stage: 'start' | 'complete' | 'error',
+		node: WorkflowNode,
+		payload?: unknown
+	): void {
+		this.options.progressEmitter?.({
+			type: 'step',
+			stage,
+			nodeId: node.id,
+			nodeType: node.type,
+			payload
+		});
+	}
+
+	private emitStatus(result: ExecutionResult): void {
+		this.options.progressEmitter?.({
+			type: 'status',
+			status: result.status,
+			output: result.output,
+			error: result.error
+		});
+	}
+
+	private createTemplateContext(
+		input: Record<string, unknown>,
+		stepResults: Record<string, unknown>
+	): Record<string, unknown> {
+		return { input, ...stepResults };
+	}
+
+	private interpolateTemplate(template: string, context: Record<string, unknown>): string {
+		return template.replace(/{{\s*([^}]+)\s*}}/g, (_match, expression) => {
+			const value = resolvePath(expression.trim(), context);
+			if (value == null) return '';
+			return typeof value === 'string' ? value : JSON.stringify(value);
+		});
+	}
+
+	private async runWithTimeout<T>(operation: () => Promise<T>, timeoutMs?: number): Promise<T> {
+		const ms = timeoutMs ?? this.options.nodeTimeoutMs;
+		if (!ms || ms === Infinity) return operation();
+
+		let timeoutId: NodeJS.Timeout | undefined;
+		try {
+			return await Promise.race([
+				operation(),
+				new Promise<T>((_, reject) => {
+					timeoutId = setTimeout(() => {
+						reject(new ValidationError('Node execution timed out', { timeoutMs: ms }));
+					}, ms);
+				})
+			]);
+		} finally {
+			if (timeoutId) {
+				clearTimeout(timeoutId);
+			}
+		}
+	}
+
+	private async withRetry<T>(operation: () => Promise<T>, retries: number): Promise<T> {
+		let attempt = 0;
+		let delay = INITIAL_RETRY_DELAY_MS;
+		let lastError: unknown;
+		while (attempt <= retries) {
+			try {
+				return await operation();
+			} catch (err) {
+				lastError = err;
+				if (attempt === retries) {
+					throw err;
+				}
+				await this.options.wait(delay);
+				delay = Math.min(delay * 2, MAX_RETRY_DELAY_MS);
+				attempt += 1;
+			}
+		}
+		throw lastError ?? new Error('retry failed');
+	}
+
+	private runParallelBranch(context: ParallelBranchContext, timeoutMs?: number): Promise<unknown> {
+		const handler =
+			this.options.parallelHandler ?? (async () => ({ nodeIds: context.branchNodeIds }));
+		return this.runWithTimeout(() => handler(context), timeoutMs);
+	}
+
+	private serializeError(err: unknown): string {
+		if (err instanceof Error) return err.message;
+		return typeof err === 'string' ? err : 'unknown error';
 	}
 }
