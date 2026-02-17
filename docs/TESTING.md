@@ -1,6 +1,6 @@
 # Testing Strategy — Phase 10 Baseline
 
-**Date**: 2026-02-13
+**Date**: 2026-02-17
 **Branches**: `main` (API) + `main` (frontend)
 **Test Framework**: Vitest 4.0.18 with `mockReset: true`
 **Total Test Files**: 116 across all workspaces (55 API, 61 frontend)
@@ -17,22 +17,28 @@
 
 ### Core Tests (`tests/`)
 
-| Test File                           | Coverage Area                                                               |
-| ----------------------------------- | --------------------------------------------------------------------------- |
-| `app-factory.test.ts`               | App creation, plugins, CORS, Helmet, Zod, error handler, security hardening |
-| `server-lifecycle.test.ts`          | Server startup, shutdown, env config, Sentry/Oracle lifecycle               |
-| `auth-middleware.test.ts`           | RBAC module, auth contract, dual auth, public/protected routes              |
-| `oracle-plugin.test.ts`             | Plugin registration, decorator types, option handling                       |
-| `health-endpoint.test.ts`           | /healthz liveness, /health deep check, degraded status                      |
-| `webhook-secret-encryption.test.ts` | AES-256-GCM encryption, key derivation, migration                           |
-| `plugins/oracle.test.ts`            | Oracle plugin lifecycle, pool init, migrations, graceful fallback           |
-| `plugins/auth.test.ts`              | Session resolution, cookie parsing, auth exclusion paths                    |
-| `plugins/rbac.test.ts`              | Permission decoration, role mapping, hasPermission hook                     |
-| `routes/tools.test.ts`              | Tool listing, execution, approval flow, rate limiting, dual auth            |
-| `routes/sessions.test.ts`           | Session CRUD, search, LIKE escaping, org-scoped access                      |
-| `routes/activity.test.ts`           | Activity queries, pagination, Oracle fallback                               |
-| `routes/chat.test.ts`               | AI chat streaming, session context, SSE responses                           |
-| `routes/metrics.test.ts`            | Prometheus text format, metric types, auth bypass                           |
+| Test File                              | Coverage Area                                                               |
+| -------------------------------------- | --------------------------------------------------------------------------- |
+| `app-factory.test.ts`                  | App creation, plugins, CORS, Helmet, Zod, error handler, security hardening |
+| `server-lifecycle.test.ts`             | Server startup, shutdown, env config, Sentry/Oracle lifecycle               |
+| `auth-middleware.test.ts`              | RBAC module, auth contract, dual auth, public/protected routes              |
+| `oracle-plugin.test.ts`                | Plugin registration, decorator types, option handling                       |
+| `health-endpoint.test.ts`              | /healthz liveness, /health deep check, degraded status                      |
+| `webhook-secret-encryption.test.ts`    | AES-256-GCM encryption, key derivation, migration                           |
+| `plugins/oracle.test.ts`               | Oracle plugin lifecycle, pool init, migrations, graceful fallback           |
+| `plugins/auth.test.ts`                 | Session resolution, cookie parsing, auth exclusion paths                    |
+| `plugins/rbac.test.ts`                 | Permission decoration, role mapping, hasPermission hook                     |
+| `routes/tools.test.ts`                 | Tool listing, execution, approval flow, rate limiting, dual auth            |
+| `routes/sessions.test.ts`              | Session CRUD, search, LIKE escaping, org-scoped access                      |
+| `routes/activity.test.ts`              | Activity queries, pagination, Oracle fallback                               |
+| `routes/chat.test.ts`                  | AI chat streaming, session context, SSE responses                           |
+| `routes/metrics.test.ts`               | Prometheus text format, metric types, auth bypass                           |
+| `routes/health.test.ts`                | /healthz liveness, /health deep check, degraded database status             |
+| `routes/search.test.ts`                | Semantic vector search, auth guard, empty-result degradation                |
+| `routes/mcp-routes.test.ts`            | MCP endpoint routing, tool discovery, org-scoped execution                  |
+| `routes/admin-ai-providers.test.ts`    | AI provider CRUD, secret stripping, connectivity test endpoints             |
+| `routes/admin-idp.test.ts`             | IDP CRUD, SSRF validation on test URLs, OIDC config management              |
+| `services/workflow-stream-bus.test.ts` | SSE streaming bus, workflow progress events, connection lifecycle           |
 
 ### Plugin Unit Tests (`plugins/`)
 

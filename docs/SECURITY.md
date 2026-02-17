@@ -18,13 +18,14 @@ This document describes the security architecture, authentication/authorization 
 12. [Audit Trail](#audit-trail)
 13. [Webhook Security](#webhook-security)
 14. [API Key Management](#api-key-management)
-15. [Admin Console Security](#admin-console-security)
+15. [Virtual Private Database (VPD) Tenant Isolation](#virtual-private-database-vpd-tenant-isolation)
+16. [Admin Console Security](#admin-console-security)
 
 ## Authentication
 
 ### Session-Based Auth (Better Auth)
 
-Primary authentication mechanism for browser-based access. Located in `apps/frontend/src/lib/server/auth/config.ts`.
+Primary authentication mechanism for browser-based access. Located in `apps/api/src/plugins/auth.ts`.
 
 - **Provider**: Better Auth with OCI IAM OIDC
 - **Cookie-based**: Secure, HttpOnly, SameSite=Strict
@@ -53,7 +54,7 @@ Programmatic access for CI/CD pipelines, monitoring scripts, and external integr
 
 ### Setup Token Guard
 
-Initial configuration endpoints secured with setup token validation. Located in `apps/frontend/src/lib/server/auth/api-keys.ts`.
+Initial configuration endpoints secured with setup token validation. Located in `apps/api/src/routes/setup.ts`.
 
 - **Setup routes**: `/api/setup` endpoints are public until portal configured
 - **Token validation**: Bearer token required for all `/api/setup/*` endpoints
@@ -528,6 +529,36 @@ Webhooks signed with HMAC-SHA256 and rate-limited with exponential backoff.
 - Never returns key_hash or plaintext key
 - Returns key_prefix for identification
 
+## Virtual Private Database (VPD) Tenant Isolation
+
+Oracle VPD policies enforce row-level security at the database layer, ensuring cross-tenant data leakage is impossible even in the event of an application-layer IDOR bug.
+
+### Migration 017
+
+VPD policies applied to all org-scoped tables: `sessions`, `tool_executions`, `pending_approvals`, `workflow_definitions`, `workflow_runs`, `webhook_subscriptions`, `api_keys`, `audit_blockchain`.
+
+```sql
+-- Example policy applied to sessions table
+CREATE OR REPLACE FUNCTION sessions_vpd_policy(
+  schema_name IN VARCHAR2, table_name IN VARCHAR2
+) RETURN VARCHAR2 AS
+BEGIN
+  RETURN 'ORG_ID = SYS_CONTEXT(''PORTAL_CTX'', ''current_org_id'')';
+END;
+```
+
+### How It Works
+
+1. **Context propagation**: The Fastify Oracle plugin sets `PORTAL_CTX.current_org_id` via `DBMS_SESSION.SET_CONTEXT` on each connection before executing queries
+2. **Policy application**: Oracle automatically appends the VPD predicate to every `SELECT`, `INSERT`, `UPDATE`, and `DELETE` on covered tables
+3. **Defense depth**: Even if application code omits an `org_id` filter (IDOR bug), Oracle silently filters rows to the current org context
+4. **Audit bypass**: VPD is not applied to `audit_blockchain` for SELECT (audit trail is readable across orgs by admins), but INSERT is org-scoped via application logic
+
+### Limitations
+
+- VPD context requires an initialized connection (set by Oracle plugin on each `withConnection()` call)
+- Does not apply to DBA-level access (separate OCI IAM controls govern database admin access)
+
 ## Admin Console Security
 
 ### Setup Token Guard
@@ -566,5 +597,5 @@ if (!valid) {
 
 ---
 
-**Last Updated**: February 12, 2026
-**Version**: 1.1
+**Last Updated**: February 17, 2026
+**Version**: 1.2

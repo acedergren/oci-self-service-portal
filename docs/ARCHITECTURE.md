@@ -23,13 +23,16 @@ oci-self-service-portal/
 
 ### 1. Package Boundaries
 
-| Package           | Contains                                                                         | Rule                                                              |
-| ----------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `packages/shared` | Business logic, Oracle repositories, auth core, error hierarchy, metrics, logger | If both apps need it, it lives here                               |
-| `apps/api`        | Fastify plugins + route handlers                                                 | Thin wrappers — no business logic beyond request/response mapping |
-| `apps/frontend`   | SvelteKit UI + server routes                                                     | Proxies to Fastify when `FASTIFY_ENABLED=true`                    |
+| Package           | Contains                                                       | Rule                                                              |
+| ----------------- | -------------------------------------------------------------- | ----------------------------------------------------------------- |
+| `packages/types`  | Zod schemas, PortalError hierarchy, shared TS types            | Pure types — no runtime Oracle or Node.js deps                    |
+| `packages/server` | Oracle repositories, auth config, workflows, admin modules     | Backend logic consumed by `apps/api`                              |
+| `packages/ui`     | Shared Svelte components, design primitives, stores, utilities | UI primitives consumed by `apps/frontend`                         |
+| `packages/shared` | Legacy bundle (being split during Phase 10)                    | Preserved during migration; prefer importing from types/server    |
+| `apps/api`        | Fastify plugins + route handlers                               | Thin wrappers — no business logic beyond request/response mapping |
+| `apps/frontend`   | SvelteKit UI only                                              | Fastify is the sole backend; SvelteKit handles UI and SSR         |
 
-The key constraint: **route handlers are adapters, not implementations**. A Fastify route calls into `packages/shared` the same way a SvelteKit `+server.ts` does. Business logic is never duplicated.
+The key constraint: **route handlers are adapters, not implementations**. A Fastify route calls into `packages/server` (or `packages/shared` during migration). Business logic is never duplicated.
 
 ### 2. Shared-First Extraction
 
@@ -149,32 +152,37 @@ app.get(
 
 ### Route Inventory
 
-| Route                | Method | Auth              | Description                                        |
-| -------------------- | ------ | ----------------- | -------------------------------------------------- |
-| `/healthz`           | GET    | None              | Liveness probe (plain text "ok")                   |
-| `/health`            | GET    | None              | Deep health check (3s timeout, subsystem statuses) |
-| `/api/metrics`       | GET    | None              | Prometheus text format metrics                     |
-| `/api/sessions`      | GET    | `sessions:read`   | List enriched sessions (with message count)        |
-| `/api/sessions`      | POST   | `sessions:write`  | Create new chat session                            |
-| `/api/sessions/:id`  | DELETE | `sessions:write`  | Delete session (user-scoped)                       |
-| `/api/activity`      | GET    | `tools:read`      | Recent tool execution feed                         |
-| `/api/tools/execute` | GET    | `tools:execute`   | Approval requirements for a tool                   |
-| `/api/tools/execute` | POST   | `tools:execute`   | Execute a tool (checks approval)                   |
-| `/api/tools/approve` | GET    | `tools:approve`   | List pending approvals (org-scoped)                |
-| `/api/tools/approve` | POST   | `tools:approve`   | Approve/reject a tool execution                    |
-| `/api/chat`          | POST   | `sessions:write`  | AI chat streaming (SSE via `streamText`)           |
-| `/api/v1/search`     | GET    | `sessions:read`   | Semantic vector search                             |
-| `/api/mcp/*`         | \*     | `tools:execute`   | MCP server endpoints (tool discovery + execution)  |
-| `/api/workflows`     | GET    | `workflows:read`  | List workflow definitions                          |
-| `/api/workflows`     | POST   | `workflows:write` | Create workflow                                    |
-| `/api/workflows/:id` | \*     | `workflows:*`     | Workflow CRUD + execution                          |
-| `/api/audit`         | GET    | `admin:audit`     | Blockchain audit verification                      |
-| `/api/graph`         | GET    | `admin:audit`     | Property graph analytics                           |
-| `/api/webhooks`      | \*     | `admin:all`       | Webhook CRUD + delivery                            |
-| `/api/models`        | \*     | `admin:all`       | AI model provider management                       |
-| `/api/setup`         | \*     | Setup token       | Portal setup wizard                                |
-| `/api/auth`          | \*     | None              | Better Auth session management                     |
-| `/api/docs`          | GET    | `admin:all`       | OpenAPI/Swagger UI (non-production default)        |
+| Route                     | Method    | Auth              | Description                                          |
+| ------------------------- | --------- | ----------------- | ---------------------------------------------------- |
+| `/healthz`                | GET       | None              | Liveness probe (plain text "ok")                     |
+| `/health`                 | GET       | None              | Deep health check (3s timeout, subsystem statuses)   |
+| `/api/metrics`            | GET       | None              | Prometheus text format metrics                       |
+| `/api/sessions`           | GET       | `sessions:read`   | List enriched sessions (with message count)          |
+| `/api/sessions`           | POST      | `sessions:write`  | Create new chat session                              |
+| `/api/sessions/:id`       | DELETE    | `sessions:write`  | Delete session (user-scoped)                         |
+| `/api/activity`           | GET       | `tools:read`      | Recent tool execution feed                           |
+| `/api/tools/execute`      | GET       | `tools:execute`   | Approval requirements for a tool                     |
+| `/api/tools/execute`      | POST      | `tools:execute`   | Execute a tool (checks approval)                     |
+| `/api/tools/approve`      | GET       | `tools:approve`   | List pending approvals (org-scoped)                  |
+| `/api/tools/approve`      | POST      | `tools:approve`   | Approve/reject a tool execution                      |
+| `/api/chat`               | POST      | `sessions:write`  | AI chat streaming (SSE via `streamText`)             |
+| `/api/v1/search`          | GET       | `sessions:read`   | Semantic vector search                               |
+| `/api/mcp/*`              | \*        | `tools:execute`   | MCP server endpoints (tool discovery + execution)    |
+| `/api/workflows`          | GET       | `workflows:read`  | List workflow definitions                            |
+| `/api/workflows`          | POST      | `workflows:write` | Create workflow                                      |
+| `/api/workflows/:id`      | \*        | `workflows:*`     | Workflow CRUD + execution                            |
+| `/api/audit`              | GET       | `admin:audit`     | Blockchain audit verification                        |
+| `/api/graph`              | GET       | `admin:audit`     | Property graph analytics                             |
+| `/api/webhooks`           | \*        | `admin:all`       | Webhook CRUD + delivery                              |
+| `/api/models`             | \*        | `admin:all`       | AI model provider management                         |
+| `/api/admin/settings`     | GET/PATCH | `admin:all`       | Portal settings management                           |
+| `/api/admin/idp`          | \*        | `admin:all`       | Identity provider CRUD                               |
+| `/api/admin/ai-providers` | \*        | `admin:all`       | AI provider CRUD (OCI GenAI, OpenAI, Bedrock, Azure) |
+| `/api/admin/mcp`          | \*        | `admin:all`       | MCP server catalog management                        |
+| `/api/admin/metrics`      | GET       | `admin:all`       | Per-org Prometheus metrics                           |
+| `/api/setup`              | \*        | Setup token       | Portal setup wizard                                  |
+| `/api/auth`               | \*        | None              | Better Auth session management                       |
+| `/api/docs`               | GET       | `admin:all`       | OpenAPI/Scalar UI (non-production default)           |
 
 ### Database Fallback Strategy
 

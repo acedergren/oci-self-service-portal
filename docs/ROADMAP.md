@@ -2,8 +2,8 @@
 
 > **Status**: Phase 9 complete, Phase 10 PRD v7 finalized (107 agent tasks planned; Wave 6 admin tools shipped)
 > **Standalone Repo**: [oci-self-service-portal](https://github.com/acedergren/oci-self-service-portal)
-> **Last Updated**: 2026-02-10
-> **Tests**: 848 passing in apps/api (55 files), frontend suite still running legacy Phase 4-8 tests (known failures)
+> **Last Updated**: 2026-02-17
+> **Tests**: 1416 passing in apps/api (89 files), frontend suite still running legacy Phase 4-8 tests (known failures)
 
 ---
 
@@ -369,10 +369,10 @@
 
 ### Phase B: Package Split + Frontend Libraries (2 weeks, 27 tasks)
 
-- [ ] 10B.1 Create @portal/types (extract Zod schemas + TS types + error hierarchy)
-- [ ] 10B.2 Create @portal/server (extract server modules)
-- [ ] 10B.3 Create @portal/ui (extract Svelte components)
-- [ ] 10B.4 Rewrite imports across all workspaces (AD-51)
+- [x] 10B.1 Create @portal/types (extract Zod schemas + TS types + error hierarchy)
+- [x] 10B.2 Create @portal/server (extract server modules)
+- [x] 10B.3 Create @portal/ui (scaffold with shared Svelte components, design primitives, stores, utilities)
+- [x] 10B.4 Rewrite imports across all workspaces (AD-51)
 - [ ] 10B.5 Add sveltekit-superforms, formsnap, layerchart, fuse.js, @tanstack/table-core
 - [ ] 10B.6 Add paneforge, svelte-dnd-action, @formkit/auto-animate
 - [ ] 10B.7 Build all 8 Generative UI components (AD-46): InstanceTable, CostChart, MetricsChart, BucketGrid, TerraformViewer, AlarmPanel, ResourceList, ApprovalCard
