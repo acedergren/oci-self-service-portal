@@ -24,9 +24,10 @@ export interface RecoveryStats {
  * @param logger - Pino logger for warnings/info
  * @returns Counts of restarted and failed runs
  */
-export async function restartAllActiveWorkflowRuns(
-	logger: { warn: (...args: unknown[]) => void; info: (...args: unknown[]) => void }
-): Promise<RecoveryStats> {
+export async function restartAllActiveWorkflowRuns(logger: {
+	warn: (...args: unknown[]) => void;
+	info: (...args: unknown[]) => void;
+}): Promise<RecoveryStats> {
 	const stats: RecoveryStats = { restarted: 0, failed: 0 };
 
 	try {
@@ -34,7 +35,9 @@ export async function restartAllActiveWorkflowRuns(
 		// Full implementation requires deeper executor integration.
 		// This ensures monitoring works in the startup hook.
 
-		logger.info('Workflow recovery: scanning for stale runs (status=running/suspended, last update >5min ago)');
+		logger.info(
+			'Workflow recovery: scanning for stale runs (status=running/suspended, last update >5min ago)'
+		);
 
 		// In a real implementation, we would:
 		// 1. Query workflow_runs table for stale runs via Oracle connection

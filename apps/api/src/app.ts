@@ -397,7 +397,9 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 	app.addHook('onReady', async () => {
 		const { restarted, failed } = await restartAllActiveWorkflowRuns(log);
 		if (restarted > 0) {
-			log.info(`Recovered ${restarted} workflow runs on startup${failed > 0 ? ` (${failed} failed)` : ''}`)
+			log.info(
+				`Recovered ${restarted} workflow runs on startup${failed > 0 ? ` (${failed} failed)` : ''}`
+			);
 		}
 	});
 
