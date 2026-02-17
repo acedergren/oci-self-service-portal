@@ -160,6 +160,7 @@ export class WorkflowExecutor {
 		let output: Record<string, unknown> | undefined;
 		let stepCount = completedNodeIds.size;
 		const startTime = Date.now();
+		const nodesById = new Map(sortedNodes.map((n) => [n.id, n]));
 
 		for (const node of sortedNodes) {
 			// Skip already completed nodes (from resume)
@@ -199,6 +200,7 @@ export class WorkflowExecutor {
 					input,
 					stepResults,
 					skippedNodes,
+					nodesById,
 					callbacks
 				);
 
@@ -317,6 +319,7 @@ export class WorkflowExecutor {
 		input: Record<string, unknown>,
 		stepResults: Record<string, unknown>,
 		skippedNodes: Set<string>,
+		nodesById: Map<string, WorkflowNode>,
 		callbacks?: ExecutionCallbacks
 	): Promise<{ result: unknown; suspended?: boolean }> {
 		switch (node.type) {
@@ -345,7 +348,15 @@ export class WorkflowExecutor {
 				return this.executeOutputNode(node, stepResults);
 
 			case 'parallel':
-				return this.executeParallelNode(node, stepResults);
+				return this.executeParallelNode(
+					node,
+					stepResults,
+					nodesById,
+					edges,
+					input,
+					skippedNodes,
+					callbacks
+				);
 
 			case 'ai-step': {
 				const retryPolicy =
@@ -609,7 +620,12 @@ export class WorkflowExecutor {
 	 */
 	private async executeParallelNode(
 		node: WorkflowNode,
-		stepResults: Record<string, unknown>
+		stepResults: Record<string, unknown>,
+		nodesById: Map<string, WorkflowNode>,
+		edges: WorkflowEdge[],
+		input: Record<string, unknown>,
+		skippedNodes: Set<string>,
+		callbacks?: ExecutionCallbacks
 	): Promise<{ result: unknown }> {
 		const data = node.data as {
 			branchNodeIds?: string[][];
@@ -629,20 +645,44 @@ export class WorkflowExecutor {
 		const errorHandling = data.errorHandling || 'fail-fast';
 		const timeoutMs = data.timeoutMs;
 
+		// Pre-mark all branch nodes as skipped so the main executeNodes loop
+		// does not visit them — they are owned by this parallel node and will
+		// be executed (and potentially re-executed) only inside executeBranch.
+		for (const branch of data.branchNodeIds) {
+			for (const nodeId of branch) {
+				skippedNodes.add(nodeId);
+			}
+		}
+
 		// Execute all branches in parallel
 		const branchPromises = data.branchNodeIds.map((branchNodeIds, branchIndex) =>
-			this.executeBranch(branchNodeIds, stepResults, branchIndex, timeoutMs)
+			this.executeBranch(
+				branchNodeIds,
+				stepResults,
+				branchIndex,
+				nodesById,
+				edges,
+				input,
+				skippedNodes,
+				timeoutMs,
+				callbacks
+			)
 		);
 
 		try {
-			let branchResults: Array<{ branchIndex: number; result: unknown; error?: string }>;
+			let branchResults: Array<{
+				branchIndex: number;
+				result: unknown;
+				stepResults?: Record<string, unknown>;
+				error?: string;
+			}>;
 
 			if (mergeStrategy === 'all') {
 				// Wait for all branches to complete
 				const results = await Promise.allSettled(branchPromises);
 				branchResults = results.map((r, i) => {
 					if (r.status === 'fulfilled') {
-						return { branchIndex: i, result: r.value };
+						return { branchIndex: i, result: r.value.lastResult, stepResults: r.value.stepResults };
 					} else {
 						const errorMsg = r.reason instanceof Error ? r.reason.message : String(r.reason);
 						if (errorHandling === 'fail-fast') {
@@ -693,33 +733,74 @@ export class WorkflowExecutor {
 
 	/**
 	 * Execute a single branch (sequence of node IDs) in the parallel node.
+	 * Runs each node in the branch sequentially, accumulating step results.
+	 * Each branch starts with a copy of the parent stepResults so branches
+	 * are isolated from each other's side effects.
 	 */
 	private async executeBranch(
 		branchNodeIds: string[],
-		stepResults: Record<string, unknown>,
+		parentStepResults: Record<string, unknown>,
 		branchIndex: number,
-		timeoutMs?: number
-	): Promise<unknown> {
-		const executeBranchWork = async (): Promise<unknown> => {
-			// For now, we simulate branch execution by returning the step results
-			// for the nodes in this branch. In a full implementation, this would
-			// execute the sub-workflow defined by branchNodeIds.
-			//
-			// Since we don't have sub-workflow execution support yet, we'll just
-			// return a placeholder result that includes the branch node IDs.
-			return {
-				branchIndex,
-				nodeIds: branchNodeIds,
-				executed: true,
-				// In real implementation, this would contain actual execution results
-				stepResults: {}
-			};
+		nodesById: Map<string, WorkflowNode>,
+		edges: WorkflowEdge[],
+		input: Record<string, unknown>,
+		skippedNodes: Set<string>,
+		timeoutMs?: number,
+		callbacks?: ExecutionCallbacks
+	): Promise<{ branchIndex: number; stepResults: Record<string, unknown>; lastResult: unknown }> {
+		const executeBranchWork = async () => {
+			// Each branch gets its own copy of stepResults to avoid cross-branch contamination
+			const branchStepResults: Record<string, unknown> = { ...parentStepResults };
+			// Branch-local skipped set: inherits parent but removes this branch's own node IDs.
+			// This allows the branch to execute its own nodes even if the parent marked them
+			// as pre-skipped (to prevent the main loop from re-executing them).
+			const branchSkipped = new Set(skippedNodes);
+			for (const nodeId of branchNodeIds) {
+				branchSkipped.delete(nodeId);
+			}
+
+			let lastResult: unknown = null;
+
+			for (const nodeId of branchNodeIds) {
+				const branchNode = nodesById.get(nodeId);
+				if (!branchNode) {
+					throw new ValidationError(`Parallel branch ${branchIndex} references unknown node`, {
+						nodeId,
+						branchIndex
+					});
+				}
+
+				if (branchSkipped.has(nodeId)) continue;
+
+				const nodeResult = await this.executeNode(
+					branchNode,
+					edges,
+					input,
+					branchStepResults,
+					branchSkipped,
+					nodesById,
+					callbacks
+				);
+
+				if (nodeResult.suspended) {
+					// Approval nodes inside parallel branches are not supported
+					throw new ValidationError('Approval nodes cannot be used inside parallel branches', {
+						nodeId,
+						branchIndex
+					});
+				}
+
+				branchStepResults[nodeId] = nodeResult.result;
+				lastResult = nodeResult.result;
+			}
+
+			return { branchIndex, stepResults: branchStepResults, lastResult };
 		};
 
 		if (timeoutMs) {
 			return Promise.race([
 				executeBranchWork(),
-				new Promise((_, reject) =>
+				new Promise<never>((_, reject) =>
 					setTimeout(() => reject(new Error(`Branch ${branchIndex} timed out`)), timeoutMs)
 				)
 			]);

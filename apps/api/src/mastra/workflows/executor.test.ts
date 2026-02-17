@@ -351,7 +351,13 @@ describe('WorkflowExecutor', () => {
 					],
 					mergeStrategy: 'all',
 					errorHandling: 'fail-fast'
-				})
+				}),
+				makeNode('branch-1-node-1', 'tool', { toolName: 'someTool' }),
+				makeNode('branch-1-node-2', 'tool', { toolName: 'someTool' }),
+				makeNode('branch-2-node-1', 'tool', { toolName: 'someTool' }),
+				makeNode('branch-3-node-1', 'tool', { toolName: 'someTool' }),
+				makeNode('branch-3-node-2', 'tool', { toolName: 'someTool' }),
+				makeNode('branch-3-node-3', 'tool', { toolName: 'someTool' })
 			];
 			const def = makeDefinition(nodes, []);
 
@@ -370,7 +376,10 @@ describe('WorkflowExecutor', () => {
 				makeNode('parallel', 'parallel', {
 					branchNodeIds: [['slow-branch'], ['fast-branch'], ['another-branch']],
 					mergeStrategy: 'any'
-				})
+				}),
+				makeNode('slow-branch', 'tool', { toolName: 'someTool' }),
+				makeNode('fast-branch', 'tool', { toolName: 'someTool' }),
+				makeNode('another-branch', 'tool', { toolName: 'someTool' })
 			];
 			const def = makeDefinition(nodes, []);
 
@@ -468,7 +477,9 @@ describe('WorkflowExecutor', () => {
 				makeNode('parallel', 'parallel', {
 					branchNodeIds: [['b1'], ['b2']]
 					// mergeStrategy not specified
-				})
+				}),
+				makeNode('b1', 'tool', { toolName: 'someTool' }),
+				makeNode('b2', 'tool', { toolName: 'someTool' })
 			];
 			const def = makeDefinition(nodes, []);
 
@@ -485,13 +496,142 @@ describe('WorkflowExecutor', () => {
 					branchNodeIds: [['b1'], ['b2']],
 					mergeStrategy: 'all'
 					// errorHandling not specified
-				})
+				}),
+				makeNode('b1', 'tool', { toolName: 'someTool' }),
+				makeNode('b2', 'tool', { toolName: 'someTool' })
 			];
 			const def = makeDefinition(nodes, []);
 
 			const result = await executor.execute(def, {});
 
 			expect(result.status).toBe('completed');
+		});
+
+		it('actually executes tool nodes inside branches and merges their outputs', async () => {
+			// Each branch has its own tool node — verify executeTool is called for each
+			mockedExecuteTool
+				.mockResolvedValueOnce({ data: 'branch-a-result' })
+				.mockResolvedValueOnce({ data: 'branch-b-result' });
+
+			const nodes = [
+				makeNode('parallel', 'parallel', {
+					branchNodeIds: [['tool-a'], ['tool-b']],
+					mergeStrategy: 'all',
+					errorHandling: 'fail-fast'
+				}),
+				makeNode('tool-a', 'tool', { toolName: 'op-a', args: { id: 1 } }),
+				makeNode('tool-b', 'tool', { toolName: 'op-b', args: { id: 2 } })
+			];
+			const def = makeDefinition(nodes, []);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('completed');
+			// Both tools should have been called
+			const calledTools = mockedExecuteTool.mock.calls.map((c) => c[0]);
+			expect(calledTools).toContain('op-a');
+			expect(calledTools).toContain('op-b');
+			// Output is merged under branch-N keys
+			const parallelResult = result.stepResults!['parallel'] as Record<string, unknown>;
+			expect(parallelResult['branch-0']).toBeDefined();
+			expect(parallelResult['branch-1']).toBeDefined();
+		});
+
+		it('propagates failure with fail-fast when a branch tool throws', async () => {
+			mockedExecuteTool.mockRejectedValueOnce(new Error('OCI API timeout'));
+
+			const nodes = [
+				makeNode('parallel', 'parallel', {
+					branchNodeIds: [['failing-tool'], ['ok-tool']],
+					mergeStrategy: 'all',
+					errorHandling: 'fail-fast'
+				}),
+				makeNode('failing-tool', 'tool', { toolName: 'bad-op' }),
+				makeNode('ok-tool', 'tool', { toolName: 'good-op' })
+			];
+			const def = makeDefinition(nodes, []);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('failed');
+			// The outer wrapper reports "Parallel node execution failed"
+			expect(result.error).toContain('Parallel node execution failed');
+		});
+
+		it('isolates branch step results — parent results visible but cross-branch writes are isolated', async () => {
+			// Setup: parent has a 'setup' tool node whose result branches should see
+			mockedExecuteTool
+				.mockResolvedValueOnce({ shared: 'parent-value' }) // setup tool
+				.mockResolvedValueOnce({ branch: 'a' }) // branch-a tool
+				.mockResolvedValueOnce({ branch: 'b' }); // branch-b tool
+
+			const nodes = [
+				makeNode('setup', 'tool', { toolName: 'setup-op' }),
+				makeNode('parallel', 'parallel', {
+					branchNodeIds: [['branch-a-tool'], ['branch-b-tool']],
+					mergeStrategy: 'all',
+					errorHandling: 'fail-fast'
+				}),
+				makeNode('branch-a-tool', 'tool', { toolName: 'branch-a-op' }),
+				makeNode('branch-b-tool', 'tool', { toolName: 'branch-b-op' })
+			];
+			const edges = [makeEdge('setup', 'parallel')];
+			const def = makeDefinition(nodes, edges);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('completed');
+			// Parallel node is in the step results
+			expect(result.stepResults!['setup']).toEqual({ shared: 'parent-value' });
+			expect(result.stepResults!['parallel']).toBeDefined();
+		});
+
+		it('rejects approval nodes inside branches with a ValidationError', async () => {
+			// Branch nodes are pre-skipped by the parallel node, so the main loop
+			// never visits 'branch-with-approval' directly. The parallel node's
+			// executeBranch encounters the approval node and throws.
+			const nodes = [
+				makeNode('parallel', 'parallel', {
+					branchNodeIds: [['branch-with-approval']],
+					mergeStrategy: 'all',
+					errorHandling: 'collect-all'
+				}),
+				makeNode('branch-with-approval', 'approval')
+			];
+			const def = makeDefinition(nodes, []);
+
+			const result = await executor.execute(def, {});
+
+			// Approval in branch is always an error (unsupported), collected by collect-all
+			expect(result.status).toBe('completed');
+			const parallelResult = result.stepResults!['parallel'] as Record<string, unknown>;
+			const branch0 = parallelResult['branch-0'] as Record<string, unknown>;
+			expect(branch0.error).toContain('Approval nodes cannot be used');
+		});
+
+		it('multi-step branches execute all nodes sequentially within the branch', async () => {
+			mockedExecuteTool
+				.mockResolvedValueOnce({ step: 1 }) // branch-a step 1
+				.mockResolvedValueOnce({ step: 2 }); // branch-a step 2
+
+			const nodes = [
+				makeNode('parallel', 'parallel', {
+					branchNodeIds: [['step1', 'step2']],
+					mergeStrategy: 'all',
+					errorHandling: 'fail-fast'
+				}),
+				makeNode('step1', 'tool', { toolName: 'op-step1' }),
+				makeNode('step2', 'tool', { toolName: 'op-step2' })
+			];
+			const def = makeDefinition(nodes, []);
+
+			const result = await executor.execute(def, {});
+
+			expect(result.status).toBe('completed');
+			// Both steps in the branch should have been executed in order
+			const calls = mockedExecuteTool.mock.calls.map((c) => c[0]);
+			expect(calls[0]).toBe('op-step1');
+			expect(calls[1]).toBe('op-step2');
 		});
 	});
 
