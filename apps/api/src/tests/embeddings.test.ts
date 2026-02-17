@@ -28,7 +28,7 @@ import {
 	resetGenAiClient,
 	__setGenAiClientForTesting
 } from '@portal/server/embeddings';
-import { ValidationError, OCIError } from '@portal/server/errors';
+import { ValidationError } from '@portal/server/errors';
 
 // ── Mock GenAI client ─────────────────────────────────────────────────────────
 
