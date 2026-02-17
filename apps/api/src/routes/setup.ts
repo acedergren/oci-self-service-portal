@@ -15,6 +15,30 @@ import {
 } from '@portal/server/admin';
 import { isValidExternalUrl } from '@portal/server/url-validation';
 
+const PortalFeaturesSchema = z.object({
+	workflows: z.boolean(),
+	vectorSearch: z.boolean(),
+	blockchainAudit: z.boolean(),
+	cspComparison: z.boolean(),
+	mcpServer: z.boolean()
+});
+
+const ToolCategoriesSchema = z.object({
+	compute: z.boolean(),
+	networking: z.boolean(),
+	database: z.boolean(),
+	storage: z.boolean(),
+	iam: z.boolean(),
+	monitoring: z.boolean(),
+	security: z.boolean(),
+	genai: z.boolean()
+});
+
+const FeaturesConfigSchema = z.object({
+	portalFeatures: PortalFeaturesSchema,
+	toolCategories: ToolCategoriesSchema
+});
+
 const TestIdpInputSchema = z.object({
 	discoveryUrl: z.string().url().optional(),
 	authorizationUrl: z.string().url().optional(),
@@ -315,6 +339,52 @@ export async function setupRoutes(app: FastifyInstance): Promise<void> {
 			const input = request.body as z.infer<typeof BulkSetSettingsInputSchema>;
 			await settingsRepository.bulkSet(input.settings);
 			return reply.send({ success: true, count: input.settings.length });
+		}
+	);
+
+	app.post(
+		'/api/setup/features',
+		{
+			preHandler: requireSetupToken,
+			schema: {
+				body: FeaturesConfigSchema,
+				response: {
+					200: z.object({ success: z.literal(true), count: z.number() }),
+					401: SetupErrorResponseSchema,
+					403: SetupErrorResponseSchema
+				}
+			}
+		},
+		async (request, reply) => {
+			const input = request.body as z.infer<typeof FeaturesConfigSchema>;
+
+			const settings = [
+				// Portal features
+				{ key: 'feature.workflows', value: input.portalFeatures.workflows },
+				{ key: 'feature.vector_search', value: input.portalFeatures.vectorSearch },
+				{ key: 'feature.blockchain_audit', value: input.portalFeatures.blockchainAudit },
+				{ key: 'feature.csp_comparison', value: input.portalFeatures.cspComparison },
+				{ key: 'feature.mcp_server', value: input.portalFeatures.mcpServer },
+				// Tool categories
+				{ key: 'tools.compute', value: input.toolCategories.compute },
+				{ key: 'tools.networking', value: input.toolCategories.networking },
+				{ key: 'tools.database', value: input.toolCategories.database },
+				{ key: 'tools.storage', value: input.toolCategories.storage },
+				{ key: 'tools.iam', value: input.toolCategories.iam },
+				{ key: 'tools.monitoring', value: input.toolCategories.monitoring },
+				{ key: 'tools.security', value: input.toolCategories.security },
+				{ key: 'tools.genai', value: input.toolCategories.genai }
+			].map((s) => ({
+				...s,
+				valueType: 'boolean' as const,
+				category: 'features',
+				isPublic: false,
+				sortOrder: 0
+			}));
+
+			await settingsRepository.bulkSet(settings);
+
+			return reply.send({ success: true, count: settings.length });
 		}
 	);
 
