@@ -114,16 +114,22 @@ const mastraPlugin: FastifyPluginAsync = async (fastify) => {
 		observability
 	});
 
-	fastify.decorate('mastra', mastra);
+	if (!fastify.hasDecorator('mastra')) {
+		fastify.decorate('mastra', mastra);
+	}
 
 	// Expose vector store and embedder for direct use (e.g., search route)
-	if (vectorStore) {
+	if (vectorStore && !fastify.hasDecorator('vectorStore')) {
 		fastify.decorate('vectorStore', vectorStore);
 	}
-	fastify.decorate('ociEmbedder', ociEmbedder);
+	if (!fastify.hasDecorator('ociEmbedder')) {
+		fastify.decorate('ociEmbedder', ociEmbedder);
+	}
 
 	// ── Decorate with MCP connection manager ───────────────────────────
-	fastify.decorate('mcpConnectionManager', mcpConnectionManager);
+	if (!fastify.hasDecorator('mcpConnectionManager')) {
+		fastify.decorate('mcpConnectionManager', mcpConnectionManager);
+	}
 
 	// ── Initialize MCP connection manager (reconnect previously-connected servers)
 	if (hasOracle) {

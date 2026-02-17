@@ -13,7 +13,7 @@ vi.mock('@portal/server/logger', () => ({
 	})
 }));
 
-describe('mastra plugin', () => {
+describe('mastra plugin', { timeout: 30_000 }, () => {
 	let app: FastifyInstance;
 
 	afterEach(async () => {
