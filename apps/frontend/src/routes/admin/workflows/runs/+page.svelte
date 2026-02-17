@@ -15,6 +15,7 @@
 		nodeId: string;
 		nodeType: string;
 		status: string;
+		inputs?: unknown;
 		output?: unknown;
 		error?: unknown;
 		startedAt: string | null;
@@ -252,6 +253,7 @@
 						nodeId: payload.nodeId,
 						nodeType: payload.nodeType ?? 'unknown',
 						status: payload.status ?? 'pending',
+						inputs: payload.inputs,
 						output: payload.output,
 						error: payload.error,
 						startedAt: payload.startedAt ?? null,
@@ -441,35 +443,58 @@
 				{#if runDetail.steps.length === 0}
 					<p class="empty-steps">No step data recorded yet.</p>
 				{:else}
-					{#each runDetail.steps as step (step.nodeId)}
-						<div class="step-card" data-status={step.status}>
-							<div class="step-heading">
-								<div>
-									<div class="step-title">{step.nodeId}</div>
-									<div class="step-meta">{step.nodeType} • {formatStepDuration(step)}</div>
+					<ol class="timeline-list">
+						{#each runDetail.steps as step, i (step.nodeId)}
+							<li class="timeline-item" data-status={step.status}>
+								<div class="timeline-marker">
+									<div
+										class="timeline-dot"
+										class:timeline-dot--pulsing={step.status === 'running'}
+										style={`--marker-color: ${statusColor(step.status)}`}
+									></div>
+									{#if i < runDetail.steps.length - 1}
+										<div class="timeline-connector"></div>
+									{/if}
 								</div>
-								<span class="step-status" style={`color: ${statusColor(step.status)}`}>
-									{step.status}
-								</span>
-							</div>
-							<div class="step-times">
-								<span>Started {formatTime(step.startedAt)}</span>
-								<span>Completed {formatTime(step.completedAt)}</span>
-							</div>
-							{#if step.output}
-								<details>
-									<summary>Output</summary>
-									<pre>{formatJson(step.output)}</pre>
-								</details>
-							{/if}
-							{#if step.error}
-								<details open>
-									<summary>Error</summary>
-									<pre>{formatJson(step.error)}</pre>
-								</details>
-							{/if}
-						</div>
-					{/each}
+								<div class="step-card" data-status={step.status}>
+									<div class="step-heading">
+										<div>
+											<div class="step-title">{step.nodeId}</div>
+											<div class="step-meta">{step.nodeType} • {formatStepDuration(step)}</div>
+										</div>
+										<span
+											class="step-status-badge"
+											style={`--status-color: ${statusColor(step.status)}`}
+										>
+											{step.status}
+										</span>
+									</div>
+									<div class="step-times">
+										<span>Started {formatTime(step.startedAt)}</span>
+										<span>Completed {formatTime(step.completedAt)}</span>
+									</div>
+									{#if step.inputs}
+										<details>
+											<summary>Inputs</summary>
+											<pre>{formatJson(step.inputs)}</pre>
+										</details>
+									{/if}
+									{#if step.output}
+										<details>
+											<summary>Output</summary>
+											<pre>{formatJson(step.output)}</pre>
+										</details>
+									{/if}
+									{#if step.error}
+										<details open>
+											<summary>Error</summary>
+											<pre>{formatJson(step.error)}</pre>
+										</details>
+									{/if}
+								</div>
+							</li>
+						{/each}
+					</ol>
 				{/if}
 			</div>
 		</div>
@@ -793,20 +818,88 @@
 		gap: var(--space-md);
 	}
 
+	.timeline-list {
+		list-style: none;
+		padding: 0;
+		margin: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 0;
+	}
+
+	.timeline-item {
+		display: flex;
+		gap: var(--space-md);
+		align-items: flex-start;
+	}
+
+	.timeline-marker {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		width: 20px;
+		flex-shrink: 0;
+		padding-top: var(--space-md);
+	}
+
+	.timeline-dot {
+		width: 14px;
+		height: 14px;
+		border-radius: 50%;
+		background: var(--marker-color, var(--fg-tertiary));
+		border: 2px solid var(--bg-secondary);
+		box-shadow: 0 0 0 2px var(--marker-color, var(--fg-tertiary));
+		position: relative;
+		z-index: 1;
+		flex-shrink: 0;
+	}
+
+	.timeline-dot--pulsing {
+		animation: dot-pulse 1.5s ease-in-out infinite;
+	}
+
+	@keyframes dot-pulse {
+		0%,
+		100% {
+			box-shadow: 0 0 0 2px var(--marker-color, var(--fg-tertiary));
+		}
+		50% {
+			box-shadow: 0 0 0 5px
+				color-mix(in oklch, var(--marker-color, var(--fg-tertiary)) 30%, transparent);
+		}
+	}
+
+	.timeline-connector {
+		width: 2px;
+		flex: 1;
+		min-height: var(--space-lg);
+		background: var(--border-muted);
+	}
+
 	.step-card {
 		border: 1px solid var(--border-default);
 		border-left: 4px solid var(--fg-tertiary);
 		border-radius: var(--radius-md);
 		padding: var(--space-md);
 		background: var(--bg-tertiary);
+		flex: 1;
+		margin-bottom: var(--space-md);
 	}
 
 	.step-card[data-status='completed'] {
 		border-left-color: var(--status-success, oklch(0.75 0.2 155));
 	}
 
+	.step-card[data-status='running'] {
+		border-left-color: var(--status-info, oklch(0.75 0.15 230));
+	}
+
 	.step-card[data-status='failed'] {
 		border-left-color: var(--status-error, oklch(0.75 0.2 30));
+	}
+
+	.step-card[data-status='suspended'] {
+		border-left-color: var(--status-warning, oklch(0.78 0.18 80));
 	}
 
 	.step-heading {
@@ -826,10 +919,18 @@
 		color: var(--fg-tertiary);
 	}
 
-	.step-status {
+	.step-status-badge {
+		display: inline-flex;
+		align-items: center;
+		padding: 2px var(--space-sm);
+		border-radius: var(--radius-sm);
+		font-size: var(--text-xs);
 		font-weight: 600;
+		color: var(--status-color, var(--fg-secondary));
+		background: color-mix(in oklch, var(--status-color, var(--fg-secondary)) 15%, transparent);
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
+		white-space: nowrap;
 	}
 
 	.step-times {
@@ -839,6 +940,33 @@
 		flex-wrap: wrap;
 		gap: var(--space-sm);
 		margin: var(--space-sm) 0;
+	}
+
+	.step-card details {
+		margin-top: var(--space-sm);
+	}
+
+	.step-card details summary {
+		cursor: pointer;
+		font-size: var(--text-xs);
+		color: var(--fg-secondary);
+		font-weight: 600;
+		user-select: none;
+		padding: var(--space-xs) 0;
+	}
+
+	.step-card details summary:hover {
+		color: var(--fg-primary);
+	}
+
+	.step-card details pre {
+		background: var(--bg-elevated);
+		padding: var(--space-sm);
+		border-radius: var(--radius-sm);
+		font-size: var(--text-xs);
+		max-height: 160px;
+		overflow: auto;
+		margin-top: var(--space-xs);
 	}
 
 	.empty-steps {
