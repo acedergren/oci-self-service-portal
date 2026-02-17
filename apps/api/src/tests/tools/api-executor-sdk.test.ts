@@ -46,6 +46,7 @@ import {
 
 describe('API-layer executor-sdk adapter', () => {
 	beforeEach(() => {
+		vi.clearAllMocks();
 		mockExecuteOCISDK.mockResolvedValue({ items: [] });
 	});
 

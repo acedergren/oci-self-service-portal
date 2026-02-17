@@ -27,6 +27,10 @@ import { executeTool } from '../tools/registry.js';
 import { generateText } from 'ai';
 import { getProviderRegistry } from '../models/provider-registry.js';
 import { z } from 'zod';
+import {
+	ApprovalSuspendPayloadSchema,
+	ApprovalResumePayloadSchema
+} from '../workflows/nodes/approval.js';
 
 // ============================================================================
 // Execution Limits (DoS Prevention)
@@ -342,7 +346,7 @@ export class WorkflowExecutor {
 				return this.executeConditionNode(node, edges, stepResults, skippedNodes);
 
 			case 'approval':
-				return { result: null, suspended: true };
+				return this.executeApprovalNode(node, stepResults);
 
 			case 'output':
 				return this.executeOutputNode(node, stepResults);
@@ -471,6 +475,46 @@ export class WorkflowExecutor {
 		return {
 			result: { conditionResult, expression: data.expression }
 		};
+	}
+
+	/**
+	 * Execute an approval node with Zod schema validation.
+	 *
+	 * Validates the node's suspend payload against ApprovalSuspendPayloadSchema,
+	 * then returns a suspension signal. The workflow will be resumed via the
+	 * approval endpoint with a resume payload validated against ApprovalResumePayloadSchema.
+	 *
+	 * Error handling: If the payload is invalid, throws a ValidationError.
+	 */
+	private executeApprovalNode(
+		node: WorkflowNode,
+		_stepResults: Record<string, unknown>
+	): { result: null; suspended: true } {
+		const data = node.data as {
+			message?: string;
+			approvers?: string[];
+			timeoutMinutes?: number;
+			context?: Record<string, unknown>;
+		};
+
+		// Validate suspend payload against schema
+		try {
+			ApprovalSuspendPayloadSchema.parse({
+				message: data.message,
+				approvers: data.approvers,
+				timeoutMinutes: data.timeoutMinutes,
+				context: data.context
+			});
+		} catch (err) {
+			const errorMsg = err instanceof Error ? err.message : String(err);
+			throw new ValidationError('Approval node payload failed validation', {
+				nodeId: node.id,
+				error: errorMsg
+			});
+		}
+
+		// Suspend the workflow — will be resumed via approval endpoint with ApprovalResumePayloadSchema
+		return { result: null, suspended: true };
 	}
 
 	/**
