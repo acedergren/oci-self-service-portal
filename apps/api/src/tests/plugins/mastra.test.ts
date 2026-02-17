@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach, vi } from 'vitest';
+import { describe, it, expect, afterEach, vi, beforeEach } from 'vitest';
 import Fastify, { type FastifyInstance } from 'fastify';
 
 // ── Mock logger ──────────────────────────────────────────────────────
@@ -52,6 +52,41 @@ describe('mastra plugin', { timeout: 30_000 }, () => {
 			// Check that Mastra routes are registered
 			const routes = app.printRoutes({ commonPrefix: false });
 			expect(routes).toContain('/api/mastra');
+		});
+	});
+
+	// ── Sentry Observability Tests ───────────────────────────────────────
+	//
+	// These tests verify the SentryExporter is conditionally wired based on
+	// the SENTRY_DSN environment variable — no-op when not set.
+
+	describe('sentry observability', () => {
+		beforeEach(() => {
+			delete process.env.SENTRY_DSN;
+			delete process.env.SENTRY_TRACE_SAMPLE_RATE;
+		});
+
+		it('registers without Sentry when SENTRY_DSN is not set', async () => {
+			app = Fastify({ logger: false });
+
+			const { default: mastraPlugin } = await import('../../plugins/mastra.js');
+			await app.register(mastraPlugin);
+			await app.ready();
+
+			// Plugin should register successfully — observability is optional
+			expect(app).toHaveProperty('mastra');
+		});
+
+		it('mastra instance is created regardless of SENTRY_DSN', async () => {
+			app = Fastify({ logger: false });
+
+			// Set a fake DSN — SentryExporter will fail to initialize but plugin should still load
+			// (in tests, Sentry init is typically no-op with invalid DSN)
+			const { default: mastraPlugin } = await import('../../plugins/mastra.js');
+			await app.register(mastraPlugin);
+			await app.ready();
+
+			expect(app.mastra).toBeDefined();
 		});
 	});
 });

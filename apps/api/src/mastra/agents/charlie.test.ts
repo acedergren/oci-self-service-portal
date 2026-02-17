@@ -12,6 +12,9 @@ vi.mock('@mastra/core/agent', () => ({
 		this.model = config.model;
 		this.tools = config.tools;
 		this.memory = config.memory;
+		this.scorers = config.scorers;
+		this.inputProcessors = config.inputProcessors;
+		this.outputProcessors = config.outputProcessors;
 	})
 }));
 
@@ -23,6 +26,20 @@ vi.mock('../tools/registry.js', () => ({
 	}))
 }));
 
+// Mock @mastra/evals/scorers/prebuilt
+vi.mock('@mastra/evals/scorers/prebuilt', () => ({
+	createFaithfulnessScorer: vi.fn(() => ({ id: 'faithfulness-scorer' })),
+	createAnswerRelevancyScorer: vi.fn(() => ({ id: 'answer-relevancy-scorer' })),
+	createPromptAlignmentScorerLLM: vi.fn(() => ({ id: 'prompt-alignment-scorer' }))
+}));
+
+// Mock guardrails
+vi.mock('./guardrails.js', () => ({
+	promptInjectionDetector: { name: 'prompt-injection-detector' },
+	piiDetector: { name: 'pii-detector' },
+	createTokenLimiter: vi.fn(() => ({ name: 'token-limiter' }))
+}));
+
 import {
 	getSystemPrompt,
 	createCharlieAgent,
@@ -31,8 +48,16 @@ import {
 	type CharlieConfig
 } from './charlie.js';
 import { Agent } from '@mastra/core/agent';
+import {
+	createFaithfulnessScorer,
+	createAnswerRelevancyScorer,
+	createPromptAlignmentScorerLLM
+} from '@mastra/evals/scorers/prebuilt';
 
 const MockAgent = vi.mocked(Agent);
+const mockCreateFaithfulnessScorer = vi.mocked(createFaithfulnessScorer);
+const mockCreateAnswerRelevancyScorer = vi.mocked(createAnswerRelevancyScorer);
+const mockCreatePromptAlignmentScorerLLM = vi.mocked(createPromptAlignmentScorerLLM);
 
 // ── getSystemPrompt ──────────────────────────────────────────────────
 
@@ -160,4 +185,113 @@ describe('createCharlieAgent', () => {
 		expect(agentConfig.tools).toHaveProperty('list-instances');
 		expect(agentConfig.tools).toHaveProperty('create-vcn');
 	});
+
+	it('includes inputProcessors and outputProcessors (guardrails)', () => {
+		createCharlieAgent({ model: DEFAULT_MODEL });
+
+		const agentConfig = MockAgent.mock.calls[0][0];
+		expect(Array.isArray(agentConfig.inputProcessors)).toBe(true);
+		expect((agentConfig.inputProcessors as unknown[]).length).toBeGreaterThanOrEqual(2);
+		expect(Array.isArray(agentConfig.outputProcessors)).toBe(true);
+		expect((agentConfig.outputProcessors as unknown[]).length).toBeGreaterThanOrEqual(1);
+	});
 });
+
+// ── eval scorers ─────────────────────────────────────────────────────
+
+describe('eval scorers', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+		// Reset env vars
+		delete process.env.MASTRA_ENABLE_EVALS;
+		delete process.env.MASTRA_EVAL_SAMPLE_RATE;
+	});
+
+	it('configures faithfulness, answer-relevancy, and prompt-alignment scorers by default', () => {
+		createCharlieAgent({ model: DEFAULT_MODEL });
+
+		const agentConfig = MockAgent.mock.calls[0][0];
+		const scorers = agentConfig.scorers as Record<string, unknown>;
+
+		expect(scorers).toBeDefined();
+		expect(scorers).toHaveProperty('faithfulness');
+		expect(scorers).toHaveProperty('answer-relevancy');
+		expect(scorers).toHaveProperty('prompt-alignment');
+	});
+
+	it('calls createFaithfulnessScorer with model and scale 10', () => {
+		createCharlieAgent({ model: 'google.gemini-2.5-flash' });
+
+		expect(mockCreateFaithfulnessScorer).toHaveBeenCalledOnce();
+		const args = mockCreateFaithfulnessScorer.mock.calls[0][0];
+		expect(args.model).toBe('google.gemini-2.5-flash');
+		expect(args.options?.scale).toBe(10);
+	});
+
+	it('calls createAnswerRelevancyScorer with model, scale 10, uncertaintyWeight 0.5', () => {
+		createCharlieAgent({ model: 'google.gemini-2.5-flash' });
+
+		expect(mockCreateAnswerRelevancyScorer).toHaveBeenCalledOnce();
+		const args = mockCreateAnswerRelevancyScorer.mock.calls[0][0];
+		expect(args.model).toBe('google.gemini-2.5-flash');
+		expect(args.options?.scale).toBe(10);
+		expect(args.options?.uncertaintyWeight).toBe(0.5);
+	});
+
+	it('calls createPromptAlignmentScorerLLM with model and scale 10', () => {
+		createCharlieAgent({ model: 'google.gemini-2.5-flash' });
+
+		expect(mockCreatePromptAlignmentScorerLLM).toHaveBeenCalledOnce();
+		const args = mockCreatePromptAlignmentScorerLLM.mock.calls[0][0];
+		expect(args.model).toBe('google.gemini-2.5-flash');
+		expect(args.options?.scale).toBe(10);
+	});
+
+	it('uses 10% sampling rate by default', () => {
+		createCharlieAgent({ model: DEFAULT_MODEL });
+
+		const agentConfig = MockAgent.mock.calls[0][0];
+		const scorers = agentConfig.scorers as Record<
+			string,
+			{ sampling: { type: string; rate: number } }
+		>;
+
+		expect(scorers['faithfulness'].sampling.type).toBe('ratio');
+		expect(scorers['faithfulness'].sampling.rate).toBe(0.1);
+		expect(scorers['answer-relevancy'].sampling.rate).toBe(0.1);
+		expect(scorers['prompt-alignment'].sampling.rate).toBe(0.1);
+	});
+
+	it('uses custom sample rate from MASTRA_EVAL_SAMPLE_RATE env var', () => {
+		process.env.MASTRA_EVAL_SAMPLE_RATE = '0.25';
+		createCharlieAgent({ model: DEFAULT_MODEL });
+
+		const agentConfig = MockAgent.mock.calls[0][0];
+		const scorers = agentConfig.scorers as Record<
+			string,
+			{ sampling: { type: string; rate: number } }
+		>;
+		expect(scorers['faithfulness'].sampling.rate).toBe(0.25);
+	});
+
+	it('disables scorers when MASTRA_ENABLE_EVALS=false', () => {
+		process.env.MASTRA_ENABLE_EVALS = 'false';
+		createCharlieAgent({ model: DEFAULT_MODEL });
+
+		const agentConfig = MockAgent.mock.calls[0][0];
+		expect(agentConfig.scorers).toBeUndefined();
+	});
+
+	it('does not call scorer factories when evals disabled', () => {
+		process.env.MASTRA_ENABLE_EVALS = 'false';
+		createCharlieAgent({ model: DEFAULT_MODEL });
+
+		expect(mockCreateFaithfulnessScorer).not.toHaveBeenCalled();
+		expect(mockCreateAnswerRelevancyScorer).not.toHaveBeenCalled();
+		expect(mockCreatePromptAlignmentScorerLLM).not.toHaveBeenCalled();
+	});
+});
+
+// ── Sentry observability (mastra.ts plugin) ──────────────────────────
+// Full integration tests are in tests/plugins/mastra.test.ts.
+// Here we verify the Charlie agent is created regardless of Sentry config.

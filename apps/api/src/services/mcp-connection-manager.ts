@@ -74,17 +74,42 @@ export class MCPConnectionManager {
 	// ========================================================================
 
 	/**
-	 * Initialize manager — reconnect all previously connected servers.
+	 * Initialize manager — reconnect all previously connected servers across all orgs.
+	 * Paginated to handle large deployments gracefully.
 	 * Individual failures don't prevent others from connecting.
 	 */
 	async initialize(): Promise<void> {
 		log.info('Initializing MCP connection manager');
 
-		// TODO: Need a way to get all servers across orgs that were connected
-		// For now, we'll connect servers on-demand when requested by org
-		// A future enhancement could add a global "reconnect on startup" flag
+		const pageSize = 100;
+		let offset = 0;
+		let reconnected = 0;
+		let failed = 0;
 
-		log.info('MCP connection manager initialized');
+		// Paginate through all connected servers across all orgs
+		while (true) {
+			const servers = await mcpServerRepository.listAllConnected({ limit: pageSize, offset });
+
+			if (servers.length === 0) break;
+
+			// Reconnect servers in parallel (per page), errors don't block others
+			const results = await Promise.allSettled(
+				servers.map((server) => this.connectServer(server.id))
+			);
+
+			for (const result of results) {
+				if (result.status === 'fulfilled') {
+					reconnected++;
+				} else {
+					failed++;
+				}
+			}
+
+			if (servers.length < pageSize) break;
+			offset += pageSize;
+		}
+
+		log.info({ reconnected, failed }, 'MCP connection manager initialized');
 	}
 
 	/**

@@ -13,7 +13,8 @@ import type { Memory } from '@mastra/memory';
 import type { MastraModelConfig } from '@mastra/core/llm';
 import {
 	createFaithfulnessScorer,
-	createAnswerRelevancyScorer
+	createAnswerRelevancyScorer,
+	createPromptAlignmentScorerLLM
 } from '@mastra/evals/scorers/prebuilt';
 import { buildMastraTools } from '../tools/registry.js';
 import { promptInjectionDetector, piiDetector, createTokenLimiter } from './guardrails.js';
@@ -260,6 +261,13 @@ export function createCharlieAgent(config: CharlieConfig): Agent {
 					scorer: createAnswerRelevancyScorer({
 						model: config.model as MastraModelConfig,
 						options: { scale: 10, uncertaintyWeight: 0.5 }
+					}),
+					sampling: { type: 'ratio' as const, rate: evalSampleRate }
+				},
+				'prompt-alignment': {
+					scorer: createPromptAlignmentScorerLLM({
+						model: config.model as MastraModelConfig,
+						options: { scale: 10 }
 					}),
 					sampling: { type: 'ratio' as const, rate: evalSampleRate }
 				}

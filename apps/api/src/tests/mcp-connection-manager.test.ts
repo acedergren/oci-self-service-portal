@@ -37,6 +37,7 @@ vi.mock('@portal/server/admin/mcp-repository', () => {
 	// Create mocks here, inside the factory
 	const mocks = {
 		listByOrg: vi.fn(),
+		listAllConnected: vi.fn(),
 		getById: vi.fn(),
 		updateStatus: vi.fn(),
 		updateDockerInfo: vi.fn(),
@@ -135,11 +136,7 @@ vi.mock('@portal/server/logger', () => ({
 // Type imports and regular imports (after mocks are registered)
 // ============================================================================
 
-import type {
-	McpServer,
-	DecryptedCredential,
-	CachedTool
-} from '@portal/server/admin/mcp-types.js';
+import type { McpServer, DecryptedCredential, CachedTool } from '@portal/server/admin/mcp-types.js';
 import { MCPConnectionManager } from '../services/mcp-connection-manager.js';
 
 // ============================================================================
@@ -226,6 +223,7 @@ beforeEach(() => {
 
 	// Repository mocks
 	mocks.repository.listByOrg.mockResolvedValue([]);
+	mocks.repository.listAllConnected.mockResolvedValue([]);
 	mocks.repository.getById.mockResolvedValue(undefined);
 	mocks.repository.updateStatus.mockResolvedValue(undefined);
 	mocks.repository.updateDockerInfo.mockResolvedValue(undefined);
@@ -266,13 +264,92 @@ describe('MCPConnectionManager', () => {
 	// ========================================================================
 
 	describe('initialize', () => {
-		it('completes when no servers exist', async () => {
+		it('completes when no previously connected servers exist', async () => {
 			const mocks = (globalThis as any).__testMocks;
 			const manager = new MCPConnectionManager();
-			mocks.repository.listByOrg.mockResolvedValue([]);
+			mocks.repository.listAllConnected.mockResolvedValue([]);
 
-			// Should not throw
 			await expect(manager.initialize()).resolves.not.toThrow();
+			expect(mocks.repository.listAllConnected).toHaveBeenCalledWith({ limit: 100, offset: 0 });
+		});
+
+		it('reconnects all previously connected servers on startup', async () => {
+			const mocks = (globalThis as any).__testMocks;
+			const manager = new MCPConnectionManager();
+
+			const server2: McpServer = { ...testServer, id: 'server-org2', orgId: 'org-456' };
+
+			// 2 servers on first page (< 100 page size → only one page fetch needed)
+			mocks.repository.listAllConnected.mockResolvedValueOnce([testServer, server2]);
+
+			mocks.repository.getById.mockResolvedValueOnce(testServer).mockResolvedValueOnce(server2);
+			mocks.mcpClient.tools.mockResolvedValue(testTools);
+
+			await manager.initialize();
+
+			// Partial page (2 < 100) → only one fetch needed, no second page
+			expect(mocks.repository.listAllConnected).toHaveBeenCalledTimes(1);
+			expect(mocks.repository.listAllConnected).toHaveBeenCalledWith({ limit: 100, offset: 0 });
+			expect(mocks.repository.updateStatus).toHaveBeenCalledWith(testServerId, 'connected');
+			expect(mocks.repository.updateStatus).toHaveBeenCalledWith('server-org2', 'connected');
+		});
+
+		it('continues reconnecting other servers when one fails', async () => {
+			const mocks = (globalThis as any).__testMocks;
+			const manager = new MCPConnectionManager();
+
+			const server2: McpServer = { ...testServer, id: 'server-good' };
+
+			mocks.repository.listAllConnected
+				.mockResolvedValueOnce([testServer, server2])
+				.mockResolvedValueOnce([]);
+
+			// First server fails to connect (getById returns undefined)
+			// Second server succeeds
+			mocks.repository.getById.mockResolvedValueOnce(undefined).mockResolvedValueOnce(server2);
+			mocks.mcpClient.tools.mockResolvedValue({});
+
+			// Should not throw even though one server fails
+			await expect(manager.initialize()).resolves.not.toThrow();
+			// Second server should still be attempted
+			expect(mocks.repository.getById).toHaveBeenCalledTimes(2);
+		});
+
+		it('handles pagination correctly for large deployments', async () => {
+			const mocks = (globalThis as any).__testMocks;
+			const manager = new MCPConnectionManager();
+
+			// Simulate exactly 100 servers on page 1 (full page → continues), then 50 on page 2 (partial → stops)
+			const page1 = Array.from({ length: 100 }, (_, i) => ({
+				...testServer,
+				id: `server-p1-${i}`
+			}));
+			const page2 = Array.from({ length: 50 }, (_, i) => ({
+				...testServer,
+				id: `server-p2-${i}`
+			}));
+
+			mocks.repository.listAllConnected.mockResolvedValueOnce(page1).mockResolvedValueOnce(page2);
+
+			// getById returns server for all (connectServer uses getById internally)
+			mocks.repository.getById.mockImplementation(async (id: string) => ({
+				...testServer,
+				id
+			}));
+			mocks.mcpClient.tools.mockResolvedValue({});
+
+			await manager.initialize();
+
+			// Full page (100) → fetch page 2; partial page (50) → stop
+			expect(mocks.repository.listAllConnected).toHaveBeenCalledTimes(2);
+			expect(mocks.repository.listAllConnected).toHaveBeenNthCalledWith(1, {
+				limit: 100,
+				offset: 0
+			});
+			expect(mocks.repository.listAllConnected).toHaveBeenNthCalledWith(2, {
+				limit: 100,
+				offset: 100
+			});
 		});
 	});
 

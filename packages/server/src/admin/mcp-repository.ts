@@ -96,6 +96,48 @@ export const mcpServerRepository = {
 	// ========================================================================
 
 	/**
+	 * List all enabled MCP servers that were connected (or connecting) at last shutdown.
+	 * Used by MCPConnectionManager.initialize() to reconnect servers on startup.
+	 *
+	 * Paginated to handle large deployments gracefully.
+	 * Returns servers ordered by org_id, sort_order for deterministic reconnect order.
+	 *
+	 * @param options.limit  Max rows per page (default 100, max 500)
+	 * @param options.offset Row offset for pagination (default 0)
+	 */
+	async listAllConnected(options?: {
+		limit?: number;
+		offset?: number;
+	}): Promise<Omit<McpServer, 'credentials'>[]> {
+		const limit = Math.min(options?.limit ?? 100, 500);
+		const offset = options?.offset ?? 0;
+
+		const rows = await withConnection(async (conn) => {
+			const result = await conn.execute<McpServerRow>(
+				`SELECT
+					s.*,
+					COALESCE(COUNT(t.id), 0) as TOOL_COUNT
+				 FROM mcp_servers s
+				 LEFT JOIN mcp_tool_cache t ON t.server_id = s.id
+				 WHERE s.status IN ('connected', 'connecting')
+				   AND s.enabled = 1
+				 GROUP BY s.id, s.org_id, s.server_name, s.display_name, s.description,
+				          s.server_type, s.transport_type, s.catalog_item_id, s.config,
+				          s.docker_image, s.docker_container_id, s.docker_status,
+				          s.status, s.enabled, s.last_connected_at, s.last_error,
+				          s.health_status, s.tags, s.sort_order, s.created_at, s.updated_at
+				 ORDER BY s.org_id, s.sort_order, s.display_name
+				 OFFSET :offset ROWS FETCH NEXT :limit ROWS ONLY`,
+				{ offset, limit },
+				{ outFormat: conn.OBJECT }
+			);
+			return result.rows ?? [];
+		});
+
+		return rows.map((row) => serverRowToServer(row));
+	},
+
+	/**
 	 * List all MCP servers for an organization — NO decrypted credentials.
 	 * Includes tool_count via LEFT JOIN to mcp_tool_cache.
 	 */
