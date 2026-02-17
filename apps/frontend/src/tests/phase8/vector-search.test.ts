@@ -44,7 +44,6 @@ vi.stubEnv('OCI_REGION', 'eu-frankfurt-1');
 import {
 	generateEmbedding,
 	generateEmbeddings,
-	resetGenAiClient,
 	__setGenAiClientForTesting
 } from '@portal/server/embeddings';
 import { embeddingRepository } from '@portal/server/oracle/repositories/embedding-repository';
