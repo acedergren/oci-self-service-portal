@@ -8,7 +8,7 @@
 
 ## Fastify 5 — Auth Hook Ordering
 
-- **Plugin registration order is load-bearing**: error-handler → request-logger → helmet → CORS → rate-limit → cookie → oracle → session → RBAC. See `apps/api/src/app.ts:68-129`.
+- **Plugin registration order is load-bearing**: error-handler → helmet → CORS → rate-limit → cookie → sensible → oracle → auth → rbac → mastra → swagger → routes. See `apps/api/src/app.ts:148-308`.
 - **`fp()` declares dependencies**: Plugins providing shared decorators must use `fastify-plugin` with `dependencies` array.
 - **Deny-by-default auth gate**: `onRequest` hook rejects unauthenticated requests not in `PUBLIC_ROUTES`. Forgetting an endpoint = 401s.
 
@@ -24,6 +24,24 @@
 - **`PUBLIC_ROUTES` set**: All unauthenticated endpoints must be listed in the deny-by-default auth gate.
 - **Type provider**: Route modules use `fastify.withTypeProvider<ZodTypeProvider>()` for Zod schema validation.
 - **`withConnection()` decorator**: Check `fastify.hasDecorator("withConnection")` before using.
+- **Zod type provider requirement**: Routes with Zod schemas require `app.setValidatorCompiler(validatorCompiler)` and `app.setSerializerCompiler(serializerCompiler)` in test `buildApp()`
+- **Reference-type decorators**: Arrays on `request` must use `{ getter, setter }` with a Symbol key (Fastify 5 restriction):
+
+```typescript
+const PERMS_KEY = Symbol('permissions');
+fastify.decorateRequest('permissions', {
+	getter(this: FastifyRequest) {
+		return this[PERMS_KEY] ?? [];
+	},
+	setter(this: FastifyRequest, v: string[]) {
+		this[PERMS_KEY] = v;
+	}
+});
+```
+
+- **`decorateRequest` semantics changed in Fastify 5**: Use function form, not `null`. Deny-by-default auth hooks run before test injection hooks — use `testUser` option or register test hooks before auth.
+- **Decorator collisions across tests**: Require proper teardown with `await fastify.close()` in `afterEach`.
+- **Always check Fastify 5 migration notes** before assuming Fastify 4 patterns work.
 
 ## Vitest 4
 
@@ -33,6 +51,32 @@
 - **`import.meta.dirname`**: Use instead of `process.cwd()` for paths relative to the test file in a monorepo.
 - **Mock hoisting order**: `vi.mock()` hoisted in declaration order. If mock A depends on mock B, declare B first.
 - **`vi.hoisted()` for shared state**: `const { mockFn } = vi.hoisted(() => ({ mockFn: vi.fn() }))`.
+- **`mockReset: true` gotcha**: Global `mockReset: true` clears mock return values between tests. Every test file using `vi.mock()` **must** re-configure mocks in `beforeEach`:
+
+```typescript
+// Top-level: define the mock fn
+const mockFn = vi.fn();
+vi.mock('module', () => ({ fn: (...args) => mockFn(...args) }));
+
+// In beforeEach: re-configure after reset clears it
+beforeEach(() => {
+	mockFn.mockResolvedValue({ data: 'test' });
+});
+```
+
+## Testing
+
+- **Always run the full test suite** (`vitest run`, not just new tests) after writing tests to catch regressions from mock interference, decorator collisions, or hook ordering issues.
+- **Use `vitest run`** (not `vitest` watch mode) in CI contexts and quality gate pipelines.
+- **Question the tests first**: When tests fail after a refactor, evaluate whether the tests are wrong before changing the code.
+
+## SvelteKit / Build
+
+- **Non-HTTP exports in +server.ts**: Must prefix with `_` (e.g., `_MODEL_ALLOWLIST`) or build fails
+- **Server/client boundary**: +page.svelte cannot import from `$lib/server/`; use +page.server.ts `load()`
+- **BETTER_AUTH_SECRET**: Required at build time; SvelteKit runs builds with NODE_ENV=production
+- **npm 403 vs pnpm**: `npm` CLI hits 403 with expired `~/.npmrc` auth; `pnpm` resolves fine
+- **`$state.raw()` for Svelte Flow**: Use for @xyflow/svelte nodes/edges (xyflow mutates directly)
 
 ## RAG Pipeline (OCI GenAI + Oracle 26AI)
 

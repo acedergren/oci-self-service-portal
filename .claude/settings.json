@@ -69,9 +69,21 @@
 					},
 					{
 						"type": "command",
+						"command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/post-edit-typecheck.sh",
+						"timeout": 30,
+						"statusMessage": "Type-checking workspace"
+					},
+					{
+						"type": "command",
 						"command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-related-tests.sh",
 						"timeout": 60,
 						"statusMessage": "Running related tests"
+					},
+					{
+						"type": "command",
+						"command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check-circular-deps.sh",
+						"timeout": 15,
+						"statusMessage": "Checking for circular dependencies"
 					}
 				]
 			}

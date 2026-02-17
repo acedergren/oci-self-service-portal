@@ -8,18 +8,18 @@
 
 Phases 9.1–9.14 built the Fastify 5 backend with full parity on core APIs (health, sessions, chat, activity, tools, workflows, search, MCP). Docker deployment, CI/CD, and OpenAPI/Swagger are also done.
 
-**What's missing**: The plumbing to actually *use* Fastify in production — the feature-flag proxy that lets SvelteKit forward requests to Fastify, integration tests proving it works, and operator documentation for cutover.
+**What's missing**: The plumbing to actually _use_ Fastify in production — the feature-flag proxy that lets SvelteKit forward requests to Fastify, integration tests proving it works, and operator documentation for cutover.
 
 ## Sub-Phase Summary
 
-| Phase | Title | Depends On | Assignee |
-|-------|-------|------------|----------|
-| 9.15 | Feature Flag Module | — | proxy-engineer |
-| 9.16 | Proxy Middleware in hooks.server.ts | 9.15 | proxy-engineer |
-| 9.17 | Proxy Integration Tests | 9.16 | test-engineer |
-| 9.18 | Fastify OpenAPI JSON Route | — | openapi-engineer |
-| 9.19 | Legacy Route Deprecation Headers | 9.16 | proxy-engineer |
-| 9.20 | Cutover Documentation | 9.17, 9.18, 9.19 | team-lead |
+| Phase | Title                               | Depends On       | Assignee         |
+| ----- | ----------------------------------- | ---------------- | ---------------- |
+| 9.15  | Feature Flag Module                 | —                | proxy-engineer   |
+| 9.16  | Proxy Middleware in hooks.server.ts | 9.15             | proxy-engineer   |
+| 9.17  | Proxy Integration Tests             | 9.16             | test-engineer    |
+| 9.18  | Fastify OpenAPI JSON Route          | —                | openapi-engineer |
+| 9.19  | Legacy Route Deprecation Headers    | 9.16             | proxy-engineer   |
+| 9.20  | Cutover Documentation               | 9.17, 9.18, 9.19 | team-lead        |
 
 ---
 
@@ -33,7 +33,7 @@ Create the module that the existing test file (`apps/frontend/src/tests/phase9/f
 
 ```typescript
 // Environment-driven configuration
-export const FASTIFY_URL: string;        // default: 'http://localhost:3001'
+export const FASTIFY_URL: string; // default: 'http://localhost:3001'
 export const FASTIFY_PROXY_ROUTES: string[]; // parsed from comma-separated env var
 
 // Route matching
@@ -76,11 +76,16 @@ import { shouldProxyToFastify, proxyToFastify } from '$lib/server/feature-flags.
 // Inside handle():
 // After requestId assignment, before ensureDatabase()
 if (shouldProxyToFastify(url.pathname)) {
-    const proxyResponse = await proxyToFastify(event.request, url.pathname);
-    proxyResponse.headers.set(REQUEST_ID_HEADER, requestId);
-    logRequest(event.request.method, url.pathname, proxyResponse.status,
-               performance.now() - startTime, requestId);
-    return proxyResponse;
+	const proxyResponse = await proxyToFastify(event.request, url.pathname);
+	proxyResponse.headers.set(REQUEST_ID_HEADER, requestId);
+	logRequest(
+		event.request.method,
+		url.pathname,
+		proxyResponse.status,
+		performance.now() - startTime,
+		requestId
+	);
+	return proxyResponse;
 }
 ```
 
@@ -133,13 +138,17 @@ Add a `/api/v1/openapi.json` route to Fastify that serves the auto-generated Ope
 
 ```typescript
 const openApiRoute: FastifyPluginAsync = async (fastify) => {
-    fastify.get('/api/v1/openapi.json', {
-        schema: { hide: true }, // Don't include this route in the spec itself
-    }, async (request, reply) => {
-        const spec = fastify.swagger();
-        reply.header('Cache-Control', 'public, max-age=3600');
-        return spec;
-    });
+	fastify.get(
+		'/api/v1/openapi.json',
+		{
+			schema: { hide: true } // Don't include this route in the spec itself
+		},
+		async (request, reply) => {
+			const spec = fastify.swagger();
+			reply.header('Cache-Control', 'public, max-age=3600');
+			return spec;
+		}
+	);
 };
 ```
 
@@ -158,11 +167,11 @@ Add `Sunset` and `Deprecation` headers to SvelteKit's non-versioned workflow rou
 
 ### Affected Routes
 
-| Legacy Route | v1 Equivalent |
-|---|---|
-| `GET /api/workflows` | `GET /api/v1/workflows` |
-| `POST /api/workflows` | `POST /api/v1/workflows` |
-| `GET /api/workflows/:id` | `GET /api/v1/workflows/:id` |
+| Legacy Route                  | v1 Equivalent                    |
+| ----------------------------- | -------------------------------- |
+| `GET /api/workflows`          | `GET /api/v1/workflows`          |
+| `POST /api/workflows`         | `POST /api/v1/workflows`         |
+| `GET /api/workflows/:id`      | `GET /api/v1/workflows/:id`      |
 | `POST /api/workflows/:id/run` | `POST /api/v1/workflows/:id/run` |
 
 ### Headers Added
@@ -178,10 +187,14 @@ Link: </api/v1/workflows>; rel="successor-version"
 Create a shared helper in `apps/frontend/src/lib/server/deprecation.ts`:
 
 ```typescript
-export function addDeprecationHeaders(headers: Headers, successorPath: string, sunsetDate?: string): void {
-    headers.set('Deprecation', 'true');
-    headers.set('Sunset', sunsetDate ?? 'Sat, 30 May 2026 00:00:00 GMT');
-    headers.set('Link', `<${successorPath}>; rel="successor-version"`);
+export function addDeprecationHeaders(
+	headers: Headers,
+	successorPath: string,
+	sunsetDate?: string
+): void {
+	headers.set('Deprecation', 'true');
+	headers.set('Sunset', sunsetDate ?? 'Sat, 30 May 2026 00:00:00 GMT');
+	headers.set('Link', `<${successorPath}>; rel="successor-version"`);
 }
 ```
 

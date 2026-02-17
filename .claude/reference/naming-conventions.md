@@ -57,24 +57,25 @@
 
 ```typescript
 // 1. Node built-ins / external packages
-import { execFile } from "child_process";
-import { z } from "zod";
+import { execFile } from 'child_process';
+import { z } from 'zod';
 
 // 2. Framework imports
-import { json } from "@sveltejs/kit";
-import type { FastifyPluginAsync } from "fastify";
+import { json } from '@sveltejs/kit';
+import type { FastifyPluginAsync } from 'fastify';
 
 // 3. Local $lib / package imports
-import { OCIError } from "$lib/server/errors.js";
-import { createLogger } from "$lib/server/logger.js";
+import { OCIError } from '$lib/server/errors.js';
+import { createLogger } from '$lib/server/logger.js';
+import type { SessionUser } from '@portal/shared';
 
 // 4. Relative imports
-import { errorResponse } from "../errors.js";
+import { errorResponse } from '../errors.js';
 ```
 
 - Always use `.js` extensions in import paths (ESM requirement)
 - Use `type` keyword for type-only imports: `import type { SessionUser } from './session.js'`
-- Verify import paths against actual package exports before using them
+- Verify import paths against actual package exports before using them — check the package's `index.ts` or `exports` field in `package.json`. Common mistakes: importing from subpaths that don't exist (e.g., `@mastra/core/storage` vs `@mastra/core/memory`), missing shared package re-exports, assuming types are co-located with runtime code
 - Prefer dynamic imports for optional dependencies (e.g., `@ai-sdk/azure`)
 
 ## Git Commit Format
@@ -91,6 +92,6 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 ## Environment Variables
 
 - Always `UPPER_SNAKE_CASE`: `ORACLE_CONNECT_STRING`, `BETTER_AUTH_SECRET`, `CORS_ORIGIN`
-- Validate with Zod at startup via `loadConfig()` in `apps/api/src/config.ts`
+- Validate at plugin registration level (no centralized config file — env vars read via `process.env` in each plugin)
 - **Never store secrets in `.env` files** — use OCI Vault via `/manage-secrets`
 - `.env` files are for non-sensitive config only (region, endpoints, feature flags)
