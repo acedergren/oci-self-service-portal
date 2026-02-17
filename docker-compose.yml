@@ -1,14 +1,16 @@
-# OCI AI Chat - Docker Compose Configuration
-# SvelteKit application with OCI GenAI integration
+# =============================================================================
+# DEPRECATED FOR LOCAL DEVELOPMENT
+# =============================================================================
+# This docker-compose.yml references a stale Dockerfile path (oci-ai-chat/Dockerfile)
+# and only builds the SvelteKit frontend — the Fastify API is not included.
+# It will not work from a clean clone.
 #
-# Usage:
-#   cp .env.example .env   # then fill in values
-#   docker compose up -d
-#   docker compose logs -f oci-ai-chat
+# For local development, run the two services natively:
+#   pnpm dev:api   # Fastify API on PORT=3001
+#   pnpm dev       # SvelteKit frontend on port 5173
 #
-# Build context is the monorepo root (..) because workspace
-# packages (agent-state, mcp-client, oci-genai-provider, oci-genai-query)
-# are sibling directories resolved during the build.
+# See README.md for full prerequisites and setup steps.
+# =============================================================================
 
 services:
   oci-ai-chat:

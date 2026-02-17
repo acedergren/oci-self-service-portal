@@ -23,6 +23,11 @@ fi
 BASENAME=$(basename "$FILE_PATH")
 
 # Block patterns: .env files, private keys, wallets, credential files
+# Allow template/example files — they contain no real secrets
+if echo "$BASENAME" | grep -qiE '\.(example|sample|template)$'; then
+  exit 0
+fi
+
 if echo "$BASENAME" | grep -qiE '^\.env(\.|$)'; then
   echo "BLOCKED: Refusing to edit .env file: $BASENAME" >&2
   echo "Store secrets in OCI Vault, not in dotenv files." >&2

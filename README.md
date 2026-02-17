@@ -15,8 +15,8 @@ Production-ready enterprise platform for OCI resource management with AI chat, w
 
 ## Prerequisites
 
-- Node.js 18+
-- pnpm 8+
+- Node.js 22+
+- pnpm 10+
 - OCI CLI configured (`~/.oci/config`)
 
 ## Quick Start
