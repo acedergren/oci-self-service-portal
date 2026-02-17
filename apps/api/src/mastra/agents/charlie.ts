@@ -18,7 +18,12 @@ import {
 	createToxicityScorer
 } from '@mastra/evals/scorers/prebuilt';
 import { buildMastraTools } from '../tools/registry.js';
-import { promptInjectionDetector, piiDetector, createTokenLimiter } from './guardrails.js';
+import {
+	promptInjectionDetector,
+	piiDetector,
+	createTokenLimiter,
+	createOutputTokenLimiter
+} from './guardrails.js';
 
 // ── System Prompt ─────────────────────────────────────────────────────────
 
@@ -291,6 +296,6 @@ export function createCharlieAgent(config: CharlieConfig): Agent {
 		memory: config.memory,
 		scorers,
 		inputProcessors: [promptInjectionDetector, createTokenLimiter()],
-		outputProcessors: [piiDetector]
+		outputProcessors: [piiDetector, createOutputTokenLimiter()]
 	});
 }

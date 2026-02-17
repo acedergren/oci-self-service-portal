@@ -14,6 +14,7 @@ import type {
 } from '@mastra/core/processors';
 import type { MastraDBMessage } from '@mastra/core/agent';
 import { createLogger } from '@portal/server/logger';
+import { truncateToTokenBudget, DEFAULT_MAX_OUTPUT_TOKENS } from '../processors/token-limiter.js';
 
 const log = createLogger('guardrails');
 
@@ -172,6 +173,51 @@ export function createTokenLimiter(
 			}
 
 			return messages;
+		}
+	};
+}
+
+// ============================================================================
+// Output Token Limiter
+// ============================================================================
+
+/**
+ * Factory for an OutputProcessor that caps agent response length.
+ *
+ * Delegates to `truncateToTokenBudget()` from the standalone token-limiter
+ * module, operating on the last assistant message in the output.
+ *
+ * Default cap: 4,000 tokens (~16,000 chars) as per E-3.03.
+ */
+export function createOutputTokenLimiter(
+	maxTokens: number = DEFAULT_MAX_OUTPUT_TOKENS
+): OutputProcessor {
+	return {
+		id: 'output-token-limiter',
+		name: 'Output Token Limiter',
+		description: `Caps agent output to ~${maxTokens} tokens`,
+
+		async processOutputResult({ messages }: ProcessOutputResultArgs) {
+			return messages.map((msg) => {
+				if (msg.role !== 'assistant') return msg;
+
+				const content = extractTextContent(msg);
+				if (!content) return msg;
+
+				const { text, wasTruncated } = truncateToTokenBudget(content, maxTokens);
+				if (!wasTruncated) return msg;
+
+				log.warn({ maxTokens }, 'Output token limit exceeded — truncating response');
+				return {
+					...msg,
+					content: {
+						...msg.content,
+						parts: msg.content.parts.map((part) =>
+							'type' in part && part.type === 'text' ? { ...part, text } : part
+						)
+					}
+				} as MastraDBMessage;
+			});
 		}
 	};
 }
