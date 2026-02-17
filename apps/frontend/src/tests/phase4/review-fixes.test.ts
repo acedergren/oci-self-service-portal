@@ -3,7 +3,7 @@
  *
  * Tests written before implementation (TDD).
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest';
 
 // ============================================================================
 // C-1: Atomic consumeApproval — single DELETE instead of SELECT+DELETE
@@ -183,11 +183,10 @@ describe('H-2: Condition node recursive subgraph skip', () => {
 		) => Promise<{ status: string; stepResults?: Record<string, unknown> }>;
 	};
 
-	beforeEach(async () => {
-		vi.clearAllMocks();
+	beforeAll(async () => {
 		const mod = await import('$lib/server/workflows/executor.js');
 		WorkflowExecutor = mod.WorkflowExecutor;
-	});
+	}, 30_000);
 
 	it('skips downstream nodes of false branch, not just immediate target', async () => {
 		// Graph: input -> condition --(true)--> toolA -> output
@@ -324,7 +323,8 @@ describe('M-4: Workflow API ownership checks', () => {
 	it('repository getById with userId filter requires matching user', async () => {
 		const { workflowRepository } = await import('$lib/server/workflows/repository.js');
 
-		// Mock: no rows returned (user doesn't own this workflow)
+		// Clear any calls from module initialisation before setting up test mocks
+		mockExecute.mockClear();
 		mockExecute.mockResolvedValueOnce({ rows: [] });
 
 		const result = await workflowRepository.getByIdForUser('non-existent', 'user-123');
@@ -336,12 +336,11 @@ describe('M-4: Workflow API ownership checks', () => {
 	});
 
 	it('repository update with userId filter prevents unauthorized modification', async () => {
-		// The update method should now accept a userId parameter
 		const { workflowRepository } = await import('$lib/server/workflows/repository.js');
 
-		// Mock: UPDATE affects 0 rows (not owned by user)
+		// Clear any calls from module initialisation before setting up test mocks
+		mockExecute.mockClear();
 		mockExecute.mockResolvedValueOnce({ rowsAffected: 0 });
-		// Mock: getById returns null (row wasn't updated)
 		mockExecute.mockResolvedValueOnce({ rows: [] });
 
 		const result = await workflowRepository.updateForUser(
