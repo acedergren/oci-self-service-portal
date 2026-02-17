@@ -478,7 +478,9 @@ describe('SDK-migrated tools', () => {
 			const listADBTool = databaseTools.find((t) => t.name === 'listAutonomousDatabases');
 			expect(listADBTool).toBeDefined();
 
-			mockExecuteAndSlim.mockResolvedValue({ data: [{ 'display-name': 'mydb', id: 'ocid1.adb.1' }] });
+			mockExecuteAndSlim.mockResolvedValue({
+				data: [{ 'display-name': 'mydb', id: 'ocid1.adb.1' }]
+			});
 
 			await listADBTool!.executeAsync({ compartmentId: 'test-compartment' });
 
@@ -668,5 +670,4 @@ describe('SDK-migrated tools', () => {
 			expect(result).toEqual({ data: { namespaceName: 'mytenancy' } });
 		});
 	});
-
 });

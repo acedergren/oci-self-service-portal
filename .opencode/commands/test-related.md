@@ -9,8 +9,8 @@ Given a source file path, try to find and run a related `*.test.ts` file.
 
 Heuristics:
 
-1) If `foo.ts` has a colocated `foo.test.ts`, run it.
-2) Otherwise search the repo for `foo.test.ts` and run the first match.
+1. If `foo.ts` has a colocated `foo.test.ts`, run it.
+2. Otherwise search the repo for `foo.test.ts` and run the first match.
 
 Usage examples:
 
