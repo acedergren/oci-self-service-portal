@@ -23,6 +23,7 @@
 		"@portal/server": "0.0.1",
 		"@portal/shared": "0.1.0",
 		"@portal/types": "0.0.1",
+		"@portal/ui": "0.0.1",
 		"@sentry/sveltekit": "10.39.0",
 		"@tanstack/svelte-query": "^6.0.18",
 		"@tanstack/table-core": "^8.21.3",
