@@ -96,16 +96,16 @@
 	});
 
 	// Mock cost trend data (7 days) until OCI Usage API is integrated
-	const costTrendData = $derived(
-		Array.from({ length: 7 }, (_, i) => {
-			const d = new Date();
-			d.setDate(d.getDate() - (6 - i));
-			return {
-				date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-				cost: Math.round(20 + Math.random() * 30 + i * 3)
-			};
-		})
-	);
+	// Computed once at load — not reactive (no live data source yet)
+	const costTrendData = Array.from({ length: 7 }, (_, i) => {
+		const now = Date.now();
+		const dayMs = 86_400_000;
+		const ts = now - (6 - i) * dayMs;
+		return {
+			date: new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(ts),
+			cost: Math.round(20 + Math.random() * 30 + i * 3)
+		};
+	});
 
 	// ── Helpers ───────────────────────────────────────────────────────────
 
@@ -315,7 +315,15 @@
 							>
 								<Svg>
 									<Pie innerRadius={60} outerRadius={90} padAngle={0.02}>
-										{#snippet children({ arcs }: { arcs: any[] })}
+										{#snippet children({
+											arcs
+										}: {
+											arcs: Array<{
+												data: { status: string; count: number; color: string };
+												startAngle: number;
+												endAngle: number;
+											}>;
+										})}
 											{#each arcs as arc (arc.data.status)}
 												<Arc
 													{arc}
