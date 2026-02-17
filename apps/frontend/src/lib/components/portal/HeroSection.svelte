@@ -1,6 +1,6 @@
 <script lang="ts">
 	import SearchBox from '$lib/components/ui/SearchBox.svelte';
-	import LoadingSpinner from '$lib/components/ui/LoadingSpinner.svelte';
+	import { LoadingSpinner } from '@portal/ui';
 	import type { HeroSectionProps } from './types.js';
 
 	let { userName, quickActions, loadingAction, onSearch, onQuickAction }: HeroSectionProps =

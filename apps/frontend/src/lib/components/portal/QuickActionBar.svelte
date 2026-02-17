@@ -1,5 +1,5 @@
 <script lang="ts">
-	import LoadingSpinner from '$lib/components/ui/LoadingSpinner.svelte';
+	import { LoadingSpinner } from '@portal/ui';
 	import type { QuickActionBarProps } from './types.js';
 
 	let { actions, loadingAction, onAction }: QuickActionBarProps = $props();

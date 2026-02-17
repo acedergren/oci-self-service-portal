@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { McpCatalogItem } from '@portal/server/admin/mcp-types';
-	import Badge from '$lib/components/ui/Badge.svelte';
+	import { Badge } from '@portal/ui';
 
 	interface Props {
 		item: McpCatalogItem;

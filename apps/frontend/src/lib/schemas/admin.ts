@@ -79,3 +79,19 @@ export const mcpServerFormSchema = z.object({
 });
 
 export type McpServerFormData = z.infer<typeof mcpServerFormSchema>;
+
+// Setup wizard — Identity Provider step schema
+// Distinct from idpFormSchema: uses tenantUrl (discovery endpoint) instead of
+// separate issuerUrl/authorizationUrl/tokenUrl fields (simpler first-time setup UX)
+export const setupIdpSchema = z.object({
+	type: z.enum(['idcs', 'oidc']).default('idcs'),
+	tenantUrl: z.string().url('Must be a valid URL').min(1, 'Tenant URL is required'),
+	clientId: z.string().min(1, 'Client ID is required'),
+	clientSecret: z.string().min(1, 'Client Secret is required'),
+	scopes: z.string().default('openid profile email urn:opc:idm:__myscopes__'),
+	pkce: z.boolean().default(true),
+	adminGroups: z.string().optional().default(''),
+	operatorGroups: z.string().optional().default('')
+});
+
+export type SetupIdpFormData = z.infer<typeof setupIdpSchema>;

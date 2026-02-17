@@ -1,5 +1,5 @@
 <script lang="ts">
-	import LoadingSpinner from './LoadingSpinner.svelte';
+	import { LoadingSpinner } from '@portal/ui';
 
 	interface Props {
 		onSubmit?: (query: string) => void;

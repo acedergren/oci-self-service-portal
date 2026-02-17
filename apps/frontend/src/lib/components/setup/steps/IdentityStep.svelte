@@ -1,48 +1,39 @@
 <script lang="ts">
+	import { superForm, defaults } from 'sveltekit-superforms';
+	import { zod4, zod4Client } from 'sveltekit-superforms/adapters';
 	import { toast } from 'svelte-sonner';
 	import SecretInput from '../shared/SecretInput.svelte';
 	import TestConnectionButton from '../shared/TestConnectionButton.svelte';
-
-	interface IDPConfig {
-		type: 'idcs' | 'oidc';
-		tenantUrl: string;
-		clientId: string;
-		clientSecret: string;
-		scopes: string;
-		pkce: boolean;
-		adminGroups: string;
-		operatorGroups: string;
-	}
+	import { setupIdpSchema, type SetupIdpFormData } from '$lib/schemas/admin.js';
 
 	interface IdentityStepProps {
-		data: IDPConfig | null;
+		data: SetupIdpFormData | null;
 		onNext: () => void;
 	}
 
 	let { data = $bindable(null), onNext }: IdentityStepProps = $props();
 
-	// Initialize with defaults
-	if (!data) {
-		data = {
-			type: 'idcs',
-			tenantUrl: '',
-			clientId: '',
-			clientSecret: '',
-			scopes: 'openid profile email urn:opc:idm:__myscopes__',
-			pkce: true,
-			adminGroups: '',
-			operatorGroups: ''
-		};
-	}
+	const formDefaults = defaults(zod4(setupIdpSchema));
 
-	let saving = $state(false);
+	const { form, errors, submitting, validateForm } = superForm(
+		data ? { ...formDefaults, data: { ...formDefaults.data, ...data } } : formDefaults,
+		{
+			SPA: true,
+			validators: zod4Client(setupIdpSchema),
+			onUpdate({ form: f }) {
+				if (!f.valid) return;
+				data = f.data;
+				onNext();
+			}
+		}
+	);
 
 	async function testConnection() {
 		try {
 			const response = await fetch('/api/setup/idp/test', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(data)
+				body: JSON.stringify($form)
 			});
 
 			const result = await response.json();
@@ -62,19 +53,18 @@
 
 	async function handleSave(e: SubmitEvent) {
 		e.preventDefault();
-		// Validate required fields
-		if (!data || !data.tenantUrl || !data.clientId || !data.clientSecret) {
+
+		const result = await validateForm({ update: true });
+		if (!result.valid) {
 			toast.error('Please fill in all required fields');
 			return;
 		}
-
-		saving = true;
 
 		try {
 			const response = await fetch('/api/setup/idp', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify(data)
+				body: JSON.stringify($form)
 			});
 
 			if (!response.ok) {
@@ -83,11 +73,10 @@
 			}
 
 			toast.success('Identity provider configured successfully');
+			data = $form;
 			onNext();
 		} catch (error) {
 			toast.error(error instanceof Error ? error.message : 'Failed to save configuration');
-		} finally {
-			saving = false;
 		}
 	}
 </script>
@@ -103,8 +92,8 @@
 		<button
 			type="button"
 			class="provider-card"
-			class:selected={data?.type === 'idcs'}
-			onclick={() => data && (data.type = 'idcs')}
+			class:selected={$form.type === 'idcs'}
+			onclick={() => ($form.type = 'idcs')}
 		>
 			<div class="card-header">
 				<h3>OCI Identity Domains</h3>
@@ -116,8 +105,8 @@
 		<button
 			type="button"
 			class="provider-card"
-			class:selected={data?.type === 'oidc'}
-			onclick={() => data && (data.type = 'oidc')}
+			class:selected={$form.type === 'oidc'}
+			onclick={() => ($form.type = 'oidc')}
 		>
 			<div class="card-header">
 				<h3>Generic OIDC</h3>
@@ -130,17 +119,21 @@
 	<form class="config-form" onsubmit={handleSave}>
 		<div class="form-group">
 			<label for="tenantUrl">
-				{data?.type === 'idcs' ? 'Tenant URL' : 'Issuer URL'}
+				{$form.type === 'idcs' ? 'Tenant URL' : 'Issuer URL'}
 				<span class="required">*</span>
 			</label>
 			<input
 				type="url"
 				id="tenantUrl"
-				bind:value={data.tenantUrl}
+				name="tenantUrl"
+				bind:value={$form.tenantUrl}
 				placeholder="https://idcs-xxx.identity.oraclecloud.com"
-				required
 				class="form-input"
+				class:input-error={$errors.tenantUrl}
 			/>
+			{#if $errors.tenantUrl}
+				<p class="form-error">{$errors.tenantUrl[0]}</p>
+			{/if}
 		</div>
 
 		<div class="form-row">
@@ -152,11 +145,15 @@
 				<input
 					type="text"
 					id="clientId"
-					bind:value={data.clientId}
+					name="clientId"
+					bind:value={$form.clientId}
 					placeholder="client-id-here"
-					required
 					class="form-input"
+					class:input-error={$errors.clientId}
 				/>
+				{#if $errors.clientId}
+					<p class="form-error">{$errors.clientId[0]}</p>
+				{/if}
 			</div>
 
 			<div class="form-group">
@@ -165,12 +162,14 @@
 					<span class="required">*</span>
 				</label>
 				<SecretInput
-					bind:value={data.clientSecret}
+					bind:value={$form.clientSecret}
 					placeholder="client-secret-here"
-					required
 					name="clientSecret"
-					onInput={(val) => data && (data.clientSecret = val)}
+					onInput={(val) => ($form.clientSecret = val)}
 				/>
+				{#if $errors.clientSecret}
+					<p class="form-error">{$errors.clientSecret[0]}</p>
+				{/if}
 			</div>
 		</div>
 
@@ -179,7 +178,8 @@
 			<input
 				type="text"
 				id="scopes"
-				bind:value={data.scopes}
+				name="scopes"
+				bind:value={$form.scopes}
 				placeholder="openid profile email"
 				class="form-input"
 			/>
@@ -188,13 +188,13 @@
 
 		<div class="form-group">
 			<label class="checkbox-label">
-				<input type="checkbox" bind:checked={data.pkce} />
+				<input type="checkbox" name="pkce" bind:checked={$form.pkce} />
 				<span>Enable PKCE (Proof Key for Code Exchange)</span>
 			</label>
 			<p class="form-hint">Recommended for enhanced security</p>
 		</div>
 
-		{#if data?.type === 'idcs'}
+		{#if $form.type === 'idcs'}
 			<div class="form-divider"></div>
 
 			<h3 class="section-title">Group Mapping</h3>
@@ -208,7 +208,8 @@
 				<input
 					type="text"
 					id="adminGroups"
-					bind:value={data.adminGroups}
+					name="adminGroups"
+					bind:value={$form.adminGroups}
 					placeholder="portal-admins, cloud-admins"
 					class="form-input"
 				/>
@@ -220,7 +221,8 @@
 				<input
 					type="text"
 					id="operatorGroups"
-					bind:value={data.operatorGroups}
+					name="operatorGroups"
+					bind:value={$form.operatorGroups}
 					placeholder="portal-operators, cloud-ops"
 					class="form-input"
 				/>
@@ -229,10 +231,10 @@
 		{/if}
 
 		<div class="form-actions">
-			<TestConnectionButton onTest={testConnection} disabled={saving} />
+			<TestConnectionButton onTest={testConnection} disabled={$submitting} />
 
-			<button type="submit" class="btn btn-primary" disabled={saving}>
-				{#if saving}
+			<button type="submit" class="btn btn-primary" disabled={$submitting}>
+				{#if $submitting}
 					<svg class="spinner" viewBox="0 0 24 24">
 						<circle class="spinner-circle" cx="12" cy="12" r="10" />
 					</svg>
@@ -363,10 +365,20 @@
 		color: var(--fg-tertiary);
 	}
 
+	.form-input.input-error {
+		border-color: var(--semantic-error);
+	}
+
 	.form-hint {
 		margin-top: var(--space-xs);
 		font-size: var(--text-xs);
 		color: var(--fg-tertiary);
+	}
+
+	.form-error {
+		margin-top: var(--space-xs);
+		font-size: var(--text-xs);
+		color: var(--semantic-error);
 	}
 
 	.checkbox-label {
