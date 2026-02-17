@@ -97,7 +97,7 @@ function addSecurityHeaders(response: Response, nonce?: string): Response {
 
 	headers.set('Content-Security-Policy', getCSPHeader(nonce));
 	headers.set('X-Content-Type-Options', 'nosniff');
-	headers.set('X-Frame-Options', 'DENY');
+	headers.set('X-Frame-Options', 'DENY'); // nosemgrep: x-frame-options-misconfiguration — hardcoded DENY, not user-controlled
 	headers.set('X-XSS-Protection', '0');
 	headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 	headers.set(

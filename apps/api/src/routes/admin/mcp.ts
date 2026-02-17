@@ -317,7 +317,7 @@ export async function mcpAdminRoutes(app: FastifyInstance): Promise<void> {
 				const updated = await mcpServerRepository.update(id, input);
 
 				log.info({ serverId: id }, 'Updated MCP server');
-				return reply.send(updated);
+				return reply.send(updated); // nosemgrep: direct-response-write — Fastify JSON serialization, not DOM HTML
 			} catch (err) {
 				log.error(
 					{ err, serverId: (request.params as { id: string }).id },
