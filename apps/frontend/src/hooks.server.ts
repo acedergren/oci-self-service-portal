@@ -1,55 +1,15 @@
-import type { Handle, RequestEvent } from '@sveltejs/kit';
+import type { Handle } from '@sveltejs/kit';
 import { dev } from '$app/environment';
 import crypto from 'crypto';
 import { createLogger } from '@portal/server/logger';
 import { initPool, closePool } from '@portal/server/oracle/connection';
 import { runMigrations } from '@portal/server/oracle/migrations';
 import { webhookRepository } from '@portal/server/oracle/repositories/webhook-repository';
-import { checkRateLimit, RATE_LIMIT_CONFIG } from '@portal/server/rate-limiter';
 import { generateRequestId, REQUEST_ID_HEADER } from '@portal/server/tracing';
-import { RateLimitError, errorResponse } from '@portal/server/errors';
 import { httpRequestDuration } from '@portal/server/metrics';
 import { initSentry, captureError, closeSentry } from '@portal/server/sentry';
 
 const log = createLogger('hooks');
-
-// ── CORS for /api/v1/* (external REST API) ──────────────────────────────────
-// Supports cross-origin browser clients using API key auth.
-// Set ALLOWED_ORIGINS to a comma-separated list of origins, or '*' for public.
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ?? (dev ? '*' : ''))
-	.split(',')
-	.filter(Boolean);
-const V1_API_PREFIX = '/api/v1/';
-const CORS_MAX_AGE = '86400'; // 24 h preflight cache
-const CORS_ALLOWED_METHODS = 'GET, POST, PUT, DELETE, OPTIONS';
-const CORS_ALLOWED_HEADERS = 'Authorization, X-API-Key, Content-Type, X-Request-Id';
-
-function getCorsOrigin(requestOrigin: string | null): string | null {
-	if (!requestOrigin || ALLOWED_ORIGINS.length === 0) return null;
-	if (ALLOWED_ORIGINS.includes('*')) return '*';
-	return ALLOWED_ORIGINS.includes(requestOrigin) ? requestOrigin : null;
-}
-
-function addCorsHeaders(headers: Headers, allowedOrigin: string): void {
-	headers.set('Access-Control-Allow-Origin', allowedOrigin);
-	headers.set('Access-Control-Allow-Methods', CORS_ALLOWED_METHODS);
-	headers.set('Access-Control-Allow-Headers', CORS_ALLOWED_HEADERS);
-	headers.set('Access-Control-Max-Age', CORS_MAX_AGE);
-	if (allowedOrigin !== '*') {
-		headers.set('Vary', 'Origin');
-	}
-}
-
-/**
- * Add CORS headers to a response if the request targets /api/v1/ and the origin is allowed.
- */
-function withV1Cors(response: Response, event: RequestEvent): Response {
-	if (!event.url.pathname.startsWith(V1_API_PREFIX)) return response;
-	const origin = event.request.headers.get('origin');
-	const allowedOrigin = getCorsOrigin(origin);
-	if (allowedOrigin) addCorsHeaders(response.headers, allowedOrigin);
-	return response;
-}
 
 // ── Oracle Database lazy initialisation ──────────────────────────────────────
 let dbInitialized = false;
@@ -91,22 +51,8 @@ async function ensureDatabase(): Promise<boolean> {
 	return dbAvailable;
 }
 
-// Paths exempt from rate limiting (health checks, metrics scrape)
-const RATE_LIMIT_EXEMPT_PATHS = ['/api/health', '/api/healthz', '/api/metrics'];
-
 // Paths exempt from request logging (noisy health checks and Prometheus scrapes)
 const LOG_EXEMPT_PATHS = ['/api/health', '/api/healthz', '/api/metrics'];
-
-/**
- * Get client identifier from request event
- */
-function getClientId(event: RequestEvent): string {
-	try {
-		return event.getClientAddress();
-	} catch {
-		return 'unknown-client';
-	}
-}
 
 /**
  * Content Security Policy configuration.
@@ -143,7 +89,8 @@ export function getCSPHeader(nonce?: string): string {
 }
 
 /**
- * Security headers applied to all responses
+ * Security headers applied to all page responses.
+ * API responses get equivalent headers from Fastify's helmet plugin.
  */
 function addSecurityHeaders(response: Response, nonce?: string): Response {
 	const headers = new Headers(response.headers);
@@ -172,21 +119,6 @@ function addSecurityHeaders(response: Response, nonce?: string): Response {
 }
 
 /**
- * Add rate limit headers to response
- */
-function addRateLimitHeaders(
-	headers: Headers,
-	endpoint: string,
-	remaining: number,
-	resetAt: number
-): void {
-	const limit = RATE_LIMIT_CONFIG.maxRequests[endpoint] ?? RATE_LIMIT_CONFIG.maxRequests.api ?? 60;
-	headers.set('X-RateLimit-Limit', String(limit));
-	headers.set('X-RateLimit-Remaining', String(remaining));
-	headers.set('X-RateLimit-Reset', String(Math.ceil(resetAt / 1000)));
-}
-
-/**
  * Log an HTTP request with method, path, status, duration, and user context.
  * Skips noisy health-check endpoints.
  */
@@ -210,6 +142,10 @@ function logRequest(
 	);
 }
 
+// ── Note: CORS and rate limiting for /api/* are handled exclusively by Fastify ──
+// - CORS:         @fastify/cors plugin (apps/api/src/app.ts)
+// - Rate limiting: rateLimiterOraclePlugin (apps/api/src/plugins/rate-limiter-oracle.ts)
+// - Nginx routes /api/* directly to Fastify (port 3001), bypassing SvelteKit entirely.
 export const handle: Handle = async ({ event, resolve }) => {
 	const startTime = performance.now();
 
@@ -221,82 +157,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const requestId = incomingId || generateRequestId();
 	event.locals.requestId = requestId;
 
-	// Make DB status available to all routes
+	// Make DB status available to all SSR page routes
 	const isDbReady = await ensureDatabase();
 	event.locals.dbAvailable = isDbReady;
 
-	const { url } = event;
-
-	// ── CORS preflight for /api/v1/* ─────────────────────────────────────────
-	// Respond to OPTIONS before auth — browsers don't send credentials on preflight.
-	if (url.pathname.startsWith(V1_API_PREFIX) && event.request.method === 'OPTIONS') {
-		const origin = event.request.headers.get('origin');
-		const allowedOrigin = getCorsOrigin(origin);
-		if (allowedOrigin) {
-			const preflightHeaders = new Headers();
-			addCorsHeaders(preflightHeaders, allowedOrigin);
-			preflightHeaders.set(REQUEST_ID_HEADER, requestId);
-			logRequest('OPTIONS', url.pathname, 204, performance.now() - startTime, requestId);
-			return new Response(null, { status: 204, headers: preflightHeaders });
-		}
-		// No matching origin — fall through to normal handling (returns no CORS headers)
-	}
-
-	// Apply rate limiting to API routes (except exempt paths)
-	if (url.pathname.startsWith('/api/') && !RATE_LIMIT_EXEMPT_PATHS.includes(url.pathname)) {
-		const clientId = getClientId(event);
-		const endpoint = url.pathname.startsWith('/api/chat') ? 'chat' : 'api';
-		const rateLimitResult = await checkRateLimit(clientId, endpoint);
-
-		if (rateLimitResult === null) {
-			const limit =
-				RATE_LIMIT_CONFIG.maxRequests[endpoint] ?? RATE_LIMIT_CONFIG.maxRequests.api ?? 60;
-			const resetAt = Date.now() + RATE_LIMIT_CONFIG.windowMs;
-			const retryAfter = Math.ceil(RATE_LIMIT_CONFIG.windowMs / 1000);
-
-			const err = new RateLimitError('Rate limit exceeded. Please try again later.', {
-				limit,
-				windowMs: RATE_LIMIT_CONFIG.windowMs,
-				retryAfter,
-				clientId,
-				endpoint
-			});
-			log.warn({ err, clientId, endpoint, retryAfter, requestId }, 'rate limit exceeded');
-
-			const rateLimitResponse = errorResponse(err, requestId);
-			rateLimitResponse.headers.set('Retry-After', String(retryAfter));
-			rateLimitResponse.headers.set('X-RateLimit-Limit', String(limit));
-			rateLimitResponse.headers.set('X-RateLimit-Remaining', '0');
-			rateLimitResponse.headers.set('X-RateLimit-Reset', String(Math.ceil(resetAt / 1000)));
-			logRequest(event.request.method, url.pathname, 429, performance.now() - startTime, requestId);
-			return withV1Cors(rateLimitResponse, event);
-		}
-
-		const response = await resolve(event);
-		const headers = new Headers(response.headers);
-		addRateLimitHeaders(headers, endpoint, rateLimitResult.remaining, rateLimitResult.resetAt);
-		headers.set(REQUEST_ID_HEADER, requestId);
-
-		const securedApiResponse = addSecurityHeaders(
-			new Response(response.body, {
-				status: response.status,
-				statusText: response.statusText,
-				headers
-			}),
-			cspNonce
-		);
-
-		logRequest(
-			event.request.method,
-			url.pathname,
-			response.status,
-			performance.now() - startTime,
-			requestId
-		);
-		return withV1Cors(securedApiResponse, event);
-	}
-
-	// For page responses, inject nonce into inline script tags via transformPageChunk
+	// ── Page response: inject nonce into inline script tags via transformPageChunk
 	const response = await resolve(event, {
 		transformPageChunk: cspNonce
 			? ({ html }) => html.replace(/<script(?=[\s>])/g, `<script nonce="${cspNonce}"`)
@@ -306,7 +171,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 	secureResponse.headers.set(REQUEST_ID_HEADER, requestId);
 	logRequest(
 		event.request.method,
-		url.pathname,
+		event.url.pathname,
 		response.status,
 		performance.now() - startTime,
 		requestId
