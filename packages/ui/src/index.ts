@@ -13,3 +13,5 @@
 export { default as Badge } from './components/Badge.svelte';
 export { default as Spinner } from './components/Spinner.svelte';
 export { default as LoadingSpinner } from './components/LoadingSpinner.svelte';
+export { default as CodeBlock } from './components/CodeBlock.svelte';
+export { default as Collapsible } from './components/Collapsible.svelte';
