@@ -234,9 +234,146 @@ EXCEPTION
 END;
 /
 
+-- Policy for tool_executions
+BEGIN
+  DBMS_RLS.ADD_POLICY(
+    object_schema   => USER,
+    object_name     => 'TOOL_EXECUTIONS',
+    policy_name     => 'PORTAL_VPD_TOOL_EXECUTIONS',
+    function_schema => USER,
+    policy_function => 'PORTAL_VPD_POLICY',
+    statement_types => 'SELECT,INSERT,UPDATE,DELETE',
+    update_check    => TRUE,
+    enable          => TRUE
+  );
+EXCEPTION
+  WHEN OTHERS THEN
+    IF SQLCODE = -28101 THEN
+      NULL;
+    ELSIF SQLCODE = -942 THEN
+      NULL;
+    ELSE
+      RAISE;
+    END IF;
+END;
+/
+
+-- Policy for webhook_subscriptions
+BEGIN
+  DBMS_RLS.ADD_POLICY(
+    object_schema   => USER,
+    object_name     => 'WEBHOOK_SUBSCRIPTIONS',
+    policy_name     => 'PORTAL_VPD_WEBHOOK_SUBS',
+    function_schema => USER,
+    policy_function => 'PORTAL_VPD_POLICY',
+    statement_types => 'SELECT,INSERT,UPDATE,DELETE',
+    update_check    => TRUE,
+    enable          => TRUE
+  );
+EXCEPTION
+  WHEN OTHERS THEN
+    IF SQLCODE = -28101 THEN
+      NULL;
+    ELSIF SQLCODE = -942 THEN
+      NULL;
+    ELSE
+      RAISE;
+    END IF;
+END;
+/
+
+-- Policy for audit_blockchain
+-- Note: audit_blockchain is an immutable ledger (blockchain table) — INSERT only.
+-- SELECT filtering ensures tenants can only query their own audit records.
+BEGIN
+  DBMS_RLS.ADD_POLICY(
+    object_schema   => USER,
+    object_name     => 'AUDIT_BLOCKCHAIN',
+    policy_name     => 'PORTAL_VPD_AUDIT_BC',
+    function_schema => USER,
+    policy_function => 'PORTAL_VPD_POLICY',
+    statement_types => 'SELECT,INSERT',
+    update_check    => FALSE,
+    enable          => TRUE
+  );
+EXCEPTION
+  WHEN OTHERS THEN
+    IF SQLCODE = -28101 THEN
+      NULL;
+    ELSIF SQLCODE = -942 THEN
+      NULL;
+    ELSE
+      RAISE;
+    END IF;
+END;
+/
+
+-- Policy for mcp_server_metrics
+-- org_id is nullable on this table; policy still restricts non-admin sessions.
+BEGIN
+  DBMS_RLS.ADD_POLICY(
+    object_schema   => USER,
+    object_name     => 'MCP_SERVER_METRICS',
+    policy_name     => 'PORTAL_VPD_MCP_METRICS',
+    function_schema => USER,
+    policy_function => 'PORTAL_VPD_POLICY',
+    statement_types => 'SELECT,INSERT,UPDATE,DELETE',
+    update_check    => TRUE,
+    enable          => TRUE
+  );
+EXCEPTION
+  WHEN OTHERS THEN
+    IF SQLCODE = -28101 THEN
+      NULL;
+    ELSIF SQLCODE = -942 THEN
+      NULL;
+    ELSE
+      RAISE;
+    END IF;
+END;
+/
+
 -- ============================================================================
 -- MIGRATION COMPLETE
 -- ============================================================================
--- VPD policies are now active on all multi-tenant tables
+-- VPD policies are now active on all multi-tenant tables:
+--   workflow_definitions, workflow_runs, chat_sessions, api_keys,
+--   mcp_servers, agent_sessions, tool_executions, webhook_subscriptions,
+--   audit_blockchain, mcp_server_metrics
+--
 -- Application code must call portal_ctx_pkg.set_org_id() at request start
--- and portal_ctx_pkg.clear_context() at request end
+-- and portal_ctx_pkg.clear_context() at request end.
+--
+-- Admin operations must call portal_ctx_pkg.set_admin_bypass() before
+-- cross-tenant queries and portal_ctx_pkg.clear_context() after.
+
+-- ============================================================================
+-- ROLLBACK SECTION (run manually to remove VPD policies)
+-- ============================================================================
+-- Execute the following block to fully remove all VPD infrastructure:
+--
+-- BEGIN
+--   -- Drop policies (ignore ORA-28102: policy does not exist)
+--   FOR p IN (
+--     SELECT object_name, policy_name FROM all_policies
+--     WHERE policy_name LIKE 'PORTAL_VPD_%'
+--   ) LOOP
+--     BEGIN
+--       DBMS_RLS.DROP_POLICY(
+--         object_schema => USER,
+--         object_name   => p.object_name,
+--         policy_name   => p.policy_name
+--       );
+--     EXCEPTION
+--       WHEN OTHERS THEN
+--         IF SQLCODE != -28102 THEN RAISE; END IF;
+--     END;
+--   END LOOP;
+--   -- Drop context package
+--   EXECUTE IMMEDIATE 'DROP PACKAGE portal_ctx_pkg';
+--   -- Drop policy function
+--   EXECUTE IMMEDIATE 'DROP FUNCTION portal_vpd_policy';
+--   -- Drop application context (requires DBA privilege)
+--   -- EXECUTE IMMEDIATE 'DROP CONTEXT portal_ctx';
+-- END;
+-- /
