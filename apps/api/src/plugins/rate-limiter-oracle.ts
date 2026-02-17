@@ -50,7 +50,11 @@ function resolveClientId(request: FastifyRequest): string {
  * Returns the category key (e.g., 'chat', 'api') used to look up the limit.
  */
 function resolveEndpointCategory(path: string): string {
-	return RATE_LIMITER_CONFIG.endpointCategories[path as keyof typeof RATE_LIMITER_CONFIG.endpointCategories] ?? 'api';
+	return (
+		RATE_LIMITER_CONFIG.endpointCategories[
+			path as keyof typeof RATE_LIMITER_CONFIG.endpointCategories
+		] ?? 'api'
+	);
 }
 
 /**
@@ -85,7 +89,10 @@ const rateLimiterOraclePluginImpl: FastifyPluginAsync = async (fastify) => {
 
 				reply.status(429);
 				reply.header('X-RateLimit-Remaining', '0');
-				reply.header('X-RateLimit-Reset', Math.floor((Date.now() + RATE_LIMIT_CONFIG.windowMs) / 1000).toString());
+				reply.header(
+					'X-RateLimit-Reset',
+					Math.floor((Date.now() + RATE_LIMIT_CONFIG.windowMs) / 1000).toString()
+				);
 				reply.header('Retry-After', retryAfter.toString());
 
 				return reply.send({

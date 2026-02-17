@@ -36,7 +36,7 @@ vi.mock('../../services/workflow-repository.js', () => ({
 	})
 }));
 
-vi.mock('../../mastra/workflows/executor.js', () => {
+vi.mock('@portal/shared/server/workflows/executor.js', () => {
 	class MockWorkflowExecutor {
 		execute: ReturnType<typeof vi.fn>;
 		constructor() {

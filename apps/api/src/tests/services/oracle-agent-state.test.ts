@@ -45,9 +45,8 @@ describe('OracleAgentStateRepository', () => {
 
 	beforeEach(async () => {
 		vi.clearAllMocks();
-		const { OracleAgentStateRepository } = await import(
-			'@portal/server/agent-state/oracle-repository'
-		);
+		const { OracleAgentStateRepository } =
+			await import('@portal/server/agent-state/oracle-repository');
 		repository = new OracleAgentStateRepository();
 	});
 
@@ -281,7 +280,11 @@ describe('OracleAgentStateRepository', () => {
 		it('should filter by status and org_id with FETCH FIRST', async () => {
 			mockExecute.mockResolvedValue({ rows: [] });
 
-			await repository.listSessions({ status: 'completed', orgId: 'org-00000000-0000-4000-8000-000000000123', limit: 10 });
+			await repository.listSessions({
+				status: 'completed',
+				orgId: 'org-00000000-0000-4000-8000-000000000123',
+				limit: 10
+			});
 
 			expect(mockExecute).toHaveBeenCalledWith(
 				expect.stringContaining('WHERE status = :status AND org_id = :orgId'),
@@ -393,7 +396,9 @@ describe('OracleAgentStateRepository', () => {
 				return { rows: [] };
 			});
 
-			const session = await repository.updateSession('00000000-0000-4000-8000-000000000001', { status: 'error' });
+			const session = await repository.updateSession('00000000-0000-4000-8000-000000000001', {
+				status: 'error'
+			});
 
 			expect(session.status).toBe('error');
 			expect(session.title).toBe('Original Title');
@@ -699,7 +704,9 @@ describe('OracleAgentStateRepository', () => {
 				]
 			});
 
-			const session = await repository.getMostRecentSession('org-00000000-0000-4000-8000-000000000123');
+			const session = await repository.getMostRecentSession(
+				'org-00000000-0000-4000-8000-000000000123'
+			);
 
 			expect(session?.id).toBe('00000000-0000-4000-8000-999999999999');
 			expect(mockExecute).toHaveBeenCalledWith(
@@ -719,7 +726,9 @@ describe('OracleAgentStateRepository', () => {
 		it('should return null if no active sessions for org', async () => {
 			mockExecute.mockResolvedValue({ rows: [] });
 
-			const session = await repository.getMostRecentSession('org-00000000-0000-4000-8000-999999999999');
+			const session = await repository.getMostRecentSession(
+				'org-00000000-0000-4000-8000-999999999999'
+			);
 
 			expect(session).toBeNull();
 		});

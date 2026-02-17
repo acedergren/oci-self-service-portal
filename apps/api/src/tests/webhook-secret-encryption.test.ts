@@ -39,8 +39,7 @@ describe('Webhook secret encryption at rest', () => {
 	});
 
 	it('encryptWebhookSecret/decryptWebhookSecret should roundtrip', async () => {
-		const { encryptWebhookSecret, decryptWebhookSecret } =
-			await import('@portal/server/crypto');
+		const { encryptWebhookSecret, decryptWebhookSecret } = await import('@portal/server/crypto');
 
 		const plaintext = 'whsec_roundtrip_secret';
 		const encrypted = encryptWebhookSecret(plaintext);
