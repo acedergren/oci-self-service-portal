@@ -123,6 +123,7 @@ const schedulePlugin: FastifyPluginAsync = async (fastify) => {
 	);
 
 	const healthCheckJob = new CronJob({ cronExpression: '*/5 * * * *' }, healthCheckTask, {
+		id: 'health-check-ping',
 		preventOverrun: true
 	});
 	fastify.scheduler.addCronJob(healthCheckJob);
@@ -139,6 +140,7 @@ const schedulePlugin: FastifyPluginAsync = async (fastify) => {
 	);
 
 	const cleanupJob = new CronJob({ cronExpression: '0 * * * *' }, cleanupTask, {
+		id: 'stale-session-cleanup',
 		preventOverrun: true
 	});
 	fastify.scheduler.addCronJob(cleanupJob);

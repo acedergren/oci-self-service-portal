@@ -53,17 +53,17 @@ describe('schedule plugin', () => {
 			expect(app).toHaveProperty('scheduler');
 		});
 
-		it('should register two cron jobs', async () => {
+		it('should register two cron jobs (health-check-ping and stale-session-cleanup)', async () => {
 			app = createAppWithOracle();
 
 			const { default: schedulePlugin } = await import('../../plugins/schedule.js');
 			await app.register(schedulePlugin);
 			await app.ready();
 
-			// The scheduler should have 2 cron jobs registered
-			// @ts-expect-error — scheduler internals not typed
-			const _jobCount = app.scheduler.getById ? 2 : undefined;
-			expect(app.scheduler).toBeDefined();
+			// toad-scheduler (used by @fastify/schedule) exposes getAllJobs() for introspection
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const allJobs: unknown[] = (app.scheduler as any).getAllJobs?.() ?? [];
+			expect(allJobs).toHaveLength(2);
 		});
 
 		it('should boot even when oracle is unavailable', async () => {

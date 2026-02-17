@@ -41,7 +41,7 @@ export interface MCPAuthContext {
  * Removes the $schema key since MCP embeds schemas inline rather than
  * referencing external schema definitions.
  */
-function zodToJsonSchema(schema: z.ZodTypeAny): Record<string, unknown> {
+function toJsonSchemaForMCP(schema: z.ZodTypeAny): Record<string, unknown> {
 	try {
 		const jsonSchema = z.toJSONSchema(schema);
 		// Remove the $schema key since MCP embeds schemas inline
@@ -58,7 +58,7 @@ function toolDefToMCPTool(def: ToolDefinition): MCPTool {
 	return {
 		name: def.name,
 		description: def.description,
-		inputSchema: zodToJsonSchema(def.parameters)
+		inputSchema: toJsonSchemaForMCP(def.parameters)
 	};
 }
 
