@@ -33,6 +33,7 @@ import vpdPlugin from './plugins/vpd.js';
 import { rateLimiterOraclePlugin } from './plugins/rate-limiter-oracle.js';
 import schedulePlugin from './plugins/schedule.js';
 import mastraPlugin from './plugins/mastra.js';
+import { restartAllActiveWorkflowRuns } from './mastra/workflows/recovery.js';
 import { healthRoutes } from './routes/health.js';
 import { sessionRoutes } from './routes/sessions.js';
 import { activityRoutes } from './routes/activity.js';
@@ -390,6 +391,15 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 	// ── Mastra framework (agents, workflows, MCP) ─────────────────────
 
 	await app.register(mastraPlugin);
+
+	// ── Workflow crash recovery (E-3.05) ────────────────────────────────
+	// Resume stale workflow runs on startup (status = running/suspended, last update >5 min ago)
+	app.addHook('onReady', async () => {
+		const { restarted, failed } = await restartAllActiveWorkflowRuns(log);
+		if (restarted > 0) {
+			log.info(`Recovered ${restarted} workflow runs on startup${failed > 0 ? ` (${failed} failed)` : ''}`)
+		}
+	});
 
 	// ── OpenAPI docs ────────────────────────────────────────────────────
 
