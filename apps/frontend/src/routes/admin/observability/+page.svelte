@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { createQuery } from '@tanstack/svelte-query';
 	import { browser } from '$app/environment';
+	import { Chart, Svg, Bars, Axis, Pie, Arc, Tooltip } from 'layerchart';
 
 	interface MetricsSummary {
 		timestamp: string;
@@ -70,6 +71,60 @@
 	const health = $derived(healthQuery.data);
 	const runs = $derived(runsQuery.data?.runs ?? []);
 
+	// ── Chart data derivations ────────────────────────────────────────────
+
+	// Top 10 tools as sorted array for horizontal bar chart
+	const toolChartData = $derived(
+		topEntries(metrics?.tools.byTool, 10).map(([tool, count]) => ({
+			tool: tool.replace(/^oci_/, '').replace(/_/g, ' '),
+			fullName: tool,
+			count
+		}))
+	);
+
+	// Workflow run status breakdown for donut chart
+	const runStatusData = $derived(() => {
+		const counts: Record<string, number> = {};
+		for (const run of runs) {
+			counts[run.status] = (counts[run.status] ?? 0) + 1;
+		}
+		return Object.entries(counts).map(([status, count]) => ({
+			status,
+			count,
+			color: STATUS_COLORS[status as WorkflowRun['status']] ?? '#888'
+		}));
+	});
+
+	// Mock cost trend data (7 days) until OCI Usage API is integrated
+	const costTrendData = $derived(
+		Array.from({ length: 7 }, (_, i) => {
+			const d = new Date();
+			d.setDate(d.getDate() - (6 - i));
+			return {
+				date: d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+				cost: Math.round(20 + Math.random() * 30 + i * 3)
+			};
+		})
+	);
+
+	// ── Helpers ───────────────────────────────────────────────────────────
+
+	const STATUS_COLORS: Record<WorkflowRun['status'], string> = {
+		completed: 'oklch(0.55 0.15 155)',
+		running: 'oklch(0.55 0.15 230)',
+		failed: 'oklch(0.55 0.15 30)',
+		suspended: 'oklch(0.55 0.15 80)',
+		cancelled: 'oklch(0.55 0.1 0)'
+	};
+
+	const STATUS_LABELS: Record<WorkflowRun['status'], string> = {
+		completed: 'Completed',
+		running: 'Running',
+		failed: 'Failed',
+		suspended: 'Suspended',
+		cancelled: 'Cancelled'
+	};
+
 	function formatUptime(seconds: number): string {
 		const days = Math.floor(seconds / 86400);
 		const hours = Math.floor((seconds % 86400) / 3600);
@@ -97,35 +152,6 @@
 	function errorCount(byStatus: Record<string, number> | undefined): number {
 		if (!byStatus) return 0;
 		return (byStatus['error'] ?? 0) + (byStatus['timeout'] ?? 0);
-	}
-
-	function getStatusColor(status: WorkflowRun['status']): string {
-		const colors: Record<WorkflowRun['status'], string> = {
-			completed: 'oklch(0.55 0.15 155)',
-			running: 'oklch(0.55 0.15 230)',
-			failed: 'oklch(0.55 0.15 30)',
-			suspended: 'oklch(0.55 0.15 80)',
-			cancelled: 'oklch(0.55 0.1 0)'
-		};
-		return colors[status] ?? 'oklch(0.55 0.1 0)';
-	}
-
-	const maxRunDuration = $derived(
-		runs.length > 0 ? Math.max(...runs.map((r) => r.duration ?? 0), 1) : 1
-	);
-
-	function runBarWidth(duration: number | undefined): string {
-		const pct = ((duration ?? 0) / maxRunDuration) * 100;
-		return `max(40px, ${pct.toFixed(1)}%)`;
-	}
-
-	function formatDuration(ms: number | undefined): string {
-		if (!ms) return '—';
-		const seconds = Math.floor(ms / 1000);
-		const mins = Math.floor(seconds / 60);
-		const secs = seconds % 60;
-		if (mins > 0) return `${mins}m ${secs}s`;
-		return `${secs}s`;
 	}
 </script>
 
@@ -237,54 +263,134 @@
 					{/each}
 				</div>
 			</div>
-
-			<div class="metric-card placeholder">
-				<div class="metric-label">Cost Tracking</div>
-				<div class="metric-value placeholder-text">—</div>
-				<div class="metric-detail">
-					<span class="metric-tag">Coming soon — requires OCI Usage API</span>
-				</div>
-			</div>
 		</div>
 
-		<!-- Workflow Run Timeline -->
-		{#if runs.length > 0}
-			<section class="section">
-				<h2 class="section-title">Recent Workflow Runs</h2>
-				<div class="timeline-container">
-					{#each runs as run (run.id)}
-						<div
-							class="timeline-bar"
-							style="background: {getStatusColor(run.status)}; width: {runBarWidth(run.duration)}"
-						>
-							<div class="timeline-tooltip">
-								<div class="tooltip-row">
-									<span class="tooltip-label">Run ID:</span>
-									<span class="tooltip-value">{run.id}</span>
+		<!-- Charts Row -->
+		<div class="charts-row">
+			<!-- Tool Usage Bar Chart -->
+			{#if toolChartData.length > 0}
+				<section class="chart-section">
+					<h2 class="section-title">Tool Usage</h2>
+					<p class="section-subtitle">Top {toolChartData.length} most-used tools</p>
+					<div class="chart-container" style="height: {Math.max(200, toolChartData.length * 36)}px">
+						{#if browser}
+							<Chart
+								data={toolChartData}
+								x="count"
+								y="tool"
+								yPadding={[0.2, 0.1]}
+								padding={{ left: 140, right: 40, top: 8, bottom: 8 }}
+							>
+								<Svg>
+									<Axis placement="left" />
+									<Axis placement="bottom" format={(d) => d.toLocaleString()} />
+									<Bars radius={3} class="fill-accent" />
+									<Tooltip.Root>
+										{#snippet content({ data: d }: { data: (typeof toolChartData)[number] })}
+											<Tooltip.Header>{d.fullName}</Tooltip.Header>
+											<Tooltip.List>
+												<Tooltip.Item label="Executions" value={d.count.toLocaleString()} />
+											</Tooltip.List>
+										{/snippet}
+									</Tooltip.Root>
+								</Svg>
+							</Chart>
+						{/if}
+					</div>
+				</section>
+			{/if}
+
+			<!-- Workflow Run Status Donut Chart -->
+			{#if runs.length > 0}
+				<section class="chart-section">
+					<h2 class="section-title">Workflow Runs by Status</h2>
+					<p class="section-subtitle">{runs.length} recent runs</p>
+					<div class="chart-container donut-container">
+						{#if browser}
+							<Chart
+								data={runStatusData()}
+								x="status"
+								y="count"
+								padding={{ top: 8, bottom: 8, left: 8, right: 8 }}
+							>
+								<Svg>
+									<Pie innerRadius={60} outerRadius={90} padAngle={0.02}>
+										{#snippet children({ arcs }: { arcs: any[] })}
+											{#each arcs as arc (arc.data.status)}
+												<Arc
+													{arc}
+													fill={arc.data.color}
+													stroke="var(--bg-primary)"
+													strokeWidth={2}
+												/>
+											{/each}
+										{/snippet}
+									</Pie>
+									<Tooltip.Root>
+										{#snippet content({
+											data: d
+										}: {
+											data: { status: string; count: number; color: string };
+										})}
+											<Tooltip.Header
+												>{STATUS_LABELS[d.status as WorkflowRun['status']] ??
+													d.status}</Tooltip.Header
+											>
+											<Tooltip.List>
+												<Tooltip.Item label="Runs" value={String(d.count)} />
+											</Tooltip.List>
+										{/snippet}
+									</Tooltip.Root>
+								</Svg>
+							</Chart>
+						{/if}
+						<!-- Legend -->
+						<div class="donut-legend">
+							{#each runStatusData() as item (item.status)}
+								<div class="legend-item">
+									<span class="legend-dot" style="background: {item.color}"></span>
+									<span class="legend-label"
+										>{STATUS_LABELS[item.status as WorkflowRun['status']] ?? item.status}</span
+									>
+									<span class="legend-count">{item.count}</span>
 								</div>
-								<div class="tooltip-row">
-									<span class="tooltip-label">Workflow:</span>
-									<span class="tooltip-value">{run.workflowName}</span>
-								</div>
-								<div class="tooltip-row">
-									<span class="tooltip-label">Status:</span>
-									<span class="tooltip-value status-{run.status}">{run.status}</span>
-								</div>
-								<div class="tooltip-row">
-									<span class="tooltip-label">Duration:</span>
-									<span class="tooltip-value">{formatDuration(run.duration)}</span>
-								</div>
-							</div>
+							{/each}
 						</div>
-					{/each}
+					</div>
+				</section>
+			{/if}
+
+			<!-- Cost Trend Placeholder -->
+			<section class="chart-section">
+				<h2 class="section-title">Cost Trends</h2>
+				<p class="section-subtitle">
+					Estimated daily spend (mock — OCI Usage API not yet connected)
+				</p>
+				<div class="chart-container" style="height: 200px">
+					{#if browser}
+						<Chart
+							data={costTrendData}
+							x="date"
+							y="cost"
+							yDomain={[0, null]}
+							padding={{ left: 48, right: 16, top: 8, bottom: 32 }}
+						>
+							<Svg>
+								<Axis placement="left" format={(d) => `$${d}`} />
+								<Axis placement="bottom" />
+								<Bars radius={4} class="fill-accent opacity-50" />
+							</Svg>
+						</Chart>
+					{/if}
 				</div>
+				<p class="chart-note">Connect the OCI Usage API to show real cost data</p>
 			</section>
-		{/if}
+		</div>
 
 		<!-- Tool Performance Table -->
 		{#if metrics && Object.keys(metrics.tools.byTool).length > 0}
 			<section class="section">
-				<h2 class="section-title">Tool Performance</h2>
+				<h2 class="section-title">Tool Performance Detail</h2>
 				<div class="table-container">
 					<table class="data-table">
 						<thead>
@@ -488,10 +594,6 @@
 		border-radius: var(--radius-sm);
 	}
 
-	.metric-tag.error-rate {
-		color: oklch(0.8 0.15 30);
-	}
-
 	.error-summary {
 		display: flex;
 		align-items: baseline;
@@ -510,13 +612,76 @@
 		font-size: var(--text-xs);
 	}
 
-	.metric-card.placeholder {
-		opacity: 0.6;
-		border-style: dashed;
+	/* Charts Row */
+	.charts-row {
+		display: grid;
+		grid-template-columns: 1fr 1fr 1fr;
+		gap: var(--space-xl);
+		margin-bottom: var(--space-xxl);
+		align-items: start;
 	}
 
-	.placeholder-text {
+	.chart-section {
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-default);
+		border-radius: var(--radius-md);
+		padding: var(--space-lg);
+	}
+
+	.chart-container {
+		position: relative;
+		width: 100%;
+	}
+
+	.donut-container {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-md);
+		height: 240px;
+	}
+
+	.donut-legend {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-xs);
+	}
+
+	.legend-item {
+		display: flex;
+		align-items: center;
+		gap: var(--space-sm);
+		font-size: var(--text-sm);
+	}
+
+	.legend-dot {
+		width: 10px;
+		height: 10px;
+		border-radius: 50%;
+		flex-shrink: 0;
+	}
+
+	.legend-label {
+		flex: 1;
+		color: var(--fg-secondary);
+		text-transform: capitalize;
+	}
+
+	.legend-count {
+		font-weight: 600;
+		color: var(--fg-primary);
+	}
+
+	.section-subtitle {
+		font-size: var(--text-xs);
 		color: var(--fg-tertiary);
+		margin-bottom: var(--space-md);
+	}
+
+	.chart-note {
+		font-size: var(--text-xs);
+		color: var(--fg-tertiary);
+		font-style: italic;
+		margin-top: var(--space-sm);
 	}
 
 	/* Sections */
@@ -528,7 +693,7 @@
 		font-size: var(--text-lg);
 		font-weight: 700;
 		color: var(--fg-primary);
-		margin-bottom: var(--space-lg);
+		margin-bottom: var(--space-xs);
 	}
 
 	/* Table */
@@ -651,104 +816,24 @@
 		margin-bottom: var(--space-md);
 	}
 
-	/* Timeline */
-	.timeline-container {
-		display: flex;
-		flex-wrap: wrap;
-		gap: var(--space-sm);
-		padding: var(--space-lg);
-		background: var(--bg-secondary);
-		border: 1px solid var(--border-default);
-		border-radius: var(--radius-md);
+	/* LayerChart theme overrides */
+	:global(.fill-accent) {
+		fill: var(--accent-primary);
 	}
 
-	.timeline-bar {
-		position: relative;
-		height: 32px;
-		border-radius: var(--radius-sm);
-		cursor: pointer;
-		transition: all var(--transition-fast);
-		flex-shrink: 0;
+	:global(.fill-accent.opacity-50) {
+		fill: oklch(from var(--accent-primary) l c h / 0.5);
 	}
 
-	.timeline-bar:hover {
-		transform: translateY(-2px);
-		box-shadow: 0 4px 12px oklch(0 0 0 / 0.15);
+	:global(.layerchart-axis text) {
+		fill: var(--fg-tertiary);
+		font-size: 11px;
+		font-family: inherit;
 	}
 
-	.timeline-bar:hover .timeline-tooltip {
-		opacity: 1;
-		visibility: visible;
-		transform: translateY(0);
-	}
-
-	.timeline-tooltip {
-		position: absolute;
-		bottom: calc(100% + 8px);
-		left: 50%;
-		transform: translateX(-50%) translateY(4px);
-		background: var(--bg-elevated);
-		border: 1px solid var(--border-default);
-		border-radius: var(--radius-md);
-		padding: var(--space-sm) var(--space-md);
-		font-size: var(--text-xs);
-		white-space: nowrap;
-		opacity: 0;
-		visibility: hidden;
-		transition: all var(--transition-fast);
-		z-index: 10;
-		box-shadow: 0 4px 12px oklch(0 0 0 / 0.15);
-	}
-
-	.timeline-tooltip::after {
-		content: '';
-		position: absolute;
-		top: 100%;
-		left: 50%;
-		transform: translateX(-50%);
-		border: 6px solid transparent;
-		border-top-color: var(--bg-elevated);
-	}
-
-	.tooltip-row {
-		display: flex;
-		justify-content: space-between;
-		gap: var(--space-md);
-		padding: var(--space-xs) 0;
-	}
-
-	.tooltip-row:not(:last-child) {
-		border-bottom: 1px solid var(--border-muted);
-	}
-
-	.tooltip-label {
-		color: var(--fg-tertiary);
-		font-weight: 500;
-	}
-
-	.tooltip-value {
-		color: var(--fg-primary);
-		font-weight: 600;
-	}
-
-	.tooltip-value.status-completed {
-		color: oklch(0.75 0.2 155);
-	}
-
-	.tooltip-value.status-running {
-		color: oklch(0.75 0.2 230);
-	}
-
-	.tooltip-value.status-failed {
-		color: oklch(0.75 0.2 30);
-	}
-
-	.tooltip-value.status-suspended {
-		color: oklch(0.75 0.2 80);
-	}
-
-	.tooltip-value.status-cancelled {
-		color: oklch(0.65 0.05 0);
+	:global(.layerchart-axis line),
+	:global(.layerchart-axis path) {
+		stroke: var(--border-muted);
 	}
 
 	@keyframes spin {
@@ -757,9 +842,19 @@
 		}
 	}
 
+	@media (max-width: 1024px) {
+		.charts-row {
+			grid-template-columns: 1fr 1fr;
+		}
+	}
+
 	@media (max-width: 768px) {
 		.metrics-grid {
 			grid-template-columns: repeat(2, 1fr);
+		}
+
+		.charts-row {
+			grid-template-columns: 1fr;
 		}
 
 		.raw-metric {
