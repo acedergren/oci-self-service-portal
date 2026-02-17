@@ -27,10 +27,7 @@ import { executeTool } from '../tools/registry.js';
 import { generateText } from 'ai';
 import { getProviderRegistry } from '../models/provider-registry.js';
 import { z } from 'zod';
-import {
-	ApprovalSuspendPayloadSchema,
-	ApprovalResumePayloadSchema
-} from '../workflows/nodes/approval.js';
+import { ApprovalSuspendPayloadSchema } from '../workflows/nodes/approval.js';
 
 // ============================================================================
 // Execution Limits (DoS Prevention)

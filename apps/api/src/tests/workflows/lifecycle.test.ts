@@ -109,9 +109,7 @@ describe('onWorkflowFinish', () => {
 		mocks.executeQuery.mockRejectedValue(new Error('Database error'));
 
 		// Should not throw
-		await expect(
-			onWorkflowFinish(runId, { status: 'completed' }, orgId)
-		).resolves.toBeUndefined();
+		await expect(onWorkflowFinish(runId, { status: 'completed' }, orgId)).resolves.toBeUndefined();
 
 		expect(mocks.executeQuery).toHaveBeenCalled();
 	});
@@ -130,9 +128,9 @@ describe('onWorkflowFinish', () => {
 
 		expect(call1Id).not.toBe(call2Id);
 		// Verify UUIDs are valid format
-		expect(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(call1Id)).toBe(
-			true
-		);
+		expect(
+			/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(call1Id)
+		).toBe(true);
 	});
 });
 
