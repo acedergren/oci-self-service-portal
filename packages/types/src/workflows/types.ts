@@ -88,7 +88,8 @@ export const AIStepNodeDataSchema = z.object({
 	systemPrompt: z.string().optional(),
 	temperature: z.number().min(0).max(2).optional(),
 	maxTokens: z.number().int().positive().optional(),
-	outputSchema: z.record(z.string(), z.unknown()).optional()
+	outputSchema: z.record(z.string(), z.unknown()).optional(),
+	timeoutMs: z.number().int().positive().optional()
 });
 export type AIStepNodeData = z.infer<typeof AIStepNodeDataSchema>;
 
