@@ -44,10 +44,7 @@
  */
 
 import type { MastraModelConfig } from '@mastra/core/llm';
-import {
-	createAnswerRelevancyScorer,
-	createToxicityScorer
-} from '@mastra/evals/scorers/prebuilt';
+import { createAnswerRelevancyScorer, createToxicityScorer } from '@mastra/evals/scorers/prebuilt';
 
 /**
  * Create eval scorers configuration for agent quality monitoring.

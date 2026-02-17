@@ -14,7 +14,8 @@ import type { MastraModelConfig } from '@mastra/core/llm';
 import {
 	createFaithfulnessScorer,
 	createAnswerRelevancyScorer,
-	createPromptAlignmentScorerLLM
+	createPromptAlignmentScorerLLM,
+	createToxicityScorer
 } from '@mastra/evals/scorers/prebuilt';
 import { buildMastraTools } from '../tools/registry.js';
 import { promptInjectionDetector, piiDetector, createTokenLimiter } from './guardrails.js';
@@ -266,6 +267,14 @@ export function createCharlieAgent(config: CharlieConfig): Agent {
 				},
 				'prompt-alignment': {
 					scorer: createPromptAlignmentScorerLLM({
+						model: config.model as MastraModelConfig,
+						options: { scale: 10 }
+					}),
+					sampling: { type: 'ratio' as const, rate: evalSampleRate }
+				}
+				,
+				toxicity: {
+					scorer: createToxicityScorer({
 						model: config.model as MastraModelConfig,
 						options: { scale: 10 }
 					}),

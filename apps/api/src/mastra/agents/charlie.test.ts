@@ -30,7 +30,8 @@ vi.mock('../tools/registry.js', () => ({
 vi.mock('@mastra/evals/scorers/prebuilt', () => ({
 	createFaithfulnessScorer: vi.fn(() => ({ id: 'faithfulness-scorer' })),
 	createAnswerRelevancyScorer: vi.fn(() => ({ id: 'answer-relevancy-scorer' })),
-	createPromptAlignmentScorerLLM: vi.fn(() => ({ id: 'prompt-alignment-scorer' }))
+	createPromptAlignmentScorerLLM: vi.fn(() => ({ id: 'prompt-alignment-scorer' })),
+	createToxicityScorer: vi.fn(() => ({ id: 'toxicity-scorer' }))
 }));
 
 // Mock guardrails
@@ -51,13 +52,15 @@ import { Agent } from '@mastra/core/agent';
 import {
 	createFaithfulnessScorer,
 	createAnswerRelevancyScorer,
-	createPromptAlignmentScorerLLM
+	createPromptAlignmentScorerLLM,
+	createToxicityScorer
 } from '@mastra/evals/scorers/prebuilt';
 
 const MockAgent = vi.mocked(Agent);
 const mockCreateFaithfulnessScorer = vi.mocked(createFaithfulnessScorer);
 const mockCreateAnswerRelevancyScorer = vi.mocked(createAnswerRelevancyScorer);
 const mockCreatePromptAlignmentScorerLLM = vi.mocked(createPromptAlignmentScorerLLM);
+const mockCreateToxicityScorer = vi.mocked(createToxicityScorer);
 
 // ── getSystemPrompt ──────────────────────────────────────────────────
 
@@ -207,7 +210,7 @@ describe('eval scorers', () => {
 		delete process.env.MASTRA_EVAL_SAMPLE_RATE;
 	});
 
-	it('configures faithfulness, answer-relevancy, and prompt-alignment scorers by default', () => {
+	it('configures faithfulness, answer-relevancy, prompt-alignment, and toxicity scorers by default', () => {
 		createCharlieAgent({ model: DEFAULT_MODEL });
 
 		const agentConfig = MockAgent.mock.calls[0][0];
@@ -217,6 +220,7 @@ describe('eval scorers', () => {
 		expect(scorers).toHaveProperty('faithfulness');
 		expect(scorers).toHaveProperty('answer-relevancy');
 		expect(scorers).toHaveProperty('prompt-alignment');
+		expect(scorers).toHaveProperty('toxicity');
 	});
 
 	it('calls createFaithfulnessScorer with model and scale 10', () => {
@@ -247,6 +251,15 @@ describe('eval scorers', () => {
 		expect(args.options?.scale).toBe(10);
 	});
 
+	it('calls createToxicityScorer with model and scale 10', () => {
+		createCharlieAgent({ model: 'google.gemini-2.5-flash' });
+
+		expect(mockCreateToxicityScorer).toHaveBeenCalledOnce();
+		const args = mockCreateToxicityScorer.mock.calls[0][0];
+		expect(args.model).toBe('google.gemini-2.5-flash');
+		expect(args.options?.scale).toBe(10);
+	});
+
 	it('uses 10% sampling rate by default', () => {
 		createCharlieAgent({ model: DEFAULT_MODEL });
 
@@ -260,6 +273,7 @@ describe('eval scorers', () => {
 		expect(scorers['faithfulness'].sampling.rate).toBe(0.1);
 		expect(scorers['answer-relevancy'].sampling.rate).toBe(0.1);
 		expect(scorers['prompt-alignment'].sampling.rate).toBe(0.1);
+		expect(scorers['toxicity'].sampling.rate).toBe(0.1);
 	});
 
 	it('uses custom sample rate from MASTRA_EVAL_SAMPLE_RATE env var', () => {
@@ -272,6 +286,7 @@ describe('eval scorers', () => {
 			{ sampling: { type: string; rate: number } }
 		>;
 		expect(scorers['faithfulness'].sampling.rate).toBe(0.25);
+		expect(scorers['toxicity'].sampling.rate).toBe(0.25);
 	});
 
 	it('disables scorers when MASTRA_ENABLE_EVALS=false', () => {
@@ -289,6 +304,7 @@ describe('eval scorers', () => {
 		expect(mockCreateFaithfulnessScorer).not.toHaveBeenCalled();
 		expect(mockCreateAnswerRelevancyScorer).not.toHaveBeenCalled();
 		expect(mockCreatePromptAlignmentScorerLLM).not.toHaveBeenCalled();
+		expect(mockCreateToxicityScorer).not.toHaveBeenCalled();
 	});
 });
 
