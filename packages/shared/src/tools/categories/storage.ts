@@ -28,7 +28,7 @@ export const storageTools: ToolEntry[] = [
 			let namespace = args.namespace as string | undefined;
 			if (!namespace) {
 				const nsResp = await executeOCISDK('objectStorage', 'getNamespace', {});
-				namespace = (nsResp as { value: string }).value;
+				namespace = (nsResp as { namespaceName: string }).namespaceName;
 			}
 			const response = await executeOCISDK('objectStorage', 'listBuckets', {
 				compartmentId,
@@ -57,7 +57,7 @@ export const storageTools: ToolEntry[] = [
 			let namespace = args.namespace as string | undefined;
 			if (!namespace) {
 				const nsResp = await executeOCISDK('objectStorage', 'getNamespace', {});
-				namespace = (nsResp as { value: string }).value;
+				namespace = (nsResp as { namespaceName: string }).namespaceName;
 			}
 			const response = await executeOCISDK('objectStorage', 'createBucket', {
 				namespaceName: namespace,
@@ -87,7 +87,7 @@ export const storageTools: ToolEntry[] = [
 			let namespace = args.namespace as string | undefined;
 			if (!namespace) {
 				const nsResp = await executeOCISDK('objectStorage', 'getNamespace', {});
-				namespace = (nsResp as { value: string }).value;
+				namespace = (nsResp as { namespaceName: string }).namespaceName;
 			}
 			const response = await executeOCISDK('objectStorage', 'deleteBucket', {
 				namespaceName: namespace,
@@ -106,7 +106,7 @@ export const storageTools: ToolEntry[] = [
 		executeAsync: async () => {
 			const response = await executeOCISDK('objectStorage', 'getNamespace', {});
 			// SDK returns { value: "namespace-string" }, normalize to { data: "namespace-string" }
-			return { data: (response as { value: string }).value };
+			return { data: response };
 		}
 	},
 	{

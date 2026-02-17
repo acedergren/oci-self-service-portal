@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { ToolEntry } from '../types.js';
 import { executeOCI } from '../executor.js';
+import { executeOCISDK, normalizeSDKResponse } from '@portal/shared/tools/executor-sdk.js';
 
 export const searchTools: ToolEntry[] = [
 	{
@@ -17,16 +18,28 @@ export const searchTools: ToolEntry[] = [
 				),
 			limit: z.number().default(50).describe('Maximum number of results')
 		}),
-		execute: (args) => {
-			return executeOCI([
-				'search',
-				'resource',
-				'structured-search',
-				'--query-text',
-				args.queryText as string,
-				'--limit',
-				String(args.limit || 50)
-			]);
+		executeAsync: async (args) => {
+			try {
+				const response = await executeOCISDK('resourceSearch', 'searchResources', {
+					searchDetails: {
+						type: 'Structured',
+						query: args.queryText as string,
+						matchingContextType: 'NONE'
+					},
+					limit: args.limit || 50
+				});
+				return normalizeSDKResponse(response);
+			} catch {
+				return executeOCI([
+					'search',
+					'resource',
+					'structured-search',
+					'--query-text',
+					args.queryText as string,
+					'--limit',
+					String(args.limit || 50)
+				]);
+			}
 		}
 	},
 	{
@@ -54,22 +67,34 @@ export const searchTools: ToolEntry[] = [
 				.optional()
 				.describe('Narrow search to a specific resource type')
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const displayName = args.displayName as string;
 			const resourceType = args.resourceType as string | undefined;
 			const typeClause = resourceType ? `${resourceType} resources` : 'all resources';
 			// Escape single quotes to prevent OCI query injection (S-1)
 			const escaped = displayName.replace(/'/g, "''");
 			const queryText = `query ${typeClause} where displayName = '${escaped}'`;
-			return executeOCI([
-				'search',
-				'resource',
-				'structured-search',
-				'--query-text',
-				queryText,
-				'--limit',
-				'50'
-			]);
+			try {
+				const response = await executeOCISDK('resourceSearch', 'searchResources', {
+					searchDetails: {
+						type: 'Structured',
+						query: queryText,
+						matchingContextType: 'NONE'
+					},
+					limit: 50
+				});
+				return normalizeSDKResponse(response);
+			} catch {
+				return executeOCI([
+					'search',
+					'resource',
+					'structured-search',
+					'--query-text',
+					queryText,
+					'--limit',
+					'50'
+				]);
+			}
 		}
 	}
 ];

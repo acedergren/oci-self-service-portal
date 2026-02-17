@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { ToolEntry } from '../types.js';
 import { executeOCI, requireCompartmentId } from '../executor.js';
+import { executeOCISDK, normalizeSDKResponse } from '@portal/shared/tools/executor-sdk.js';
 
 const compartmentIdSchema = z
 	.string()
@@ -20,18 +21,28 @@ export const identityTools: ToolEntry[] = [
 			compartmentId: compartmentIdSchema,
 			accessLevel: z.enum(['ANY', 'ACCESSIBLE']).default('ACCESSIBLE')
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			return executeOCI([
-				'iam',
-				'compartment',
-				'list',
-				'--compartment-id',
-				compartmentId,
-				'--access-level',
-				(args.accessLevel as string) || 'ACCESSIBLE',
-				'--all'
-			]);
+			const accessLevel = (args.accessLevel as string) || 'ACCESSIBLE';
+			try {
+				const response = await executeOCISDK('identity', 'listCompartments', {
+					compartmentId,
+					accessLevel,
+					limit: 1000
+				});
+				return normalizeSDKResponse(response);
+			} catch {
+				return executeOCI([
+					'iam',
+					'compartment',
+					'list',
+					'--compartment-id',
+					compartmentId,
+					'--access-level',
+					accessLevel,
+					'--all'
+				]);
+			}
 		}
 	},
 	{
@@ -43,9 +54,17 @@ export const identityTools: ToolEntry[] = [
 		parameters: z.object({
 			compartmentId: compartmentIdSchema
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			return executeOCI(['iam', 'policy', 'list', '--compartment-id', compartmentId, '--all']);
+			try {
+				const response = await executeOCISDK('identity', 'listPolicies', {
+					compartmentId,
+					limit: 1000
+				});
+				return normalizeSDKResponse(response);
+			} catch {
+				return executeOCI(['iam', 'policy', 'list', '--compartment-id', compartmentId, '--all']);
+			}
 		}
 	},
 	{
@@ -60,22 +79,35 @@ export const identityTools: ToolEntry[] = [
 			description: z.string(),
 			statements: z.array(z.string())
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
 			const statements = args.statements as string[];
-			return executeOCI([
-				'iam',
-				'policy',
-				'create',
-				'--compartment-id',
-				compartmentId,
-				'--name',
-				args.name as string,
-				'--description',
-				args.description as string,
-				'--statements',
-				JSON.stringify(statements)
-			]);
+			try {
+				const request = {
+					createPolicyDetails: {
+						compartmentId,
+						name: args.name as string,
+						description: args.description as string,
+						statements
+					}
+				};
+				const response = await executeOCISDK('identity', 'createPolicy', request);
+				return normalizeSDKResponse(response);
+			} catch {
+				return executeOCI([
+					'iam',
+					'policy',
+					'create',
+					'--compartment-id',
+					compartmentId,
+					'--name',
+					args.name as string,
+					'--description',
+					args.description as string,
+					'--statements',
+					JSON.stringify(statements)
+				]);
+			}
 		}
 	}
 ];

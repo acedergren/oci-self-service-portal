@@ -175,7 +175,15 @@ const CLIENT_MAP = {
 			authenticationDetailsProvider: getOCIAuthProvider()
 		}),
 	usageApi: () =>
-		new oci.usageapi.UsageapiClient({ authenticationDetailsProvider: getOCIAuthProvider() })
+		new oci.usageapi.UsageapiClient({ authenticationDetailsProvider: getOCIAuthProvider() }),
+	computeInstanceAgent: () =>
+		new oci.computeinstanceagent.ComputeInstanceAgentClient({
+			authenticationDetailsProvider: getOCIAuthProvider()
+		}),
+	instanceAgentPlugin: () =>
+		new oci.computeinstanceagent.PluginClient({
+			authenticationDetailsProvider: getOCIAuthProvider()
+		})
 } as const;
 
 export type OCIServiceName = keyof typeof CLIENT_MAP;

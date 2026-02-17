@@ -40,6 +40,7 @@ import { observabilityTools } from '@portal/shared/tools/categories/observabilit
 import { loggingTools } from '@portal/shared/tools/categories/logging';
 import { billingTools } from '@portal/shared/tools/categories/billing';
 import { searchTools } from '@portal/shared/tools/categories/search';
+import { databaseTools } from '@portal/shared/tools/categories/database';
 import { storageTools } from '@portal/shared/tools/categories/storage';
 
 describe('SDK-migrated tools', () => {
@@ -157,9 +158,7 @@ describe('SDK-migrated tools', () => {
 		});
 
 		it('getComputeMetrics builds MQL query and calls monitoring.summarizeMetricsData', async () => {
-			const getComputeMetricsTool = observabilityTools.find(
-				(t) => t.name === 'getComputeMetrics'
-			);
+			const getComputeMetricsTool = observabilityTools.find((t) => t.name === 'getComputeMetrics');
 			expect(getComputeMetricsTool).toBeDefined();
 
 			mockExecuteOCISDK.mockResolvedValue({ items: [] });
@@ -199,9 +198,7 @@ describe('SDK-migrated tools', () => {
 		});
 
 		it('getComputeMetrics adds resourceId filter when instanceId provided', async () => {
-			const getComputeMetricsTool = observabilityTools.find(
-				(t) => t.name === 'getComputeMetrics'
-			);
+			const getComputeMetricsTool = observabilityTools.find((t) => t.name === 'getComputeMetrics');
 
 			await getComputeMetricsTool!.executeAsync({
 				compartmentId: 'test-compartment',
@@ -389,9 +386,7 @@ describe('SDK-migrated tools', () => {
 		});
 
 		it('searchResourcesByName builds query and calls resourceSearch.searchResources', async () => {
-			const searchResourcesByNameTool = searchTools.find(
-				(t) => t.name === 'searchResourcesByName'
-			);
+			const searchResourcesByNameTool = searchTools.find((t) => t.name === 'searchResourcesByName');
 			expect(searchResourcesByNameTool).toBeDefined();
 
 			mockExecuteOCISDK.mockResolvedValue({ items: [] });
@@ -413,9 +408,7 @@ describe('SDK-migrated tools', () => {
 		});
 
 		it('searchResourcesByName queries all resources when resourceType not provided', async () => {
-			const searchResourcesByNameTool = searchTools.find(
-				(t) => t.name === 'searchResourcesByName'
-			);
+			const searchResourcesByNameTool = searchTools.find((t) => t.name === 'searchResourcesByName');
 
 			await searchResourcesByNameTool!.executeAsync({
 				displayName: 'test-resource'
@@ -477,4 +470,203 @@ describe('SDK-migrated tools', () => {
 			});
 		});
 	});
+
+	// ── Database Tools ─────────────────────────────────────────────────
+
+	describe('database tools', () => {
+		it('listAutonomousDatabases calls executeAndSlim with database.listAutonomousDatabases', async () => {
+			const listADBTool = databaseTools.find((t) => t.name === 'listAutonomousDatabases');
+			expect(listADBTool).toBeDefined();
+
+			mockExecuteAndSlim.mockResolvedValue({ data: [{ 'display-name': 'mydb', id: 'ocid1.adb.1' }] });
+
+			await listADBTool!.executeAsync({ compartmentId: 'test-compartment' });
+
+			expect(mockRequireCompartmentId).toHaveBeenCalledWith({ compartmentId: 'test-compartment' });
+			expect(mockExecuteAndSlim).toHaveBeenCalledWith(
+				'database',
+				'listAutonomousDatabases',
+				{ compartmentId: 'test-compartment-id' },
+				[
+					'display-name',
+					'id',
+					'db-name',
+					'db-workload',
+					'lifecycle-state',
+					'cpu-core-count',
+					'data-storage-size-in-tbs',
+					'time-created',
+					'is-free-tier',
+					'db-version',
+					'infrastructure-type'
+				]
+			);
+		});
+
+		it('listAutonomousDatabases passes dbWorkload filter when provided', async () => {
+			const listADBTool = databaseTools.find((t) => t.name === 'listAutonomousDatabases');
+
+			await listADBTool!.executeAsync({ compartmentId: 'test-compartment', dbWorkload: 'OLTP' });
+
+			expect(mockExecuteAndSlim).toHaveBeenCalledWith(
+				'database',
+				'listAutonomousDatabases',
+				{ compartmentId: 'test-compartment-id', dbWorkload: 'OLTP' },
+				expect.any(Array)
+			);
+		});
+
+		it('createAutonomousDatabase calls executeOCISDK with database.createAutonomousDatabase', async () => {
+			const createADBTool = databaseTools.find((t) => t.name === 'createAutonomousDatabase');
+			expect(createADBTool).toBeDefined();
+
+			mockExecuteOCISDK.mockResolvedValue({ autonomousDatabase: { id: 'ocid1.adb.new' } });
+
+			await createADBTool!.executeAsync({
+				compartmentId: 'test-compartment',
+				displayName: 'MyDB',
+				dbName: 'MYDB',
+				dbWorkload: 'OLTP',
+				cpuCoreCount: 1,
+				dataStorageSizeInTBs: 1
+			});
+
+			expect(mockRequireCompartmentId).toHaveBeenCalled();
+			expect(mockExecuteOCISDK).toHaveBeenCalledWith('database', 'createAutonomousDatabase', {
+				createAutonomousDatabaseDetails: {
+					compartmentId: 'test-compartment-id',
+					displayName: 'MyDB',
+					dbName: 'MYDB',
+					dbWorkload: 'OLTP',
+					cpuCoreCount: 1,
+					dataStorageSizeInTBs: 1
+				}
+			});
+		});
+
+		it('terminateAutonomousDatabase calls executeOCISDK with database.deleteAutonomousDatabase', async () => {
+			const terminateADBTool = databaseTools.find((t) => t.name === 'terminateAutonomousDatabase');
+			expect(terminateADBTool).toBeDefined();
+
+			mockExecuteOCISDK.mockResolvedValue({});
+
+			await terminateADBTool!.executeAsync({
+				autonomousDatabaseId: 'ocid1.autonomousdatabase.test'
+			});
+
+			expect(mockExecuteOCISDK).toHaveBeenCalledWith('database', 'deleteAutonomousDatabase', {
+				autonomousDatabaseId: 'ocid1.autonomousdatabase.test'
+			});
+		});
+	});
+
+	// ── Object Storage Tools ────────────────────────────────────────────
+
+	describe('object storage tools', () => {
+		it('listBuckets calls objectStorage.getNamespace then objectStorage.listBuckets', async () => {
+			const listBucketsTool = storageTools.find((t) => t.name === 'listBuckets');
+			expect(listBucketsTool).toBeDefined();
+
+			let callCount = 0;
+			mockExecuteOCISDK.mockImplementation(async () => {
+				callCount++;
+				if (callCount === 1) return { namespaceName: 'mytenancy' };
+				return { items: [{ name: 'my-bucket', timeCreated: '2026-01-01T00:00:00Z' }] };
+			});
+			mockNormalizeSDKResponse.mockReturnValue({ data: [{ name: 'my-bucket' }] });
+			mockSlimOCIResponse.mockImplementation((data: unknown) => data);
+
+			await listBucketsTool!.executeAsync({ compartmentId: 'test-compartment' });
+
+			expect(mockExecuteOCISDK).toHaveBeenNthCalledWith(1, 'objectStorage', 'getNamespace', {});
+			expect(mockExecuteOCISDK).toHaveBeenNthCalledWith(2, 'objectStorage', 'listBuckets', {
+				compartmentId: 'test-compartment-id',
+				namespaceName: 'mytenancy'
+			});
+			expect(mockNormalizeSDKResponse).toHaveBeenCalled();
+		});
+
+		it('listBuckets uses provided namespace without calling getNamespace', async () => {
+			const listBucketsTool = storageTools.find((t) => t.name === 'listBuckets');
+
+			mockExecuteOCISDK.mockResolvedValue({ items: [] });
+			mockNormalizeSDKResponse.mockReturnValue({ data: [] });
+			mockSlimOCIResponse.mockImplementation((data: unknown) => data);
+
+			await listBucketsTool!.executeAsync({
+				compartmentId: 'test-compartment',
+				namespace: 'provided-ns'
+			});
+
+			// Only one SDK call — no getNamespace needed
+			expect(mockExecuteOCISDK).toHaveBeenCalledTimes(1);
+			expect(mockExecuteOCISDK).toHaveBeenCalledWith('objectStorage', 'listBuckets', {
+				compartmentId: 'test-compartment-id',
+				namespaceName: 'provided-ns'
+			});
+		});
+
+		it('createBucket calls objectStorage.getNamespace then objectStorage.createBucket', async () => {
+			const createBucketTool = storageTools.find((t) => t.name === 'createBucket');
+			expect(createBucketTool).toBeDefined();
+
+			let callCount = 0;
+			mockExecuteOCISDK.mockImplementation(async () => {
+				callCount++;
+				if (callCount === 1) return { namespaceName: 'mytenancy' };
+				return { bucket: { name: 'new-bucket' } };
+			});
+			mockNormalizeSDKResponse.mockReturnValue({ data: { name: 'new-bucket' } });
+			mockSlimOCIResponse.mockImplementation((data: unknown) => data);
+
+			await createBucketTool!.executeAsync({
+				compartmentId: 'test-compartment',
+				name: 'new-bucket',
+				publicAccessType: 'NoPublicAccess'
+			});
+
+			expect(mockExecuteOCISDK).toHaveBeenNthCalledWith(1, 'objectStorage', 'getNamespace', {});
+			expect(mockExecuteOCISDK).toHaveBeenNthCalledWith(2, 'objectStorage', 'createBucket', {
+				namespaceName: 'mytenancy',
+				createBucketDetails: {
+					name: 'new-bucket',
+					compartmentId: 'test-compartment-id',
+					publicAccessType: 'NoPublicAccess'
+				}
+			});
+		});
+
+		it('deleteBucket calls objectStorage.deleteBucket with namespace and bucketName', async () => {
+			const deleteBucketTool = storageTools.find((t) => t.name === 'deleteBucket');
+			expect(deleteBucketTool).toBeDefined();
+
+			let callCount = 0;
+			mockExecuteOCISDK.mockImplementation(async () => {
+				callCount++;
+				if (callCount === 1) return { namespaceName: 'mytenancy' };
+				return {};
+			});
+
+			await deleteBucketTool!.executeAsync({ bucketName: 'old-bucket' });
+
+			expect(mockExecuteOCISDK).toHaveBeenNthCalledWith(1, 'objectStorage', 'getNamespace', {});
+			expect(mockExecuteOCISDK).toHaveBeenNthCalledWith(2, 'objectStorage', 'deleteBucket', {
+				namespaceName: 'mytenancy',
+				bucketName: 'old-bucket'
+			});
+		});
+
+		it('getObjectStorageNamespace returns namespace from SDK', async () => {
+			const getNsTool = storageTools.find((t) => t.name === 'getObjectStorageNamespace');
+			expect(getNsTool).toBeDefined();
+
+			mockExecuteOCISDK.mockResolvedValue({ namespaceName: 'mytenancy' });
+
+			const result = await getNsTool!.executeAsync({});
+
+			expect(mockExecuteOCISDK).toHaveBeenCalledWith('objectStorage', 'getNamespace', {});
+			expect(result).toEqual({ data: { namespaceName: 'mytenancy' } });
+		});
+	});
+
 });

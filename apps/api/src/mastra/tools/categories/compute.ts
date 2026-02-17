@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import type { ToolEntry } from '../types.js';
 import { executeOCI, executeOCIAsync, slimOCIResponse, requireCompartmentId } from '../executor.js';
+import {
+	executeOCISDK,
+	executeAndSlim,
+	normalizeSDKResponse,
+	camelToKebab
+} from '@portal/shared/tools/executor-sdk.js';
 
 const compartmentIdSchema = z
 	.string()
@@ -21,22 +27,39 @@ export const computeTools: ToolEntry[] = [
 			displayName: z.string().optional().describe('Filter by display name'),
 			lifecycleState: z.enum(['RUNNING', 'STOPPED', 'TERMINATED']).optional()
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			const cliArgs = ['compute', 'instance', 'list', '--compartment-id', compartmentId, '--all'];
-			if (args.displayName) cliArgs.push('--display-name', args.displayName as string);
-			if (args.lifecycleState) cliArgs.push('--lifecycle-state', args.lifecycleState as string);
-			return slimOCIResponse(executeOCI(cliArgs), [
-				'display-name',
-				'id',
-				'lifecycle-state',
-				'shape',
-				'shape-config',
-				'availability-domain',
-				'time-created',
-				'region',
-				'fault-domain'
-			]);
+			try {
+				const request: Record<string, unknown> = { compartmentId, limit: 1000 };
+				if (args.displayName) request.displayName = args.displayName as string;
+				if (args.lifecycleState) request.lifecycleState = args.lifecycleState as string;
+				return await executeAndSlim('compute', 'listInstances', request, [
+					'display-name',
+					'id',
+					'lifecycle-state',
+					'shape',
+					'shape-config',
+					'availability-domain',
+					'time-created',
+					'region',
+					'fault-domain'
+				]);
+			} catch {
+				const cliArgs = ['compute', 'instance', 'list', '--compartment-id', compartmentId, '--all'];
+				if (args.displayName) cliArgs.push('--display-name', args.displayName as string);
+				if (args.lifecycleState) cliArgs.push('--lifecycle-state', args.lifecycleState as string);
+				return slimOCIResponse(executeOCI(cliArgs), [
+					'display-name',
+					'id',
+					'lifecycle-state',
+					'shape',
+					'shape-config',
+					'availability-domain',
+					'time-created',
+					'region',
+					'fault-domain'
+				]);
+			}
 		}
 	},
 	{
@@ -48,10 +71,10 @@ export const computeTools: ToolEntry[] = [
 		parameters: z.object({
 			instanceId: z.string().describe('The OCID of the instance')
 		}),
-		execute: (args) => {
-			return slimOCIResponse(
-				executeOCI(['compute', 'instance', 'get', '--instance-id', args.instanceId as string]),
-				[
+		executeAsync: async (args) => {
+			const instanceId = args.instanceId as string;
+			try {
+				return await executeAndSlim('compute', 'getInstance', { instanceId }, [
 					'display-name',
 					'id',
 					'lifecycle-state',
@@ -63,8 +86,25 @@ export const computeTools: ToolEntry[] = [
 					'fault-domain',
 					'source-details',
 					'launch-options'
-				]
-			);
+				]);
+			} catch {
+				return slimOCIResponse(
+					executeOCI(['compute', 'instance', 'get', '--instance-id', instanceId]),
+					[
+						'display-name',
+						'id',
+						'lifecycle-state',
+						'shape',
+						'shape-config',
+						'availability-domain',
+						'time-created',
+						'region',
+						'fault-domain',
+						'source-details',
+						'launch-options'
+					]
+				);
+			}
 		}
 	},
 	{
@@ -81,24 +121,45 @@ export const computeTools: ToolEntry[] = [
 			imageId: z.string().describe('The OCID of the image'),
 			subnetId: z.string().describe('The OCID of the subnet')
 		}),
-		execute: (args) => {
-			return executeOCI([
-				'compute',
-				'instance',
-				'launch',
-				'--compartment-id',
-				args.compartmentId as string,
-				'--availability-domain',
-				args.availabilityDomain as string,
-				'--display-name',
-				args.displayName as string,
-				'--shape',
-				args.shape as string,
-				'--image-id',
-				args.imageId as string,
-				'--subnet-id',
-				args.subnetId as string
-			]);
+		executeAsync: async (args) => {
+			const compartmentId = requireCompartmentId(args);
+			try {
+				const request = {
+					launchInstanceDetails: {
+						compartmentId,
+						availabilityDomain: args.availabilityDomain as string,
+						displayName: args.displayName as string,
+						shape: args.shape as string,
+						sourceDetails: {
+							sourceType: 'image',
+							imageId: args.imageId as string
+						},
+						createVnicDetails: {
+							subnetId: args.subnetId as string
+						}
+					}
+				};
+				const response = await executeOCISDK('compute', 'launchInstance', request);
+				return normalizeSDKResponse(response);
+			} catch {
+				return executeOCI([
+					'compute',
+					'instance',
+					'launch',
+					'--compartment-id',
+					compartmentId,
+					'--availability-domain',
+					args.availabilityDomain as string,
+					'--display-name',
+					args.displayName as string,
+					'--shape',
+					args.shape as string,
+					'--image-id',
+					args.imageId as string,
+					'--subnet-id',
+					args.subnetId as string
+				]);
+			}
 		}
 	},
 	{
@@ -110,16 +171,26 @@ export const computeTools: ToolEntry[] = [
 		parameters: z.object({
 			instanceId: z.string().describe('The OCID of the instance')
 		}),
-		execute: (args) => {
-			return executeOCI([
-				'compute',
-				'instance',
-				'action',
-				'--action',
-				'STOP',
-				'--instance-id',
-				args.instanceId as string
-			]);
+		executeAsync: async (args) => {
+			const instanceId = args.instanceId as string;
+			try {
+				const request = {
+					instanceId,
+					instanceActionDetails: { action: 'STOP' }
+				};
+				const response = await executeOCISDK('compute', 'instanceAction', request);
+				return normalizeSDKResponse(response);
+			} catch {
+				return executeOCI([
+					'compute',
+					'instance',
+					'action',
+					'--action',
+					'STOP',
+					'--instance-id',
+					instanceId
+				]);
+			}
 		}
 	},
 	{
@@ -132,17 +203,26 @@ export const computeTools: ToolEntry[] = [
 			instanceId: z.string().describe('The OCID of the instance'),
 			preserveBootVolume: z.boolean().default(false)
 		}),
-		execute: (args) => {
-			const cliArgs = [
-				'compute',
-				'instance',
-				'terminate',
-				'--instance-id',
-				args.instanceId as string,
-				'--force'
-			];
-			if (args.preserveBootVolume) cliArgs.push('--preserve-boot-volume', 'true');
-			return executeOCI(cliArgs);
+		executeAsync: async (args) => {
+			const instanceId = args.instanceId as string;
+			const preserveBootVolume = args.preserveBootVolume as boolean;
+			try {
+				const request: Record<string, unknown> = { instanceId };
+				if (preserveBootVolume) request.preserveBootVolume = true;
+				const response = await executeOCISDK('compute', 'terminateInstance', request);
+				return normalizeSDKResponse(response);
+			} catch {
+				const cliArgs = [
+					'compute',
+					'instance',
+					'terminate',
+					'--instance-id',
+					instanceId,
+					'--force'
+				];
+				if (preserveBootVolume) cliArgs.push('--preserve-boot-volume', 'true');
+				return executeOCI(cliArgs);
+			}
 		}
 	},
 	{
@@ -154,9 +234,22 @@ export const computeTools: ToolEntry[] = [
 		parameters: z.object({
 			compartmentId: compartmentIdSchema
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			return executeOCI(['iam', 'availability-domain', 'list', '--compartment-id', compartmentId]);
+			try {
+				const response = await executeOCISDK('identity', 'listAvailabilityDomains', {
+					compartmentId
+				});
+				return normalizeSDKResponse(response);
+			} catch {
+				return executeOCI([
+					'iam',
+					'availability-domain',
+					'list',
+					'--compartment-id',
+					compartmentId
+				]);
+			}
 		}
 	},
 	{
@@ -177,33 +270,56 @@ export const computeTools: ToolEntry[] = [
 				.describe('Filter by OS version (e.g., "8", "22.04")'),
 			shape: z.string().optional().describe('Filter by compatible shape')
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			const cliArgs = [
-				'compute',
-				'image',
-				'list',
-				'--compartment-id',
-				compartmentId,
-				'--sort-by',
-				'TIMECREATED',
-				'--sort-order',
-				'DESC',
-				'--all'
-			];
-			if (args.operatingSystem) cliArgs.push('--operating-system', args.operatingSystem as string);
-			if (args.operatingSystemVersion)
-				cliArgs.push('--operating-system-version', args.operatingSystemVersion as string);
-			if (args.shape) cliArgs.push('--shape', args.shape as string);
-			return slimOCIResponse(executeOCI(cliArgs), [
-				'display-name',
-				'id',
-				'operating-system',
-				'operating-system-version',
-				'time-created',
-				'size-in-mbs',
-				'compartment-id'
-			]);
+			try {
+				const request: Record<string, unknown> = {
+					compartmentId,
+					sortBy: 'TIMECREATED',
+					sortOrder: 'DESC',
+					limit: 100
+				};
+				if (args.operatingSystem) request.operatingSystem = args.operatingSystem as string;
+				if (args.operatingSystemVersion)
+					request.operatingSystemVersion = args.operatingSystemVersion as string;
+				if (args.shape) request.shape = args.shape as string;
+				return await executeAndSlim('compute', 'listImages', request, [
+					'display-name',
+					'id',
+					'operating-system',
+					'operating-system-version',
+					'time-created',
+					'size-in-mbs',
+					'compartment-id'
+				]);
+			} catch {
+				const cliArgs = [
+					'compute',
+					'image',
+					'list',
+					'--compartment-id',
+					compartmentId,
+					'--sort-by',
+					'TIMECREATED',
+					'--sort-order',
+					'DESC',
+					'--all'
+				];
+				if (args.operatingSystem)
+					cliArgs.push('--operating-system', args.operatingSystem as string);
+				if (args.operatingSystemVersion)
+					cliArgs.push('--operating-system-version', args.operatingSystemVersion as string);
+				if (args.shape) cliArgs.push('--shape', args.shape as string);
+				return slimOCIResponse(executeOCI(cliArgs), [
+					'display-name',
+					'id',
+					'operating-system',
+					'operating-system-version',
+					'time-created',
+					'size-in-mbs',
+					'compartment-id'
+				]);
+			}
 		}
 	},
 	{
@@ -216,23 +332,40 @@ export const computeTools: ToolEntry[] = [
 			compartmentId: compartmentIdSchema,
 			availabilityDomain: z.string().optional().describe('Filter by availability domain')
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			const cliArgs = ['compute', 'shape', 'list', '--compartment-id', compartmentId, '--all'];
-			if (args.availabilityDomain)
-				cliArgs.push('--availability-domain', args.availabilityDomain as string);
-			return slimOCIResponse(executeOCI(cliArgs), [
-				'shape',
-				'billing-type',
-				'processor-description',
-				'ocpus',
-				'memory-in-gbs',
-				'networking-bandwidth-in-gbps',
-				'max-vnic-attachments',
-				'gpu-description',
-				'ocpu-options',
-				'memory-options'
-			]);
+			try {
+				const request: Record<string, unknown> = { compartmentId, limit: 500 };
+				if (args.availabilityDomain) request.availabilityDomain = args.availabilityDomain as string;
+				return await executeAndSlim('compute', 'listShapes', request, [
+					'shape',
+					'billing-type',
+					'processor-description',
+					'ocpus',
+					'memory-in-gbs',
+					'networking-bandwidth-in-gbps',
+					'max-vnic-attachments',
+					'gpu-description',
+					'ocpu-options',
+					'memory-options'
+				]);
+			} catch {
+				const cliArgs = ['compute', 'shape', 'list', '--compartment-id', compartmentId, '--all'];
+				if (args.availabilityDomain)
+					cliArgs.push('--availability-domain', args.availabilityDomain as string);
+				return slimOCIResponse(executeOCI(cliArgs), [
+					'shape',
+					'billing-type',
+					'processor-description',
+					'ocpus',
+					'memory-in-gbs',
+					'networking-bandwidth-in-gbps',
+					'max-vnic-attachments',
+					'gpu-description',
+					'ocpu-options',
+					'memory-options'
+				]);
+			}
 		}
 	},
 	{
@@ -249,53 +382,87 @@ export const computeTools: ToolEntry[] = [
 			const compartmentId = requireCompartmentId(args);
 			const instanceId = args.instanceId as string;
 
-			const attachments = (await executeOCIAsync([
-				'compute',
-				'vnic-attachment',
-				'list',
-				'--instance-id',
-				instanceId,
-				'--compartment-id',
-				compartmentId,
-				'--all'
-			])) as {
-				data: Array<{
-					'vnic-id': string;
-					'display-name'?: string;
-					'lifecycle-state': string;
+			try {
+				const attachmentsResponse = await executeOCISDK('compute', 'listVnicAttachments', {
+					compartmentId,
+					instanceId
+				});
+				const attachments = normalizeSDKResponse(attachmentsResponse);
+				const attachmentList = (
+					Array.isArray((attachments as { data: unknown }).data)
+						? (attachments as { data: unknown[] }).data
+						: []
+				) as Array<{
+					'vnic-id'?: string;
+					vnicId?: string;
+					'lifecycle-state'?: string;
+					lifecycleState?: string;
 				}>;
-			};
 
-			if (!attachments?.data?.length) {
-				return {
-					vnics: [],
-					message: 'No VNIC attachments found for this instance'
+				if (!attachmentList.length) {
+					return { vnics: [], message: 'No VNIC attachments found for this instance' };
+				}
+
+				const vnics = await Promise.all(
+					attachmentList
+						.filter((a) => (a['lifecycle-state'] ?? a.lifecycleState) === 'ATTACHED')
+						.map(async (attachment) => {
+							const vnicId = (attachment['vnic-id'] ?? attachment.vnicId) as string;
+							try {
+								const vnicResponse = await executeOCISDK('virtualNetwork', 'getVnic', { vnicId });
+								const vnicData = normalizeSDKResponse(vnicResponse);
+								return { vnicId, ...(vnicData as { data: Record<string, unknown> }).data };
+							} catch {
+								return { vnicId, error: 'Failed to resolve VNIC' };
+							}
+						})
+				);
+
+				return { vnics, count: vnics.length };
+			} catch {
+				// Full CLI fallback for the composite operation
+				const attachments = (await executeOCIAsync([
+					'compute',
+					'vnic-attachment',
+					'list',
+					'--instance-id',
+					instanceId,
+					'--compartment-id',
+					compartmentId,
+					'--all'
+				])) as {
+					data: Array<{
+						'vnic-id': string;
+						'display-name'?: string;
+						'lifecycle-state': string;
+					}>;
 				};
+
+				if (!attachments?.data?.length) {
+					return { vnics: [], message: 'No VNIC attachments found for this instance' };
+				}
+
+				const vnics = await Promise.all(
+					attachments.data
+						.filter((a) => a['lifecycle-state'] === 'ATTACHED')
+						.map(async (attachment) => {
+							try {
+								const vnic = (await executeOCIAsync([
+									'network',
+									'vnic',
+									'get',
+									'--vnic-id',
+									attachment['vnic-id']
+								])) as { data: Record<string, unknown> };
+								return { vnicId: attachment['vnic-id'], ...vnic.data };
+							} catch {
+								return { vnicId: attachment['vnic-id'], error: 'Failed to resolve VNIC' };
+							}
+						})
+				);
+
+				return { vnics, count: vnics.length };
 			}
-
-			const vnics = await Promise.all(
-				attachments.data
-					.filter((a) => a['lifecycle-state'] === 'ATTACHED')
-					.map(async (attachment) => {
-						try {
-							const vnic = (await executeOCIAsync([
-								'network',
-								'vnic',
-								'get',
-								'--vnic-id',
-								attachment['vnic-id']
-							])) as { data: Record<string, unknown> };
-							return { vnicId: attachment['vnic-id'], ...vnic.data };
-						} catch {
-							return {
-								vnicId: attachment['vnic-id'],
-								error: 'Failed to resolve VNIC'
-							};
-						}
-					})
-			);
-
-			return { vnics, count: vnics.length };
 		}
 	},
 	{
@@ -316,28 +483,52 @@ export const computeTools: ToolEntry[] = [
 			const command = args.command as string;
 			const timeoutSeconds = (args.timeoutSeconds as number) || 60;
 
-			const commandDetails = JSON.stringify({
-				source: { sourceType: 'TEXT', text: command },
-				executionTimeOutInSeconds: timeoutSeconds,
-				target: { instanceId },
-				compartmentId
-			});
-
-			const result = await executeOCIAsync([
-				'instance-agent',
-				'command',
-				'create',
-				'--from-json',
-				commandDetails
-			]);
-
-			return {
-				instanceId,
-				command,
-				timeoutSeconds,
-				data: result,
-				note: 'Use getCommandExecution to check the result'
-			};
+			try {
+				const request = {
+					createInstanceAgentCommandDetails: {
+						compartmentId,
+						executionTimeOutInSeconds: timeoutSeconds,
+						target: { instanceId },
+						content: {
+							source: { sourceType: 'TEXT', text: command }
+						}
+					}
+				};
+				const response = await executeOCISDK(
+					'computeInstanceAgent',
+					'createInstanceAgentCommand',
+					request
+				);
+				const result = normalizeSDKResponse(response);
+				return {
+					instanceId,
+					command,
+					timeoutSeconds,
+					data: result,
+					note: 'Use getCommandExecution to check the result'
+				};
+			} catch {
+				const commandDetails = JSON.stringify({
+					source: { sourceType: 'TEXT', text: command },
+					executionTimeOutInSeconds: timeoutSeconds,
+					target: { instanceId },
+					compartmentId
+				});
+				const result = await executeOCIAsync([
+					'instance-agent',
+					'command',
+					'create',
+					'--from-json',
+					commandDetails
+				]);
+				return {
+					instanceId,
+					command,
+					timeoutSeconds,
+					data: result,
+					note: 'Use getCommandExecution to check the result'
+				};
+			}
 		}
 	},
 	{
@@ -350,16 +541,27 @@ export const computeTools: ToolEntry[] = [
 			instanceId: z.string().describe('The OCID of the instance'),
 			commandId: z.string().describe('The OCID of the command to check')
 		}),
-		execute: (args) => {
-			return executeOCI([
-				'instance-agent',
-				'command-execution',
-				'get',
-				'--instance-agent-command-id',
-				args.commandId as string,
-				'--instance-id',
-				args.instanceId as string
-			]);
+		executeAsync: async (args) => {
+			const instanceId = args.instanceId as string;
+			const instanceAgentCommandId = args.commandId as string;
+			try {
+				const response = await executeOCISDK(
+					'computeInstanceAgent',
+					'getInstanceAgentCommandExecution',
+					{ instanceId, instanceAgentCommandId }
+				);
+				return normalizeSDKResponse(response);
+			} catch {
+				return executeOCI([
+					'instance-agent',
+					'command-execution',
+					'get',
+					'--instance-agent-command-id',
+					instanceAgentCommandId,
+					'--instance-id',
+					instanceId
+				]);
+			}
 		}
 	},
 	{
@@ -372,17 +574,27 @@ export const computeTools: ToolEntry[] = [
 			instanceId: z.string().describe('The OCID of the instance'),
 			compartmentId: compartmentIdSchema
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			return executeOCI([
-				'instance-agent',
-				'plugin',
-				'list',
-				'--instanceagent-id',
-				args.instanceId as string,
-				'--compartment-id',
-				compartmentId
-			]);
+			const instanceagentId = args.instanceId as string;
+			try {
+				const response = await executeOCISDK('instanceAgentPlugin', 'listInstanceAgentPlugins', {
+					instanceagentId,
+					compartmentId
+				});
+				const normalized = normalizeSDKResponse(response);
+				return camelToKebab(normalized);
+			} catch {
+				return executeOCI([
+					'instance-agent',
+					'plugin',
+					'list',
+					'--instanceagent-id',
+					instanceagentId,
+					'--compartment-id',
+					compartmentId
+				]);
+			}
 		}
 	}
 ];

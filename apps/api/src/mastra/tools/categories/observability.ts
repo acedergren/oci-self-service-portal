@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { ToolEntry } from '../types.js';
-import { executeOCI, executeOCIAsync, slimOCIResponse, requireCompartmentId } from '../executor.js';
+import { executeOCI, executeOCIAsync, requireCompartmentId } from '../executor.js';
+import { executeOCISDK, normalizeSDKResponse } from '@portal/shared/tools/executor-sdk.js';
 
 const compartmentIdSchema = z
 	.string()
@@ -20,21 +21,18 @@ export const observabilityTools: ToolEntry[] = [
 			compartmentId: compartmentIdSchema,
 			displayName: z.string().optional()
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			const cliArgs = ['monitoring', 'alarm', 'list', '--compartment-id', compartmentId, '--all'];
-			if (args.displayName) cliArgs.push('--display-name', args.displayName as string);
-			return slimOCIResponse(executeOCI(cliArgs), [
-				'display-name',
-				'id',
-				'severity',
-				'lifecycle-state',
-				'metric-compartment-id',
-				'namespace',
-				'query',
-				'is-enabled',
-				'time-created'
-			]);
+			try {
+				const request: Record<string, unknown> = { compartmentId };
+				if (args.displayName) request.displayName = args.displayName as string;
+				const response = await executeOCISDK('monitoring', 'listAlarms', request);
+				return normalizeSDKResponse(response);
+			} catch {
+				const cliArgs = ['monitoring', 'alarm', 'list', '--compartment-id', compartmentId, '--all'];
+				if (args.displayName) cliArgs.push('--display-name', args.displayName as string);
+				return executeOCI(cliArgs);
+			}
 		}
 	},
 	{
@@ -53,29 +51,46 @@ export const observabilityTools: ToolEntry[] = [
 			endTime: z.string().optional().describe('End time (ISO 8601) — defaults to now'),
 			resolution: z.string().optional().describe('Data resolution (e.g., 1m, 5m, 1h)')
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
 			const now = new Date();
 			const threeHoursAgo = new Date(now.getTime() - 3 * 60 * 60 * 1000);
 			const startTime = (args.startTime as string) || threeHoursAgo.toISOString();
 			const endTime = (args.endTime as string) || now.toISOString();
-			const cliArgs = [
-				'monitoring',
-				'metric-data',
-				'summarize-metrics-data',
-				'--compartment-id',
-				compartmentId,
-				'--namespace',
-				args.namespace as string,
-				'--query-text',
-				args.query as string,
-				'--start-time',
-				startTime,
-				'--end-time',
-				endTime
-			];
-			if (args.resolution) cliArgs.push('--resolution', args.resolution as string);
-			return executeOCI(cliArgs);
+
+			try {
+				const summarizeMetricsDataDetails: Record<string, unknown> = {
+					namespace: args.namespace,
+					query: args.query,
+					startTime: new Date(startTime),
+					endTime: new Date(endTime)
+				};
+				if (args.resolution) summarizeMetricsDataDetails.resolution = args.resolution;
+
+				const response = await executeOCISDK('monitoring', 'summarizeMetricsData', {
+					compartmentId,
+					summarizeMetricsDataDetails
+				});
+				return normalizeSDKResponse(response);
+			} catch {
+				const cliArgs = [
+					'monitoring',
+					'metric-data',
+					'summarize-metrics-data',
+					'--compartment-id',
+					compartmentId,
+					'--namespace',
+					args.namespace as string,
+					'--query-text',
+					args.query as string,
+					'--start-time',
+					startTime,
+					'--end-time',
+					endTime
+				];
+				if (args.resolution) cliArgs.push('--resolution', args.resolution as string);
+				return executeOCI(cliArgs);
+			}
 		}
 	},
 	{
@@ -129,35 +144,63 @@ export const observabilityTools: ToolEntry[] = [
 			const resourceFilter = instanceId ? `{resourceId = "${instanceId}"}` : '';
 			const mqlQuery = `${metricName}[${config.interval}]${resourceFilter}.${aggregation}()`;
 
-			const result = await executeOCIAsync([
-				'monitoring',
-				'metric-data',
-				'summarize-metrics-data',
-				'--compartment-id',
-				compartmentId,
-				'--namespace',
-				'oci_computeagent',
-				'--query-text',
-				mqlQuery,
-				'--start-time',
-				startTime.toISOString(),
-				'--end-time',
-				now.toISOString()
-			]);
+			try {
+				const response = await executeOCISDK('monitoring', 'summarizeMetricsData', {
+					compartmentId,
+					summarizeMetricsDataDetails: {
+						namespace: 'oci_computeagent',
+						query: mqlQuery,
+						startTime,
+						endTime: now
+					}
+				});
 
-			return {
-				metricName,
-				period,
-				aggregation,
-				query: mqlQuery,
-				namespace: 'oci_computeagent',
-				timeRange: {
-					start: startTime.toISOString(),
-					end: now.toISOString(),
-					interval: config.interval
-				},
-				data: result
-			};
+				const result = normalizeSDKResponse(response);
+
+				return {
+					metricName,
+					period,
+					aggregation,
+					query: mqlQuery,
+					namespace: 'oci_computeagent',
+					timeRange: {
+						start: startTime.toISOString(),
+						end: now.toISOString(),
+						interval: config.interval
+					},
+					data: result
+				};
+			} catch {
+				const result = await executeOCIAsync([
+					'monitoring',
+					'metric-data',
+					'summarize-metrics-data',
+					'--compartment-id',
+					compartmentId,
+					'--namespace',
+					'oci_computeagent',
+					'--query-text',
+					mqlQuery,
+					'--start-time',
+					startTime.toISOString(),
+					'--end-time',
+					now.toISOString()
+				]);
+
+				return {
+					metricName,
+					period,
+					aggregation,
+					query: mqlQuery,
+					namespace: 'oci_computeagent',
+					timeRange: {
+						start: startTime.toISOString(),
+						end: now.toISOString(),
+						interval: config.interval
+					},
+					data: result
+				};
+			}
 		}
 	},
 	{
@@ -169,17 +212,27 @@ export const observabilityTools: ToolEntry[] = [
 		parameters: z.object({
 			compartmentId: compartmentIdSchema
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			return executeOCI([
-				'monitoring',
-				'metric',
-				'list',
-				'--compartment-id',
-				compartmentId,
-				'--group-by',
-				JSON.stringify(['namespace'])
-			]);
+			try {
+				const response = await executeOCISDK('monitoring', 'listMetrics', {
+					compartmentId,
+					listMetricsDetails: {
+						groupBy: ['namespace']
+					}
+				});
+				return normalizeSDKResponse(response);
+			} catch {
+				return executeOCI([
+					'monitoring',
+					'metric',
+					'list',
+					'--compartment-id',
+					compartmentId,
+					'--group-by',
+					JSON.stringify(['namespace'])
+				]);
+			}
 		}
 	}
 ];

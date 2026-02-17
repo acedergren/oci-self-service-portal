@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { ToolEntry } from '../types.js';
 import { executeOCIAsync, requireCompartmentId } from '../executor.js';
+import { executeOCISDK, normalizeSDKResponse } from '@portal/shared/tools/executor-sdk.js';
 
 const compartmentIdSchema = z
 	.string()
@@ -41,25 +42,46 @@ export const loggingTools: ToolEntry[] = [
 			const now = new Date();
 			const startTime = new Date(now.getTime() - hoursBack * 60 * 60 * 1000);
 
-			const result = await executeOCIAsync([
-				'logging-search',
-				'search-logs',
-				'--search-query',
-				`search "${compartmentId}" | ${query}`,
-				'--time-start',
-				startTime.toISOString(),
-				'--time-end',
-				now.toISOString(),
-				'--limit',
-				String(limit)
-			]);
+			try {
+				const response = await executeOCISDK('logSearch', 'searchLogs', {
+					searchLogsDetails: {
+						searchQuery: `search "${compartmentId}" | ${query}`,
+						timeStart: startTime,
+						timeEnd: now,
+						isReturnFieldInfo: false
+					},
+					limit
+				});
 
-			return {
-				query,
-				period,
-				timeRange: { start: startTime.toISOString(), end: now.toISOString() },
-				data: result
-			};
+				const result = normalizeSDKResponse(response);
+
+				return {
+					query,
+					period,
+					timeRange: { start: startTime.toISOString(), end: now.toISOString() },
+					data: result
+				};
+			} catch {
+				const result = await executeOCIAsync([
+					'logging-search',
+					'search-logs',
+					'--search-query',
+					`search "${compartmentId}" | ${query}`,
+					'--time-start',
+					startTime.toISOString(),
+					'--time-end',
+					now.toISOString(),
+					'--limit',
+					String(limit)
+				]);
+
+				return {
+					query,
+					period,
+					timeRange: { start: startTime.toISOString(), end: now.toISOString() },
+					data: result
+				};
+			}
 		}
 	}
 ];
