@@ -37,35 +37,36 @@ vi.mock('$lib/server/sentry.js', () => ({
 	captureError: vi.fn()
 }));
 
-// Mock OCI CLI via the util promisify pattern used in embeddings.ts
-// The module does: const execFileAsync = promisify(execFile);
-// We mock util.promisify to return our mock function
-const mockExecFileAsync = vi.fn();
-vi.mock('util', async (importOriginal) => {
-	const actual = (await importOriginal()) as Record<string, unknown>;
-	return {
-		...actual,
-		promisify: () => mockExecFileAsync
-	};
-});
-
 // Set OCI env for embeddings module
 vi.stubEnv('OCI_COMPARTMENT_ID', 'ocid1.compartment.oc1..test');
 vi.stubEnv('OCI_REGION', 'eu-frankfurt-1');
 
-import { generateEmbedding, generateEmbeddings } from '@portal/server/embeddings';
+import {
+	generateEmbedding,
+	generateEmbeddings,
+	resetGenAiClient,
+	__setGenAiClientForTesting
+} from '@portal/server/embeddings';
 import { embeddingRepository } from '@portal/server/oracle/repositories/embedding-repository';
 
-/** Helper to build a mock OCI embed-text response */
-function mockEmbedResponse(count: number): string {
+// Mock GenAI SDK client — injected via __setGenAiClientForTesting() because
+// oci-sdk is a CJS module that vi.mock() cannot reliably intercept.
+const mockEmbedText = vi.fn();
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const mockGenAiClient: any = { embedText: (...args: unknown[]) => mockEmbedText(...args) };
+
+/** Helper to build a mock OCI SDK embedText response */
+function mockEmbedResponse(count: number): object {
 	const embeddings = Array.from({ length: count }, () =>
 		Array.from({ length: 1536 }, () => Math.random() * 2 - 1)
 	);
-	return JSON.stringify({ data: { embeddings } });
+	return { embedTextResult: { id: 'r1', embeddings } };
 }
 
 beforeEach(() => {
 	vi.clearAllMocks();
+	// Inject mock client so tests don't make real SDK calls
+	__setGenAiClientForTesting(mockGenAiClient, 'eu-frankfurt-1');
 });
 
 // ============================================================================
@@ -75,7 +76,7 @@ beforeEach(() => {
 describe('Embedding Generation (Phase 8.5)', () => {
 	describe('generateEmbedding', () => {
 		it('returns a Float32Array of 1536 dimensions', async () => {
-			mockExecFileAsync.mockResolvedValueOnce({ stdout: mockEmbedResponse(1) });
+			mockEmbedText.mockResolvedValue(mockEmbedResponse(1));
 
 			const embedding = await generateEmbedding('List all compute instances');
 			expect(embedding).toBeInstanceOf(Float32Array);
@@ -83,7 +84,7 @@ describe('Embedding Generation (Phase 8.5)', () => {
 		});
 
 		it('returns non-zero values', async () => {
-			mockExecFileAsync.mockResolvedValueOnce({ stdout: mockEmbedResponse(1) });
+			mockEmbedText.mockResolvedValue(mockEmbedResponse(1));
 
 			const embedding = await generateEmbedding('Test query');
 			expect(embedding).not.toBeNull();
@@ -95,8 +96,9 @@ describe('Embedding Generation (Phase 8.5)', () => {
 			await expect(generateEmbedding('')).rejects.toThrow('empty');
 		});
 
-		it('returns null when OCI CLI fails with transient error', async () => {
-			mockExecFileAsync.mockRejectedValueOnce(new Error('ServiceUnavailable'));
+		it('returns null when OCI SDK fails with transient error', async () => {
+			const sdkError = Object.assign(new Error('ServiceUnavailable'), { statusCode: 503 });
+			mockEmbedText.mockRejectedValue(sdkError);
 
 			const result = await generateEmbedding('test');
 			expect(result).toBeNull();
@@ -105,7 +107,7 @@ describe('Embedding Generation (Phase 8.5)', () => {
 
 	describe('generateEmbeddings (batch)', () => {
 		it('returns embeddings for multiple texts', async () => {
-			mockExecFileAsync.mockResolvedValueOnce({ stdout: mockEmbedResponse(2) });
+			mockEmbedText.mockResolvedValue(mockEmbedResponse(2));
 
 			const embeddings = await generateEmbeddings([
 				'List compute instances',
@@ -127,7 +129,8 @@ describe('Embedding Generation (Phase 8.5)', () => {
 		});
 
 		it('returns null entries when batch fails', async () => {
-			mockExecFileAsync.mockRejectedValueOnce(new Error('timeout'));
+			const sdkError = Object.assign(new Error('timeout'), { statusCode: 500 });
+			mockEmbedText.mockRejectedValue(sdkError);
 
 			const embeddings = await generateEmbeddings(['text1', 'text2']);
 			expect(embeddings).toHaveLength(2);
