@@ -52,6 +52,9 @@ import { setupRoutes } from './routes/setup.js';
 import { authRoutes } from './routes/auth.js';
 import { mcpAdminRoutes } from './routes/admin/mcp.js';
 import { adminMetricsRoutes } from './routes/admin/metrics.js';
+import { idpAdminRoutes } from './routes/admin/idp.js';
+import { adminSettingsRoutes } from './routes/admin/settings.js';
+import { aiProviderAdminRoutes } from './routes/admin/ai-providers.js';
 
 const log = createLogger('app');
 
@@ -437,6 +440,9 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 	await app.register(authRoutes);
 	await app.register(mcpAdminRoutes);
 	await app.register(adminMetricsRoutes);
+	await app.register(idpAdminRoutes);
+	await app.register(adminSettingsRoutes);
+	await app.register(aiProviderAdminRoutes);
 
 	log.info('Fastify app created with plugins and routes');
 	return app;

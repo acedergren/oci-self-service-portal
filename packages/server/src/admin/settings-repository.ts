@@ -257,6 +257,22 @@ export const settingsRepository = {
 	},
 
 	/**
+	 * List all settings ordered by category and sort_order.
+	 * Admin-only — returns all settings including private ones.
+	 */
+	async listAll(): Promise<PortalSetting[]> {
+		return withConnection(async (conn) => {
+			const result = await conn.execute<PortalSettingRow>(
+				'SELECT * FROM portal_settings ORDER BY category, sort_order, key',
+				{}
+			);
+
+			if (!result.rows) return [];
+			return result.rows.map(rowToSetting);
+		});
+	},
+
+	/**
 	 * Delete a setting by key.
 	 */
 	async delete(key: string): Promise<void> {
