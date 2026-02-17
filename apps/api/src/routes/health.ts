@@ -1,4 +1,4 @@
-import type { FastifyInstance } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import { runHealthChecks } from '@portal/server/health';
 
 const HEALTH_CHECK_TIMEOUT_MS = 3_000;
@@ -6,17 +6,19 @@ const HEALTH_CHECK_TIMEOUT_MS = 3_000;
 /**
  * Health check routes.
  *
- * - GET /healthz — lightweight liveness probe (plain text "ok")
- * - GET /health  — deep health check with subsystem details (3s timeout)
+ * - GET /healthz     — lightweight liveness probe (plain text "ok")
+ * - GET /api/healthz — alias (Nginx proxies /api/* to Fastify)
+ * - GET /health      — deep health check with subsystem details (3s timeout)
+ * - GET /api/health  — alias (frontend observability dashboard)
  */
 export async function healthRoutes(app: FastifyInstance): Promise<void> {
-	// Lightweight liveness probe for load balancers / k8s
-	app.get('/healthz', async (_request, reply) => {
-		return reply.type('text/plain').send('ok');
-	});
+	// ── Handlers ──────────────────────────────────────────────────────────
 
-	// Deep health check with subsystem statuses
-	app.get('/health', async (_request, reply) => {
+	async function livenessHandler(_request: FastifyRequest, reply: FastifyReply) {
+		return reply.type('text/plain').send('ok');
+	}
+
+	async function deepHealthHandler(_request: FastifyRequest, reply: FastifyReply) {
 		try {
 			let timeoutId: ReturnType<typeof setTimeout>;
 			const timeoutPromise = new Promise<never>((_, reject) => {
@@ -38,5 +40,15 @@ export async function healthRoutes(app: FastifyInstance): Promise<void> {
 				timestamp: new Date().toISOString()
 			});
 		}
-	});
+	}
+
+	// ── Routes ────────────────────────────────────────────────────────────
+
+	// Lightweight liveness probe (direct access for k8s / load balancers)
+	app.get('/healthz', livenessHandler);
+	app.get('/api/healthz', livenessHandler);
+
+	// Deep health check with subsystem statuses
+	app.get('/health', deepHealthHandler);
+	app.get('/api/health', deepHealthHandler);
 }
