@@ -57,8 +57,8 @@ export async function startNewSession(
 
 	// Mark old session as completed in Oracle
 	if (oldId) {
-		await sessionRepository.update(oldId, { status: 'completed' }).catch(() => {
-			// Old session may not exist, that's fine
+		await sessionRepository.update(oldId, { status: 'completed' }).catch((err: unknown) => {
+			log.debug({ sessionId: oldId, err }, 'could not mark old session as completed');
 		});
 	}
 
