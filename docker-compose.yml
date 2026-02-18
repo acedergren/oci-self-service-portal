@@ -1,7 +1,7 @@
 # =============================================================================
 # DEPRECATED FOR LOCAL DEVELOPMENT
 # =============================================================================
-# This docker-compose.yml references a stale Dockerfile path (oci-ai-chat/Dockerfile)
+# This docker-compose.yml references a stale Dockerfile path (cloudnow/Dockerfile)
 # and only builds the SvelteKit frontend — the Fastify API is not included.
 # It will not work from a clean clone.
 #
@@ -13,11 +13,11 @@
 # =============================================================================
 
 services:
-  oci-ai-chat:
+  cloudnow:
     build:
       context: ..
-      dockerfile: oci-ai-chat/Dockerfile
-    container_name: oci-ai-chat
+      dockerfile: cloudnow/Dockerfile
+    container_name: cloudnow
     restart: unless-stopped
 
     ports:

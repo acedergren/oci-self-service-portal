@@ -142,7 +142,7 @@ const rootOptions: LoggerOptions = {
 	},
 	transport: buildTransport(),
 	// Bind the service name so all lines are attributable in aggregation
-	base: { service: 'oci-ai-chat' }
+	base: { service: 'cloudnow' }
 };
 
 /**

@@ -1,5 +1,5 @@
 /**
- * MCP Service for oci-ai-chat
+ * MCP Service for CloudNow
  *
  * Manages MCP server connections and integrates MCP tools with the AI SDK.
  * This service runs server-side only in SvelteKit.

@@ -5,7 +5,7 @@
 	import { resolve } from '$app/paths';
 	import UserMenu from '$lib/components/UserMenu.svelte';
 
-	// Create query client with OCI AI Chat defaults
+	// Create query client with CloudNow defaults
 	// Using QueryClient directly from svelte-query to avoid version mismatches
 	const queryClient = new QueryClient({
 		defaultOptions: {

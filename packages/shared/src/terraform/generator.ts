@@ -508,7 +508,7 @@ export function generateQuickComputeTerraform(options: {
 			memoryGBs: options.memoryGBs,
 			tags: {
 				ManagedBy: 'Terraform',
-				CreatedBy: 'oci-ai-chat'
+				CreatedBy: 'cloudnow'
 			}
 		}
 	};
