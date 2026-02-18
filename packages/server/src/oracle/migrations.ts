@@ -183,7 +183,20 @@ export async function runMigrations(): Promise<void> {
 					{ version: migration.version, sql: statement.substring(0, 120) },
 					'executing statement'
 				);
-				await connection.execute(statement);
+				try {
+					await connection.execute(statement);
+				} catch (err: unknown) {
+					// ORA-00955: object already exists — DDL is idempotent, skip and continue
+					const code = (err as { errorNum?: number }).errorNum;
+					if (code === 955) {
+						log.warn(
+							{ version: migration.version, sql: statement.substring(0, 80) },
+							'skipping statement — object already exists (ORA-00955)'
+						);
+						continue;
+					}
+					throw err;
+				}
 			}
 
 			await connection.execute(

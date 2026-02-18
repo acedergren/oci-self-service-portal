@@ -144,6 +144,9 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 		// Trust reverse proxy headers (X-Forwarded-Proto, X-Forwarded-For) from nginx.
 		// Required so secure cookies and request metadata behave correctly behind TLS termination.
 		trustProxy: fastifyOptions.trustProxy ?? true,
+		// Allow extra time for Oracle plugin to run DB migrations on first start.
+		// Default (10s) is too short for 17+ sequential SQL statements over TCPS.
+		pluginTimeout: 120_000,
 		logger: {
 			level: process.env.LOG_LEVEL || 'info',
 			serializers: {
