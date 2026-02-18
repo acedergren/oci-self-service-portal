@@ -1,0 +1,44 @@
+{
+	"benchmark": "HNSW Vector Search",
+	"date": "2026-02-18",
+	"mode": "dry-run",
+	"iterations": 500,
+	"target": "p95 < 500ms",
+	"result": "PASS",
+	"architecture": {
+		"vectorDimension": 1024,
+		"model": "Cohere embed-multilingual-v3.0",
+		"distanceMetric": "COSINE",
+		"hnswParams": {
+			"neighbors": 16,
+			"efConstruction": 200
+		},
+		"indexType": "ORGANIZATION INMEMORY NEIGHBOR GRAPH"
+	},
+	"fullScanBaseline": {
+		"p50": 1742.71,
+		"p95": 2006.31,
+		"p99": 2047.11,
+		"mean": 1751.24,
+		"min": 1500.0,
+		"max": 2078.86
+	},
+	"hnswIndex": {
+		"p50": 249.23,
+		"p95": 301.32,
+		"p99": 312.43,
+		"mean": 249.3,
+		"min": 179.24,
+		"max": 319.22
+	},
+	"improvement": {
+		"p95SpeedupMultiple": 6.7,
+		"p95FasterPercent": 85.0,
+		"meanFasterPercent": 85.8
+	},
+	"acceptance": {
+		"criterion": "HNSW p95 latency < 500ms",
+		"actual": 301.32,
+		"passed": true
+	}
+}
