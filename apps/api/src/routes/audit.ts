@@ -19,7 +19,6 @@ const AuditErrorResponseSchema = z.object({
 });
 
 export async function auditRoutes(app: FastifyInstance): Promise<void> {
-	// codeql[js/missing-rate-limiting] -- endpoint is gated by requireAuth('admin:audit'); admin-only route.
 	app.get(
 		'/api/v1/audit/verify',
 		{
@@ -31,6 +30,7 @@ export async function auditRoutes(app: FastifyInstance): Promise<void> {
 				}
 			}
 		},
+		// codeql[js/missing-rate-limiting] -- endpoint is gated by requireAuth('admin:audit'); admin-only route.
 		async (request, reply) => {
 			try {
 				const result = await blockchainAuditRepository.verify();

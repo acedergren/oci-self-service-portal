@@ -127,24 +127,45 @@ if command -v codeql &>/dev/null; then
       --quiet \
       codeql/javascript-queries:codeql-suites/javascript-security-extended.qls 2>/dev/null; then
 
-      # Build artifact path prefixes — generated code is excluded from security counting.
-      # Findings in source files are counted; suppressions (// codeql[...]) are respected.
+      # Count only actionable findings: exclude build artifacts and inline-suppressed results.
+      # Note: CodeQL CLI does not process // codeql[] comments into SARIF suppressions[] locally;
+      # that only happens on GitHub's code scanning service. We replicate the suppression check
+      # by reading the source file for each finding and looking for // codeql[rule-id] annotations.
       RESULT_COUNT=$(python3 -c "
-import json, sys
+import json, re, os
 BUILD_DIRS = ('build/', 'dist/', 'apps/frontend/build/', 'apps/api/build/',
               '.svelte-kit/', 'node_modules/', 'infrastructure/docker/observability/')
+REPO_ROOT = '$REPO_ROOT'
+
+def has_suppression(uri, start_line, rule_id):
+    try:
+        filepath = os.path.join(REPO_ROOT, uri)
+        with open(filepath) as f:
+            lines = f.readlines()
+        pat = re.compile(r'//\s*codeql\[' + re.escape(rule_id) + r'\]')
+        for ln in [start_line, start_line - 1]:
+            if 1 <= ln <= len(lines) and pat.search(lines[ln - 1]):
+                return True
+    except Exception:
+        pass
+    return False
+
+count = 0
 with open('$CODEQL_RESULTS') as f:
     sarif = json.load(f)
-count = 0
 for run in sarif.get('runs', []):
     for result in run.get('results', []):
-        if result.get('suppressions'):
-            continue  # Inline // codeql[...] suppression in source
+        rule = result.get('ruleId', '')
         locs = result.get('locations', [])
-        if locs:
-            uri = locs[0].get('physicalLocation', {}).get('artifactLocation', {}).get('uri', '')
-            if any(uri.startswith(d) for d in BUILD_DIRS):
-                continue  # Generated build artifact — scan source instead
+        if not locs:
+            count += 1
+            continue
+        uri = locs[0].get('physicalLocation', {}).get('artifactLocation', {}).get('uri', '')
+        start_line = locs[0].get('physicalLocation', {}).get('region', {}).get('startLine', 0)
+        if any(uri.startswith(d) for d in BUILD_DIRS):
+            continue  # Generated build artifact
+        if result.get('suppressions') or has_suppression(uri, start_line, rule):
+            continue  # Inline // codeql[rule-id] suppression
         count += 1
 print(count)
 " 2>/dev/null || echo "0")
@@ -152,25 +173,40 @@ print(count)
       if [ "$RESULT_COUNT" -gt 0 ]; then
         echo "[codeql] WARNING: $RESULT_COUNT finding(s):"
         python3 -c "
-import json
+import json, re, os
 BUILD_DIRS = ('build/', 'dist/', 'apps/frontend/build/', 'apps/api/build/',
               '.svelte-kit/', 'node_modules/', 'infrastructure/docker/observability/')
+REPO_ROOT = '$REPO_ROOT'
+
+def has_suppression(uri, start_line, rule_id):
+    try:
+        filepath = os.path.join(REPO_ROOT, uri)
+        with open(filepath) as f:
+            lines = f.readlines()
+        pat = re.compile(r'//\s*codeql\[' + re.escape(rule_id) + r'\]')
+        for ln in [start_line, start_line - 1]:
+            if 1 <= ln <= len(lines) and pat.search(lines[ln - 1]):
+                return True
+    except Exception:
+        pass
+    return False
+
 with open('$CODEQL_RESULTS') as f:
     sarif = json.load(f)
 for run in sarif.get('runs', []):
     for result in run.get('results', []):
-        if result.get('suppressions'):
-            continue
-        locs = result.get('locations', [])
-        loc = ''
-        if locs:
-            phys = locs[0].get('physicalLocation', {})
-            uri = phys.get('artifactLocation', {}).get('uri', '')
-            line = phys.get('region', {}).get('startLine', '?')
-            loc = f'{uri}:{line}'
-            if any(uri.startswith(d) for d in BUILD_DIRS):
-                continue
         rule = result.get('ruleId', 'unknown')
+        locs = result.get('locations', [])
+        if not locs:
+            continue
+        phys = locs[0].get('physicalLocation', {})
+        uri = phys.get('artifactLocation', {}).get('uri', '')
+        start_line = phys.get('region', {}).get('startLine', 0)
+        loc = f'{uri}:{start_line}'
+        if any(uri.startswith(d) for d in BUILD_DIRS):
+            continue
+        if result.get('suppressions') or has_suppression(uri, start_line, rule):
+            continue
         msg = result.get('message', {}).get('text', '')[:120]
         print(f'  [{rule}] {loc}: {msg}')
 " 2>/dev/null
