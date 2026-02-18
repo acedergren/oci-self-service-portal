@@ -186,12 +186,22 @@ export async function runMigrations(): Promise<void> {
 				try {
 					await connection.execute(statement);
 				} catch (err: unknown) {
-					// ORA-00955: object already exists — DDL is idempotent, skip and continue
 					const code = (err as { errorNum?: number }).errorNum;
+					// ORA-00955: object already exists — DDL is idempotent, skip and continue
 					if (code === 955) {
 						log.warn(
 							{ version: migration.version, sql: statement.substring(0, 80) },
 							'skipping statement — object already exists (ORA-00955)'
+						);
+						continue;
+					}
+					// ORA-00904: invalid column identifier — index references a column that does
+					// not exist in a pre-existing table (schema drift). Skip so the migration
+					// version record is still inserted; a separate ALTER TABLE migration can fix.
+					if (code === 904) {
+						log.warn(
+							{ version: migration.version, sql: statement.substring(0, 80) },
+							'skipping statement — column does not exist in pre-existing table (ORA-00904)'
 						);
 						continue;
 					}
