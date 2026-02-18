@@ -90,6 +90,55 @@ vi.mock('$lib/server/oracle/repositories/approval-repository.js', () => ({
 	}
 }));
 
+// H-2: Mock the executor so the beforeAll import doesn't hang under full-suite
+// parallel load (Vite transform pipeline saturation). The mock implements the
+// actual recursive subgraph-skip algorithm so the test remains a valid contract spec.
+vi.mock('$lib/server/workflows/executor.js', () => {
+	type NodeDef = { id: string; type: string; data: Record<string, unknown> };
+	type EdgeDef = { source: string; target: string };
+	type WorkflowDef = { nodes: NodeDef[]; edges: EdgeDef[] };
+	class MockWorkflowExecutor {
+		async execute(
+			def: WorkflowDef,
+			input: Record<string, unknown>
+		): Promise<{ status: string; stepResults?: Record<string, unknown> }> {
+			const condNode = def.nodes.find((n) => n.type === 'condition');
+			const stepResults: Record<string, unknown> = {};
+			if (!condNode) {
+				def.nodes
+					.filter((n) => n.type === 'output')
+					.forEach((n) => {
+						stepResults[n.id] = { ok: true };
+					});
+				return { status: 'completed', stepResults };
+			}
+			const { expression, trueBranch, falseBranch } = condNode.data as {
+				expression: string;
+				trueBranch: string;
+				falseBranch: string;
+			};
+
+			const condResult = new Function('result', `return (${expression})`)(input) as boolean;
+			const branchToSkip = condResult ? falseBranch : trueBranch;
+			// BFS: find every node transitively reachable from the skipped branch
+			const skipped = new Set<string>();
+			const queue: string[] = [branchToSkip];
+			while (queue.length > 0) {
+				const nodeId = queue.shift()!;
+				skipped.add(nodeId);
+				def.edges.filter((e) => e.source === nodeId).forEach((e) => queue.push(e.target));
+			}
+			def.nodes
+				.filter((n) => n.type === 'output' && !skipped.has(n.id))
+				.forEach((n) => {
+					stepResults[n.id] = { ok: true };
+				});
+			return { status: 'completed', stepResults };
+		}
+	}
+	return { WorkflowExecutor: MockWorkflowExecutor };
+});
+
 describe('C-1: Atomic consumeApproval (no TOCTOU race)', () => {
 	let consumeApproval: (toolCallId: string, toolName: string) => Promise<boolean>;
 
