@@ -12,7 +12,64 @@
  * - Tool/resource cache: Discovered capabilities from connected servers
  * - Metrics: Tool call tracking and performance monitoring
  */
+import type { Logger } from 'pino';
 import { z } from 'zod';
+
+import { PortalError } from '../errors.js';
+import { createLogger } from '../logger.js';
+
+// ============================================================================
+// JSON Helpers
+// ============================================================================
+
+const defaultLogger = createLogger('mcp-types');
+
+type SafeParseLogger = Pick<Logger, 'warn'>;
+
+export interface SafeParseOptions {
+	field: string;
+	serverId?: string;
+	log?: SafeParseLogger;
+}
+
+interface SafeParseSuccess<T> {
+	ok: true;
+	value: T;
+	error?: undefined;
+}
+
+interface SafeParseFailure<T> {
+	ok: false;
+	value: T;
+	error: PortalError;
+}
+
+export type SafeParseResult<T> = SafeParseSuccess<T> | SafeParseFailure<T>;
+
+export function safeParseJSON<T>(
+	raw: unknown,
+	fallback: T,
+	opts: SafeParseOptions
+): SafeParseResult<T> {
+	if (raw === null || raw === undefined || raw === '') {
+		return { ok: true, value: fallback };
+	}
+
+	try {
+		return { ok: true, value: JSON.parse(String(raw)) as T };
+	} catch (err) {
+		const logger = opts.log ?? defaultLogger;
+		logger.warn({ err, field: opts.field, serverId: opts.serverId }, 'Invalid JSON payload');
+		return {
+			ok: false,
+			value: fallback,
+			error: new PortalError('INVALID_JSON', 'Invalid JSON payload', 400, {
+				field: opts.field,
+				...(opts.serverId ? { serverId: opts.serverId } : {})
+			})
+		};
+	}
+}
 
 // ============================================================================
 // Enum Schemas
