@@ -71,6 +71,41 @@ vi.mock('@mastra/observability', () => ({
 	}
 }));
 
+// ── Mock heavy local modules (prevent Vite transform hang under parallel load) ─
+// Without these, mastra.ts imports OracleStore, registry.js (60+ tools),
+// charlie.js, and mcp-connection-manager — forcing Vite to transform thousands
+// of lines under full-suite load, causing the 30 s timeout.
+
+vi.mock('../../mastra/storage/oracle-store.js', () => ({
+	OracleStore: class {
+		constructor() {}
+	}
+}));
+
+vi.mock('../../mastra/rag/oracle-vector-store.js', () => ({
+	OracleVectorStore: class {
+		constructor() {}
+	}
+}));
+
+vi.mock('../../mastra/tools/registry.js', () => ({
+	buildMastraTools: () => ({})
+}));
+
+vi.mock('../../mastra/agents/charlie.js', () => ({
+	createCharlieAgent: () => ({ name: 'Charlie' }),
+	DEFAULT_MODEL: 'test-model'
+}));
+
+vi.mock('../../services/mcp-connection-manager.js', () => ({
+	mcpConnectionManager: {
+		initialize: vi.fn().mockResolvedValue(undefined),
+		getServer: vi.fn(),
+		getAllServers: vi.fn().mockReturnValue([]),
+		shutdown: vi.fn().mockResolvedValue(undefined)
+	}
+}));
+
 describe('mastra plugin', { timeout: 30_000 }, () => {
 	let app: FastifyInstance;
 
