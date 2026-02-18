@@ -322,7 +322,7 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 	// Cookie flags are shared with Better Auth config (packages/shared/server/auth/cookies.ts)
 	// to avoid drift between SvelteKit auth routes and Fastify API behavior.
 	await app.register(fastifyCookie, {
-		secret: process.env.BETTER_AUTH_SECRET || 'dev-secret-change-in-production',
+		secret: process.env.BETTER_AUTH_SECRET,
 		parseOptions: getAuthCookieAttributes()
 	});
 

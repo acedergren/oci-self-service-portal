@@ -769,6 +769,26 @@ describe('createApp – environment configuration', () => {
 
 		expect(response.headers['access-control-allow-origin']).toBe('https://env-origin.example.com');
 	});
+
+	it('throws in production when CORS_ORIGIN is not set and no corsOrigin option', async () => {
+		process.env.NODE_ENV = 'production';
+		process.env.BETTER_AUTH_SECRET = 'a'.repeat(32);
+		delete process.env.CORS_ORIGIN;
+
+		await expect(createApp({ corsOrigin: undefined })).rejects.toThrow(
+			'CORS_ORIGIN is required in production'
+		);
+	});
+
+	it('does NOT throw in production when passed explicit corsOrigin option', async () => {
+		process.env.NODE_ENV = 'production';
+		process.env.BETTER_AUTH_SECRET = 'a'.repeat(32);
+		delete process.env.CORS_ORIGIN;
+
+		// Should not throw — explicit option overrides env var requirement
+		app = await createApp({ corsOrigin: 'https://example.com', enableRateLimit: false });
+		await app.close();
+	});
 });
 
 // ---------------------------------------------------------------------------

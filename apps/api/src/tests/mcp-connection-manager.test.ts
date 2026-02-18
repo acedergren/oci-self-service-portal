@@ -701,6 +701,30 @@ describe('MCPConnectionManager', () => {
 				manager.executeToolOnServer(testServerId, 'github_create_issue', {})
 			).rejects.toThrow('Server not connected');
 		});
+
+		it('rejects with timeout error when tool execution exceeds timeoutMs', async () => {
+			const mocks = (globalThis as any).__testMocks;
+			const manager = new MCPConnectionManager();
+
+			// Connect server first
+			mocks.repository.getById.mockResolvedValue(testServer);
+			mocks.mcpClient.tools.mockResolvedValue(testTools);
+			await manager.connectServer(testServerId);
+
+			// Replace the tool execute with a hanging implementation
+			const hangingTools = {
+				...testTools,
+				'slow-tool': {
+					execute: vi.fn().mockImplementation(() => new Promise<never>(() => {}))
+				}
+			};
+			mocks.mcpClient.tools.mockResolvedValue(hangingTools);
+
+			// Act + Assert: should reject before 200ms with timeout message
+			await expect(
+				manager.executeToolOnServer(testServerId, 'slow-tool', {}, { timeoutMs: 100 })
+			).rejects.toThrow('Tool execution timed out after 100ms');
+		}, 2000);
 	});
 
 	// ========================================================================

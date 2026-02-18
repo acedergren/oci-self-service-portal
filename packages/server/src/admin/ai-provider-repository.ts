@@ -16,6 +16,9 @@
 
 import { withConnection } from '../oracle/connection.js';
 import { encryptSecret, decryptSecret } from '../auth/crypto.js';
+import { createLogger } from '../logger.js';
+
+const log = createLogger('ai-provider-repository');
 import type {
 	AiProvider,
 	CreateAiProviderInput,
@@ -64,10 +67,10 @@ async function rowToProvider(row: AiProviderRow): Promise<AiProvider> {
 		try {
 			apiKey = await decryptSecret(row.API_KEY_ENC, row.API_KEY_IV, row.API_KEY_TAG);
 		} catch (err) {
-			console.error('Failed to decrypt API key for provider:', {
-				providerId: row.ID,
-				error: err instanceof Error ? err.message : 'Unknown error'
-			});
+			log.error(
+				{ providerId: row.ID, err: err instanceof Error ? err.message : 'Unknown error' },
+				'Failed to decrypt API key for provider'
+			);
 			// Continue without key — admin can re-enter
 			apiKey = undefined;
 		}

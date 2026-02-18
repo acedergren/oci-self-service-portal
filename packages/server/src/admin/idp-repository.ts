@@ -16,6 +16,9 @@
 
 import { withConnection } from '../oracle/connection.js';
 import { encryptSecret, decryptSecret } from '../auth/crypto.js';
+import { createLogger } from '../logger.js';
+
+const log = createLogger('idp-repository');
 import {
 	IdpProviderTypeSchema,
 	IdpStatusSchema,
@@ -79,10 +82,10 @@ async function rowToProvider(row: IdpProviderRow): Promise<IdpProvider> {
 				row.CLIENT_SECRET_TAG
 			);
 		} catch (err) {
-			console.error('Failed to decrypt client secret for IDP:', {
-				idpId: row.ID,
-				error: err instanceof Error ? err.message : 'Unknown error'
-			});
+			log.error(
+				{ idpId: row.ID, err: err instanceof Error ? err.message : 'Unknown error' },
+				'Failed to decrypt client secret for IDP'
+			);
 			// Continue without secret — admin can re-enter
 			clientSecret = undefined;
 		}

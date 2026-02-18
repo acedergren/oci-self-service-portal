@@ -859,6 +859,54 @@ describe('POST /api/admin/mcp/servers/:id/tools/:toolName/test', () => {
 		expect(body.result).toEqual({ issue_id: 123, url: 'https://github.com/...' });
 		expect(body.durationMs).toBe(450);
 	});
+
+	it('truncates tool result when output exceeds 100KB', async () => {
+		const server = createMockServer();
+		const hugeString = 'x'.repeat(200_000); // 200KB
+		mockGetById.mockResolvedValue(server);
+		mockExecuteToolOnServer.mockResolvedValue({ result: { data: hugeString }, durationMs: 50 });
+
+		const app = await buildTestApp();
+		simulateSession(app, { id: 'user-1', activeOrganizationId: 'org-123' }, ['admin:all']);
+		await app.register(mcpAdminRoutes);
+		await app.ready();
+
+		const res = await app.inject({
+			method: 'POST',
+			url: '/api/admin/mcp/servers/660e8400-e29b-41d4-a716-446655440001/tools/my-tool/test',
+			payload: { args: {} }
+		});
+
+		expect(res.statusCode).toBe(200);
+		const body = res.json();
+		expect(body.truncated).toBe(true);
+		expect(body.truncatedAt).toBe(100_000);
+		expect(typeof body.result).toBe('string');
+		expect((body.result as string).length).toBeLessThanOrEqual(100_000);
+	});
+
+	it('does not truncate tool result when output is under 100KB', async () => {
+		const server = createMockServer();
+		const smallResult = { status: 'ok', items: [1, 2, 3] };
+		mockGetById.mockResolvedValue(server);
+		mockExecuteToolOnServer.mockResolvedValue({ result: smallResult, durationMs: 10 });
+
+		const app = await buildTestApp();
+		simulateSession(app, { id: 'user-1', activeOrganizationId: 'org-123' }, ['admin:all']);
+		await app.register(mcpAdminRoutes);
+		await app.ready();
+
+		const res = await app.inject({
+			method: 'POST',
+			url: '/api/admin/mcp/servers/660e8400-e29b-41d4-a716-446655440001/tools/my-tool/test',
+			payload: { args: {} }
+		});
+
+		expect(res.statusCode).toBe(200);
+		const body = res.json();
+		expect(body.truncated).toBeUndefined();
+		expect(body.result).toEqual(smallResult);
+	});
 });
 
 describe('GET /api/admin/mcp/servers/:id/metrics', () => {

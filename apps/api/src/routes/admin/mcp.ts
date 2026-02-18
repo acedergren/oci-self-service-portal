@@ -50,7 +50,9 @@ const ToolListResponseSchema = z.object({
 
 const ToolTestResponseSchema = z.object({
 	result: z.unknown(),
-	durationMs: z.number().int().nonnegative()
+	durationMs: z.number().int().nonnegative(),
+	truncated: z.boolean().optional(),
+	truncatedAt: z.number().int().positive().optional()
 });
 
 const HealthStatusResponseSchema = z.object({
@@ -731,6 +733,23 @@ export async function mcpAdminRoutes(app: FastifyInstance): Promise<void> {
 				);
 
 				log.info({ serverId: id, toolName, durationMs }, 'Tested MCP tool');
+
+				const MAX_RESULT_BYTES = 100_000; // 100KB
+				const serialized = JSON.stringify(result);
+
+				if (serialized.length > MAX_RESULT_BYTES) {
+					log.warn(
+						{ serverId: id, toolName, resultBytes: serialized.length },
+						'MCP tool result truncated to 100KB'
+					);
+					return reply.send({
+						result: serialized.slice(0, MAX_RESULT_BYTES),
+						durationMs,
+						truncated: true,
+						truncatedAt: MAX_RESULT_BYTES
+					});
+				}
+
 				return reply.send({ result, durationMs });
 			} catch (err) {
 				log.error(

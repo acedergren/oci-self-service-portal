@@ -15,7 +15,7 @@ async function main() {
 		// Create and start Fastify app
 		// Oracle pool init + migrations are handled by the oracle plugin inside createApp()
 		const app = await createApp({
-			corsOrigin: process.env.CORS_ORIGIN || '*',
+			corsOrigin: process.env.CORS_ORIGIN,
 			enableRateLimit: process.env.ENABLE_RATE_LIMIT !== 'false',
 			enableTracing: process.env.ENABLE_TRACING !== 'false'
 		});

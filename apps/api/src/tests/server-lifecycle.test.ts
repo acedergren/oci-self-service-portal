@@ -10,6 +10,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { FastifyInstance } from 'fastify';
 
 // ---------------------------------------------------------------------------
 // Mock heavy dependencies so tests run without Oracle/Sentry
@@ -53,6 +54,37 @@ vi.mock('@portal/server/logger', () => ({
 		child: vi.fn().mockReturnThis()
 	}))
 }));
+
+const buildMockApp = (): FastifyInstance =>
+	({
+		addHook: vi.fn(),
+		close: vi.fn().mockResolvedValue(undefined),
+		ready: vi.fn().mockResolvedValue(undefined),
+		addresses: vi.fn(() => [])
+	}) as unknown as FastifyInstance;
+
+const mockCreateApp = vi.fn();
+const setCreateAppMock = () =>
+	mockCreateApp.mockImplementation(async (options?: { corsOrigin?: unknown }) => {
+		if (process.env.NODE_ENV === 'production' && !options?.corsOrigin) {
+			throw new Error('CORS_ORIGIN is required in production');
+		}
+		return buildMockApp();
+	});
+setCreateAppMock();
+const mockStartServer = vi.fn().mockResolvedValue(undefined);
+const mockStopServer = vi.fn().mockResolvedValue(undefined);
+
+vi.mock('../app.js', () => ({
+	createApp: mockCreateApp,
+	startServer: mockStartServer,
+	stopServer: mockStopServer
+}));
+
+async function loadServerModule() {
+	await import('../server.js');
+	await new Promise((resolve) => setImmediate(resolve));
+}
 
 describe('server lifecycle', () => {
 	const originalEnv = process.env;
@@ -148,6 +180,53 @@ describe('server lifecycle', () => {
 		process.env.ENABLE_TRACING = 'false';
 		const enabled = process.env.ENABLE_TRACING !== 'false';
 		expect(enabled).toBe(false);
+	});
+});
+
+describe('server main – CORS origin', () => {
+	const originalEnv = process.env;
+	let exitSpy: ReturnType<typeof vi.spyOn>;
+
+	beforeEach(() => {
+		process.env = { ...originalEnv };
+		vi.resetModules();
+		mockCreateApp.mockReset();
+		setCreateAppMock();
+		mockStartServer.mockReset();
+		mockStopServer.mockReset();
+		exitSpy = vi.spyOn(process, 'exit').mockImplementation((() => undefined) as never);
+	});
+
+	afterEach(() => {
+		process.env = originalEnv;
+		exitSpy.mockRestore();
+	});
+
+	it('should pass explicit CORS origin to createApp in production', async () => {
+		process.env.NODE_ENV = 'production';
+		process.env.CORS_ORIGIN = 'https://portal.example.com';
+
+		await loadServerModule();
+
+		expect(mockCreateApp).toHaveBeenCalledTimes(1);
+		expect(mockCreateApp).toHaveBeenCalledWith(
+			expect.objectContaining({ corsOrigin: 'https://portal.example.com' })
+		);
+		expect(exitSpy).not.toHaveBeenCalled();
+	});
+
+	it('should not fall back to wildcard when CORS_ORIGIN is missing in production', async () => {
+		process.env.NODE_ENV = 'production';
+		delete process.env.CORS_ORIGIN;
+
+		await loadServerModule();
+
+		expect(mockCreateApp).toHaveBeenCalledTimes(1);
+		const passedOptions = mockCreateApp.mock.calls.at(-1)?.[0] as
+			| { corsOrigin?: unknown }
+			| undefined;
+		expect(passedOptions?.corsOrigin).toBeUndefined();
+		expect(exitSpy).toHaveBeenCalledWith(1);
 	});
 });
 

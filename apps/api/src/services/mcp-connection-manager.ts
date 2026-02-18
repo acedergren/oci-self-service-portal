@@ -384,12 +384,16 @@ export class MCPConnectionManager {
 	 * Execute a tool on an MCP server.
 	 * Records metric (fire-and-forget).
 	 * Returns result and timing.
+	 *
+	 * @param options.timeoutMs - Max ms to wait for tool execution (default: 30000)
 	 */
 	async executeToolOnServer(
 		serverId: string,
 		toolName: string,
-		args: Record<string, unknown>
+		args: Record<string, unknown>,
+		options: { timeoutMs?: number } = {}
 	): Promise<ToolExecutionResult> {
+		const { timeoutMs = 30_000 } = options;
 		const startTime = Date.now();
 
 		try {
@@ -405,7 +409,15 @@ export class MCPConnectionManager {
 				throw new Error(`Tool not found or not executable: ${toolName}`);
 			}
 
-			const result = await tool.execute(args, {});
+			const result = await Promise.race([
+				tool.execute(args, {}),
+				new Promise<never>((_, reject) =>
+					setTimeout(
+						() => reject(new Error(`Tool execution timed out after ${timeoutMs}ms`)),
+						timeoutMs
+					)
+				)
+			]);
 			const durationMs = Date.now() - startTime;
 
 			// Record metric (fire-and-forget)
