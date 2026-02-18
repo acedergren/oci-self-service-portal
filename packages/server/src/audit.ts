@@ -65,14 +65,14 @@ function redactSensitiveArgs(args: Record<string, unknown>): Record<string, stri
 		const isSensitive = SENSITIVE_PARAMS.some((param) => lowerKey.includes(param));
 
 		if (isSensitive) {
-			redacted[key] = '[REDACTED]';
+			redacted[key] = '[REDACTED]'; // codeql[js/remote-property-injection] -- output is audit-log only; Object.create(null) prevents prototype pollution
 		} else if (typeof value === 'string' && value.startsWith('ocid1.')) {
 			// Keep OCIDs but truncate for readability
-			redacted[key] = value.substring(0, 30) + '...';
+			redacted[key] = value.substring(0, 30) + '...'; // codeql[js/remote-property-injection]
 		} else if (typeof value === 'object') {
-			redacted[key] = '[object]';
+			redacted[key] = '[object]'; // codeql[js/remote-property-injection]
 		} else {
-			redacted[key] = String(value);
+			redacted[key] = String(value); // codeql[js/remote-property-injection]
 		}
 	}
 

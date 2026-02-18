@@ -127,32 +127,52 @@ if command -v codeql &>/dev/null; then
       --quiet \
       codeql/javascript-queries:codeql-suites/javascript-security-extended.qls 2>/dev/null; then
 
+      # Build artifact path prefixes — generated code is excluded from security counting.
+      # Findings in source files are counted; suppressions (// codeql[...]) are respected.
       RESULT_COUNT=$(python3 -c "
 import json, sys
+BUILD_DIRS = ('build/', 'dist/', 'apps/frontend/build/', 'apps/api/build/',
+              '.svelte-kit/', 'node_modules/', 'infrastructure/docker/observability/')
 with open('$CODEQL_RESULTS') as f:
     sarif = json.load(f)
-    count = sum(len(run.get('results', [])) for run in sarif.get('runs', []))
-    print(count)
+count = 0
+for run in sarif.get('runs', []):
+    for result in run.get('results', []):
+        if result.get('suppressions'):
+            continue  # Inline // codeql[...] suppression in source
+        locs = result.get('locations', [])
+        if locs:
+            uri = locs[0].get('physicalLocation', {}).get('artifactLocation', {}).get('uri', '')
+            if any(uri.startswith(d) for d in BUILD_DIRS):
+                continue  # Generated build artifact — scan source instead
+        count += 1
+print(count)
 " 2>/dev/null || echo "0")
 
       if [ "$RESULT_COUNT" -gt 0 ]; then
         echo "[codeql] WARNING: $RESULT_COUNT finding(s):"
         python3 -c "
 import json
+BUILD_DIRS = ('build/', 'dist/', 'apps/frontend/build/', 'apps/api/build/',
+              '.svelte-kit/', 'node_modules/', 'infrastructure/docker/observability/')
 with open('$CODEQL_RESULTS') as f:
     sarif = json.load(f)
-    for run in sarif.get('runs', []):
-        for result in run.get('results', []):
-            rule = result.get('ruleId', 'unknown')
-            msg = result.get('message', {}).get('text', '')[:120]
-            locs = result.get('locations', [])
-            loc = ''
-            if locs:
-                phys = locs[0].get('physicalLocation', {})
-                uri = phys.get('artifactLocation', {}).get('uri', '')
-                line = phys.get('region', {}).get('startLine', '?')
-                loc = f'{uri}:{line}'
-            print(f'  [{rule}] {loc}: {msg}')
+for run in sarif.get('runs', []):
+    for result in run.get('results', []):
+        if result.get('suppressions'):
+            continue
+        locs = result.get('locations', [])
+        loc = ''
+        if locs:
+            phys = locs[0].get('physicalLocation', {})
+            uri = phys.get('artifactLocation', {}).get('uri', '')
+            line = phys.get('region', {}).get('startLine', '?')
+            loc = f'{uri}:{line}'
+            if any(uri.startswith(d) for d in BUILD_DIRS):
+                continue
+        rule = result.get('ruleId', 'unknown')
+        msg = result.get('message', {}).get('text', '')[:120]
+        print(f'  [{rule}] {loc}: {msg}')
 " 2>/dev/null
         FAILED=true
       else

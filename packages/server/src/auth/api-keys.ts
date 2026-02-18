@@ -41,9 +41,8 @@ function generateKey(): string {
 
 /** SHA-256 hash of a key (for storage and lookup). */
 function hashKey(key: string): string {
-	// lgtm[js/insufficient-password-hash] — API key hashing, not password hashing.
-	// Keys are 32 random bytes (256 bits of entropy); SHA-256 is appropriate for lookup.
-	return crypto.createHash('sha256').update(key).digest('hex');
+	// API key hashing (not password hashing): 32 random bytes = 256-bit entropy; SHA-256 is appropriate.
+	return crypto.createHash('sha256').update(key).digest('hex'); // codeql[js/insufficient-password-hash]
 }
 
 /** Extract the key prefix (first 8 chars after `portal_`) for UI display. */

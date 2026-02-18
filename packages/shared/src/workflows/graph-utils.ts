@@ -180,8 +180,7 @@ export function safeEvaluateExpression(
 	context: Record<string, unknown>
 ): boolean {
 	// Parse comparison: left operator right
-	// lgtm[js/polynomial-redos] — regex is anchored (^...$) with unambiguous left-side class; no catastrophic backtracking path.
-	const comparisonMatch = expression.match(/^([\w.[\]]+)\s*(===?|!==?|>=?|<=?|>|<)\s*(.+)$/);
+	const comparisonMatch = expression.match(/^([\w.[\]]+)\s*(===?|!==?|>=?|<=?|>|<)\s*(.+)$/); // codeql[js/polynomial-redos] -- anchored regex (^...$) with unambiguous left-side character class; no catastrophic backtracking path
 
 	if (!comparisonMatch) {
 		// Simple truthy check: resolve path and check truthiness

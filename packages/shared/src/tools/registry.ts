@@ -198,10 +198,10 @@ export async function executeTool(name: string, args: Record<string, unknown>): 
 	const syncExecutor = toolExecutors[name];
 
 	if (asyncExecutor) {
-		return asyncExecutor(args); // lgtm[js/unvalidated-dynamic-method-call] — existence check above validates name against the static registry.
+		return asyncExecutor(args); // codeql[js/unvalidated-dynamic-method-call] -- existence check above validates name against the static registry
 	}
 	if (syncExecutor) {
-		return syncExecutor(args); // lgtm[js/unvalidated-dynamic-method-call] — existence check above validates name against the static registry.
+		return syncExecutor(args); // codeql[js/unvalidated-dynamic-method-call] -- existence check above validates name against the static registry
 	}
 	throw new Error(
 		`No executor for tool: ${name}. This tool may be read-only and executed directly.`
