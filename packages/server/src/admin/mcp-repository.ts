@@ -18,6 +18,7 @@
 import { withConnection } from '../oracle/connection.js';
 import { encryptSecret, decryptSecret } from '../auth/crypto.js';
 import { createLogger } from '../logger.js';
+import { ValidationError } from '../errors.js';
 import type {
 	McpCatalogItem,
 	McpServer,
@@ -34,7 +35,8 @@ import type {
 	McpServerRow,
 	McpCredentialRow,
 	McpToolCacheRow,
-	McpResourceCacheRow
+	McpResourceCacheRow,
+	InvalidMcpServerRecord
 } from './mcp-types.js';
 import {
 	catalogRowToItem,
@@ -44,6 +46,37 @@ import {
 } from './mcp-types.js';
 
 const log = createLogger('mcp-repository');
+
+type ServerListResult = {
+	servers: Omit<McpServer, 'credentials'>[];
+	invalidServers: InvalidMcpServerRecord[];
+};
+
+function mapServers(
+	rows: McpServerRow[],
+	context: { source: string; orgId?: string }
+): ServerListResult {
+	const servers: Omit<McpServer, 'credentials'>[] = [];
+	const invalidServers: InvalidMcpServerRecord[] = [];
+
+	for (const row of rows) {
+		const parsed = serverRowToServer(row, log);
+		if (parsed.server) {
+			servers.push(parsed.server);
+			continue;
+		}
+
+		if (parsed.invalid) {
+			invalidServers.push(parsed.invalid);
+			log.warn(
+				{ invalid: parsed.invalid, source: context.source, orgId: context.orgId },
+				'Skipping MCP server due to invalid JSON'
+			);
+		}
+	}
+
+	return { servers, invalidServers };
+}
 
 // ============================================================================
 // MCP Server Repository
@@ -105,10 +138,7 @@ export const mcpServerRepository = {
 	 * @param options.limit  Max rows per page (default 100, max 500)
 	 * @param options.offset Row offset for pagination (default 0)
 	 */
-	async listAllConnected(options?: {
-		limit?: number;
-		offset?: number;
-	}): Promise<Omit<McpServer, 'credentials'>[]> {
+	async listAllConnected(options?: { limit?: number; offset?: number }): Promise<ServerListResult> {
 		const limit = Math.min(options?.limit ?? 100, 500);
 		const offset = options?.offset ?? 0;
 
@@ -134,14 +164,14 @@ export const mcpServerRepository = {
 			return result.rows ?? [];
 		});
 
-		return rows.map((row) => serverRowToServer(row));
+		return mapServers(rows ?? [], { source: 'listAllConnected' });
 	},
 
 	/**
 	 * List all MCP servers for an organization — NO decrypted credentials.
 	 * Includes tool_count via LEFT JOIN to mcp_tool_cache.
 	 */
-	async listByOrg(orgId: string): Promise<Omit<McpServer, 'credentials'>[]> {
+	async listByOrg(orgId: string): Promise<ServerListResult> {
 		const rows = await withConnection(async (conn) => {
 			const result = await conn.execute<McpServerRow>(
 				`SELECT
@@ -162,7 +192,7 @@ export const mcpServerRepository = {
 			return result.rows ?? [];
 		});
 
-		return rows.map((row) => serverRowToServer(row));
+		return mapServers(rows ?? [], { source: 'listByOrg', orgId });
 	},
 
 	/**
@@ -191,8 +221,19 @@ export const mcpServerRepository = {
 
 		if (rows.length === 0) return undefined;
 
+		const parsed = serverRowToServer(rows[0], log);
+		if (!parsed.server) {
+			const detail = parsed.invalid;
+			log.warn({ invalid: detail, id }, 'Failed to load MCP server due to invalid JSON');
+			throw new ValidationError('Invalid MCP server record', {
+				id,
+				field: detail.field,
+				reason: detail.reason
+			});
+		}
+
 		// Build base server without credentials
-		const server = serverRowToServer(rows[0]);
+		const server = parsed.server;
 
 		// Fetch and decrypt credentials
 		const credentials = await this.getDecryptedCredentials(id);

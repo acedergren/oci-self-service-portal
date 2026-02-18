@@ -513,6 +513,20 @@ export interface McpMetricRow {
 	CREATED_AT: Date;
 }
 
+export interface InvalidMcpServerRecord {
+	id: string;
+	orgId: string;
+	serverName: string;
+	displayName?: string;
+	field: string;
+	reason: string;
+	rawValue?: unknown;
+}
+
+export type ServerParseResult =
+	| { server: Omit<McpServer, 'credentials'>; invalid?: undefined }
+	| { server?: undefined; invalid: InvalidMcpServerRecord };
+
 // ============================================================================
 // Row-to-Entity Converter Functions
 // ============================================================================
@@ -549,30 +563,71 @@ export function catalogRowToItem(row: McpCatalogRow): McpCatalogItem {
  * Converts Oracle row to McpServer entity WITHOUT decrypted credentials.
  * Use for list operations where secrets must not be exposed.
  */
-export function serverRowToServer(row: McpServerRow): Omit<McpServer, 'credentials'> {
+export function serverRowToServer(
+	row: McpServerRow,
+	log: SafeParseLogger = defaultLogger
+): ServerParseResult {
+	const configResult = safeParseJSON<McpServerConfig>(row.CONFIG, {} as McpServerConfig, {
+		field: 'config',
+		serverId: row.ID,
+		log
+	});
+
+	if (!configResult.ok) {
+		return {
+			invalid: {
+				id: row.ID,
+				orgId: row.ORG_ID,
+				serverName: row.SERVER_NAME,
+				displayName: row.DISPLAY_NAME ?? undefined,
+				field: 'config',
+				reason: configResult.error.message,
+				rawValue: row.CONFIG
+			}
+		};
+	}
+
+	const tagsResult = safeParseJSON<string[]>(row.TAGS, [], {
+		field: 'tags',
+		serverId: row.ID,
+		log
+	});
+
+	const healthResult = safeParseJSON<Record<string, unknown> | undefined>(
+		row.HEALTH_STATUS,
+		undefined,
+		{
+			field: 'healthStatus',
+			serverId: row.ID,
+			log
+		}
+	);
+
 	return {
-		id: row.ID,
-		orgId: row.ORG_ID,
-		serverName: row.SERVER_NAME,
-		displayName: row.DISPLAY_NAME,
-		description: row.DESCRIPTION ?? undefined,
-		serverType: row.SERVER_TYPE as McpServerType,
-		transportType: row.TRANSPORT_TYPE as McpTransportType,
-		catalogItemId: row.CATALOG_ITEM_ID ?? undefined,
-		config: JSON.parse(row.CONFIG),
-		dockerImage: row.DOCKER_IMAGE ?? undefined,
-		dockerContainerId: row.DOCKER_CONTAINER_ID ?? undefined,
-		dockerStatus: (row.DOCKER_STATUS as McpDockerStatus) ?? undefined,
-		status: row.STATUS as McpServerStatus,
-		enabled: row.ENABLED === 1,
-		lastConnectedAt: row.LAST_CONNECTED_AT ?? undefined,
-		lastError: row.LAST_ERROR ?? undefined,
-		healthStatus: row.HEALTH_STATUS ? JSON.parse(row.HEALTH_STATUS) : undefined,
-		tags: row.TAGS ? JSON.parse(row.TAGS) : [],
-		sortOrder: row.SORT_ORDER,
-		toolCount: row.TOOL_COUNT,
-		createdAt: row.CREATED_AT,
-		updatedAt: row.UPDATED_AT
+		server: {
+			id: row.ID,
+			orgId: row.ORG_ID,
+			serverName: row.SERVER_NAME,
+			displayName: row.DISPLAY_NAME,
+			description: row.DESCRIPTION ?? undefined,
+			serverType: row.SERVER_TYPE as McpServerType,
+			transportType: row.TRANSPORT_TYPE as McpTransportType,
+			catalogItemId: row.CATALOG_ITEM_ID ?? undefined,
+			config: configResult.value,
+			dockerImage: row.DOCKER_IMAGE ?? undefined,
+			dockerContainerId: row.DOCKER_CONTAINER_ID ?? undefined,
+			dockerStatus: (row.DOCKER_STATUS as McpDockerStatus) ?? undefined,
+			status: row.STATUS as McpServerStatus,
+			enabled: row.ENABLED === 1,
+			lastConnectedAt: row.LAST_CONNECTED_AT ?? undefined,
+			lastError: row.LAST_ERROR ?? undefined,
+			healthStatus: healthResult.value,
+			tags: tagsResult.value ?? [],
+			sortOrder: row.SORT_ORDER,
+			toolCount: row.TOOL_COUNT,
+			createdAt: row.CREATED_AT,
+			updatedAt: row.UPDATED_AT
+		}
 	};
 }
 

@@ -7,6 +7,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { mcpServerRepository } from '@portal/server/admin/mcp-repository.js';
+import { ValidationError } from '@portal/server/errors.js';
 import type {
 	McpCatalogRow,
 	McpServerRow,
@@ -187,43 +188,45 @@ describe('getCatalogItem', () => {
 // ============================================================================
 
 describe('listByOrg', () => {
+	const createServerRow = (overrides: Partial<McpServerRow> = {}): McpServerRow => ({
+		ID: 'server-1',
+		ORG_ID: 'org-1',
+		SERVER_NAME: 'my-github',
+		DISPLAY_NAME: 'My GitHub',
+		DESCRIPTION: 'GitHub connection',
+		SERVER_TYPE: 'catalog',
+		TRANSPORT_TYPE: 'stdio',
+		CATALOG_ITEM_ID: 'cat-1',
+		CONFIG: JSON.stringify({ transport: 'stdio' }),
+		DOCKER_IMAGE: null,
+		DOCKER_CONTAINER_ID: null,
+		DOCKER_STATUS: null,
+		STATUS: 'connected',
+		ENABLED: 1,
+		LAST_CONNECTED_AT: new Date('2026-01-15'),
+		LAST_ERROR: null,
+		HEALTH_STATUS: null,
+		TAGS: JSON.stringify(['production']),
+		SORT_ORDER: 1,
+		TOOL_COUNT: 5,
+		CREATED_AT: new Date('2026-01-01'),
+		UPDATED_AT: new Date('2026-01-15'),
+		...overrides
+	});
+
 	it('returns servers for given org without credentials', async () => {
-		const mockRows: McpServerRow[] = [
-			{
-				ID: 'server-1',
-				ORG_ID: 'org-1',
-				SERVER_NAME: 'my-github',
-				DISPLAY_NAME: 'My GitHub',
-				DESCRIPTION: 'GitHub connection',
-				SERVER_TYPE: 'catalog',
-				TRANSPORT_TYPE: 'stdio',
-				CATALOG_ITEM_ID: 'cat-1',
-				CONFIG: JSON.stringify({ transport: 'stdio' }),
-				DOCKER_IMAGE: null,
-				DOCKER_CONTAINER_ID: null,
-				DOCKER_STATUS: null,
-				STATUS: 'connected',
-				ENABLED: 1,
-				LAST_CONNECTED_AT: new Date('2026-01-15'),
-				LAST_ERROR: null,
-				HEALTH_STATUS: null,
-				TAGS: JSON.stringify(['production']),
-				SORT_ORDER: 1,
-				TOOL_COUNT: 5,
-				CREATED_AT: new Date('2026-01-01'),
-				UPDATED_AT: new Date('2026-01-15')
-			}
-		];
+		const mockRows: McpServerRow[] = [createServerRow()];
 
 		mockExecute.mockResolvedValueOnce({ rows: mockRows });
 
 		const result = await mcpServerRepository.listByOrg('org-1');
 
-		expect(result).toHaveLength(1);
-		expect(result[0].id).toBe('server-1');
-		expect(result[0].serverName).toBe('my-github');
-		expect(result[0].toolCount).toBe(5);
-		expect(result[0].status).toBe('connected');
+		expect(result.servers).toHaveLength(1);
+		expect(result.servers[0].id).toBe('server-1');
+		expect(result.servers[0].serverName).toBe('my-github');
+		expect(result.servers[0].toolCount).toBe(5);
+		expect(result.servers[0].status).toBe('connected');
+		expect(result.invalidServers).toEqual([]);
 		expect(mockExecute).toHaveBeenCalledWith(
 			expect.stringContaining('WHERE s.org_id = :orgId'),
 			{ orgId: 'org-1' },
@@ -236,14 +239,13 @@ describe('listByOrg', () => {
 
 		const result = await mcpServerRepository.listByOrg('org-empty');
 
-		expect(result).toEqual([]);
+		expect(result.servers).toEqual([]);
+		expect(result.invalidServers).toEqual([]);
 	});
 
 	it('includes tool count from cache', async () => {
 		const mockRows: McpServerRow[] = [
-			{
-				ID: 'server-1',
-				ORG_ID: 'org-1',
+			createServerRow({
 				SERVER_NAME: 'test',
 				DISPLAY_NAME: 'Test',
 				DESCRIPTION: null,
@@ -251,27 +253,42 @@ describe('listByOrg', () => {
 				TRANSPORT_TYPE: 'sse',
 				CATALOG_ITEM_ID: null,
 				CONFIG: JSON.stringify({}),
-				DOCKER_IMAGE: null,
-				DOCKER_CONTAINER_ID: null,
-				DOCKER_STATUS: null,
 				STATUS: 'disconnected',
-				ENABLED: 1,
 				LAST_CONNECTED_AT: null,
-				LAST_ERROR: null,
-				HEALTH_STATUS: null,
 				TAGS: null,
 				SORT_ORDER: 0,
-				TOOL_COUNT: 12,
-				CREATED_AT: new Date('2026-01-01'),
-				UPDATED_AT: new Date('2026-01-01')
-			}
+				TOOL_COUNT: 12
+			})
 		];
 
 		mockExecute.mockResolvedValueOnce({ rows: mockRows });
 
 		const result = await mcpServerRepository.listByOrg('org-1');
 
-		expect(result[0].toolCount).toBe(12);
+		expect(result.servers[0].toolCount).toBe(12);
+	});
+
+	it('skips invalid rows and returns invalidServers metadata', async () => {
+		const validRow = createServerRow();
+		const invalidRow = {
+			...createServerRow({ ID: 'bad', SERVER_NAME: 'poisoned-server' }),
+			CONFIG: 'not json'
+		};
+
+		mockExecute.mockResolvedValueOnce({ rows: [validRow, invalidRow] });
+
+		const result = await mcpServerRepository.listByOrg('org-1');
+
+		expect(result.servers).toHaveLength(1);
+		expect(result.servers[0].id).toBe('server-1');
+		expect(result.invalidServers).toEqual([
+			expect.objectContaining({
+				id: 'bad',
+				serverName: 'poisoned-server',
+				field: 'config',
+				reason: 'Invalid JSON payload'
+			})
+		]);
 	});
 });
 
@@ -390,6 +407,39 @@ describe('getById', () => {
 
 		expect(result).toBeDefined();
 		expect(result?.credentials).toEqual([]); // Failed cred is skipped
+	});
+
+	it('throws ValidationError when server row contains invalid JSON config', async () => {
+		const invalidServerRow: McpServerRow = {
+			ID: 'server-invalid',
+			ORG_ID: 'org-1',
+			SERVER_NAME: 'broken',
+			DISPLAY_NAME: 'Broken Server',
+			DESCRIPTION: null,
+			SERVER_TYPE: 'custom',
+			TRANSPORT_TYPE: 'stdio',
+			CATALOG_ITEM_ID: null,
+			CONFIG: 'not json',
+			DOCKER_IMAGE: null,
+			DOCKER_CONTAINER_ID: null,
+			DOCKER_STATUS: null,
+			STATUS: 'connected',
+			ENABLED: 1,
+			LAST_CONNECTED_AT: null,
+			LAST_ERROR: null,
+			HEALTH_STATUS: null,
+			TAGS: null,
+			SORT_ORDER: 0,
+			TOOL_COUNT: 0,
+			CREATED_AT: new Date('2026-01-01'),
+			UPDATED_AT: new Date('2026-01-01')
+		};
+
+		mockExecute
+			.mockResolvedValueOnce({ rows: [invalidServerRow] })
+			.mockResolvedValueOnce({ rows: [] });
+
+		await expect(mcpServerRepository.getById('server-invalid')).rejects.toThrow(ValidationError);
 	});
 });
 
