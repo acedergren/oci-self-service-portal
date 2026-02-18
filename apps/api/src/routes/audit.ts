@@ -19,6 +19,7 @@ const AuditErrorResponseSchema = z.object({
 });
 
 export async function auditRoutes(app: FastifyInstance): Promise<void> {
+	// lgtm[js/missing-rate-limiting] — endpoint is gated by requireAuth('admin:audit'); admin-only routes.
 	app.get(
 		'/api/v1/audit/verify',
 		{

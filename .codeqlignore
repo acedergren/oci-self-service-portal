@@ -1,0 +1,15 @@
+# CodeQL scan exclusions
+# Build artifacts (compiled output — source files are scanned instead)
+build/
+dist/
+apps/*/build/
+apps/*/dist/
+packages/*/dist/
+.svelte-kit/
+.output/
+
+# Dependencies
+node_modules/
+
+# Infrastructure config (Grafana datasource empty passwords are intentional in dev)
+infrastructure/docker/observability/grafana/datasources/

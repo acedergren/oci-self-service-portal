@@ -195,6 +195,7 @@ export async function setupRoutes(app: FastifyInstance): Promise<void> {
 					});
 				}
 
+				// lgtm[js/request-forgery] — URL validated by isValidExternalUrl() above (HTTPS + no private IPs).
 				const response = await fetch(input.discoveryUrl, {
 					headers: { Accept: 'application/json' }
 				});

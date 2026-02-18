@@ -57,7 +57,8 @@ const SENSITIVE_PARAMS = [
  * Redact sensitive values from arguments
  */
 function redactSensitiveArgs(args: Record<string, unknown>): Record<string, string> {
-	const redacted: Record<string, string> = {};
+	// Object.create(null) prevents prototype pollution via __proto__ keys in user-supplied args.
+	const redacted = Object.create(null) as Record<string, string>;
 
 	for (const [key, value] of Object.entries(args)) {
 		const lowerKey = key.toLowerCase();
