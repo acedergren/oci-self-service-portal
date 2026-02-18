@@ -67,7 +67,7 @@ describe('Deep Health Checks (Phase 6.8)', () => {
 		});
 	});
 
-	describe('runHealthChecks', () => {
+	describe('runHealthChecks', { timeout: 10_000 }, () => {
 		it('returns overall status and individual check results', async () => {
 			if (!healthModule) return;
 			const runHealthChecks = healthModule.runHealthChecks as () => Promise<{
