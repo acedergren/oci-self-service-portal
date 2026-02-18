@@ -1,0 +1,6 @@
+# Spectral configuration for OpenAPI linting
+# Uses OWASP ruleset for API security analysis
+#
+# Usage: npx spectral lint openapi.json
+extends:
+  - '@stoplight/spectral-owasp-ruleset'

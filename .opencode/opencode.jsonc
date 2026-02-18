@@ -1,0 +1,4 @@
+{
+	"$schema": "https://raw.githubusercontent.com/sst/opencode/main/schema/opencode.json",
+	"plugin": ["@tarquinen/opencode-dcp@latest", "@franlol/opencode-md-table-formatter@0.0.3"]
+}

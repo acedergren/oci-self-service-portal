@@ -1,0 +1,20 @@
+[sqlfluff]
+dialect = oracle
+max_line_length = 120
+exclude_rules = L016  # Line too long (handled by max_line_length)
+
+[sqlfluff:rules:capitalisation.keywords]
+capitalisation_policy = upper  # SQL keywords in UPPERCASE
+
+[sqlfluff:rules:capitalisation.identifiers]
+extended_capitalisation_policy = lower  # Table/column names in lowercase
+
+[sqlfluff:rules:aliasing.table]
+aliasing = explicit  # Always alias tables
+
+[sqlfluff:rules:layout.spacing]
+line_position = trailing  # Trailing commas
+
+[sqlfluff:indentation]
+indent_unit = tab
+tab_space_size = 4

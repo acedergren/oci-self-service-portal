@@ -1,0 +1,4598 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Phase 10 PRD — OCI Self-Service Portal</title>
+		<style>
+			*,
+			*::before,
+			*::after {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+			:root {
+				--bg: #0a0a0f;
+				--bg2: #12121a;
+				--bg3: #1a1a26;
+				--bg4: #22222e;
+				--border: #2a2a3a;
+				--border2: #3a3a4e;
+				--text: #e0e0e8;
+				--text2: #a0a0b0;
+				--text3: #707088;
+				--accent: #6c5ce7;
+				--accent2: #a29bfe;
+				--accent3: #3d37a5;
+				--green: #00b894;
+				--green2: #55efc4;
+				--red: #e74c3c;
+				--red2: #ff6b6b;
+				--orange: #f39c12;
+				--orange2: #fdcb6e;
+				--blue: #0984e3;
+				--blue2: #74b9ff;
+				--cyan: #00cec9;
+				--purple: #6c5ce7;
+				--pink: #e84393;
+				--font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+				--mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+				--radius: 8px;
+				--radius-sm: 4px;
+			}
+			html {
+				font-family: var(--font);
+				background: var(--bg);
+				color: var(--text);
+				font-size: 14px;
+				line-height: 1.5;
+			}
+			body {
+				min-height: 100vh;
+				display: flex;
+				flex-direction: column;
+			}
+
+			/* Header */
+			.header {
+				background: var(--bg2);
+				border-bottom: 1px solid var(--border);
+				padding: 12px 24px;
+				display: flex;
+				align-items: center;
+				gap: 16px;
+				position: sticky;
+				top: 0;
+				z-index: 100;
+			}
+			.header h1 {
+				font-size: 16px;
+				font-weight: 600;
+				white-space: nowrap;
+			}
+			.header .version {
+				background: var(--accent3);
+				color: var(--accent2);
+				padding: 2px 8px;
+				border-radius: 10px;
+				font-size: 11px;
+				font-weight: 600;
+			}
+			.header .meta {
+				margin-left: auto;
+				color: var(--text3);
+				font-size: 12px;
+			}
+
+			/* Navigation */
+			.nav {
+				background: var(--bg2);
+				border-bottom: 1px solid var(--border);
+				display: flex;
+				overflow-x: auto;
+				padding: 0 16px;
+				gap: 2px;
+			}
+			.nav button {
+				background: none;
+				border: none;
+				color: var(--text3);
+				padding: 10px 14px;
+				font-size: 12px;
+				font-weight: 500;
+				cursor: pointer;
+				white-space: nowrap;
+				border-bottom: 2px solid transparent;
+				transition: all 0.15s;
+			}
+			.nav button:hover {
+				color: var(--text);
+				background: var(--bg3);
+			}
+			.nav button.active {
+				color: var(--accent2);
+				border-bottom-color: var(--accent);
+			}
+
+			/* Main Content */
+			.main {
+				flex: 1;
+				padding: 20px 24px;
+				max-width: 1600px;
+				margin: 0 auto;
+				width: 100%;
+			}
+			.section {
+				display: none;
+			}
+			.section.active {
+				display: block;
+			}
+			.section h2 {
+				font-size: 20px;
+				font-weight: 600;
+				margin-bottom: 16px;
+				display: flex;
+				align-items: center;
+				gap: 8px;
+			}
+			.section h3 {
+				font-size: 15px;
+				font-weight: 600;
+				margin: 16px 0 8px;
+				color: var(--text2);
+			}
+
+			/* Cards */
+			.card {
+				background: var(--bg2);
+				border: 1px solid var(--border);
+				border-radius: var(--radius);
+				padding: 16px;
+				margin-bottom: 12px;
+			}
+			.card-header {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				margin-bottom: 12px;
+			}
+			.card-title {
+				font-weight: 600;
+				font-size: 14px;
+			}
+
+			/* Grid layouts */
+			.grid-2 {
+				display: grid;
+				grid-template-columns: repeat(2, 1fr);
+				gap: 12px;
+			}
+			.grid-3 {
+				display: grid;
+				grid-template-columns: repeat(3, 1fr);
+				gap: 12px;
+			}
+			.grid-4 {
+				display: grid;
+				grid-template-columns: repeat(4, 1fr);
+				gap: 12px;
+			}
+			@media (max-width: 900px) {
+				.grid-2,
+				.grid-3,
+				.grid-4 {
+					grid-template-columns: 1fr;
+				}
+			}
+
+			/* Metric cards */
+			.metric {
+				text-align: center;
+				padding: 20px;
+			}
+			.metric .value {
+				font-size: 28px;
+				font-weight: 700;
+				color: var(--accent2);
+			}
+			.metric .label {
+				font-size: 11px;
+				color: var(--text3);
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+				margin-top: 4px;
+			}
+			.metric .bar {
+				height: 4px;
+				background: var(--bg4);
+				border-radius: 2px;
+				margin-top: 8px;
+				overflow: hidden;
+			}
+			.metric .bar .fill {
+				height: 100%;
+				border-radius: 2px;
+				transition: width 0.5s ease;
+			}
+
+			/* Progress bars */
+			.progress {
+				height: 6px;
+				background: var(--bg4);
+				border-radius: 3px;
+				overflow: hidden;
+				margin: 4px 0;
+			}
+			.progress .fill {
+				height: 100%;
+				border-radius: 3px;
+				transition: width 0.6s ease;
+			}
+
+			/* Tags */
+			.tag {
+				display: inline-block;
+				padding: 2px 8px;
+				border-radius: 10px;
+				font-size: 11px;
+				font-weight: 600;
+			}
+			.tag.green {
+				background: #00b89422;
+				color: var(--green2);
+			}
+			.tag.red {
+				background: #e74c3c22;
+				color: var(--red2);
+			}
+			.tag.orange {
+				background: #f39c1222;
+				color: var(--orange2);
+			}
+			.tag.blue {
+				background: #0984e322;
+				color: var(--blue2);
+			}
+			.tag.purple {
+				background: #6c5ce722;
+				color: var(--accent2);
+			}
+
+			/* Tables */
+			table {
+				width: 100%;
+				border-collapse: collapse;
+				font-size: 13px;
+			}
+			th {
+				text-align: left;
+				padding: 8px 12px;
+				background: var(--bg3);
+				color: var(--text2);
+				font-weight: 600;
+				border-bottom: 1px solid var(--border);
+				font-size: 11px;
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+			}
+			td {
+				padding: 8px 12px;
+				border-bottom: 1px solid var(--border);
+			}
+			tr:hover td {
+				background: var(--bg3);
+			}
+
+			/* Gantt Chart */
+			.gantt {
+				position: relative;
+				overflow-x: auto;
+			}
+			.gantt-row {
+				display: flex;
+				align-items: center;
+				margin-bottom: 6px;
+			}
+			.gantt-label {
+				width: 220px;
+				flex-shrink: 0;
+				font-size: 12px;
+				font-weight: 500;
+				padding-right: 12px;
+			}
+			.gantt-track {
+				flex: 1;
+				height: 32px;
+				position: relative;
+				background: var(--bg3);
+				border-radius: var(--radius-sm);
+			}
+			.gantt-bar {
+				position: absolute;
+				height: 100%;
+				border-radius: var(--radius-sm);
+				display: flex;
+				align-items: center;
+				padding: 0 8px;
+				font-size: 11px;
+				font-weight: 600;
+				color: #fff;
+				cursor: pointer;
+				transition: opacity 0.2s;
+			}
+			.gantt-bar:hover {
+				opacity: 0.85;
+			}
+			.gantt-header {
+				display: flex;
+				margin-bottom: 8px;
+			}
+			.gantt-header span {
+				flex: 1;
+				text-align: center;
+				font-size: 10px;
+				color: var(--text3);
+				text-transform: uppercase;
+			}
+			.gantt-dep {
+				position: absolute;
+				border-left: 2px dashed var(--border2);
+				border-bottom: 2px dashed var(--border2);
+				pointer-events: none;
+			}
+
+			/* Kanban */
+			.kanban {
+				display: grid;
+				grid-template-columns: repeat(4, 1fr);
+				gap: 12px;
+				min-height: 500px;
+			}
+			.kanban-col {
+				background: var(--bg3);
+				border-radius: var(--radius);
+				padding: 12px;
+				display: flex;
+				flex-direction: column;
+			}
+			.kanban-col-header {
+				font-size: 12px;
+				font-weight: 700;
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+				color: var(--text3);
+				margin-bottom: 12px;
+				display: flex;
+				align-items: center;
+				gap: 6px;
+			}
+			.kanban-col-header .count {
+				background: var(--bg4);
+				padding: 1px 6px;
+				border-radius: 8px;
+				font-size: 10px;
+			}
+			.kanban-items {
+				flex: 1;
+				display: flex;
+				flex-direction: column;
+				gap: 6px;
+				min-height: 100px;
+			}
+			.kanban-card {
+				background: var(--bg2);
+				border: 1px solid var(--border);
+				border-radius: var(--radius-sm);
+				padding: 10px;
+				cursor: grab;
+				font-size: 12px;
+				transition: all 0.15s;
+			}
+			.kanban-card:hover {
+				border-color: var(--accent);
+				transform: translateY(-1px);
+			}
+			.kanban-card.dragging {
+				opacity: 0.5;
+			}
+			.kanban-card .phase {
+				font-size: 10px;
+				font-weight: 600;
+				margin-bottom: 4px;
+			}
+			.kanban-card .task {
+				font-weight: 500;
+			}
+
+			/* Architecture diagram */
+			.arch {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 20px;
+				padding: 20px;
+			}
+			.arch-layer {
+				display: flex;
+				gap: 16px;
+				align-items: stretch;
+				width: 100%;
+				justify-content: center;
+				flex-wrap: wrap;
+			}
+			.arch-box {
+				background: var(--bg3);
+				border: 2px solid var(--border);
+				border-radius: var(--radius);
+				padding: 16px;
+				text-align: center;
+				min-width: 160px;
+				flex: 1;
+				max-width: 250px;
+				position: relative;
+				transition: all 0.2s;
+			}
+			.arch-box:hover {
+				border-color: var(--accent);
+				transform: scale(1.02);
+			}
+			.arch-box .name {
+				font-weight: 700;
+				font-size: 13px;
+				margin-bottom: 4px;
+			}
+			.arch-box .desc {
+				font-size: 11px;
+				color: var(--text3);
+			}
+			.arch-box.types {
+				border-color: #00b89466;
+			}
+			.arch-box.server {
+				border-color: #0984e366;
+			}
+			.arch-box.ui {
+				border-color: #e8439366;
+			}
+			.arch-box.api {
+				border-color: #6c5ce766;
+			}
+			.arch-box.frontend {
+				border-color: #f39c1266;
+			}
+			.arch-box.oracle {
+				border-color: #e74c3c66;
+			}
+			.arch-arrow {
+				font-size: 20px;
+				color: var(--text3);
+				text-align: center;
+			}
+
+			/* ERD */
+			.erd {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 12px;
+				justify-content: center;
+			}
+			.erd-table {
+				background: var(--bg3);
+				border: 1px solid var(--border);
+				border-radius: var(--radius);
+				min-width: 180px;
+				overflow: hidden;
+			}
+			.erd-table .erd-name {
+				background: var(--bg4);
+				padding: 8px 12px;
+				font-weight: 700;
+				font-size: 12px;
+				border-bottom: 1px solid var(--border);
+			}
+			.erd-table .erd-col {
+				padding: 4px 12px;
+				font-size: 11px;
+				font-family: var(--mono);
+				display: flex;
+				justify-content: space-between;
+				gap: 8px;
+			}
+			.erd-table .erd-col .type {
+				color: var(--text3);
+			}
+			.erd-table .erd-col.pk {
+				color: var(--orange2);
+			}
+			.erd-table .erd-col.fk {
+				color: var(--blue2);
+			}
+
+			/* Component Tree */
+			.tree {
+				padding-left: 20px;
+			}
+			.tree-item {
+				position: relative;
+				padding: 4px 0;
+			}
+			.tree-item::before {
+				content: '';
+				position: absolute;
+				left: -12px;
+				top: 0;
+				height: 100%;
+				border-left: 1px solid var(--border);
+			}
+			.tree-item::after {
+				content: '';
+				position: absolute;
+				left: -12px;
+				top: 14px;
+				width: 12px;
+				border-top: 1px solid var(--border);
+			}
+			.tree-label {
+				display: inline-flex;
+				align-items: center;
+				gap: 6px;
+				font-size: 12px;
+				padding: 2px 8px;
+				border-radius: var(--radius-sm);
+				cursor: pointer;
+			}
+			.tree-label:hover {
+				background: var(--bg3);
+			}
+			.tree-label .new {
+				color: var(--green2);
+				font-size: 10px;
+				font-weight: 700;
+			}
+			.tree-folder {
+				font-weight: 600;
+				color: var(--accent2);
+			}
+
+			/* Decision timeline */
+			.timeline {
+				position: relative;
+				padding-left: 24px;
+			}
+			.timeline::before {
+				content: '';
+				position: absolute;
+				left: 8px;
+				top: 0;
+				height: 100%;
+				width: 2px;
+				background: var(--border);
+			}
+			.timeline-item {
+				position: relative;
+				margin-bottom: 8px;
+				cursor: pointer;
+			}
+			.timeline-item::before {
+				content: '';
+				position: absolute;
+				left: -20px;
+				top: 8px;
+				width: 12px;
+				height: 12px;
+				border-radius: 50%;
+				background: var(--accent);
+				border: 2px solid var(--bg2);
+			}
+			.timeline-item .id {
+				font-weight: 700;
+				font-size: 12px;
+				color: var(--accent2);
+			}
+			.timeline-item .text {
+				font-size: 12px;
+				color: var(--text2);
+			}
+			.timeline-item .detail {
+				display: none;
+				font-size: 11px;
+				color: var(--text3);
+				margin-top: 4px;
+				padding: 8px;
+				background: var(--bg3);
+				border-radius: var(--radius-sm);
+			}
+			.timeline-item.open .detail {
+				display: block;
+			}
+
+			/* Workflow Designer Mock */
+			.wf-canvas {
+				background: var(--bg3);
+				border: 1px solid var(--border);
+				border-radius: var(--radius);
+				padding: 24px;
+				min-height: 400px;
+				position: relative;
+				overflow: hidden;
+			}
+			.wf-node {
+				position: absolute;
+				background: var(--bg2);
+				border: 2px solid var(--border);
+				border-radius: var(--radius);
+				padding: 10px 16px;
+				font-size: 12px;
+				font-weight: 600;
+				text-align: center;
+				min-width: 120px;
+				cursor: pointer;
+				transition: all 0.2s;
+			}
+			.wf-node:hover {
+				border-color: var(--accent);
+				z-index: 10;
+			}
+			.wf-node .type {
+				font-size: 10px;
+				color: var(--text3);
+				text-transform: uppercase;
+				margin-bottom: 2px;
+			}
+			.wf-node.input {
+				border-color: var(--green);
+			}
+			.wf-node.output {
+				border-color: var(--red);
+			}
+			.wf-node.tool {
+				border-color: var(--blue);
+			}
+			.wf-node.condition {
+				border-color: var(--orange);
+				border-radius: 0;
+				transform: rotate(0deg);
+			}
+			.wf-node.approval {
+				border-color: var(--purple);
+			}
+			.wf-node.ai-step {
+				border-color: var(--pink);
+			}
+			.wf-node.loop {
+				border-color: var(--cyan);
+			}
+			.wf-node.parallel {
+				border-color: var(--orange2);
+			}
+			.wf-node .status {
+				font-size: 9px;
+				margin-top: 4px;
+			}
+
+			/* Admin Console Mock */
+			.admin-mock {
+				display: flex;
+				height: 500px;
+				border: 1px solid var(--border);
+				border-radius: var(--radius);
+				overflow: hidden;
+			}
+			.admin-sidebar {
+				width: 200px;
+				background: var(--bg3);
+				border-right: 1px solid var(--border);
+				padding: 12px 0;
+			}
+			.admin-sidebar .item {
+				padding: 8px 16px;
+				font-size: 12px;
+				cursor: pointer;
+				display: flex;
+				align-items: center;
+				gap: 8px;
+			}
+			.admin-sidebar .item:hover {
+				background: var(--bg4);
+			}
+			.admin-sidebar .item.active {
+				background: var(--accent3);
+				color: var(--accent2);
+			}
+			.admin-content {
+				flex: 1;
+				padding: 20px;
+				overflow-y: auto;
+			}
+			.admin-content h3 {
+				font-size: 16px;
+				margin-bottom: 16px;
+			}
+
+			/* Risk Matrix */
+			.risk-matrix {
+				display: grid;
+				grid-template-columns: 60px repeat(3, 1fr);
+				grid-template-rows: auto repeat(3, 80px);
+				gap: 2px;
+			}
+			.risk-axis {
+				font-size: 10px;
+				color: var(--text3);
+				text-transform: uppercase;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-weight: 600;
+			}
+			.risk-cell {
+				background: var(--bg3);
+				border-radius: var(--radius-sm);
+				display: flex;
+				flex-wrap: wrap;
+				align-items: center;
+				justify-content: center;
+				gap: 4px;
+				padding: 4px;
+			}
+			.risk-cell.high-high {
+				background: #e74c3c33;
+			}
+			.risk-cell.high-med,
+			.risk-cell.med-high {
+				background: #f39c1233;
+			}
+			.risk-cell.med-med,
+			.risk-cell.low-high {
+				background: #f39c1222;
+			}
+			.risk-cell.low-med,
+			.risk-cell.med-low {
+				background: #00b89422;
+			}
+			.risk-cell.low-low {
+				background: #0984e322;
+			}
+			.risk-dot {
+				width: 24px;
+				height: 24px;
+				border-radius: 50%;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-size: 9px;
+				font-weight: 700;
+				color: #fff;
+				cursor: pointer;
+			}
+
+			/* Tabs */
+			.tabs {
+				display: flex;
+				gap: 2px;
+				margin-bottom: 12px;
+			}
+			.tabs button {
+				background: var(--bg3);
+				border: 1px solid var(--border);
+				color: var(--text2);
+				padding: 6px 14px;
+				font-size: 12px;
+				cursor: pointer;
+				border-radius: var(--radius-sm);
+			}
+			.tabs button.active {
+				background: var(--accent3);
+				color: var(--accent2);
+				border-color: var(--accent);
+			}
+
+			/* Prompt output */
+			.prompt-bar {
+				background: var(--bg2);
+				border-top: 1px solid var(--border);
+				padding: 12px 24px;
+				display: flex;
+				align-items: center;
+				gap: 12px;
+				position: sticky;
+				bottom: 0;
+			}
+			.prompt-bar textarea {
+				flex: 1;
+				background: var(--bg3);
+				border: 1px solid var(--border);
+				border-radius: var(--radius-sm);
+				color: var(--text);
+				padding: 8px 12px;
+				font-family: var(--mono);
+				font-size: 12px;
+				resize: none;
+				height: 60px;
+			}
+			.prompt-bar button {
+				background: var(--accent);
+				color: #fff;
+				border: none;
+				padding: 8px 16px;
+				border-radius: var(--radius-sm);
+				cursor: pointer;
+				font-weight: 600;
+				font-size: 12px;
+				white-space: nowrap;
+			}
+			.prompt-bar button:hover {
+				background: var(--accent2);
+				color: var(--bg);
+			}
+
+			/* Scrollbar */
+			::-webkit-scrollbar {
+				width: 6px;
+				height: 6px;
+			}
+			::-webkit-scrollbar-track {
+				background: var(--bg);
+			}
+			::-webkit-scrollbar-thumb {
+				background: var(--border);
+				border-radius: 3px;
+			}
+			::-webkit-scrollbar-thumb:hover {
+				background: var(--border2);
+			}
+
+			/* Tooltip */
+			.tooltip {
+				position: fixed;
+				background: var(--bg4);
+				color: var(--text);
+				padding: 8px 12px;
+				border-radius: var(--radius-sm);
+				font-size: 11px;
+				pointer-events: none;
+				z-index: 1000;
+				max-width: 300px;
+				border: 1px solid var(--border);
+				display: none;
+			}
+
+			/* Q&A Feedback */
+			.qa-options {
+				display: flex;
+				flex-direction: column;
+				gap: 8px;
+				margin-top: 4px;
+			}
+			.qa-option {
+				display: block;
+				padding: 12px 16px;
+				background: var(--bg3);
+				border: 1px solid var(--border);
+				border-radius: var(--radius);
+				cursor: pointer;
+				transition: all 0.15s;
+			}
+			.qa-option:hover {
+				border-color: var(--accent);
+				background: var(--bg4);
+			}
+			.qa-option.selected {
+				border-color: var(--green);
+				background: #00b89410;
+			}
+			.qa-option.selected:hover {
+				border-color: var(--green2);
+			}
+
+			/* Detail Modal */
+			.modal-overlay {
+				position: fixed;
+				inset: 0;
+				background: rgba(0, 0, 0, 0.6);
+				z-index: 500;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				opacity: 0;
+				pointer-events: none;
+				transition: opacity 0.2s;
+			}
+			.modal-overlay.open {
+				opacity: 1;
+				pointer-events: all;
+			}
+			.modal {
+				background: var(--bg2);
+				border: 1px solid var(--border2);
+				border-radius: var(--radius);
+				width: 90%;
+				max-width: 700px;
+				max-height: 80vh;
+				overflow-y: auto;
+				padding: 24px;
+				transform: translateY(10px);
+				transition: transform 0.2s;
+			}
+			.modal-overlay.open .modal {
+				transform: translateY(0);
+			}
+			.modal h3 {
+				margin-top: 0;
+				font-size: 18px;
+				font-weight: 600;
+				margin-bottom: 12px;
+			}
+			.modal .close-btn {
+				position: absolute;
+				top: 16px;
+				right: 16px;
+				background: var(--bg4);
+				border: 1px solid var(--border);
+				color: var(--text2);
+				width: 28px;
+				height: 28px;
+				border-radius: 50%;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				cursor: pointer;
+				font-size: 14px;
+			}
+			.modal .close-btn:hover {
+				background: var(--red);
+				color: white;
+				border-color: var(--red);
+			}
+			.detail-grid {
+				display: grid;
+				grid-template-columns: 120px 1fr;
+				gap: 8px 16px;
+				font-size: 13px;
+			}
+			.detail-grid dt {
+				color: var(--text3);
+				font-weight: 600;
+				text-transform: uppercase;
+				font-size: 10px;
+				letter-spacing: 0.5px;
+				padding-top: 3px;
+			}
+			.detail-grid dd {
+				color: var(--text);
+			}
+			.clickable {
+				cursor: pointer;
+				transition: all 0.15s;
+			}
+			.clickable:hover {
+				border-color: var(--accent);
+				box-shadow: 0 0 0 1px var(--accent3);
+			}
+		</style>
+	</head>
+	<body>
+		<div class="header">
+			<h1>Phase 10 PRD Dashboard</h1>
+			<span class="version">v7 DRAFT</span>
+			<span class="meta"
+				>OCI Self-Service Portal &bull; Foundation Rewrite + Workflow Designer + Oracle 26AI +
+				Self-Built Admin</span
+			>
+		</div>
+
+		<nav class="nav" id="nav"></nav>
+
+		<div class="main" id="main"></div>
+
+		<div class="prompt-bar">
+			<textarea
+				id="prompt"
+				readonly
+				placeholder="Context prompt updates as you interact..."
+			></textarea>
+			<button onclick="copyPrompt()">Copy Prompt</button>
+		</div>
+
+		<div class="tooltip" id="tooltip"></div>
+
+		<!-- Detail Modal -->
+		<div
+			class="modal-overlay"
+			id="modal-overlay"
+			onclick="if (event.target === this) closeModal();"
+		>
+			<div class="modal" style="position: relative">
+				<button class="close-btn" onclick="closeModal()">&times;</button>
+				<div id="modal-body"></div>
+			</div>
+		</div>
+
+		<script>
+						// ─── STATE ───────────────────────────────────────────────────
+						const state = {
+							activeTab: 'overview',
+							kanban: { backlog: [], progress: [], review: [], done: [] },
+							expandedDecisions: new Set(),
+							adminPage: 'idp',
+							depTab: 'current',
+							focusPhase: null,
+							focusRisk: null
+						};
+
+						// ─── MODAL SYSTEM ────────────────────────────────────────────
+						function showModal(html) {
+							document.getElementById('modal-body').innerHTML = html;
+							document.getElementById('modal-overlay').classList.add('open');
+							document.body.style.overflow = 'hidden';
+						}
+						function closeModal() {
+							document.getElementById('modal-overlay').classList.remove('open');
+							document.body.style.overflow = '';
+						}
+						document.addEventListener('keydown', (e) => {
+							if (e.key === 'Escape') closeModal();
+						});
+
+						// ─── COMPONENT DETAILS (for click-to-expand) ─────────────────
+						const componentDetails = {
+							// Portal components
+							ChatOverlay: {
+								path: 'apps/frontend/src/lib/components/portal/ChatOverlay.svelte',
+								desc: 'Full-screen chat overlay with streaming AI responses. Uses AI SDK Chat class with tool part rendering.',
+								props: 'open, chat, activeWorkflowPlan, hideToolExecution, onClose',
+								deps: '@ai-sdk/svelte, ai'
+							},
+							ChatMessage: {
+								path: 'apps/frontend/src/lib/components/portal/ChatMessage.svelte',
+								desc: 'Individual message bubble with markdown rendering and tool result display.',
+								props: 'message, isUser',
+								deps: 'marked, DOMPurify'
+							},
+							ToolResult: {
+								path: 'apps/frontend/src/lib/components/portal/ToolResult.svelte',
+								desc: 'Renders OCI tool execution results with collapsible JSON output.',
+								props: 'result, toolName',
+								deps: 'none'
+							},
+							ToolApproval: {
+								path: 'apps/frontend/src/lib/components/portal/ToolApproval.svelte',
+								desc: 'Approval dialog for destructive tool calls (terminate, delete). Shows parameters and impact.',
+								props: 'tool, onApprove, onReject',
+								deps: 'none',
+								phase10: 'Replace with AI SDK built-in addToolApprovalResponse'
+							},
+							CostDashboard: {
+								path: 'apps/frontend/src/lib/components/portal/CostDashboard.svelte',
+								desc: 'Cost analysis dashboard with bar/line charts for cloud spending.',
+								props: 'data, period',
+								deps: 'layerchart'
+							},
+							InstanceTable: {
+								path: 'apps/frontend/src/lib/components/portal/InstanceTable.svelte',
+								desc: 'Sortable, filterable table of OCI compute instances.',
+								props: 'instances, onAction',
+								deps: 'none',
+								phase10: 'Convert to Generative UI component'
+							},
+							// Workflow components
+							WorkflowCanvas: {
+								path: 'apps/frontend/src/lib/components/workflow/WorkflowCanvas.svelte',
+								desc: 'Main canvas using @xyflow/svelte for DAG visualization. Handles node/edge CRUD.',
+								props: 'definition, onSave',
+								deps: '@xyflow/svelte'
+							},
+							NodePalette: {
+								path: 'apps/frontend/src/lib/components/workflow/NodePalette.svelte',
+								desc: 'Drag-and-drop palette of 8 node types (input, tool, condition, approval, output, ai-step, loop, parallel).',
+								props: 'onDrag',
+								deps: 'none'
+							},
+							NodeEditor: {
+								path: 'apps/frontend/src/lib/components/workflow/NodeEditor.svelte',
+								desc: 'Side panel for editing selected node configuration.',
+								props: 'node, onUpdate',
+								deps: 'none'
+							},
+							// Admin components
+							AdminLayout: {
+								path: 'apps/frontend/src/lib/components/admin/AdminLayout.svelte',
+								desc: 'Shell layout with sidebar navigation for admin console pages.',
+								props: 'children',
+								deps: 'none'
+							},
+							IDPConfig: {
+								path: 'apps/frontend/src/lib/components/admin/IDPConfig.svelte',
+								desc: 'Form for configuring OCI IDCS genericOAuth provider with group-to-role mapping.',
+								props: 'config, onSave',
+								deps: 'sveltekit-superforms'
+							},
+							MCPServerList: {
+								path: 'apps/frontend/src/lib/components/admin/MCPServerList.svelte',
+								desc: 'CRUD table for MCP server connections (stdio/SSE) with health checks.',
+								props: 'servers, onAction',
+								deps: 'none'
+							},
+							MCPCatalog: {
+								path: 'apps/frontend/src/lib/components/admin/MCPCatalog.svelte',
+								desc: 'Catalog of available MCP servers (Oracle, AWS, Azure, GCP) with one-click add.',
+								props: 'catalog, onInstall',
+								deps: 'none',
+								phase10: 'Add cross-CSP servers (AD-30)'
+							},
+							StudioEmbed: {
+								path: 'apps/frontend/src/lib/components/admin/StudioEmbed.svelte',
+								desc: 'Iframe embed of Mastra Studio at /admin/studio. Admin-only gated via @fastify/swagger-ui uiHooks.',
+								props: 'none',
+								deps: '@mastra/core',
+								phase10: 'NEW in Phase C'
+							},
+							// UI primitives
+							DataTable: {
+								path: 'apps/frontend/src/lib/components/ui/DataTable.svelte',
+								desc: 'Reusable sortable/filterable data table with pagination.',
+								props: 'columns, data, pageSize',
+								deps: 'none'
+							},
+							Modal: {
+								path: 'apps/frontend/src/lib/components/ui/Modal.svelte',
+								desc: 'Accessible modal dialog with focus trap and Escape key close.',
+								props: 'open, onClose, title',
+								deps: 'none'
+							},
+							Toast: {
+								path: 'apps/frontend/src/lib/components/ui/Toast.svelte',
+								desc: 'Toast notification system with auto-dismiss and action buttons.',
+								props: 'message, type, duration',
+								deps: 'none'
+							}
+						};
+
+						// ─── DEPENDENCY DETAILS (for click-to-expand) ──────────────────
+						const depDetails = {
+							fastify: {
+								homepage: 'fastify.dev',
+								license: 'MIT',
+								size: '~2MB',
+								notes:
+									'Core HTTP framework. v5 breaking: reply.send(undefined) throws, plugin registration returns void.'
+							},
+							'@sveltejs/kit': {
+								homepage: 'kit.svelte.dev',
+								license: 'MIT',
+								size: '~4MB',
+								notes: 'SSR framework. Phase B: remove all +server.ts routes, keep only load functions.'
+							},
+							'@mastra/core': {
+								homepage: 'mastra.ai',
+								license: 'Apache-2.0',
+								size: '~3MB',
+								notes:
+									'AI agent framework. Provides Agent, Workflow, RAG, MCP. Studio available at /admin/studio.'
+							},
+							oracledb: {
+								homepage: 'oracle.github.io/node-oracledb',
+								license: 'UPL-1.0',
+								size: '~30MB',
+								notes:
+									'Oracle DB thin driver. v6.10 supports 26AI features (HNSW, JSON Duality Views, VPD).'
+							},
+							ai: {
+								homepage: 'ai-sdk.dev',
+								license: 'Apache-2.0',
+								size: '~1MB',
+								notes:
+									'Vercel AI SDK v6. Chat class (not hooks) for Svelte. Generative UI via tool parts.'
+							},
+							'@fastify/websocket': {
+								homepage: 'github.com/fastify/fastify-websocket',
+								license: 'MIT',
+								size: '~50KB',
+								notes: 'P0: Real-time workflow run updates and agent streaming. Required for Phase C.'
+							},
+							'@fastify/under-pressure': {
+								homepage: 'github.com/fastify/under-pressure',
+								license: 'MIT',
+								size: '~30KB',
+								notes: 'P0: Load shedding — returns 503 before OOM. Monitors event loop delay and heap.'
+							},
+							'@fastify/otel': {
+								homepage: 'github.com/fastify/fastify-otel',
+								license: 'MIT',
+								size: '~40KB',
+								notes:
+									'P0: OpenTelemetry integration. Replaces deprecated @autotelic/fastify-opentelemetry.'
+							},
+							'oci-sdk': {
+								homepage: 'github.com/oracle/oci-typescript-sdk',
+								license: 'UPL-1.0',
+								size: '~80MB',
+								notes:
+									'Official Oracle Cloud TypeScript SDK. v2.125.0. Replaces 60+ CLI subprocess wrappers (Phase D).'
+							},
+							'sveltekit-superforms': {
+								homepage: 'superforms.rocks',
+								license: 'MIT',
+								size: '~100KB',
+								notes:
+									'Form validation with Zod. 52K weekly downloads. Phase B: admin forms, workflow config.'
+							},
+							layerchart: {
+								homepage: 'layerchart.com',
+								license: 'MIT',
+								size: '~200KB',
+								notes: 'D3-powered charting with shadcn integration. Phase B: cost dashboards, metrics.'
+							},
+							'@mastra/sentry': {
+								homepage: 'mastra.ai/docs/observability',
+								license: 'Apache-2.0',
+								size: '~50KB',
+								notes: 'Maps AI spans to Sentry traces. Agent calls, tool executions, model latency.'
+							},
+							'@mastra/evals': {
+								homepage: 'mastra.ai/docs/evals',
+								license: 'Apache-2.0',
+								size: '~80KB',
+								notes: 'Agent quality scoring. Faithfulness, relevance, completeness metrics.'
+							},
+							'@modelcontextprotocol/sdk': {
+								homepage: 'modelcontextprotocol.io',
+								license: 'MIT',
+								size: '~200KB',
+								notes: 'Official MCP SDK. stdio + SSE transports. Tool discovery, resource access.'
+							}
+						};
+
+						// ─── ARCHITECTURE BOX DETAILS ──────────────────────────────────
+						const archDetails = {
+							Nginx: {
+								desc: 'Reverse proxy handling TLS termination, rate limiting at edge, route splitting (/api/* → Fastify :3001, /* → SvelteKit :3000), and static asset serving with caching headers.',
+								config: 'nginx.conf.template with envsubst for PORT_API, PORT_FRONTEND, SSL_CERT paths.',
+								related: ['apps/api', 'apps/frontend']
+							},
+							'apps/api (Fastify 5)': {
+								desc: '18 registered plugins in load-bearing order: oracle → auth → rbac → swagger → routes. Handles all API logic, Mastra agent/workflow execution, MCP server management, and Mastra Studio embedding.',
+								plugins:
+									'oracle, auth, cors, helmet, rate-limit, rbac, error-handler, request-logger, mastra, swagger, routes (activity, audit, auth, chat, graph, health, mcp, metrics, models, schemas, search, sessions, setup, tools, webhooks, workflows)',
+								tests: '683 tests across 46 test files in apps/api/src/tests/'
+							},
+							'apps/frontend (SvelteKit)': {
+								desc: 'SSR-only SvelteKit app with adapter-node. After Phase B migration: zero +server.ts files, only +page.server.ts load functions. Cookie forwarding to Fastify for auth. 54 Svelte 5 components.',
+								routes: '37 SvelteKit routes to migrate to Fastify in Phase B.',
+								components:
+									'54 total across 7 categories (portal, workflow, admin, setup, mobile, UI, layout)'
+							},
+							'@portal/server': {
+								desc: 'Shared server-side business logic. Oracle repositories, Better Auth configuration, RBAC, workflow executor, admin services, MCP portal server, crypto utilities.',
+								modules:
+									'oracle/ (migrations, pool, repos), auth/ (factory, RBAC, IDCS, API keys), admin/ (IDP, AI providers, settings), mcp/ (portal server), workflows/, approvals.ts, crypto.ts, metrics.ts, logger.ts'
+							},
+							'@portal/types': {
+								desc: 'Zero runtime dependency package. Zod schemas, TypeScript types, error hierarchy (PortalError), API response types. Build: tsc → .d.ts declarations.',
+								exports:
+									'PortalError, ValidationError, AuthError, NotFoundError, OCIError, DatabaseError, isPortalError, toPortalError, Zod schemas for all entities'
+							},
+							'@portal/ui': {
+								desc: 'Svelte component library (planned split from @portal/shared). Components, stores, client-side utilities. Framework-specific — depends on Svelte 5 runes.',
+								components:
+									'Button, Input, Select, Modal, Drawer, Toast, Tabs, Badge, Avatar, ProgressBar, DataTable, EmptyState, ErrorBoundary, LoadingSkeleton, ConfirmDialog'
+							},
+							'Oracle Database 26AI': {
+								desc: 'Primary data store. 15+ tables with VPD tenant isolation (SYS_CONTEXT). HNSW vector indexes for RAG (replacing IVF). JSON Duality Views for workflow definitions. Blockchain tables for immutable audit.',
+								tables:
+									'users, sessions, organizations, workflow_definitions, workflow_runs, api_keys, mcp_servers, agent_state, agent_sessions, agent_turns, audit_log, approval_tokens, blockchain_audit_log, blockchain_api_key_events',
+								migrations:
+									'Migration 014 (agent sessions/turns) ✅, Migration 015 (HNSW indexes) ✅, Migration 016 (JSON Duality Views) ✅, Migration 017 (VPD policies) ✅'
+							},
+							'OracleStore (agent-state)': {
+								desc: 'MastraStorage implementation backed by Oracle DB. Replaces SQLite-based agent state. Stores chat sessions, thread memory with org_id + thread_id partitioning. VPD tenant isolation.',
+								migration:
+									'Phase A: implement OracleStore class, create agent_state table with org_id, thread_id columns.',
+								related: ['@mastra/core MastraStorage interface', 'AD-35']
+							}
+						};
+
+						// ─── DATA ────────────────────────────────────────────────────
+						const phases = [
+							{
+								id: 'A',
+								name: 'Dependency Updates + Fastify Hardening',
+								weeks: '1-2',
+								start: 0,
+								end: 2,
+								color: '#6c5ce7',
+								status: 'in-progress',
+								tasks: [
+									'Patch/minor updates (ai, svelte, sentry, pino) — partial',
+									'Remove @types/dompurify',
+									'✅ Add oci-sdk v2.125.0',
+									'Add @modelcontextprotocol/sdk',
+									'✅ Add @fastify/under-pressure (load shedding)',
+									'Add @fastify/otel (OpenTelemetry)',
+									'Add @fastify/graceful-shutdown',
+									'✅ Add Valkey cache module (iovalkey)',
+									'Add @mastra/sentry + @mastra/evals',
+									'Add syncpack + zod-validation-error',
+									'✅ Add rate-limiter-flexible',
+									'Replace zodToJsonSchema() with z.toJSONSchema()',
+									'Switch swagger-ui → @scalar/fastify-api-reference (AD-42)',
+									'Set up Grafana + Tempo observability (AD-48)',
+									'✅ Configure per-user rate limiting with Oracle (AD-49)',
+									'Configure @fastify/schedule + Oracle job queue (AD-50)',
+									'✅ Migrate agent_state SQLite → Oracle (AD-35)',
+									'Add knip to CI',
+									'DEFERRED: Vite 7 + ESLint 10 (AD-41)'
+								]
+							},
+							{
+								id: 'B',
+								name: 'Package Split + Frontend Libraries',
+								weeks: '3-4',
+								start: 2,
+								end: 4,
+								color: '#0984e3',
+								status: 'not-started',
+								deps: ['A'],
+								tasks: [
+									'Create @portal/types (AD-51)',
+									'Create @portal/server (AD-51)',
+									'Create @portal/ui (AD-51)',
+									'Rewrite imports across workspaces',
+									'Add sveltekit-superforms + formsnap + layerchart + fuse.js',
+									'Add @tanstack/table-core + paneforge + svelte-dnd-action',
+									'Build 8 GenUI components (AD-46): InstanceTable, CostChart, etc.',
+									'Migrate admin forms to Superforms',
+									'Adopt createAIContext() for shared Chat state',
+									'Validate build + test suite + madge circular check'
+								]
+							},
+							{
+								id: 'C',
+								name: 'Fastify-First Migration',
+								weeks: '5-7',
+								start: 4,
+								end: 7,
+								color: '#00b894',
+								status: 'mostly-complete',
+								deps: ['B'],
+								tasks: [
+									'✅ Better Auth catch-all in Fastify',
+									'✅ Migrate 22/37 SvelteKit routes (Waves 1-3)',
+									'✅ Update SvelteKit to cookie-forwarding',
+									'✅ Raw SSE streaming (no plugin needed)',
+									'✅ Add AWS + Azure MCP servers to catalog (AD-45)',
+									'✅ Nginx config verified (all /api/* → Fastify)',
+									'✅ 59 integration tests added (Wave 3)',
+									'Delete 15 remaining +server.ts stubs',
+									'Remove feature flags + proxy middleware'
+								]
+							},
+							{
+								id: 'D',
+								name: 'OCI SDK Migration',
+								weeks: '5-8',
+								start: 4,
+								end: 8,
+								color: '#e84393',
+								status: 'in-progress',
+								deps: ['A'],
+								tasks: [
+									'✅ Configure oci-sdk auth provider',
+									'✅ Create executor-sdk.ts adapter',
+									'✅ Adapter unit tests',
+									'✅ Migrate Compute tools (4 tools)',
+									'✅ Migrate Networking tools (5 tools)',
+									'✅ Migrate Object Storage tools (4 tools)',
+									'✅ Migrate Database tools (6 tools)',
+									'✅ Migrate Identity tools (5 tools)',
+									'Migrate Monitoring tools',
+									'Migrate Container tools',
+									'Migrate Load Balancer tools',
+									'Migrate remaining tools',
+									'Integration tests',
+									'Latency benchmarks'
+								]
+							},
+							{
+								id: 'E',
+								name: 'Workflow Designer + AI Hardening',
+								weeks: '7-9',
+								start: 6,
+								end: 9,
+								color: '#f39c12',
+								status: 'not-started',
+								deps: ['B'],
+								tasks: [
+									'Implement ai-step node',
+									'Implement loop node (.foreach)',
+									'Implement parallel node (.parallel)',
+									'Add retry policies (exponential backoff)',
+									'Add compensation/saga pattern',
+									'Add workflow streaming (writer + SSE)',
+									'Add lifecycle callbacks (onFinish, onError)',
+									'Add typed suspendSchema/resumeSchema',
+									'Add Agent Guardrails (3 detectors)',
+									'Configure @mastra/evals scorers (10% sampling)',
+									'Add crash recovery (restartAllActiveWorkflowRuns)',
+									'Update frontend editor for new node types',
+									'A2A Agent Card DEFERRED (AD-43)'
+								]
+							},
+							{
+								id: 'F',
+								name: 'Oracle 26AI Modernization',
+								weeks: '5-6',
+								start: 4,
+								end: 6,
+								color: '#e74c3c',
+								status: 'complete',
+								deps: ['A'],
+								tasks: [
+									'✅ Migration 015: HNSW DML indexes (parallel — AD-52)',
+									'✅ Migration 016: JSON Duality Views (parallel — AD-52)',
+									'✅ Migration 017: VPD tenant isolation (parallel — AD-52)',
+									'✅ Replace vectorToOracleString() with Float32Array',
+									'✅ Update OracleVectorStore for HNSW + DB_TYPE_VECTOR',
+									'✅ Benchmark vector performance (3x target)',
+									'✅ Test VPD with admin and non-admin roles',
+									'✅ Quality gate: all tests passing'
+								]
+							},
+							{
+								id: 'G',
+								name: 'Self-Built Admin Experience',
+								weeks: '8-10',
+								start: 7,
+								end: 10,
+								color: '#fd79a8',
+								status: 'not-started',
+								deps: ['C'],
+								tasks: [
+									'G-1: Agent Playground (/admin/agents) — chat testing, model switching',
+									'G-2: Workflow Execution Monitor (/admin/workflows/runs) — live SSE',
+									'G-3: Tool Tester (/admin/tools/playground) — execute + inspect results',
+									'G-4: Observability Dashboard (/admin/observability) — Grafana embeds',
+									'Verify OracleStore MastraStorage coverage (already complete — AD-55)',
+									'Browser feedback loops for design iteration (AD-54)',
+									'RBAC gating: admin:all required for all /admin/* pages'
+								]
+							}
+						];
+
+						const decisions = [
+							{
+								id: 'AD-1',
+								text: 'Replace custom MCP client with @modelcontextprotocol/sdk',
+								detail:
+									'Official SDK, automatic protocol updates, 24K+ users. Replaces 750 LOC custom client.'
+							},
+							{
+								id: 'AD-2',
+								text: 'Replace Terraform generator with terraform-generator',
+								detail: 'AST-based > string concat. CDKTF deprecated Dec 2025. Replaces 577 LOC.'
+							},
+							{
+								id: 'AD-3',
+								text: 'Gradual oci-sdk migration (hybrid CLI+SDK)',
+								detail:
+									'3-5x faster, typed, but 60+ tools need incremental migration. SDK for high-freq, CLI fallback.'
+							},
+							{
+								id: 'AD-4',
+								text: 'Keep OracleVectorStore (no alternative)',
+								detail: 'No Oracle vector store exists in any framework (drizzle, kysely skip Oracle).'
+							},
+							{
+								id: 'AD-5',
+								text: 'Keep Better Auth (already external)',
+								detail: 'No Fastify-native auth matches feature set. Organization plugin, OIDC, API keys.'
+							},
+							{
+								id: 'AD-6',
+								text: 'Keep pricing service (no alternative)',
+								detail: 'No multi-cloud pricing npm package exists. Static OCI data + Azure API.'
+							},
+							{
+								id: 'AD-7',
+								text: 'Use Mastra workflow primitives for node types',
+								detail: '.then(), .parallel(), .foreach(), .branch() map directly to designer node types.'
+							},
+							{
+								id: 'AD-8',
+								text: 'Split @portal/shared into 3 packages',
+								detail:
+									'@portal/types (0 deps), @portal/server (Oracle, auth), @portal/ui (Svelte). Faster builds.'
+							},
+							{
+								id: 'AD-9',
+								text: 'Move Better Auth entirely to Fastify',
+								detail: 'Single auth boundary eliminates dual-runtime auth. toWebRequest pattern.'
+							},
+							{
+								id: 'AD-10',
+								text: 'VPD for tenant isolation',
+								detail:
+									'Database-level org_id filtering. Even buggy app code cannot leak cross-tenant data.'
+							},
+							{
+								id: 'AD-11',
+								text: 'Direct Float32Array vector binding',
+								detail:
+									'node-oracledb 6.5+ supports native TypedArrays. Eliminates vectorToOracleString().'
+							},
+							{
+								id: 'AD-12',
+								text: 'Remove Inngest (use Mastra suspend/resume)',
+								detail: 'Mastra provides built-in durability, crash recovery, sleep/suspend.'
+							},
+							{
+								id: 'AD-13',
+								text: 'Better Auth Fastify via toWebRequest pattern',
+								detail:
+									'Official integration pattern from Better Auth docs. Converts Fastify req to Fetch API Request.'
+							},
+							{
+								id: 'AD-14',
+								text: 'SUPERSEDED by AD-53: Self-built admin replaces Mastra Studio',
+								detail:
+									'Agent chat playground, workflow viz, tool testing, MCP explorer, eval scorers. Admin-gated.'
+							},
+							{
+								id: 'AD-15',
+								text: 'Add @mastra/sentry for AI observability',
+								detail:
+									'Maps Mastra spans → Sentry (AGENT_RUN→gen_ai.invoke_agent, TOOL_CALL→gen_ai.execute_tool).'
+							},
+							{
+								id: 'AD-16',
+								text: 'Add @mastra/evals for agent quality scoring',
+								detail:
+									'Scorer framework with 10% production sampling. Results visible in Studio Scorers tab.'
+							},
+							{
+								id: 'AD-17',
+								text: 'Add Mastra Agent Guardrails',
+								detail:
+									'PromptInjectionDetector, PIIDetector, ModerationProcessor, TokenLimiter, SystemPromptScrubber.'
+							},
+							{
+								id: 'AD-18',
+								text: 'Adopt workflow lifecycle callbacks',
+								detail: 'onFinish → audit log, onError → Sentry + admin notification, retryConfig.'
+							},
+							{
+								id: 'AD-19',
+								text: 'Use typed suspendSchema/resumeSchema',
+								detail: 'Runtime Zod validation of suspend/resume payloads for approval workflows.'
+							},
+							{
+								id: 'AD-20',
+								text: 'Adopt workflow streaming (writer arg)',
+								detail:
+									'Real-time step progress + agent stream piping to client via textStream.pipeTo(writer).'
+							},
+							{
+								id: 'AD-21',
+								text: 'Add @fastify/websocket for real-time updates',
+								detail:
+									'Workflow execution live updates, agent streaming, admin notifications. Built on ws@8.'
+							},
+							{
+								id: 'AD-22',
+								text: 'Add @fastify/under-pressure for load shedding',
+								detail: 'Auto-503 on event loop delay/heap pressure. Prevents OOM crashes.'
+							},
+							{
+								id: 'AD-23',
+								text: 'Add @fastify/otel (replace deprecated OTel)',
+								detail: 'Official Fastify OpenTelemetry plugin. W3C trace context. Must register FIRST.'
+							},
+							{
+								id: 'AD-24',
+								text: 'Add sveltekit-superforms for forms',
+								detail:
+									'Type-safe form validation, 52K weekly DL, Svelte 5 compatible, built-in Zod integration.'
+							},
+							{
+								id: 'AD-25',
+								text: 'Add LayerChart for visualization',
+								detail:
+									'D3-based charting. shadcn-svelte integration. Cost comparison + workflow analytics.'
+							},
+							{
+								id: 'AD-26',
+								text: 'Skip Felte (prefer Superforms)',
+								detail: 'Superforms has 10x adoption, better Svelte 5 support. Felte at 5K weekly DL.'
+							},
+							{
+								id: 'AD-27',
+								text: 'Skip SVAR DataGrid (evaluate later)',
+								detail:
+									'Commercial licensing, limited Svelte 5 runes. Revisit when enterprise tables needed.'
+							},
+							{
+								id: 'AD-28',
+								text: 'Use z.toJSONSchema() (Zod 4 built-in)',
+								detail: 'Replaces hand-rolled zodToJsonSchema() in portal-mcp-server.ts. ~80 LOC savings.'
+							},
+							{
+								id: 'AD-29',
+								text: 'Consolidate MCP (deprecate custom client)',
+								detail:
+									'Custom MCPClient/MCPManager unused in production. Mastra MCPConnectionManager covers all needs. Deduplicate PortalMCPServer.'
+							},
+							{
+								id: 'AD-30',
+								text: 'Add cross-CSP MCP catalog (AWS, Azure, GCP)',
+								detail:
+									'awslabs/mcp (AWS CloudControl), @azure/mcp (Cosmos DB, SQL), GCP managed (BigQuery, GKE). Add as admin catalog entries.'
+							},
+							{
+								id: 'AD-31',
+								text: 'Adopt Generative UI (AI SDK tool→Svelte)',
+								detail:
+									'Map tool results to rich components: InstanceTable, CostChart, TerraformViewer, ApprovalCard. Built-in tool approval flow.'
+							},
+							{
+								id: 'AD-32',
+								text: 'Defer A2A Agent Card to post-Phase E',
+								detail:
+									'Mastra A2A has bugs (#8411). IBM ACP merged into A2A. Oracle AgentSpec Python-only. Wait for stability.'
+							},
+							{
+								id: 'AD-33',
+								text: 'Skip IBM ACP (merged into A2A)',
+								detail:
+									'ACP merged with A2A under Linux Foundation (Sep 2025). No independent implementation needed.'
+							},
+							{
+								id: 'AD-34',
+								text: 'Skip Oracle Agent Spec (Python-only)',
+								detail:
+									'WayFlow runtime Python-only. No TypeScript SDK. Monitor for TS SDK release. Mastra approach preferred.'
+							},
+							{
+								id: 'AD-35',
+								text: 'Migrate agent_state SQLite→Oracle',
+								detail:
+									'Add org_id (VPD) + thread_id (Mastra memory). Implement OracleStore (MastraStorage). Drop SQLite dependency.'
+							},
+							{
+								id: 'AD-36',
+								text: 'Adopt formsnap + @tanstack/table-core',
+								detail:
+									'formsnap: accessible Superforms companion (12K DL). @tanstack/table-core: headless table for data-heavy admin pages.'
+							},
+							{
+								id: 'AD-37',
+								text: 'Use paneforge for resizable panels',
+								detail:
+									'Split-view layout: canvas + inspector panel in workflow designer. Svelte 5 compatible.'
+							},
+							{
+								id: 'AD-38',
+								text: 'Use svelte-dnd-action for drag-and-drop',
+								detail: 'Kanban boards, node palette drag-to-canvas. 15K DL, Svelte 5 runes support.'
+							},
+							{
+								id: 'AD-39',
+								text: 'OCI Cache with Valkey (defer DBIM)',
+								detail:
+									'Valkey: MCP tool cache, OCI API responses, settings, agent context. ~$28-85/mo. iovalkey client.'
+							},
+							{
+								id: 'AD-40',
+								text: 'SSE as primary streaming transport',
+								detail:
+									'95% of real-time needs are server→client. AI SDK + Mastra use SSE natively. WebSocket deferred.'
+							},
+							{
+								id: 'AD-41',
+								text: 'Defer Vite 7 + ESLint 10',
+								detail:
+									'ESLint 10 BLOCKED: typescript-eslint 8.x has no support. Vite 7 low-priority. Wait for ecosystem.'
+							},
+							{
+								id: 'AD-42',
+								text: 'Switch to @scalar/fastify-api-reference',
+								detail:
+									'Modern API docs, dark mode, interactive playground, code generation. Drop-in 10 LOC replacement.'
+							},
+							{
+								id: 'AD-43',
+								text: 'Defer A2A Agent Card to post-Phase E',
+								detail:
+									'Mastra A2A has known bugs (#8411). Wait for v1.0 stability. Low risk — no production consumers.'
+							},
+							{
+								id: 'AD-44',
+								text: 'Deprecate custom MCP, keep Mastra only',
+								detail:
+									'Custom MCPClient unused in production. MCPConnectionManager has Docker, Oracle, encryption, admin UI.'
+							},
+							{
+								id: 'AD-45',
+								text: 'AWS + Azure MCP servers first',
+								detail:
+									'Both have mature MCP servers. Covers 80%+ of multi-cloud customers. GCP deferred.'
+							},
+							{
+								id: 'AD-46',
+								text: 'All 8 Generative UI components at once',
+								detail:
+									'InstanceTable, CostChart, MetricsChart, BucketGrid, TerraformViewer, AlarmPanel, ResourceList, ApprovalCard.'
+							},
+							{
+								id: 'AD-47',
+								text: 'Clean agent_state SQLite→Oracle migration',
+								detail:
+									'New OracleStore with org_id + thread_id. No data migration — sessions are ephemeral.'
+							},
+							{
+								id: 'AD-48',
+								text: 'Grafana + Tempo for observability',
+								detail:
+									'OSS stack. Full control. Self-hosted Grafana, Tempo, Prometheus. Most flexible option.'
+							},
+							{
+								id: 'AD-49',
+								text: 'Per-user rate limiting with Oracle store',
+								detail:
+									'rate-limiter-flexible with Oracle adapter. Different limits for chat (10/min) vs read (60/min).'
+							},
+							{
+								id: 'AD-50',
+								text: '@fastify/schedule + Oracle queue for jobs',
+								detail: 'Zero new infrastructure. Oracle table for job queue, toad-scheduler for cron.'
+							},
+							{
+								id: 'AD-51',
+								text: 'Split @portal/shared into 3 packages',
+								detail:
+									'Confirms AD-8. @portal/types has 0 runtime deps. Faster builds. Framework isolation.'
+							},
+							{
+								id: 'AD-52',
+								text: 'Oracle 26AI features in parallel',
+								detail:
+									'Migrations 015/016/017 are independent SQL. Can run together. Reduces Phase F by ~40%.'
+							}
+						{
+							id: 'AD-53',
+							text: 'Self-built admin over Mastra Studio (supersedes AD-14)',
+							detail:
+								'Studio is standalone Hono+React on :4111, not embeddable. Build 4 custom admin pages consuming Mastra REST API via @mastra/fastify adapter.'
+						},
+						{
+							id: 'AD-54',
+							text: 'Browser feedback loops for design iteration',
+							detail:
+								'Use claude-in-chrome MCP tools for visual validation. Branch per iteration, ≥2 iterations per page. Confirm layout/UX before merging.'
+						},
+						{
+							id: 'AD-55',
+							text: 'OracleStore already complete (drift detected)',
+							detail:
+								'1244 LOC implementing full MastraStorage interface. All 3 domains (workflows, memory, scores) covered. Phase A task is done.'
+						}
+						];
+
+						const risks = [
+							{
+								id: 'R1',
+								text: 'Vite 7 breaks SvelteKit build',
+								prob: 'med',
+								impact: 'high',
+								mit: 'Test in branch first. Pin Vite 6 if needed.'
+							},
+							{
+								id: 'R2',
+								text: 'ESLint 10 flat config migration',
+								prob: 'med',
+								impact: 'med',
+								mit: 'Already using flat config. Test plugin compat.'
+							},
+							{
+								id: 'R3',
+								text: 'Better Auth Fastify breaks OIDC',
+								prob: 'med',
+								impact: 'high',
+								mit: 'Keep /api/auth/* path identical. Test with IDCS.'
+							},
+							{
+								id: 'R4',
+								text: 'oci-sdk missing CLI functionality',
+								prob: 'low',
+								impact: 'med',
+								mit: 'Hybrid approach: SDK + CLI fallback.'
+							},
+							{
+								id: 'R5',
+								text: 'Package split breaks imports',
+								prob: 'high',
+								impact: 'med',
+								mit: 'jscodeshift automated rewriting. Full test suite.'
+							},
+							{
+								id: 'R6',
+								text: 'VPD conflicts with admin queries',
+								prob: 'low',
+								impact: 'high',
+								mit: 'Admin role gets VPD exemption via app context.'
+							},
+							{
+								id: 'R7',
+								text: 'HNSW index memory pressure',
+								prob: 'med',
+								impact: 'med',
+								mit: 'Configure neighbors=16 (not 64). Monitor OCI metrics.'
+							},
+							{
+								id: 'R8',
+								text: '@mcp/sdk v2 breaking changes',
+								prob: 'low',
+								impact: 'med',
+								mit: 'Pin ^1.26.0. MCPConnectionManager wraps SDK.'
+							},
+							{
+								id: 'R9',
+								text: '37 route migration regressions',
+								prob: 'high',
+								impact: 'high',
+								mit: 'Migrate in batches. Keep proxy fallback.'
+							},
+							{
+								id: 'R10',
+								text: 'OCI SDK auth differs from CLI',
+								prob: 'med',
+								impact: 'med',
+								mit: 'Document both. Instance principal for prod.'
+							},
+							{
+								id: 'R11',
+								text: 'Float32Array breaks legacy queries',
+								prob: 'low',
+								impact: 'med',
+								mit: 'Test with existing data. Fallback to strings.'
+							},
+							{
+								id: 'R12',
+								text: 'REMOVED: Mastra Studio auth bypass (eliminated by AD-53)',
+								prob: 'med',
+								impact: 'high',
+								mit: 'N/A — risk eliminated by AD-53 (self-built admin).'
+							},
+							{
+								id: 'R13',
+								text: '@mastra/evals scorer LLM costs',
+								prob: 'med',
+								impact: 'med',
+								mit: '10% sampling. gpt-4o-mini. Disable in tests.'
+							},
+							{
+								id: 'R14',
+								text: 'Guardrails false positives',
+								prob: 'med',
+								impact: 'med',
+								mit: 'Start with warn strategy, tune, then block.'
+							},
+							{
+								id: 'R15',
+								text: 'New plugins increase startup time',
+								prob: 'low',
+								impact: 'low',
+								mit: 'Benchmark cold start. Lazy-load non-critical.'
+							},
+							{
+								id: 'R16',
+								text: 'MCP consolidation breaks custom client consumers',
+								prob: 'low',
+								impact: 'low',
+								mit: 'Custom client unused in production. Deprecate with README notice.'
+							},
+							{
+								id: 'R17',
+								text: 'A2A protocol instability (pre-1.0)',
+								prob: 'med',
+								impact: 'med',
+								mit: 'Defer to post-Phase E. Mastra A2A has known bugs. Stable A2A late 2026.'
+							},
+							{
+								id: 'R18',
+								text: 'Cross-CSP MCP servers need customer credentials',
+								prob: 'med',
+								impact: 'high',
+								mit: 'Reuse MCPConnectionManager AES-256-GCM encryption. Admin-only install.'
+							},
+						{
+							id: 'R21',
+							text: 'Phase G scope creep (4 admin pages)',
+							prob: 'med',
+							impact: 'med',
+							mit: 'Strict sub-phase boundaries. Ship G-1 before starting G-2. Design review gates.'
+						},
+						{
+							id: 'R22',
+							text: 'Browser feedback loop latency',
+							prob: 'low',
+							impact: 'low',
+							mit: 'Cap at 2 iterations per page. Use screenshots for async review.'
+						}
+						];
+
+						const metrics = [
+							{ label: 'SvelteKit Routes', current: 15, target: 0, unit: 'routes', inverse: true },
+							{ label: 'Tool Latency (p95)', current: 1200, target: 500, unit: 'ms', inverse: true },
+							{ label: 'Compile Time', current: 8, target: 3, unit: 's', inverse: true },
+							{ label: 'Node Types', current: 5, target: 8, unit: '/8' },
+							{ label: 'Vector Perf', current: 3, target: 3, unit: 'x improvement' },
+							{ label: 'Test Pass Rate', current: 100, target: 100, unit: '%' },
+							{ label: 'Test Count', current: 763, target: 800, unit: ' tests' },
+							{ label: 'OCI SDK Migration', current: 24, target: 29, unit: ' tools' },
+							{ label: 'Custom LOC Replaced', current: 750, target: 1300, unit: 'LOC' },
+							{ label: 'Auth Codepaths', current: 2, target: 1, unit: 'paths', inverse: true },
+							{ label: 'Admin Pages', current: 0, target: 4, unit: ' pages' }
+						];
+
+						const dbTables = [
+							{
+								name: 'users',
+								cols: [
+									{ n: 'id', t: 'VARCHAR2(36)', pk: true },
+									{ n: 'email', t: 'VARCHAR2(255)' },
+									{ n: 'name', t: 'VARCHAR2(255)' },
+									{ n: 'role', t: 'VARCHAR2(20)' },
+									{ n: 'created_at', t: 'TIMESTAMP' }
+								]
+							},
+							{
+								name: 'organizations',
+								cols: [
+									{ n: 'id', t: 'VARCHAR2(36)', pk: true },
+									{ n: 'name', t: 'VARCHAR2(255)' },
+									{ n: 'slug', t: 'VARCHAR2(100)' },
+									{ n: 'created_at', t: 'TIMESTAMP' }
+								]
+							},
+							{
+								name: 'sessions',
+								cols: [
+									{ n: 'id', t: 'VARCHAR2(36)', pk: true },
+									{ n: 'user_id', t: 'VARCHAR2(36)', fk: 'users' },
+									{ n: 'expires_at', t: 'TIMESTAMP' },
+									{ n: 'ip_address', t: 'VARCHAR2(45)' }
+								]
+							},
+							{
+								name: 'api_keys',
+								cols: [
+									{ n: 'id', t: 'VARCHAR2(36)', pk: true },
+									{ n: 'org_id', t: 'VARCHAR2(36)', fk: 'organizations' },
+									{ n: 'key_hash', t: 'VARCHAR2(64)' },
+									{ n: 'permissions', t: 'JSON' }
+								]
+							},
+							{
+								name: 'workflow_definitions',
+								cols: [
+									{ n: 'id', t: 'VARCHAR2(36)', pk: true },
+									{ n: 'org_id', t: 'VARCHAR2(36)', fk: 'organizations' },
+									{ n: 'name', t: 'VARCHAR2(255)' },
+									{ n: 'graph', t: 'JSON' },
+									{ n: 'version', t: 'NUMBER' }
+								]
+							},
+							{
+								name: 'workflow_runs',
+								cols: [
+									{ n: 'id', t: 'VARCHAR2(36)', pk: true },
+									{ n: 'definition_id', t: 'VARCHAR2(36)', fk: 'workflow_definitions' },
+									{ n: 'status', t: 'VARCHAR2(20)' },
+									{ n: 'started_at', t: 'TIMESTAMP' },
+									{ n: 'steps', t: 'JSON' }
+								]
+							},
+							{
+								name: 'mcp_servers',
+								cols: [
+									{ n: 'id', t: 'VARCHAR2(36)', pk: true },
+									{ n: 'org_id', t: 'VARCHAR2(36)', fk: 'organizations' },
+									{ n: 'name', t: 'VARCHAR2(255)' },
+									{ n: 'transport', t: 'VARCHAR2(10)' },
+									{ n: 'config', t: 'JSON (encrypted)' }
+								]
+							},
+							{
+								name: 'audit_log',
+								cols: [
+									{ n: 'id', t: 'VARCHAR2(36)', pk: true },
+									{ n: 'org_id', t: 'VARCHAR2(36)', fk: 'organizations' },
+									{ n: 'actor_id', t: 'VARCHAR2(36)', fk: 'users' },
+									{ n: 'action', t: 'VARCHAR2(100)' },
+									{ n: 'payload', t: 'JSON' }
+								],
+								blockchain: true
+							},
+							{
+								name: 'approval_tokens',
+								cols: [
+									{ n: 'id', t: 'VARCHAR2(36)', pk: true },
+									{ n: 'run_id', t: 'VARCHAR2(36)', fk: 'workflow_runs' },
+									{ n: 'token_hash', t: 'VARCHAR2(64)' },
+									{ n: 'consumed', t: 'NUMBER(1)' },
+									{ n: 'expires_at', t: 'TIMESTAMP' }
+								]
+							},
+							{
+								name: 'agent_state',
+								cols: [
+									{ n: 'session_id', t: 'VARCHAR2(36)', pk: true },
+									{ n: 'org_id', t: 'VARCHAR2(36)', fk: 'organizations' },
+									{ n: 'thread_id', t: 'VARCHAR2(36)' },
+									{ n: 'messages', t: 'JSON' },
+									{ n: 'context', t: 'JSON' },
+									{ n: 'updated_at', t: 'TIMESTAMP' }
+								]
+							},
+							{
+								name: 'agent_sessions',
+								cols: [
+									{ n: 'session_id', t: 'VARCHAR2(36)', pk: true },
+									{ n: 'org_id', t: 'VARCHAR2(36)', fk: 'organizations' },
+									{ n: 'resource_id', t: 'VARCHAR2(255)' },
+									{ n: 'metadata', t: 'JSON' },
+									{ n: 'created_at', t: 'TIMESTAMP' },
+									{ n: 'updated_at', t: 'TIMESTAMP' }
+								]
+							},
+							{
+								name: 'agent_turns',
+								cols: [
+									{ n: 'id', t: 'VARCHAR2(36)', pk: true },
+									{ n: 'session_id', t: 'VARCHAR2(36)', fk: 'agent_sessions' },
+									{ n: 'org_id', t: 'VARCHAR2(36)', fk: 'organizations' },
+									{ n: 'turn_id', t: 'VARCHAR2(36)' },
+									{ n: 'messages', t: 'JSON' },
+									{ n: 'created_at', t: 'TIMESTAMP' }
+								]
+							}
+						];
+
+						const components = [
+							{
+								cat: 'Portal',
+								items: [
+									'ChatWindow',
+									'ChatMessage',
+									'ChatInput',
+									'ToolCallCard',
+									'ToolApproval',
+									'SessionList',
+									'SessionItem',
+									'ModelSelector',
+									'CostDisplay',
+									'MarkdownRenderer',
+									'CodeBlock',
+									'SearchBar'
+								]
+							},
+							{
+								cat: 'Workflow',
+								items: [
+									'WorkflowCanvas',
+									'NodePalette',
+									'NodeEditor',
+									'EdgeConnector',
+									'ConditionBuilder',
+									'RetryConfig',
+									'ParallelConfig',
+									'LoopConfig',
+									'AIStepConfig',
+									'ApprovalConfig',
+									'RunViewer',
+									'StepInspector'
+								],
+								new: ['RetryConfig', 'ParallelConfig', 'LoopConfig', 'AIStepConfig']
+							},
+							{
+								cat: 'Admin',
+								items: [
+									'AdminLayout',
+									'IDPConfig',
+									'AIProviderForm',
+									'SettingsPanel',
+									'MCPServerList',
+									'MCPCatalog',
+									'IntegrationsPage',
+									'AgentPlayground',
+									'SetupWizard',
+									'SetupStep'
+								],
+								new: ['AgentPlayground']
+							},
+							{ cat: 'Mobile', items: ['MobileNav', 'MobileChat', 'MobileDrawer', 'BottomSheet'] },
+							{
+								cat: 'UI',
+								items: [
+									'Button',
+									'Input',
+									'Select',
+									'Modal',
+									'Drawer',
+									'Toast',
+									'Tabs',
+									'Badge',
+									'Avatar',
+									'ProgressBar',
+									'DataTable',
+									'EmptyState',
+									'ErrorBoundary',
+									'LoadingSkeleton',
+									'ConfirmDialog'
+								]
+							}
+						];
+
+						const deps = {
+							current: [
+								{ pkg: 'fastify', ver: '5.7.4', status: 'current', cat: 'Core' },
+								{ pkg: '@sveltejs/kit', ver: '2.50.2', status: 'current', cat: 'Core' },
+								{ pkg: 'svelte', ver: '5.49.2', status: 'minor-behind', cat: 'Core' },
+								{ pkg: 'zod', ver: '4.3.6', status: 'current', cat: 'Core' },
+								{ pkg: '@fastify/cookie', ver: '11.0.2', status: 'current', cat: 'Fastify' },
+								{ pkg: '@fastify/cors', ver: '11.2.0', status: 'current', cat: 'Fastify' },
+								{ pkg: '@fastify/helmet', ver: '13.0.2', status: 'current', cat: 'Fastify' },
+								{ pkg: '@fastify/rate-limit', ver: '10.3.0', status: 'current', cat: 'Fastify' },
+								{ pkg: '@fastify/swagger', ver: '9.6.1', status: 'minor-behind', cat: 'Fastify' },
+								{ pkg: '@mastra/core', ver: '1.2.0', status: 'current', cat: 'AI' },
+								{ pkg: '@mastra/fastify', ver: '1.1.1', status: 'current', cat: 'AI' },
+								{ pkg: '@mastra/rag', ver: '2.1.0', status: 'current', cat: 'AI' },
+								{ pkg: 'ai', ver: '6.0.73', status: 'patch-behind', cat: 'AI' },
+								{ pkg: '@sentry/sveltekit', ver: '10.32.1', status: 'minor-behind', cat: 'UI' },
+								{ pkg: '@xyflow/svelte', ver: '1.5.0', status: 'current', cat: 'UI' },
+								{ pkg: 'oracledb', ver: '6.10.0', status: 'current', cat: 'DB' },
+								{ pkg: 'better-auth', ver: '1.4.18', status: 'current', cat: 'Auth' }
+							],
+							newP0: [
+								{
+									pkg: '@fastify/websocket',
+									purpose: 'Real-time workflow/agent updates',
+									cat: 'Fastify'
+								},
+								{
+									pkg: '@fastify/under-pressure',
+									purpose: 'Load shedding (503 before OOM)',
+									cat: 'Fastify'
+								},
+								{ pkg: 'fastify-graceful-shutdown', purpose: 'Zero-downtime deploys', cat: 'Fastify' },
+								{ pkg: '@fastify/otel', purpose: 'OpenTelemetry (replaces deprecated)', cat: 'Fastify' }
+							],
+							newP1: [
+								{ pkg: '@fastify/sse', purpose: 'SSE for workflow progress', cat: 'Fastify' },
+								{ pkg: 'cache-manager', purpose: 'Multi-layer API response caching', cat: 'Fastify' },
+								{ pkg: '@fastify/compress', purpose: 'Gzip/Brotli (~60-70% reduction)', cat: 'Fastify' },
+								{ pkg: '@fastify/schedule', purpose: 'Lightweight cron jobs', cat: 'Fastify' }
+							],
+							mastra: [
+								{ pkg: '@mastra/sentry', purpose: 'AI span → Sentry mapping', cat: 'Observability' },
+								{ pkg: '@mastra/evals', purpose: 'Agent quality scoring', cat: 'Quality' }
+							],
+							frontend: [
+								{ pkg: 'sveltekit-superforms', purpose: 'Form validation (52K weekly DL)', cat: 'Forms' },
+								{ pkg: 'layerchart', purpose: 'D3 charting + shadcn integration', cat: 'Charts' },
+								{ pkg: 'fuse.js', purpose: 'Client-side fuzzy search (1.2M DL)', cat: 'Search' }
+							],
+							dx: [
+								{ pkg: 'syncpack', purpose: 'Dependency version sync', cat: 'Monorepo' },
+								{ pkg: 'zod-validation-error', purpose: 'Human-readable Zod errors', cat: 'DX' },
+								{ pkg: 'oci-sdk', purpose: 'Official Oracle Cloud TS SDK', cat: 'Core' },
+								{ pkg: '@modelcontextprotocol/sdk', purpose: 'Official MCP SDK', cat: 'Core' },
+								{ pkg: 'terraform-generator', purpose: 'AST-based HCL generation', cat: 'Core' }
+							]
+						};
+
+						// ─── TABS ────────────────────────────────────────────────────
+						const tabs = [
+							{ id: 'overview', label: 'Overview' },
+							{ id: 'roadmap', label: 'Roadmap' },
+							{ id: 'agenttasks', label: 'Agent Tasks' },
+							{ id: 'kanban', label: 'Kanban' },
+							{ id: 'architecture', label: 'Architecture' },
+							{ id: 'database', label: 'Database' },
+							{ id: 'components', label: 'Components' },
+							{ id: 'deps', label: 'Dependencies' },
+							{ id: 'decisions', label: 'Decisions' },
+							{ id: 'workflow', label: 'Workflow Mock' },
+							{ id: 'admin', label: 'Admin Mock' },
+							{ id: 'risks', label: 'Risks' },
+							{ id: 'qa', label: 'Q&A Feedback' }
+						];
+
+						// ─── INIT ────────────────────────────────────────────────────
+						function init() {
+							// Build nav
+							const nav = document.getElementById('nav');
+							tabs.forEach((t) => {
+								const btn = document.createElement('button');
+								btn.textContent = t.label;
+								btn.onclick = () => switchTab(t.id);
+								btn.id = 'nav-' + t.id;
+								nav.appendChild(btn);
+							});
+
+							// Init kanban
+							phases.forEach((p) => {
+								p.tasks.forEach((t) => {
+									state.kanban.backlog.push({ phase: p.id, text: t, color: p.color });
+								});
+							});
+
+							switchTab('overview');
+						}
+
+						function switchTab(id) {
+							state.activeTab = id;
+							document.querySelectorAll('.nav button').forEach((b) => b.classList.remove('active'));
+							document.getElementById('nav-' + id).classList.add('active');
+							renderSection(id);
+							updatePrompt();
+						}
+
+						// ─── RENDERERS ───────────────────────────────────────────────
+						function renderSection(id) {
+							const main = document.getElementById('main');
+							const renderers = {
+								overview: renderOverview,
+								roadmap: renderRoadmap,
+								agenttasks: renderAgentTasks,
+								kanban: renderKanban,
+								architecture: renderArchitecture,
+								database: renderDatabase,
+								components: renderComponents,
+								deps: renderDeps,
+								decisions: renderDecisions,
+								workflow: renderWorkflow,
+								admin: renderAdmin,
+								risks: renderRisks,
+								qa: renderQA
+							};
+							main.innerHTML = '';
+							const section = document.createElement('div');
+							section.className = 'section active';
+							renderers[id](section);
+							main.appendChild(section);
+						}
+
+						// ─── AGENT TASKS ─────────────────────────────────────────────
+						const agentTasks = {
+							A: {
+								name: 'Dependency Updates + Fastify Hardening',
+								color: '#6c5ce7',
+								waves: [
+									{
+										name: 'Wave A1 — Deps',
+										tasks: [
+											{
+												id: 'A-1.01',
+												title: 'Update patch/minor runtime deps',
+												agent: 'haiku',
+												dur: '20m',
+												status: 'pending'
+											},
+											{
+												id: 'A-1.02',
+												title: 'Add oci-sdk + @mcp/sdk',
+												agent: 'haiku',
+												dur: '15m',
+												status: 'pending'
+											},
+											{
+												id: 'A-1.03',
+												title: 'Add P0 Fastify plugins',
+												agent: 'haiku',
+												dur: '15m',
+												status: 'pending'
+											},
+											{
+												id: 'A-1.04',
+												title: 'Add Mastra packages + iovalkey',
+												agent: 'haiku',
+												dur: '15m',
+												status: 'pending'
+											},
+											{
+												id: 'A-1.05',
+												title: 'Remove @types/dompurify + syncpack',
+												agent: 'haiku',
+												dur: '15m',
+												status: 'pending'
+											},
+											{
+												id: 'A-1.06',
+												title: 'Add rate-limiter-flexible + zod-validation-error',
+												agent: 'haiku',
+												dur: '15m',
+												status: 'pending'
+											}
+										]
+									},
+									{
+										name: 'Wave A2 — Config',
+										tasks: [
+											{
+												id: 'A-2.01',
+												title: 'Register @fastify/otel first',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'A-2.02',
+												title: 'Configure under-pressure',
+												agent: 'sonnet',
+												dur: '30m',
+												status: 'pending'
+											},
+											{
+												id: 'A-2.03',
+												title: 'Wire graceful-shutdown',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'A-2.04',
+												title: 'Create Valkey cache module',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											},
+											{
+												id: 'A-2.05',
+												title: 'Switch to Scalar API docs',
+												agent: 'sonnet',
+												dur: '30m',
+												status: 'pending'
+											},
+											{
+												id: 'A-2.06',
+												title: 'Configure @mastra/sentry',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'A-2.07',
+												title: 'Configure @mastra/evals',
+												agent: 'sonnet',
+												dur: '30m',
+												status: 'pending'
+											},
+											{
+												id: 'A-2.08',
+												title: 'Replace zodToJsonSchema()',
+												agent: 'sonnet',
+												dur: '30m',
+												status: 'pending'
+											},
+											{
+												id: 'A-2.09',
+												title: 'Deprecate custom MCP',
+												agent: 'sonnet',
+												dur: '30m',
+												status: 'pending'
+											},
+											{
+												id: 'A-2.10',
+												title: 'Migrate agent_state → Oracle',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											},
+											{
+												id: 'A-2.11',
+												title: 'Add knip to CI',
+												agent: 'haiku',
+												dur: '15m',
+												status: 'pending'
+											},
+											{
+												id: 'A-2.12',
+												title: 'Configure rate-limiter-flexible',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											}
+										]
+									},
+									{
+										name: 'Wave A3 — Final',
+										tasks: [
+											{
+												id: 'A-3.01',
+												title: 'Grafana + Tempo docker-compose',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'A-3.02',
+												title: 'Configure @fastify/schedule',
+												agent: 'haiku',
+												dur: '20m',
+												status: 'pending'
+											},
+											{
+												id: 'A-3.03',
+												title: 'Write plugin tests',
+												agent: 'haiku',
+												dur: '30m',
+												status: 'pending'
+											},
+											{
+												id: 'A-3.04',
+												title: 'Run full quality gate',
+												agent: 'haiku',
+												dur: '15m',
+												status: 'pending'
+											}
+										]
+									}
+								]
+							},
+							B: {
+								name: 'Package Split + Frontend Libraries',
+								color: '#0984e3',
+								waves: [
+									{
+										name: 'Wave B1 — Scaffold',
+										tasks: [
+											{
+												id: 'B-1.01',
+												title: 'Create @portal/types scaffold',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											},
+											{
+												id: 'B-1.02',
+												title: 'Extract Zod schemas + types',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											},
+											{
+												id: 'B-1.03',
+												title: 'Extract error hierarchy',
+												agent: 'sonnet',
+												dur: '30m',
+												status: 'pending'
+											},
+											{
+												id: 'B-1.04',
+												title: 'Create @portal/server scaffold',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											},
+											{
+												id: 'B-1.05',
+												title: 'Extract server modules',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											},
+											{
+												id: 'B-1.06',
+												title: 'Create @portal/ui scaffold',
+												agent: 'sonnet',
+												dur: '30m',
+												status: 'pending'
+											},
+											{
+												id: 'B-1.07',
+												title: 'Update workspace config',
+												agent: 'haiku',
+												dur: '15m',
+												status: 'pending'
+											}
+										]
+									},
+									{
+										name: 'Wave B2 — Imports',
+										tasks: [
+											{
+												id: 'B-2.01',
+												title: 'Rewrite api imports',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											},
+											{
+												id: 'B-2.02',
+												title: 'Rewrite frontend imports',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											},
+											{
+												id: 'B-2.03',
+												title: 'Rewrite cross-package imports',
+												agent: 'sonnet',
+												dur: '30m',
+												status: 'pending'
+											},
+											{
+												id: 'B-2.04',
+												title: 'Verify no circular deps',
+												agent: 'haiku',
+												dur: '15m',
+												status: 'pending'
+											},
+											{
+												id: 'B-2.05',
+												title: 'Run full test suite',
+												agent: 'haiku',
+												dur: '15m',
+												status: 'pending'
+											}
+										]
+									},
+									{
+										name: 'Wave B3 — Frontend',
+										tasks: [
+											{
+												id: 'B-3.01',
+												title: 'Install superforms + formsnap',
+												agent: 'haiku',
+												dur: '15m',
+												status: 'pending'
+											},
+											{
+												id: 'B-3.02',
+												title: 'Install layerchart',
+												agent: 'haiku',
+												dur: '15m',
+												status: 'pending'
+											},
+											{
+												id: 'B-3.03',
+												title: 'Install fuse.js',
+												agent: 'haiku',
+												dur: '15m',
+												status: 'pending'
+											},
+											{
+												id: 'B-3.04',
+												title: 'Install @tanstack/table-core',
+												agent: 'haiku',
+												dur: '15m',
+												status: 'pending'
+											},
+											{
+												id: 'B-3.05',
+												title: 'Install paneforge + dnd + animate',
+												agent: 'haiku',
+												dur: '15m',
+												status: 'pending'
+											},
+											{
+												id: 'B-3.06',
+												title: 'Build InstanceTable + ResourceList',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											},
+											{
+												id: 'B-3.07',
+												title: 'Build CostChart + MetricsChart',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											},
+											{
+												id: 'B-3.08',
+												title: 'Build TerraformViewer + BucketGrid',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											},
+											{
+												id: 'B-3.09',
+												title: 'Build AlarmPanel + ApprovalCard',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											},
+											{
+												id: 'B-3.10',
+												title: 'Migrate admin forms to Superforms',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											},
+											{
+												id: 'B-3.11',
+												title: 'Add fuzzy search',
+												agent: 'sonnet',
+												dur: '30m',
+												status: 'pending'
+											},
+											{
+												id: 'B-3.12',
+												title: 'Adopt createAIContext()',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'B-3.13',
+												title: 'Add streaming data parts',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'B-3.14',
+												title: 'Write GenUI component tests',
+												agent: 'haiku',
+												dur: '30m',
+												status: 'pending'
+											},
+											{
+												id: 'B-3.15',
+												title: 'Run full quality gate',
+												agent: 'haiku',
+												dur: '15m',
+												status: 'pending'
+											}
+										]
+									}
+								]
+							},
+							C: {
+								name: 'Fastify-First Migration',
+								color: '#00b894',
+								waves: [
+									{
+										name: 'Wave C1 — Auth',
+										tasks: [
+											{
+												id: 'C-1.01',
+												title: 'Better Auth catch-all in Fastify',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											},
+											{
+												id: 'C-1.02',
+												title: 'Configure trustedOrigins + CORS',
+												agent: 'sonnet',
+												dur: '30m',
+												status: 'pending'
+											},
+											{
+												id: 'C-1.03',
+												title: 'SvelteKit cookie-forwarding only',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'C-1.04',
+												title: 'Update layout.server.ts',
+												agent: 'sonnet',
+												dur: '30m',
+												status: 'pending'
+											},
+											{
+												id: 'C-1.05',
+												title: 'Test OIDC end-to-end',
+												agent: 'sonnet',
+												dur: '30m',
+												status: 'pending'
+											}
+										]
+									},
+									{
+										name: 'Wave C2 — Routes',
+										tasks: [
+											{
+												id: 'C-2.01',
+												title: 'Migrate 3 auth/session routes',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'C-2.02',
+												title: 'Migrate 6 chat/AI routes',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											},
+											{
+												id: 'C-2.03',
+												title: 'Migrate 4 tool routes',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'C-2.04',
+												title: 'Migrate 5 workflow routes',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'C-2.05',
+												title: 'Migrate 10 admin routes',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											},
+											{
+												id: 'C-2.06',
+												title: 'Migrate 9 webhook/misc routes',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											}
+										]
+									},
+									{
+										name: 'Wave C3 — Cleanup',
+										tasks: [
+											{
+												id: 'C-3.01',
+												title: 'Configure @fastify/sse',
+												agent: 'sonnet',
+												dur: '30m',
+												status: 'pending'
+											},
+											{
+												id: 'C-3.02',
+												title: 'Configure @fastify/compress',
+												agent: 'haiku',
+												dur: '20m',
+												status: 'pending'
+											},
+											{
+												id: 'C-3.03',
+												title: 'Configure Mastra Studio + RBAC',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'C-3.04',
+												title: 'Add AWS + Azure MCP catalog',
+												agent: 'sonnet',
+												dur: '30m',
+												status: 'pending'
+											},
+											{
+												id: 'C-3.05',
+												title: 'Remove feature flags + proxy',
+												agent: 'haiku',
+												dur: '20m',
+												status: 'pending'
+											},
+											{
+												id: 'C-3.06',
+												title: 'Update nginx config',
+												agent: 'haiku',
+												dur: '15m',
+												status: 'pending'
+											},
+											{
+												id: 'C-3.07',
+												title: 'Write route integration tests',
+												agent: 'haiku',
+												dur: '30m',
+												status: 'pending'
+											},
+											{
+												id: 'C-3.08',
+												title: 'Verify zero +server.ts remain',
+												agent: 'haiku',
+												dur: '15m',
+												status: 'pending'
+											}
+										]
+									}
+								]
+							},
+							D: {
+								name: 'OCI SDK Migration',
+								color: '#e84393',
+								waves: [
+									{
+										name: 'Wave D1 — Foundation',
+										tasks: [
+											{
+												id: 'D-1.01',
+												title: 'Configure oci-sdk auth',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'D-1.02',
+												title: 'Create executor-sdk.ts adapter',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											},
+											{
+												id: 'D-1.03',
+												title: 'Write adapter unit tests',
+												agent: 'haiku',
+												dur: '30m',
+												status: 'pending'
+											}
+										]
+									},
+									{
+										name: 'Wave D2 — Top Tools',
+										tasks: [
+											{
+												id: 'D-2.01',
+												title: 'Migrate compute tools',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											},
+											{
+												id: 'D-2.02',
+												title: 'Migrate networking tools',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											},
+											{
+												id: 'D-2.03',
+												title: 'Migrate storage tools',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'D-2.04',
+												title: 'Migrate database tools',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'D-2.05',
+												title: 'Migrate IAM tools',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											}
+										]
+									},
+									{
+										name: 'Wave D3 — Remaining',
+										tasks: [
+											{
+												id: 'D-3.01',
+												title: 'Migrate monitoring tools',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'D-3.02',
+												title: 'Migrate container tools',
+												agent: 'sonnet',
+												dur: '30m',
+												status: 'pending'
+											},
+											{
+												id: 'D-3.03',
+												title: 'Migrate load balancer tools',
+												agent: 'sonnet',
+												dur: '30m',
+												status: 'pending'
+											},
+											{
+												id: 'D-3.04',
+												title: 'Migrate edge-case tools',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'D-3.05',
+												title: 'Write integration tests',
+												agent: 'haiku',
+												dur: '30m',
+												status: 'pending'
+											},
+											{
+												id: 'D-3.06',
+												title: 'Run latency benchmarks',
+												agent: 'haiku',
+												dur: '20m',
+												status: 'pending'
+											}
+										]
+									}
+								]
+							},
+							E: {
+								name: 'Workflow Designer + AI Hardening',
+								color: '#f39c12',
+								waves: [
+									{
+										name: 'Wave E1 — Nodes',
+										tasks: [
+											{
+												id: 'E-1.01',
+												title: 'Implement ai-step node',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											},
+											{
+												id: 'E-1.02',
+												title: 'Implement loop node',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											},
+											{
+												id: 'E-1.03',
+												title: 'Implement parallel node',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											}
+										]
+									},
+									{
+										name: 'Wave E2 — Features',
+										tasks: [
+											{
+												id: 'E-2.01',
+												title: 'Add retry policies',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'E-2.02',
+												title: 'Add compensation/saga',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											},
+											{
+												id: 'E-2.03',
+												title: 'Add workflow streaming',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'E-2.04',
+												title: 'Add lifecycle callbacks',
+												agent: 'sonnet',
+												dur: '30m',
+												status: 'pending'
+											},
+											{
+												id: 'E-2.05',
+												title: 'Add suspend/resume schemas',
+												agent: 'sonnet',
+												dur: '30m',
+												status: 'pending'
+											},
+											{
+												id: 'E-2.06',
+												title: 'Add crash recovery',
+												agent: 'sonnet',
+												dur: '30m',
+												status: 'pending'
+											},
+											{
+												id: 'E-2.07',
+												title: 'Update workflow Zod schemas',
+												agent: 'haiku',
+												dur: '20m',
+												status: 'pending'
+											}
+										]
+									},
+									{
+										name: 'Wave E3 — AI + FE',
+										tasks: [
+											{
+												id: 'E-3.01',
+												title: 'Add guardrails (3 detectors)',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'E-3.02',
+												title: 'Configure evals scorers',
+												agent: 'sonnet',
+												dur: '30m',
+												status: 'pending'
+											},
+											{
+												id: 'E-3.03',
+												title: 'Editor: ai-step node',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'E-3.04',
+												title: 'Editor: loop node',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'E-3.05',
+												title: 'Editor: parallel node',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'E-3.06',
+												title: 'Write node editor tests',
+												agent: 'haiku',
+												dur: '30m',
+												status: 'pending'
+											},
+											{
+												id: 'E-3.07',
+												title: 'Write guardrail tests',
+												agent: 'haiku',
+												dur: '30m',
+												status: 'pending'
+											}
+										]
+									}
+								]
+							},
+							F: {
+								name: 'Oracle 26AI Modernization',
+								color: '#e74c3c',
+								waves: [
+									{
+										name: 'Wave F1 — Migrations (parallel)',
+										tasks: [
+											{
+												id: 'F-1.01',
+												title: 'Migration 015: HNSW indexes',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'F-1.02',
+												title: 'Migration 016: Duality Views',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'F-1.03',
+												title: 'Migration 017: VPD policies',
+												agent: 'sonnet',
+												dur: '60m',
+												status: 'pending'
+											}
+										]
+									},
+									{
+										name: 'Wave F2 — Code + Bench',
+										tasks: [
+											{
+												id: 'F-2.01',
+												title: 'Replace vectorToOracleString()',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'F-2.02',
+												title: 'Update OracleVectorStore',
+												agent: 'sonnet',
+												dur: '45m',
+												status: 'pending'
+											},
+											{
+												id: 'F-2.03',
+												title: 'Vector search benchmarks',
+												agent: 'haiku',
+												dur: '20m',
+												status: 'pending'
+											},
+											{
+												id: 'F-2.04',
+												title: 'Test VPD isolation',
+												agent: 'haiku',
+												dur: '20m',
+												status: 'pending'
+											},
+											{
+												id: 'F-2.05',
+												title: 'Run full quality gate',
+												agent: 'haiku',
+												dur: '15m',
+												status: 'pending'
+											}
+										]
+									}
+								]
+							}
+						};
+
+						function renderAgentTasks(el) {
+							const allTasks = [];
+							Object.entries(agentTasks).forEach(([phase, data]) => {
+								data.waves.forEach((w) =>
+									w.tasks.forEach((t) =>
+										allTasks.push({ ...t, phase, phaseColor: data.color, wave: w.name })
+									)
+								);
+							});
+							const totalTasks = allTasks.length;
+							const doneTasks = allTasks.filter((t) => t.status === 'done').length;
+							const inProgress = allTasks.filter((t) => t.status === 'in-progress').length;
+							const haikuTasks = allTasks.filter((t) => t.agent === 'haiku').length;
+							const sonnetTasks = allTasks.filter((t) => t.agent === 'sonnet').length;
+
+							el.innerHTML = `<h2>Agent Task Plan</h2>
+								<div class="grid-3" style="margin-bottom:16px">
+									<div class="card metric"><div class="value">${totalTasks}</div><div class="label">Total Tasks</div></div>
+									<div class="card metric"><div class="value" style="color:var(--purple)">${sonnetTasks}</div><div class="label">Sonnet Tasks</div></div>
+									<div class="card metric"><div class="value" style="color:var(--cyan)">${haikuTasks}</div><div class="label">Haiku Tasks</div></div>
+								</div>
+								<div class="card" style="margin-bottom:16px">
+									<div class="card-header"><span class="card-title">Progress</span><span class="tag">${doneTasks}/${totalTasks} done</span></div>
+									<div style="background:var(--bg4);border-radius:4px;height:8px;overflow:hidden">
+										<div style="height:100%;width:${((doneTasks / totalTasks) * 100).toFixed(1)}%;background:var(--green);border-radius:4px;transition:width 0.3s"></div>
+									</div>
+								</div>
+								${Object.entries(agentTasks)
+									.map(([phase, data]) => {
+										const pTasks = [];
+										data.waves.forEach((w) => w.tasks.forEach((t) => pTasks.push(t)));
+										const pDone = pTasks.filter((t) => t.status === 'done').length;
+										return `<div class="card" style="margin-bottom:12px;border-left:3px solid ${data.color}">
+										<div class="card-header">
+											<span class="card-title">Phase ${phase}: ${data.name}</span>
+											<span class="tag" style="background:${data.color}20;color:${data.color}">${pDone}/${pTasks.length}</span>
+										</div>
+										${data.waves
+											.map(
+												(w) => `
+											<h3 style="font-size:13px;margin:12px 0 6px;color:var(--text2)">${w.name}</h3>
+											<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:6px">
+												${w.tasks
+													.map((t) => {
+														const statusColor =
+															t.status === 'done'
+																? 'var(--green)'
+																: t.status === 'in-progress'
+																	? 'var(--orange)'
+																	: 'var(--text3)';
+														const agentColor = t.agent === 'sonnet' ? 'var(--purple)' : 'var(--cyan)';
+														const statusIcon =
+															t.status === 'done'
+																? '\u2713'
+																: t.status === 'in-progress'
+																	? '\u25B6'
+																	: '\u25CB';
+														return `<div style="padding:6px 10px;background:var(--bg3);border-radius:var(--radius-sm);font-size:12px;display:flex;align-items:center;gap:8px">
+														<span style="color:${statusColor};font-weight:600;min-width:14px">${statusIcon}</span>
+														<span style="color:var(--text3);font-family:var(--mono);font-size:10px;min-width:42px">${t.id}</span>
+														<span style="flex:1">${t.title}</span>
+														<span style="color:${agentColor};font-size:10px;font-weight:600;text-transform:uppercase">${t.agent}</span>
+														<span style="color:var(--text3);font-size:10px">${t.dur}</span>
+													</div>`;
+													})
+													.join('')}
+											</div>
+										`
+											)
+											.join('')}
+									</div>`;
+									})
+									.join('')}`;
+						}
+
+						// ─── OVERVIEW ────────────────────────────────────────────────
+						function renderOverview(el) {
+							const totalTasks = phases.reduce((sum, p) => sum + p.tasks.length, 0);
+							const completedTasks = phases.reduce(
+								(sum, p) => sum + p.tasks.filter((t) => t.startsWith('✅')).length,
+								0
+							);
+							const overallPct = Math.round((completedTasks / totalTasks) * 100);
+
+							el.innerHTML = `<h2>Executive Summary</h2>
+			  <div class="card" style="border:2px solid var(--accent);margin-bottom:20px">
+			    <div style="display:flex;align-items:center;gap:24px;padding:8px">
+			      <div style="flex:0 0 auto">
+			        <div style="font-size:48px;font-weight:700;color:var(--accent)">${overallPct}%</div>
+			        <div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Overall</div>
+			      </div>
+			      <div style="flex:1">
+			        <div style="font-size:14px;margin-bottom:6px"><strong>${completedTasks}/${totalTasks} tasks completed</strong></div>
+			        <div style="font-size:12px;color:var(--text2)">Phase F (Oracle 26AI): ✅ Complete | Phase C (Fastify-First): ~78% | Phase D (OCI SDK): 57% | Phase G (Admin): NEW</div>
+			        <div class="progress" style="margin-top:8px"><div class="fill" style="width:${overallPct}%;background:var(--accent)"></div></div>
+			      </div>
+			    </div>
+			  </div>
+
+			  <div class="card">
+			    <div class="card-header"><span class="card-title">Remaining Issues</span><span class="tag orange">6 Active</span> <span class="tag green">4 Resolved</span></div>
+			    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px">
+			      ${[
+							{ text: 'Dual API boundary (15 SvelteKit stubs remaining)', resolved: false },
+							{ text: 'Split authentication (2 codepaths)', resolved: false },
+							{ text: 'Monolithic @portal/shared (25+ modules)', resolved: false },
+							{ text: 'CLI subprocess overhead (24/29 tools migrated)', resolved: false },
+							{ text: 'No admin experience (Mastra Studio not embeddable)', resolved: false },
+							{ text: 'Incomplete workflow designer (3/8 node types TODO)', resolved: false },
+							{ text: 'Legacy IVF vector indexes → HNSW ✅', resolved: true },
+							{ text: 'String-based vector conversion → Float32Array ✅', resolved: true },
+							{ text: 'OracleStore MastraStorage — already complete (1244 LOC) ✅', resolved: true },
+							{ text: 'Mastra Studio embedding — replaced by self-built admin (AD-53) ✅', resolved: true }
+						]
+							.map(
+								(p) =>
+									`<div style="padding:8px 12px;background:var(--bg3);border-radius:var(--radius-sm);font-size:12px;border-left:3px solid ${p.resolved ? 'var(--green)' : 'var(--red)'};${p.resolved ? 'opacity:0.6;text-decoration:line-through' : ''}">${p.text}</div>`
+							)
+							.join('')}
+			    </div>
+			  </div>
+
+			  <h3>Success Metrics</h3>
+			  <div class="grid-3">
+			    ${metrics
+						.map((m) => {
+							const pct = m.inverse
+								? Math.max(0, Math.min(100, m.current - m.target === 0 ? 100 : 0))
+								: Math.min(100, (m.current / m.target) * 100);
+							const color = pct >= 80 ? 'var(--green)' : pct >= 40 ? 'var(--orange)' : 'var(--red)';
+							return `<div class="card metric">
+			        <div class="value">${m.current}${m.unit === '%' ? '%' : ''}<span style="font-size:14px;color:var(--text3)"> → ${m.target}${m.unit === '/8' ? '/8' : m.unit === '%' ? '%' : ''}</span></div>
+			        <div class="label">${m.label}</div>
+			        <div class="bar"><div class="fill" style="width:${pct}%;background:${color}"></div></div>
+			      </div>`;
+						})
+						.join('')}
+			  </div>
+
+			  <h3>Phase Progress</h3>
+			  <div class="grid-2">
+			    ${phases
+						.map((p) => {
+							const completed = p.tasks.filter((t) => t.startsWith('✅')).length;
+							const pct = Math.round((completed / p.tasks.length) * 100);
+							return `<div class="card" style="border-left:3px solid ${p.color}">
+			      <div class="card-header">
+			        <span class="card-title">Phase ${p.id}: ${p.name}</span>
+			        <span class="tag ${p.status === 'complete' ? 'green' : p.status === 'mostly-complete' ? 'green' : p.status === 'in-progress' ? 'orange' : 'blue'}">${p.status === 'not-started' ? 'Not Started' : p.status === 'complete' ? 'Complete' : p.status === 'mostly-complete' ? '~78% Done' : p.status}</span>
+			      </div>
+			      <div style="font-size:12px;color:var(--text2)">Weeks ${p.weeks} &bull; ${completed}/${p.tasks.length} tasks (${pct}%)</div>
+			      <div class="progress"><div class="fill" style="width:${pct}%;background:${p.color}"></div></div>
+			    </div>`;
+						})
+						.join('')}
+			  </div>
+
+			  <h3>Personas</h3>
+			  <div class="grid-3" style="grid-template-columns:repeat(5,1fr)">
+			    ${[
+						{ n: 'Platform Admin', d: 'Configures portal, MCP servers', icon: '👑' },
+						{ n: 'Ops Engineer', d: 'Daily CloudAdvisor user', icon: '🔧' },
+						{ n: 'Workflow Designer', d: 'Builds automation DAGs', icon: '🔀' },
+						{ n: 'Security Reviewer', d: 'Audits auth, RBAC, encryption', icon: '🛡' },
+						{ n: 'Developer', d: 'Extends portal, writes tools', icon: '💻' }
+					]
+						.map(
+							(p) =>
+								`<div class="card" style="text-align:center;padding:20px 12px">
+			        <div style="font-size:28px;margin-bottom:8px">${p.icon}</div>
+			        <div style="font-weight:600;font-size:13px">${p.n}</div>
+			        <div style="font-size:11px;color:var(--text3);margin-top:4px">${p.d}</div>
+			      </div>`
+						)
+						.join('')}
+			  </div>`;
+						}
+
+						// ─── ROADMAP (Gantt) ─────────────────────────────────────────
+						function renderRoadmap(el) {
+							const totalWeeks = 11;
+							el.innerHTML = `<h2>Phase Roadmap (Gantt)</h2><div class="card"><div class="gantt">
+			    <div class="gantt-header" style="margin-left:220px">
+			      ${Array.from({ length: totalWeeks }, (_, i) => `<span>W${i + 1}</span>`).join('')}
+			    </div>
+			    ${phases
+						.map((p, idx) => {
+							const left = ((p.start / totalWeeks) * 100).toFixed(1);
+							const width = (((p.end - p.start) / totalWeeks) * 100).toFixed(1);
+							const completed = p.tasks.filter((t) => t.startsWith('✅')).length;
+							const pct = Math.round((completed / p.tasks.length) * 100);
+							const barStyle =
+								p.status === 'complete'
+									? `background:${p.color}`
+									: p.status === 'in-progress'
+										? `background:repeating-linear-gradient(45deg,${p.color},${p.color} 10px,rgba(0,0,0,0.3) 10px,rgba(0,0,0,0.3) 20px)`
+										: `background:${p.color};opacity:0.3`;
+							return `<div class="gantt-row">
+			        <div class="gantt-label" style="color:${p.color}">
+			          <strong>Phase ${p.id}</strong><br><span style="font-size:11px;color:var(--text3)">${p.name}</span>
+			        </div>
+			        <div class="gantt-track">
+			          <div class="gantt-bar" style="left:${left}%;width:${width}%;${barStyle}" onclick="showPhaseDetail('${p.id}')" title="${p.name}\nWeeks ${p.weeks}\n${completed}/${p.tasks.length} tasks (${pct}%)">
+			            ${p.id} (W${p.start + 1}-${p.end})
+			          </div>
+			        </div>
+			      </div>`;
+						})
+						.join('')}
+			  </div></div>
+
+			  <h3>Phase Dependencies</h3>
+			  <div class="card" style="font-family:var(--mono);font-size:12px;line-height:1.8;padding:20px">
+			    <pre style="color:var(--text2)">A (deps+hardening) ──► B (split+frontend) ──► C (fastify-first) ──► G (admin) NEW
+			                                                    │
+			A (deps+hardening) ──────────────────────────────► D (oci-sdk)
+			                                                    │
+			B (split+frontend) ──────► E (workflows+AI)
+			                                                    │
+			A (deps+hardening) ──────────────────────────────► F (oracle)</pre>
+			    <div style="margin-top:12px;color:var(--text3)">D and F run parallel with B/C/E. G depends on C; G-2 benefits from E; G-4 needs A (Grafana)</div>
+			  </div>
+
+			  <div id="phase-detail"></div>`;
+						}
+
+						function showPhaseDetail(id) {
+							const p = phases.find((x) => x.id === id);
+							const det = document.getElementById('phase-detail');
+							if (det) {
+								det.innerHTML = `<div class="card" style="border-left:3px solid ${p.color}">
+			      <h3 style="color:${p.color}">Phase ${p.id}: ${p.name}</h3>
+			      <div style="font-size:12px;color:var(--text3);margin-bottom:12px">Weeks ${p.weeks} &bull; ${p.deps ? 'Depends on: ' + p.deps.join(', ') : 'No dependencies'}</div>
+			      <table><thead><tr><th>#</th><th>Task</th><th>Status</th></tr></thead><tbody>
+			        ${p.tasks.map((t, i) => `<tr><td>${i + 1}</td><td>${t}</td><td><span class="tag blue">Backlog</span></td></tr>`).join('')}
+			      </tbody></table>
+			    </div>`;
+								state.focusPhase = id;
+								updatePrompt();
+							}
+						}
+
+						// ─── KANBAN ──────────────────────────────────────────────────
+						function renderKanban(el) {
+							const cols = [
+								{ id: 'backlog', label: 'Backlog', color: 'var(--text3)' },
+								{ id: 'progress', label: 'In Progress', color: 'var(--blue)' },
+								{ id: 'review', label: 'Review', color: 'var(--orange)' },
+								{ id: 'done', label: 'Done', color: 'var(--green)' }
+							];
+
+							el.innerHTML = `<h2>Kanban Board</h2><p style="font-size:12px;color:var(--text3);margin-bottom:12px">Drag cards between columns to track progress. Pre-populated from migration checklist.</p>
+			  <div class="kanban">
+			    ${cols
+						.map(
+							(c) => `<div class="kanban-col" id="col-${c.id}"
+			      ondrop="drop(event,'${c.id}')" ondragover="event.preventDefault()" ondragenter="event.currentTarget.style.outline='2px solid var(--accent)'" ondragleave="event.currentTarget.style.outline='none'">
+			      <div class="kanban-col-header" style="color:${c.color}">
+			        ${c.label} <span class="count" id="count-${c.id}">${state.kanban[c.id].length}</span>
+			      </div>
+			      <div class="kanban-items" id="items-${c.id}">
+			        ${state.kanban[c.id].map((t, i) => kanbanCard(t, c.id, i)).join('')}
+			      </div>
+			    </div>`
+						)
+						.join('')}
+			  </div>`;
+						}
+
+						function kanbanCard(t, col, idx) {
+							return `<div class="kanban-card" draggable="true" ondragstart="drag(event,'${col}',${idx})" id="card-${col}-${idx}">
+			    <div class="phase" style="color:${t.color}">Phase ${t.phase}</div>
+			    <div class="task">${t.text}</div>
+			  </div>`;
+						}
+
+						let dragData = null;
+						function drag(e, col, idx) {
+							dragData = { col, idx };
+							e.dataTransfer.effectAllowed = 'move';
+						}
+						function drop(e, targetCol) {
+							e.preventDefault();
+							e.currentTarget.style.outline = 'none';
+							if (!dragData) return;
+							const item = state.kanban[dragData.col].splice(dragData.idx, 1)[0];
+							state.kanban[targetCol].push(item);
+							dragData = null;
+							renderKanban(document.querySelector('.section.active'));
+							updatePrompt();
+						}
+
+						// ─── ARCHITECTURE ────────────────────────────────────────────
+						function archClick(name) {
+							const d = archDetails[name];
+							if (!d) return;
+							let html = `<h3>${name}</h3><dl class="detail-grid"><dt>Description</dt><dd>${d.desc}</dd>`;
+							if (d.plugins) html += `<dt>Plugins</dt><dd style="font-size:12px">${d.plugins}</dd>`;
+							if (d.modules) html += `<dt>Modules</dt><dd style="font-size:12px">${d.modules}</dd>`;
+							if (d.exports) html += `<dt>Exports</dt><dd style="font-size:12px">${d.exports}</dd>`;
+							if (d.components) html += `<dt>Components</dt><dd>${d.components}</dd>`;
+							if (d.routes) html += `<dt>Routes</dt><dd>${d.routes}</dd>`;
+							if (d.tables) html += `<dt>Tables</dt><dd style="font-size:12px">${d.tables}</dd>`;
+							if (d.migrations) html += `<dt>Migrations</dt><dd>${d.migrations}</dd>`;
+							if (d.migration) html += `<dt>Migration Plan</dt><dd>${d.migration}</dd>`;
+							if (d.tests) html += `<dt>Tests</dt><dd>${d.tests}</dd>`;
+							if (d.config) html += `<dt>Config</dt><dd>${d.config}</dd>`;
+							if (d.related) html += `<dt>Related</dt><dd>${d.related.join(', ')}</dd>`;
+							html += `</dl>`;
+							showModal(html);
+						}
+
+						function renderArchitecture(el) {
+							el.innerHTML = `<h2>Architecture Diagram</h2>
+			  <p style="font-size:12px;color:var(--text3);margin-bottom:12px">Click any box for detailed context.</p>
+			  <div class="card">
+			    <div class="arch">
+			      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Layer 1: Edge</div>
+			      <div class="arch-layer">
+			        <div class="arch-box clickable" style="border-color:var(--text3);max-width:600px" onclick="archClick('Nginx')">
+			          <div class="name">Nginx</div>
+			          <div class="desc">TLS termination &bull; Rate limiting &bull; Route splitting &bull; Static assets</div>
+			        </div>
+			      </div>
+			      <div class="arch-arrow">▼ /api/* → :3001 &nbsp;&nbsp;&nbsp;&nbsp; /* → :3000 ▼</div>
+
+			      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Layer 2-3: Applications</div>
+			      <div class="arch-layer">
+			        <div class="arch-box api clickable" onclick="archClick('apps/api (Fastify 5)')">
+			          <div class="name">apps/api (Fastify 5)</div>
+			          <div class="desc">18 plugins &bull; Better Auth &bull; RBAC &bull; Mastra &bull; Studio &bull; All routes</div>
+			        </div>
+			        <div class="arch-box frontend clickable" onclick="archClick('apps/frontend (SvelteKit)')">
+			          <div class="name">apps/frontend (SvelteKit)</div>
+			          <div class="desc">SSR only &bull; 54 components &bull; Cookie forwarding &bull; Zero +server.ts</div>
+			        </div>
+			      </div>
+			      <div class="arch-arrow">▼ imports ▼</div>
+
+			      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Layer 4-5: Packages</div>
+			      <div class="arch-layer">
+			        <div class="arch-box server clickable" onclick="archClick('@portal/server')">
+			          <div class="name">@portal/server</div>
+			          <div class="desc">Oracle repos &bull; Auth &bull; Workflows &bull; Admin &bull; MCP &bull; Crypto</div>
+			        </div>
+			        <div class="arch-box types clickable" onclick="archClick('@portal/types')">
+			          <div class="name">@portal/types</div>
+			          <div class="desc">Zod schemas &bull; TS types &bull; Error hierarchy &bull; Zero runtime deps</div>
+			        </div>
+			        <div class="arch-box ui clickable" style="border-color:var(--pink)" onclick="archClick('@portal/ui')">
+			          <div class="name">@portal/ui</div>
+			          <div class="desc">Svelte components &bull; Stores &bull; Client utilities</div>
+			        </div>
+			      </div>
+			      <div class="arch-arrow">▼ queries ▼</div>
+
+			      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:1px">Layer 6: Data</div>
+			      <div class="arch-layer">
+			        <div class="arch-box oracle clickable" onclick="archClick('Oracle Database 26AI')">
+			          <div class="name">Oracle Database 26AI</div>
+			          <div class="desc">HNSW vectors &bull; JSON Duality Views &bull; VPD isolation &bull; Blockchain audit</div>
+			        </div>
+			        <div class="arch-box oracle clickable" onclick="archClick('OracleStore (agent-state)')">
+			          <div class="name">OracleStore (agent-state)</div>
+			          <div class="desc">Chat sessions &bull; Thread memory &bull; VPD tenant isolation</div>
+			        </div>
+			      </div>
+			    </div>
+			  </div>
+
+			  <h3>Boundary Rules</h3>
+			  <div class="card">
+			    <table><thead><tr><th>Boundary</th><th>Rule</th><th>Enforcement</th></tr></thead><tbody>
+			      <tr><td>SvelteKit → Fastify</td><td>SvelteKit NEVER handles API logic</td><td>Zero +server.ts files</td></tr>
+			      <tr><td>Fastify → @portal/server</td><td>Routes call server functions, not Oracle</td><td>Lint: no oracledb imports</td></tr>
+			      <tr><td>@portal/server → Oracle</td><td>All DB via repositories + bind params</td><td>Code review</td></tr>
+			      <tr><td>@portal/types → anything</td><td>Zero runtime deps (Zod only)</td><td>package.json validation</td></tr>
+			      <tr><td>@portal/ui → @portal/types</td><td>UI may import types, never server</td><td>TS path restrictions</td></tr>
+			    </tbody></table>
+			  </div>`;
+						}
+
+						// ─── DATABASE ────────────────────────────────────────────────
+						const tableDetails = {
+							users: {
+								desc: 'Core user table managed by Better Auth. Stores identity, role, and profile info.',
+								vpd: 'No VPD (global scope)',
+								migration: 'Original migration 001',
+								notes: '1:N relationship to sessions, audit_log.'
+							},
+							organizations: {
+								desc: 'Multi-tenant organizations. Every resource is scoped to an org via org_id FK.',
+								vpd: 'VPD filter via SYS_CONTEXT',
+								migration: 'Original migration 001',
+								notes: 'Root of all tenant-scoped data.'
+							},
+							sessions: {
+								desc: 'User sessions with TTL-based expiry. Managed by Better Auth session middleware.',
+								vpd: 'No VPD (user scope)',
+								migration: 'Original migration 001',
+								notes: 'ip_address for audit. Auto-purged on expiry.'
+							},
+							api_keys: {
+								desc: 'API key authentication for programmatic access. Key hash stored, never plaintext.',
+								vpd: 'VPD filter on org_id',
+								migration: 'Migration 007',
+								notes:
+									'permissions JSON stores RBAC scopes. AES-256-GCM encryption at rest (migration 009).'
+							},
+							workflow_definitions: {
+								desc: 'Workflow DAG definitions as JSON graph. Versioned with optimistic locking.',
+								vpd: 'VPD filter on org_id',
+								migration: 'Migration 005',
+								notes: 'Phase F: Convert to JSON Duality View for direct JSON ↔ relational mapping.'
+							},
+							workflow_runs: {
+								desc: 'Execution instances of workflows. Tracks status, timing, and step-level results.',
+								vpd: 'VPD filter on org_id (via definition)',
+								migration: 'Migration 005',
+								notes: 'steps JSON stores per-node execution data with inputs/outputs.'
+							},
+							mcp_servers: {
+								desc: 'MCP server connection configurations. Config JSON encrypted with AES-256-GCM.',
+								vpd: 'VPD filter on org_id',
+								migration: 'Migration 010',
+								notes:
+									'Transport: stdio (local) or SSE (remote). Docker container management via Mastra MCPConnectionManager.'
+							},
+							audit_log: {
+								desc: 'Immutable audit trail. BLOCKCHAIN table with NO DELETE UNTIL 365 DAYS AFTER INSERT.',
+								vpd: 'VPD filter on org_id',
+								migration: 'Migration 003',
+								notes: 'Uses Oracle Blockchain table. Hash-chained rows for tamper detection.'
+							},
+							approval_tokens: {
+								desc: 'HMAC-SHA256 signed tokens for workflow approval gates. Single-use with TTL.',
+								vpd: 'VPD filter (via run → definition → org)',
+								migration: 'Migration 008',
+								notes: 'consumeApproval() is atomic — prevents double-approval race conditions.'
+							},
+							agent_state: {
+								desc: 'Chat session state for AI agent. Migrated from SQLite to Oracle (AD-35). Implements MastraStorage interface.',
+								vpd: 'VPD filter on org_id',
+								migration: 'Phase A: new OracleStore migration',
+								notes: 'thread_id enables multi-turn conversations. org_id enables tenant isolation.'
+							},
+							agent_sessions: {
+								desc: 'Agent chat sessions table (migration 014). Stores session metadata and resource IDs for multi-turn AI conversations.',
+								vpd: 'VPD filter on org_id',
+								migration: 'Migration 014',
+								notes: 'Tracks session state across multiple turns. Metadata stores agent context.'
+							},
+							agent_turns: {
+								desc: 'Individual turns within agent sessions (migration 014). Stores message history for each conversation turn.',
+								vpd: 'VPD filter on org_id',
+								migration: 'Migration 014',
+								notes:
+									'Foreign key to agent_sessions. Messages stored as JSON array for efficient retrieval.'
+							}
+						};
+
+						function showTableDetail(name) {
+							const d = tableDetails[name];
+							const t = dbTables.find((x) => x.name === name);
+							if (!d) return;
+							showModal(`
+								<h3>${name} ${t && t.blockchain ? '<span class="tag orange">BLOCKCHAIN</span>' : ''}</h3>
+								<dl class="detail-grid">
+									<dt>Description</dt><dd>${d.desc}</dd>
+									<dt>VPD Policy</dt><dd>${d.vpd}</dd>
+									<dt>Migration</dt><dd>${d.migration}</dd>
+									<dt>Columns</dt><dd>${t ? t.cols.map((c) => `<code style="background:var(--bg4);padding:1px 4px;border-radius:2px;font-size:11px">${c.n}</code>`).join(' ') : '—'}</dd>
+									<dt>Notes</dt><dd>${d.notes}</dd>
+								</dl>
+							`);
+						}
+
+						function renderDatabase(el) {
+							el.innerHTML = `<h2>Database Schema (ERD)</h2>
+			  <p style="font-size:12px;color:var(--text3);margin-bottom:16px">Oracle 26AI tables with VPD tenant isolation. Blockchain tables have 365-day retention. Click any table for details.</p>
+			  <div class="erd">
+			    ${dbTables
+						.map(
+							(
+								t
+							) => `<div class="erd-table clickable" onclick="showTableDetail('${t.name}')" ${t.blockchain ? 'style="border:1px solid var(--orange)"' : ''}>
+			      <div class="erd-name">${t.name} ${t.blockchain ? '<span class="tag orange" style="float:right;font-size:9px">BLOCKCHAIN</span>' : ''}</div>
+			      ${t.cols
+							.map(
+								(c) => `<div class="erd-col ${c.pk ? 'pk' : ''} ${c.fk ? 'fk' : ''}">
+			        <span>${c.pk ? '🔑 ' : ''}${c.fk ? '🔗 ' : ''}${c.n}</span>
+			        <span class="type">${c.t}</span>
+			      </div>`
+							)
+							.join('')}
+			    </div>`
+						)
+						.join('')}
+			  </div>
+
+			  <h3>Key Relationships</h3>
+			  <div class="card" style="font-family:var(--mono);font-size:11px">
+			    <pre style="color:var(--text2)">users ──1:N──► sessions
+			users ──1:N──► audit_log (actor_id)
+			organizations ──1:N──► workflow_definitions (org_id)
+			organizations ──1:N──► api_keys (org_id)
+			organizations ──1:N──► mcp_servers (org_id)
+			organizations ──1:N──► audit_log (org_id)
+			organizations ──1:N──► agent_sessions (org_id)
+			workflow_definitions ──1:N──► workflow_runs (definition_id)
+			workflow_runs ──1:N──► approval_tokens (run_id)
+			agent_sessions ──1:N──► agent_turns (session_id)
+
+			VPD Policy: ALL tables filtered by org_id via SYS_CONTEXT('PORTAL_CTX','ORG_ID')</pre>
+			  </div>`;
+						}
+
+						// ─── COMPONENTS ──────────────────────────────────────────────
+						function renderComponents(el) {
+							const total = components.reduce((s, c) => s + c.items.length, 0);
+							const newCount = components.reduce((s, c) => s + (c.new || []).length, 0);
+							el.innerHTML = `<h2>Component Map</h2>
+			  <p style="font-size:12px;color:var(--text3);margin-bottom:16px">${total} total components across 5 categories. <span class="tag green">${newCount} new</span> in Phase 10. Click any component for details.</p>
+			  <div class="grid-2">
+			    ${components
+						.map(
+							(cat) => `<div class="card">
+			      <div class="card-header">
+			        <span class="card-title">${cat.cat}</span>
+			        <span class="tag purple">${cat.items.length} components</span>
+			      </div>
+			      <div class="tree">
+			        ${cat.items
+								.map((item) => {
+									const isNew = (cat.new || []).includes(item);
+									const hasDetail = componentDetails[item];
+									return `<div class="tree-item ${hasDetail ? 'clickable' : ''}" ${hasDetail ? `onclick="showComponentDetail('${item}')" style="cursor:pointer"` : ''}>
+			            <span class="tree-label">${item}.svelte ${isNew ? '<span class="new">NEW</span>' : ''} ${hasDetail ? '<span style="color:var(--accent2);font-size:10px;margin-left:4px">ℹ</span>' : ''}</span>
+			          </div>`;
+								})
+								.join('')}
+			      </div>
+			    </div>`
+						)
+						.join('')}
+			  </div>`;
+						}
+
+						function showComponentDetail(name) {
+							const d = componentDetails[name];
+							if (!d) return;
+							showModal(`
+								<h3>${name}.svelte</h3>
+								<dl class="detail-grid">
+									<dt>Path</dt><dd style="font-family:var(--mono);font-size:12px">${d.path}</dd>
+									<dt>Description</dt><dd>${d.desc}</dd>
+									<dt>Props</dt><dd style="font-family:var(--mono);font-size:12px">${d.props}</dd>
+									<dt>Dependencies</dt><dd>${d.deps}</dd>
+									${d.phase10 ? `<dt>Phase 10</dt><dd><span class="tag orange">${d.phase10}</span></dd>` : ''}
+								</dl>
+							`);
+						}
+
+						// ─── DEPENDENCIES ────────────────────────────────────────────
+						function renderDeps(el) {
+							const tabKeys = ['current', 'newP0', 'newP1', 'mastra', 'frontend', 'dx'];
+							const tabLabels = ['Current', 'New P0', 'New P1', 'Mastra', 'Frontend', 'DX'];
+
+							el.innerHTML = `<h2>Dependency Inventory</h2>
+			  <div class="tabs">${tabKeys.map((k, i) => `<button class="${k === state.depTab ? 'active' : ''}" onclick="state.depTab='${k}';renderDeps(document.querySelector('.section.active'))">${tabLabels[i]} (${deps[k].length})</button>`).join('')}</div>
+			  <div class="card">
+			    <table><thead><tr>
+			      <th>Package</th>
+			      ${state.depTab === 'current' ? '<th>Version</th><th>Status</th><th>Category</th>' : '<th>Purpose</th><th>Category</th>'}
+			    </tr></thead><tbody>
+			      ${deps[state.depTab]
+							.map((d) => {
+								const hasDetail = depDetails[d.pkg];
+								return `<tr class="${hasDetail ? 'clickable' : ''}" ${hasDetail ? `onclick="showDepDetail('${d.pkg}')" style="cursor:pointer"` : ''}>
+			        <td style="font-family:var(--mono);font-size:12px">${d.pkg} ${hasDetail ? '<span style="color:var(--accent2);font-size:9px">ℹ</span>' : ''}</td>
+			        ${
+								state.depTab === 'current'
+									? `<td>${d.ver}</td><td><span class="tag ${d.status === 'current' ? 'green' : d.status === 'minor-behind' ? 'orange' : 'blue'}">${d.status}</span></td><td>${d.cat}</td>`
+									: `<td style="font-size:12px">${d.purpose}</td><td>${d.cat}</td>`
+							}
+			      </tr>`;
+							})
+							.join('')}
+			    </tbody></table>
+			  </div>`;
+						}
+
+						function showDepDetail(pkg) {
+							const d = depDetails[pkg];
+							if (!d) return;
+							showModal(`
+								<h3 style="font-family:var(--mono)">${pkg}</h3>
+								<dl class="detail-grid">
+									<dt>Homepage</dt><dd>${d.homepage}</dd>
+									<dt>License</dt><dd>${d.license}</dd>
+									<dt>Size</dt><dd>${d.size}</dd>
+									<dt>Notes</dt><dd>${d.notes}</dd>
+								</dl>
+							`);
+						}
+
+						// ─── DECISIONS ───────────────────────────────────────────────
+						function renderDecisions(el) {
+							el.innerHTML = `<h2>Architecture Decision Log</h2>
+			  <p style="font-size:12px;color:var(--text3);margin-bottom:16px">${decisions.length} decisions. Click to expand rationale.</p>
+			  <div class="card"><div class="timeline">
+			    ${decisions
+						.map((d) => {
+							const open = state.expandedDecisions.has(d.id);
+							return `<div class="timeline-item ${open ? 'open' : ''}" onclick="toggleDecision('${d.id}')">
+			        <span class="id">${d.id}</span>
+			        <span class="text">${d.text}</span>
+			        <div class="detail">${d.detail}</div>
+			      </div>`;
+						})
+						.join('')}
+			  </div></div>`;
+						}
+
+						function toggleDecision(id) {
+							if (state.expandedDecisions.has(id)) state.expandedDecisions.delete(id);
+							else state.expandedDecisions.add(id);
+							renderDecisions(document.querySelector('.section.active'));
+						}
+
+						// ─── WORKFLOW MOCK ───────────────────────────────────────────
+						const wfNodeDetails = {
+							Trigger: {
+								type: 'input',
+								desc: 'Entry point. Receives workflow input payload. Supports manual trigger, API webhook, and scheduled (cron) triggers.',
+								config: 'inputSchema: Zod schema, trigger: manual | webhook | schedule',
+								impl: 'Mastra WorkflowTrigger — fully implemented.'
+							},
+							'List Instances': {
+								type: 'tool',
+								desc: 'Calls OCI ListInstances API via SDK. Returns all compute instances in a compartment.',
+								config: 'compartmentId, lifecycleState filter, limit',
+								impl: 'Phase D: migrate from CLI subprocess to oci-sdk.'
+							},
+							'Count > 0?': {
+								type: 'condition',
+								desc: 'Branch based on expression evaluation. Supports AND/OR/NOT operators with JSON path expressions.',
+								config: 'expression: $.instances.length > 0, trueTarget, falseTarget',
+								impl: 'ConditionBuilder component — fully implemented.'
+							},
+							'AI Analysis': {
+								type: 'ai-step',
+								desc: 'Invokes an LLM agent within the workflow. Can use any configured provider (Anthropic, OpenAI, OCI GenAI).',
+								config: 'model, systemPrompt, temperature, maxTokens, tools[]',
+								impl: 'Phase E TODO: AIStepConfig component, streaming output.'
+							},
+							'Check All': {
+								type: 'parallel',
+								desc: 'Fan-out to multiple branches executing concurrently. Waits for all (or configurable N) branches to complete before continuing.',
+								config: 'branches: [nodeId[]], waitFor: all | any | N',
+								impl: 'Phase E TODO: ParallelConfig component, scatter-gather pattern.'
+							},
+							'Check CPU': {
+								type: 'tool',
+								desc: 'Calls OCI Monitoring API to get CPU utilization metrics for instances.',
+								config: 'instanceId, period: 5m, statistic: mean',
+								impl: 'Tool wrapper exists. Phase D: migrate to SDK.'
+							},
+							'Check Memory': {
+								type: 'tool',
+								desc: 'Calls OCI Monitoring API to get memory utilization metrics.',
+								config: 'instanceId, period: 5m, statistic: p95',
+								impl: 'Tool wrapper exists. Phase D: migrate to SDK.'
+							},
+							'For Each Alert': {
+								type: 'loop',
+								desc: 'Iterate over an array, executing a sub-workflow for each item. Supports configurable concurrency and max iterations.',
+								config: 'over: $.alerts, concurrency: 3, maxIterations: 100',
+								impl: 'Phase E TODO: LoopConfig component, progress tracking.'
+							},
+							'Admin Approve': {
+								type: 'approval',
+								desc: 'Pauses workflow execution until an authorized user approves or rejects. Sends notification via webhook. Supports timeout with auto-action.',
+								config:
+									'approvers: [role:admin], timeout: 24h, autoAction: reject, notifyChannel: webhook',
+								impl: 'Approval token system — fully implemented. Uses HMAC-SHA256 signed tokens.'
+							},
+							'Send Report': {
+								type: 'output',
+								desc: 'Terminal node that formats and delivers workflow results. Supports webhook delivery, email, and storing results in Oracle.',
+								config: 'format: json | markdown, destination: webhook | email | store',
+								impl: 'Webhook delivery — fully implemented. HMAC-SHA256 signed.'
+							}
+						};
+
+						function renderWorkflow(el) {
+							const nodes = [
+								{ type: 'input', label: 'Trigger', x: 50, y: 160, color: 'var(--green)', done: true },
+								{
+									type: 'tool',
+									label: 'List Instances',
+									x: 220,
+									y: 80,
+									color: 'var(--blue)',
+									done: true
+								},
+								{
+									type: 'condition',
+									label: 'Count > 0?',
+									x: 400,
+									y: 80,
+									color: 'var(--orange)',
+									done: true
+								},
+								{
+									type: 'ai-step',
+									label: 'AI Analysis',
+									x: 580,
+									y: 20,
+									color: 'var(--pink)',
+									done: false
+								},
+								{
+									type: 'parallel',
+									label: 'Check All',
+									x: 580,
+									y: 150,
+									color: 'var(--orange2)',
+									done: false
+								},
+								{ type: 'tool', label: 'Check CPU', x: 760, y: 80, color: 'var(--blue)', done: true },
+								{ type: 'tool', label: 'Check Memory', x: 760, y: 180, color: 'var(--blue)', done: true },
+								{
+									type: 'loop',
+									label: 'For Each Alert',
+									x: 940,
+									y: 130,
+									color: 'var(--cyan)',
+									done: false
+								},
+								{
+									type: 'approval',
+									label: 'Admin Approve',
+									x: 1100,
+									y: 130,
+									color: 'var(--purple)',
+									done: true
+								},
+								{ type: 'output', label: 'Send Report', x: 1260, y: 130, color: 'var(--red)', done: true }
+							];
+
+							el.innerHTML = `<h2>Workflow Designer Mock</h2>
+			  <p style="font-size:12px;color:var(--text3);margin-bottom:12px">Sample DAG showing all 8 node types. Click any node for configuration details. <span class="tag green">5 implemented</span> <span class="tag red">3 TODO</span></p>
+			  <div style="display:flex;gap:16px">
+			    <div class="card" style="flex:1;min-width:0">
+			      <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+			        ${[
+								{ t: 'input', c: 'var(--green)' },
+								{ t: 'tool', c: 'var(--blue)' },
+								{ t: 'condition', c: 'var(--orange)' },
+								{ t: 'approval', c: 'var(--purple)' },
+								{ t: 'output', c: 'var(--red)' },
+								{ t: 'ai-step', c: 'var(--pink)' },
+								{ t: 'loop', c: 'var(--cyan)' },
+								{ t: 'parallel', c: 'var(--orange2)' }
+							]
+								.map(
+									(n) =>
+										`<div style="display:flex;align-items:center;gap:4px;font-size:11px"><div style="width:10px;height:10px;border-radius:2px;background:${n.c}"></div>${n.t}</div>`
+								)
+								.join('')}
+			      </div>
+			      <div class="wf-canvas" style="height:300px;overflow-x:auto">
+			        <svg width="1350" height="280" style="position:absolute;top:0;left:0;pointer-events:none">
+			          <defs><marker id="arrow" viewBox="0 0 10 6" refX="10" refY="3" markerWidth="8" markerHeight="6" orient="auto"><path d="M0,0 L10,3 L0,6" fill="#555"/></marker></defs>
+			          <line x1="170" y1="175" x2="220" y2="105" stroke="#555" marker-end="url(#arrow)"/>
+			          <line x1="340" y1="95" x2="400" y2="95" stroke="#555" marker-end="url(#arrow)"/>
+			          <line x1="520" y1="70" x2="580" y2="40" stroke="#555" marker-end="url(#arrow)"/>
+			          <line x1="520" y1="110" x2="580" y2="165" stroke="#555" marker-end="url(#arrow)"/>
+			          <line x1="700" y1="165" x2="760" y2="105" stroke="#555" marker-end="url(#arrow)"/>
+			          <line x1="700" y1="165" x2="760" y2="195" stroke="#555" marker-end="url(#arrow)"/>
+			          <line x1="880" y1="105" x2="940" y2="145" stroke="#555" marker-end="url(#arrow)"/>
+			          <line x1="880" y1="195" x2="940" y2="145" stroke="#555" marker-end="url(#arrow)"/>
+			          <line x1="1060" y1="145" x2="1100" y2="145" stroke="#555" marker-end="url(#arrow)"/>
+			          <line x1="1220" y1="145" x2="1260" y2="145" stroke="#555" marker-end="url(#arrow)"/>
+			        </svg>
+			        ${nodes
+								.map(
+									(
+										n
+									) => `<div class="wf-node ${n.type} clickable" style="left:${n.x}px;top:${n.y}px;border-color:${n.color}" onclick="showWfNode('${n.label}')">
+			          <div class="type">${n.type}</div>
+			          ${n.label}
+			          <div class="status">${n.done ? '<span style="color:var(--green)">Done</span>' : '<span style="color:var(--red)">TODO</span>'}</div>
+			        </div>`
+								)
+								.join('')}
+			      </div>
+			    </div>
+			    <div id="wf-sidebar" class="card" style="width:300px;flex-shrink:0;font-size:12px">
+			      <div style="color:var(--text3);text-align:center;padding:40px 0">Click a node to see its configuration</div>
+			    </div>
+			  </div>
+
+			  <h3 style="margin-top:16px">Node Palette</h3>
+			  <div class="grid-4">
+			    ${[
+						{ t: 'input', c: 'var(--green)', desc: 'Entry point with schema validation', done: true },
+						{ t: 'tool', c: 'var(--blue)', desc: 'Execute OCI SDK/MCP tool', done: true },
+						{ t: 'condition', c: 'var(--orange)', desc: 'Branch on expression', done: true },
+						{ t: 'approval', c: 'var(--purple)', desc: 'Human-in-the-loop gate', done: true },
+						{ t: 'output', c: 'var(--red)', desc: 'Terminal with delivery', done: true },
+						{ t: 'ai-step', c: 'var(--pink)', desc: 'LLM agent invocation', done: false },
+						{ t: 'loop', c: 'var(--cyan)', desc: 'Iterate over collection', done: false },
+						{ t: 'parallel', c: 'var(--orange2)', desc: 'Fan-out/fan-in', done: false }
+					]
+						.map(
+							(n) => `<div class="card" style="border-left:3px solid ${n.c};padding:12px">
+			        <div style="display:flex;justify-content:space-between;align-items:center">
+			          <strong>${n.t}</strong>
+			          ${n.done ? '<span class="tag green" style="font-size:9px">DONE</span>' : '<span class="tag red" style="font-size:9px">TODO</span>'}
+			        </div>
+			        <div style="font-size:11px;color:var(--text3);margin-top:4px">${n.desc}</div>
+			      </div>`
+						)
+						.join('')}
+			  </div>`;
+						}
+
+						function showWfNode(label) {
+							const d = wfNodeDetails[label];
+							if (!d) return;
+							const sidebar = document.getElementById('wf-sidebar');
+							if (sidebar) {
+								sidebar.innerHTML = `
+									<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+										<span class="tag ${d.type === 'input' ? 'green' : d.type === 'tool' ? 'blue' : d.type === 'condition' ? 'orange' : d.type === 'approval' ? 'purple' : d.type === 'output' ? 'red' : d.type === 'ai-step' ? 'purple' : 'blue'}">${d.type}</span>
+										<strong>${label}</strong>
+									</div>
+									<div style="color:var(--text2);margin-bottom:12px">${d.desc}</div>
+									<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Configuration</div>
+									<div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px;font-family:var(--mono);font-size:11px;margin-bottom:12px;white-space:pre-wrap">${d.config}</div>
+									<div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px">Implementation Status</div>
+									<div style="color:var(--text2)">${d.impl}</div>`;
+							}
+						}
+
+						// ─── ADMIN MOCK ──────────────────────────────────────────────
+						function renderAdmin(el) {
+							const pages = [
+								{ id: 'idp', label: 'Identity Providers', icon: '🔐' },
+								{ id: 'models', label: 'AI Providers', icon: '🤖' },
+								{ id: 'settings', label: 'Settings', icon: '⚙' },
+								{ id: 'mcp', label: 'MCP Servers', icon: '🔌' },
+								{ id: 'studio', label: 'Mastra Studio', icon: '🎭' }
+							];
+
+							const pageContent = {
+								idp: `<h3>Identity Provider Configuration</h3>
+			      <div style="display:grid;gap:12px;max-width:500px">
+			        <div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">Provider Type</label>
+			          <div style="background:var(--bg3);border:1px solid var(--border);padding:8px 12px;border-radius:var(--radius-sm);font-size:13px">OCI IDCS (genericOAuth)</div></div>
+			        <div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">Client ID</label>
+			          <div style="background:var(--bg3);border:1px solid var(--border);padding:8px 12px;border-radius:var(--radius-sm);font-size:13px;font-family:var(--mono)">••••••••••••••••</div></div>
+			        <div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">Discovery URL</label>
+			          <div style="background:var(--bg3);border:1px solid var(--border);padding:8px 12px;border-radius:var(--radius-sm);font-size:13px;font-family:var(--mono)">https://idcs-xxx.identity.oraclecloud.com/.well-known/openid-configuration</div></div>
+			        <div><label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">Group → Role Mapping</label>
+			          <div style="background:var(--bg3);border:1px solid var(--border);padding:8px;border-radius:var(--radius-sm);font-size:12px">
+			            <div style="display:flex;justify-content:space-between;padding:4px 0"><span>CloudAdmins</span><span class="tag purple">admin</span></div>
+			            <div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid var(--border)"><span>CloudOperators</span><span class="tag blue">operator</span></div>
+			            <div style="display:flex;justify-content:space-between;padding:4px 0;border-top:1px solid var(--border)"><span>CloudViewers</span><span class="tag green">viewer</span></div>
+			          </div></div>
+			      </div>`,
+								models: `<h3>AI Model Providers</h3>
+			      <table><thead><tr><th>Provider</th><th>Model</th><th>Status</th><th>Cost/1K tokens</th></tr></thead><tbody>
+			        <tr><td>Anthropic</td><td>claude-sonnet-4-5</td><td><span class="tag green">Connected</span></td><td>$0.003</td></tr>
+			        <tr><td>OpenAI</td><td>gpt-4o</td><td><span class="tag green">Connected</span></td><td>$0.005</td></tr>
+			        <tr><td>OCI GenAI</td><td>cohere.command-r-plus</td><td><span class="tag green">Connected</span></td><td>$0.003</td></tr>
+			        <tr><td>Google</td><td>gemini-2.0-flash</td><td><span class="tag orange">API Key Required</span></td><td>—</td></tr>
+			      </tbody></table>`,
+								settings: `<h3>Portal Settings</h3>
+			      <div style="display:grid;gap:12px;max-width:500px">
+			        ${[
+								'Portal Name|OCI Self-Service Portal',
+								'Default Model|claude-sonnet-4-5',
+								'Max Chat Tokens|4000',
+								'Rate Limit (req/min)|60',
+								'Session TTL (hours)|24',
+								'MCP Container Memory|512MB'
+							]
+								.map((s) => {
+									const [l, v] = s.split('|');
+									return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border)">
+			            <span style="font-size:13px">${l}</span>
+			            <span style="font-family:var(--mono);font-size:12px;color:var(--accent2)">${v}</span>
+			          </div>`;
+								})
+								.join('')}
+			      </div>`,
+								mcp: `<h3>MCP Server Management</h3>
+			      <table><thead><tr><th>Server</th><th>Transport</th><th>Tools</th><th>Status</th></tr></thead><tbody>
+			        <tr><td>Serena (Code Navigation)</td><td>stdio</td><td>24</td><td><span class="tag green">Running</span></td></tr>
+			        <tr><td>Oracle OCI API</td><td>stdio</td><td>8</td><td><span class="tag green">Running</span></td></tr>
+			        <tr><td>Svelte Docs</td><td>stdio</td><td>4</td><td><span class="tag green">Running</span></td></tr>
+			        <tr><td>Context7</td><td>stdio</td><td>2</td><td><span class="tag green">Running</span></td></tr>
+			        <tr><td>Semgrep</td><td>stdio</td><td>7</td><td><span class="tag orange">Idle</span></td></tr>
+			      </tbody></table>`,
+								studio: `<h3>Mastra Studio <span class="tag purple">NEW in Phase 10</span></h3>
+			      <div style="background:var(--bg3);border:1px solid var(--accent3);border-radius:var(--radius);padding:20px;text-align:center;margin-bottom:16px">
+			        <div style="font-size:40px;margin-bottom:8px">🎭</div>
+			        <div style="font-weight:600;font-size:16px;color:var(--accent2)">Mastra Studio</div>
+			        <div style="font-size:12px;color:var(--text3);margin-top:4px">Embedded at /admin/studio — Admin-only access</div>
+			      </div>
+			      <div class="grid-3">
+			        ${[
+								'Agent Chat Playground|Test agents with model/temp switching|🤖',
+								'Workflow Visualizer|Real-time DAG execution state|🔀',
+								'Tool Playground|Run tools in isolation|🔧',
+								'MCP Explorer|Browse server tools|🔌',
+								'Observability|AI-focused traces|📊',
+								'Eval Scorers|Quality scoring results|✅'
+							]
+								.map((s) => {
+									const [n, d, i] = s.split('|');
+									return `<div class="card" style="text-align:center;padding:16px">
+			            <div style="font-size:24px">${i}</div>
+			            <div style="font-weight:600;font-size:12px;margin-top:4px">${n}</div>
+			            <div style="font-size:11px;color:var(--text3);margin-top:2px">${d}</div>
+			          </div>`;
+								})
+								.join('')}
+			      </div>`
+							};
+
+							el.innerHTML = `<h2>Admin Console Mock</h2>
+			  <div class="admin-mock">
+			    <div class="admin-sidebar">
+			      <div style="padding:12px 16px;font-weight:700;font-size:13px;border-bottom:1px solid var(--border)">Admin Console</div>
+			      ${pages.map((p) => `<div class="item ${p.id === state.adminPage ? 'active' : ''}" onclick="state.adminPage='${p.id}';renderAdmin(document.querySelector('.section.active'))">${p.icon} ${p.label}</div>`).join('')}
+			    </div>
+			    <div class="admin-content">${pageContent[state.adminPage]}</div>
+			  </div>`;
+						}
+
+						// ─── RISKS ───────────────────────────────────────────────────
+						function renderRisks(el) {
+							const probMap = { low: 0, med: 1, high: 2 };
+							const impactMap = { low: 0, med: 1, high: 2 };
+							const colors = ['#0984e3', '#f39c12', '#e74c3c'];
+
+							// Build grid cells
+							const grid = Array.from({ length: 3 }, () => Array.from({ length: 3 }, () => []));
+							risks.forEach((r) => {
+								grid[2 - impactMap[r.impact]][probMap[r.prob]].push(r);
+							});
+
+							const cellClass = (row, col) => {
+								const imp = ['low', 'med', 'high'][2 - row];
+								const prob = ['low', 'med', 'high'][col];
+								return `${prob}-${imp}`;
+							};
+
+							el.innerHTML = `<h2>Risk Matrix</h2>
+			  <p style="font-size:12px;color:var(--text3);margin-bottom:16px">${risks.length} risks identified. Click any risk for mitigation details.</p>
+			  <div class="card">
+			    <div class="risk-matrix">
+			      <div></div><div class="risk-axis">Low</div><div class="risk-axis">Medium</div><div class="risk-axis">High</div>
+			      ${[0, 1, 2]
+							.map((row) => {
+								const impLabel = ['Low', 'Medium', 'High'][2 - row];
+								return `<div class="risk-axis" style="writing-mode:vertical-lr;transform:rotate(180deg)">${impLabel}</div>
+			          ${[0, 1, 2]
+									.map(
+										(col) => `<div class="risk-cell ${cellClass(row, col)}">
+			            ${grid[row][col].map((r) => `<div class="risk-dot" style="background:${colors[Math.max(probMap[r.prob], impactMap[r.impact])]}" onclick="showRisk('${r.id}')" title="${r.id}: ${r.text}">${r.id.replace('R', '')}</div>`).join('')}
+			          </div>`
+									)
+									.join('')}`;
+							})
+							.join('')}
+			    </div>
+			    <div style="display:flex;gap:12px;margin-top:12px;justify-content:center">
+			      <div class="risk-axis" style="writing-mode:horizontal-tb">← PROBABILITY →</div>
+			    </div>
+			    <div style="text-align:center;font-size:10px;color:var(--text3);margin-top:4px">↑ IMPACT ↑</div>
+			  </div>
+			  <div id="risk-detail"></div>
+			  <h3>All Risks</h3>
+			  <div class="card">
+			    <table><thead><tr><th>ID</th><th>Risk</th><th>Probability</th><th>Impact</th><th>Mitigation</th></tr></thead><tbody>
+			      ${risks
+							.map(
+								(r) => `<tr onclick="showRisk('${r.id}')" style="cursor:pointer">
+			        <td style="font-weight:700">${r.id}</td>
+			        <td>${r.text}</td>
+			        <td><span class="tag ${r.prob === 'high' ? 'red' : r.prob === 'med' ? 'orange' : 'green'}">${r.prob}</span></td>
+			        <td><span class="tag ${r.impact === 'high' ? 'red' : r.impact === 'med' ? 'orange' : 'green'}">${r.impact}</span></td>
+			        <td style="font-size:12px;color:var(--text2)">${r.mit}</td>
+			      </tr>`
+							)
+							.join('')}
+			    </tbody></table>
+			  </div>`;
+						}
+
+						function showRisk(id) {
+							const r = risks.find((x) => x.id === id);
+							state.focusRisk = id;
+							showModal(`
+								<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+									<h3 style="margin:0">${r.id}: ${r.text}</h3>
+								</div>
+								<div style="display:flex;gap:8px;margin-bottom:16px">
+									<span class="tag ${r.prob === 'high' ? 'red' : r.prob === 'med' ? 'orange' : 'green'}">Probability: ${r.prob}</span>
+									<span class="tag ${r.impact === 'high' ? 'red' : r.impact === 'med' ? 'orange' : 'green'}">Impact: ${r.impact}</span>
+								</div>
+								<dl class="detail-grid">
+									<dt>Mitigation</dt><dd>${r.mit}</dd>
+									<dt>Risk Score</dt><dd>${{ low: 1, med: 2, high: 3 }[r.prob] * { low: 1, med: 2, high: 3 }[r.impact]} / 9</dd>
+									<dt>Category</dt><dd>${r.prob === 'high' || r.impact === 'high' ? 'Critical — requires active monitoring' : 'Manageable — standard risk response'}</dd>
+								</dl>
+							`);
+							updatePrompt();
+						}
+
+						// ─── Q&A FEEDBACK ────────────────────────────────────────────
+						const qaQuestions = [
+							{
+								id: 'q1',
+								category: 'Agent Interoperability',
+								question: 'Should we implement A2A Agent Card for CloudAdvisor now or defer?',
+								options: [
+									{
+										label: 'Defer to post-Phase E (Recommended)',
+										value: 'defer',
+										detail:
+											'Mastra A2A has known bugs (#8411). Wait for v1.0 stability. Low risk, no immediate business need.'
+									},
+									{
+										label: 'Implement in Phase E',
+										value: 'phase-e',
+										detail:
+											'Enables external agents (FinOps, security scanners) to delegate to CloudAdvisor. Medium effort.'
+									},
+									{
+										label: 'Skip entirely',
+										value: 'skip',
+										detail:
+											'A2A is pre-1.0. Focus on MCP integration which is mature and covers tool discovery use cases.'
+									}
+								],
+								selected: null
+							},
+							{
+								id: 'q2',
+								category: 'MCP Architecture',
+								question: 'How should we handle the duplicate MCP implementations?',
+								options: [
+									{
+										label: 'Deprecate custom, keep Mastra only (Recommended)',
+										value: 'deprecate',
+										detail:
+											'Custom MCPClient unused in production. MCPConnectionManager has Docker, Oracle, encryption, admin UI.'
+									},
+									{
+										label: 'Keep both, different use cases',
+										value: 'both',
+										detail:
+											'Custom for lightweight dev tools, Mastra for production multi-tenant. More maintenance burden.'
+									},
+									{
+										label: 'Merge best features into one',
+										value: 'merge',
+										detail:
+											'Extract config helpers from custom into Mastra implementation. Medium effort, cleanest result.'
+									}
+								],
+								selected: null
+							},
+							{
+								id: 'q3',
+								category: 'Cross-Cloud',
+								question: 'Which CSP MCP servers should we add to the catalog first?',
+								options: [
+									{
+										label: 'AWS only (most customers)',
+										value: 'aws',
+										detail:
+											'awslabs/mcp has CloudControl (CRUDL any AWS resource), Lambda, S3, Bedrock. Highest demand.'
+									},
+									{
+										label: 'AWS + Azure (Recommended)',
+										value: 'aws-azure',
+										detail: 'Both have mature MCP servers. Covers 80%+ of multi-cloud customers.'
+									},
+									{
+										label: 'All three (AWS + Azure + GCP)',
+										value: 'all',
+										detail:
+											'Most complete but GCP MCP is newer (managed endpoint). Higher testing surface.'
+									},
+									{
+										label: 'None — OCI focus only',
+										value: 'none',
+										detail: 'Reduce scope. Portal is OCI-first. Multi-cloud via pricing comparison only.'
+									}
+								],
+								selected: null
+							},
+							{
+								id: 'q4',
+								category: 'Frontend UX',
+								question: 'Which Generative UI components should we prioritize?',
+								options: [
+									{
+										label: 'CostChart + InstanceTable (Recommended)',
+										value: 'cost-instance',
+										detail:
+											'Highest visibility. Cost comparisons and instance lists are the most common tool outputs.'
+									},
+									{
+										label: 'ApprovalCard first (security)',
+										value: 'approval',
+										detail:
+											'Replace custom ToolApproval with AI SDK built-in flow. Better security UX for destructive operations.'
+									},
+									{
+										label: 'All at once',
+										value: 'all',
+										detail:
+											'8+ components: InstanceTable, CostChart, MetricsChart, BucketGrid, TerraformViewer, AlarmPanel, ResourceList, ApprovalCard.'
+									},
+									{
+										label: 'Skip — current JSON rendering is fine',
+										value: 'skip',
+										detail: 'Less scope. Focus on backend architecture improvements instead.'
+									}
+								],
+								selected: null
+							},
+							{
+								id: 'q5',
+								category: 'Agent State',
+								question: 'What migration strategy for agent_state SQLite → Oracle?',
+								options: [
+									{
+										label: 'Clean migration in Phase A (Recommended)',
+										value: 'phase-a',
+										detail:
+											'New OracleStore with org_id + thread_id. No data migration needed — sessions are ephemeral.'
+									},
+									{
+										label: 'Phase F with other Oracle work',
+										value: 'phase-f',
+										detail:
+											'Bundle with VPD policies and other Oracle 26AI migrations. Single Oracle change window.'
+									},
+									{
+										label: 'Keep SQLite for dev, Oracle for prod',
+										value: 'dual',
+										detail: 'Environment-specific storage backend. More code paths to maintain.'
+									}
+								],
+								selected: null
+							},
+							{
+								id: 'q6',
+								category: 'Observability',
+								question: 'What observability backend for @fastify/otel traces?',
+								options: [
+									{
+										label: 'Sentry only (Recommended)',
+										value: 'sentry',
+										detail:
+											'Already have @sentry/sveltekit. @mastra/sentry maps AI spans. Unified error + trace view.'
+									},
+									{
+										label: 'OCI APM',
+										value: 'oci-apm',
+										detail:
+											'Native OCI service. Better for production monitoring. Requires OCI APM setup and OTLP exporter.'
+									},
+									{
+										label: 'Grafana + Tempo',
+										value: 'grafana',
+										detail:
+											'OSS stack. Full control. Requires self-hosting Grafana, Tempo, Prometheus. Most flexible.'
+									},
+									{
+										label: 'Both Sentry + OCI APM',
+										value: 'both',
+										detail:
+											'Sentry for dev/debugging. OCI APM for production monitoring. Dual export via OTLP.'
+									}
+								],
+								selected: null
+							},
+							{
+								id: 'q7',
+								category: 'Rate Limiting',
+								question: 'Should we upgrade rate limiting for LLM endpoints?',
+								options: [
+									{
+										label: 'Per-user limits with Oracle store (Recommended)',
+										value: 'per-user',
+										detail:
+											'rate-limiter-flexible with Oracle adapter. Different limits for chat (expensive) vs read endpoints.'
+									},
+									{
+										label: 'Keep current global limits',
+										value: 'global',
+										detail: '@fastify/rate-limit with single global max/minute. Simple but coarse.'
+									},
+									{
+										label: 'Add Redis for rate limiting',
+										value: 'redis',
+										detail: 'Best performance. But adds Redis as infrastructure dependency.'
+									}
+								],
+								selected: null
+							},
+							{
+								id: 'q8',
+								category: 'Background Jobs',
+								question: 'How should we handle background job processing?',
+								options: [
+									{
+										label: '@fastify/schedule + Oracle queue table (Recommended)',
+										value: 'oracle-schedule',
+										detail:
+											'Zero new infrastructure. Oracle table for job queue, toad-scheduler for cron. Adequate for current scale.'
+									},
+									{
+										label: 'BullMQ + Redis',
+										value: 'bullmq',
+										detail:
+											'Industry standard. Best reliability and ecosystem (Bull Board). Requires Redis.'
+									},
+									{
+										label: 'Oracle Advanced Queuing',
+										value: 'oracle-aq',
+										detail:
+											'Enterprise-grade within Oracle. Complex Node.js integration. Native transactional guarantees.'
+									}
+								],
+								selected: null
+							},
+							{
+								id: 'q9',
+								category: 'Package Structure',
+								question: 'Should @portal/shared split into 3 packages as planned (AD-8)?',
+								options: [
+									{
+										label: 'Yes — @portal/types + @portal/server + @portal/ui (Recommended)',
+										value: 'split-3',
+										detail:
+											'Cleaner boundaries. @portal/types has 0 runtime deps. Faster builds. Framework isolation.'
+									},
+									{
+										label: 'Split into 2 — @portal/types + @portal/server',
+										value: 'split-2',
+										detail:
+											'UI components stay in frontend. Less migration work. Types + server is the main boundary.'
+									},
+									{
+										label: 'Keep as-is',
+										value: 'keep',
+										detail:
+											'Avoid migration risk. Package split can wait. Focus on other Phase 10 priorities.'
+									}
+								],
+								selected: null
+							},
+							{
+								id: 'q10',
+								category: 'Oracle 26AI',
+								question: 'What priority for Oracle 26AI features in Phase F?',
+								options: [
+									{
+										label: 'VPD first, then vectors (Recommended)',
+										value: 'vpd-first',
+										detail:
+											'Tenant isolation is security-critical. Vector improvements are performance optimization.'
+									},
+									{
+										label: 'Vectors first, VPD later',
+										value: 'vectors-first',
+										detail: 'HNSW indexes give immediate 3x performance. VPD can follow.'
+									},
+									{
+										label: 'JSON Duality Views first',
+										value: 'duality',
+										detail:
+											'Simplifies workflow definition CRUD. Single view maps JSON to relational tables.'
+									},
+									{
+										label: 'All in parallel',
+										value: 'all',
+										detail: 'Migrations 015/016/017 are independent SQL. Can run together if tested well.'
+									}
+								],
+								selected: null
+							}
+						];
+
+						function renderQA(el) {
+							el.innerHTML = `<h2>Q&A Feedback Loop</h2>
+			  <p style="font-size:13px;color:var(--text2);margin-bottom:16px">Select your preferred option for each question. Your choices generate a copyable prompt below with all decisions.</p>
+			  <div id="qa-questions"></div>
+			  <div class="card" style="margin-top:24px;border-color:var(--accent)">
+			    <div class="card-header"><span class="card-title">Generated Prompt</span>
+			      <button id="qa-copy" style="background:var(--accent);color:white;border:none;padding:4px 12px;border-radius:var(--radius-sm);cursor:pointer;font-size:12px">Copy</button>
+			    </div>
+			    <pre id="qa-prompt" style="font-size:12px;color:var(--text2);white-space:pre-wrap;max-height:300px;overflow-y:auto;font-family:var(--mono)"></pre>
+			  </div>`;
+
+							const qEl = el.querySelector('#qa-questions');
+							qaQuestions.forEach((q, qi) => {
+								const card = document.createElement('div');
+								card.className = 'card';
+								card.innerHTML = `
+			      <div class="card-header">
+			        <span class="tag blue" style="font-size:10px">${q.category}</span>
+			        <span class="card-title" style="flex:1;margin-left:8px">${q.question}</span>
+			      </div>
+			      <div class="qa-options" data-qi="${qi}">
+			        ${q.options
+								.map(
+									(o, oi) => `
+			          <label class="qa-option ${q.selected === oi ? 'selected' : ''}" data-oi="${oi}">
+			            <input type="radio" name="q${qi}" value="${oi}" ${q.selected === oi ? 'checked' : ''} style="display:none">
+			            <div style="display:flex;justify-content:space-between;align-items:center">
+			              <strong style="font-size:13px">${o.label}</strong>
+			              ${q.selected === oi ? '<span class="tag green" style="font-size:9px">SELECTED</span>' : ''}
+			            </div>
+			            <div style="font-size:12px;color:var(--text3);margin-top:4px">${o.detail}</div>
+			          </label>
+			        `
+								)
+								.join('')}
+			      </div>`;
+								qEl.appendChild(card);
+
+								card.querySelectorAll('.qa-option').forEach((opt) => {
+									opt.addEventListener('click', () => {
+										const oi = parseInt(opt.dataset.oi);
+										qaQuestions[qi].selected = oi;
+										renderQA(el);
+										updatePrompt();
+									});
+								});
+							});
+
+							el.querySelector('#qa-copy').onclick = () => {
+								const text = el.querySelector('#qa-prompt').textContent;
+								navigator.clipboard.writeText(text).then(() => {
+									const btn = el.querySelector('#qa-copy');
+									btn.textContent = 'Copied!';
+									setTimeout(() => {
+										btn.textContent = 'Copy';
+									}, 1500);
+								});
+							};
+
+							// Set initial prompt text directly on detached element
+							const promptEl = el.querySelector('#qa-prompt');
+							const answered = qaQuestions.filter((q) => q.selected !== null);
+							if (answered.length === 0) {
+								promptEl.textContent = 'Select options above to generate a prompt with your decisions...';
+							} else {
+								updateQAPrompt();
+							}
+						}
+
+						function updateQAPrompt() {
+							const promptEl = document.getElementById('qa-prompt');
+							if (!promptEl) return;
+
+							const answered = qaQuestions.filter((q) => q.selected !== null);
+							if (answered.length === 0) {
+								promptEl.textContent = 'Select options above to generate a prompt with your decisions...';
+								return;
+							}
+
+							let prompt = 'Update the Phase 10 PRD with the following decisions:\n\n';
+							answered.forEach((q) => {
+								const opt = q.options[q.selected];
+								prompt += `## ${q.category}: ${q.question}\n`;
+								prompt += `Decision: ${opt.label}\n`;
+								prompt += `Rationale: ${opt.detail}\n\n`;
+							});
+
+							const unanswered = qaQuestions.filter((q) => q.selected === null);
+							if (unanswered.length > 0) {
+								prompt += `\n---\nOpen questions (${unanswered.length} remaining):\n`;
+								unanswered.forEach((q) => {
+									prompt += `- ${q.category}: ${q.question}\n`;
+								});
+							}
+
+							prompt += `\n---\nGenerated from PRD Dashboard Q&A (${answered.length}/${qaQuestions.length} answered)`;
+							promptEl.textContent = prompt;
+						}
+
+						// ─── PROMPT ──────────────────────────────────────────────────
+						function updatePrompt() {
+							const parts = [`Viewing Phase 10 PRD Dashboard — ${state.activeTab} section.`];
+
+							if (state.activeTab === 'kanban') {
+								const moved =
+									state.kanban.progress.length + state.kanban.review.length + state.kanban.done.length;
+								if (moved > 0) {
+									parts.push(
+										`${state.kanban.progress.length} tasks in progress, ${state.kanban.review.length} in review, ${state.kanban.done.length} done.`
+									);
+								}
+							}
+
+							if (state.focusPhase) {
+								const p = phases.find((x) => x.id === state.focusPhase);
+								parts.push(
+									`Focused on Phase ${p.id}: ${p.name} (${p.tasks.length} tasks, weeks ${p.weeks}).`
+								);
+							}
+
+							if (state.focusRisk) {
+								const r = risks.find((x) => x.id === state.focusRisk);
+								parts.push(`Investigating ${r.id}: ${r.text} — Mitigation: ${r.mit}`);
+							}
+
+							if (state.expandedDecisions.size > 0) {
+								parts.push(`Reviewing decisions: ${[...state.expandedDecisions].join(', ')}.`);
+							}
+
+							if (state.activeTab === 'qa') {
+								const answered = qaQuestions.filter((q) => q.selected !== null).length;
+								if (answered > 0) parts.push(`${answered}/${qaQuestions.length} Q&A decisions made.`);
+								updateQAPrompt();
+							}
+
+							document.getElementById('prompt').value = parts.join(' ');
+						}
+
+						function copyPrompt() {
+							const text = document.getElementById('prompt').value;
+							navigator.clipboard.writeText(text).then(() => {
+								const btn = document.querySelector('.prompt-bar button');
+								btn.textContent = 'Copied!';
+								setTimeout(() => (btn.textContent = 'Copy Prompt'), 1500);
+							});
+						}
+
+						// ─── BOOT ────────────────────────────────────────────────────
+						init();
+		</script>
+	</body>
+</html>

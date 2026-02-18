@@ -1,0 +1,9 @@
+{
+	"version": 1,
+	"workspace": {
+		"name": "oci-self-service-portal",
+		"createdAt": 1770976192718,
+		"preset": "starter"
+	},
+	"authorizedRoots": ["/Users/acedergr/Projects/oci-self-service-portal"]
+}
