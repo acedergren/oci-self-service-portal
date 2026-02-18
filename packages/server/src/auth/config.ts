@@ -79,20 +79,20 @@ async function findOidcSub(userId: string): Promise<string | null> {
 	}
 }
 
-function requireEnv(name: string): string {
-	const value = process.env[name];
-	if (!value) {
+const oidcClientId = process.env.OCI_IAM_CLIENT_ID;
+const oidcClientSecret = process.env.OCI_IAM_CLIENT_SECRET;
+const hasOidcConfig = !!(oidcClientId && oidcClientSecret);
+
+if (!hasOidcConfig) {
+	if (isProduction) {
 		throw new Error(
-			`Missing required environment variable ${name}. ` +
+			'Missing required environment variable OCI_IAM_CLIENT_ID. ' +
 				'Ensure OCI IAM OIDC is configured correctly. ' +
 				'See docs/AUTH_PLUGIN_DESIGN.md for setup instructions.'
 		);
 	}
-	return value;
+	log.warn('OCI_IAM_CLIENT_ID / OCI_IAM_CLIENT_SECRET not set — OIDC login disabled (dev mode)');
 }
-
-const OCI_IAM_CLIENT_ID = requireEnv('OCI_IAM_CLIENT_ID');
-const OCI_IAM_CLIENT_SECRET = requireEnv('OCI_IAM_CLIENT_SECRET');
 
 export const auth = betterAuth({
 	database: oracleAdapter(),
@@ -126,39 +126,43 @@ export const auth = betterAuth({
 		}
 	},
 	plugins: [
-		genericOAuth({
-			config: [
-				{
-					providerId: 'oci-iam',
-					clientId: OCI_IAM_CLIENT_ID,
-					clientSecret: OCI_IAM_CLIENT_SECRET,
-					discoveryUrl: process.env.OCI_IAM_DISCOVERY_URL,
-					// urn:opc:idm:__myscopes__ requests all IDCS app scopes,
-					// which includes group and app role claims in the token
-					scopes: ['openid', 'email', 'profile', 'urn:opc:idm:__myscopes__'],
-					pkce: true,
-					mapProfileToUser: (profile: Record<string, unknown>) => {
-						const p = profile as IdcsProfile;
-						const displayName = p.user_displayname || p.name || p.email || p.sub;
+		...(hasOidcConfig
+			? [
+					genericOAuth({
+						config: [
+							{
+								providerId: 'oci-iam',
+								clientId: oidcClientId!,
+								clientSecret: oidcClientSecret!,
+								discoveryUrl: process.env.OCI_IAM_DISCOVERY_URL,
+								// urn:opc:idm:__myscopes__ requests all IDCS app scopes,
+								// which includes group and app role claims in the token
+								scopes: ['openid', 'email', 'profile', 'urn:opc:idm:__myscopes__'],
+								pkce: true,
+								mapProfileToUser: (profile: Record<string, unknown>) => {
+									const p = profile as IdcsProfile;
+									const displayName = p.user_displayname || p.name || p.email || p.sub;
 
-						// Stash IDCS groups for post-login provisioning
-						if (p.groups?.length) {
-							stashIdcsProfile(p.sub, p.groups, p.user_tenantname);
-							log.info(
-								{ sub: p.sub, groups: p.groups, tenant: p.user_tenantname },
-								'IDCS user signed in with groups'
-							);
-						}
+									// Stash IDCS groups for post-login provisioning
+									if (p.groups?.length) {
+										stashIdcsProfile(p.sub, p.groups, p.user_tenantname);
+										log.info(
+											{ sub: p.sub, groups: p.groups, tenant: p.user_tenantname },
+											'IDCS user signed in with groups'
+										);
+									}
 
-						return {
-							name: displayName,
-							email: p.email || `${p.sub}@idcs.local`,
-							image: undefined
-						};
-					}
-				}
-			]
-		}),
+									return {
+										name: displayName,
+										email: p.email || `${p.sub}@idcs.local`,
+										image: undefined
+									};
+								}
+							}
+						]
+					})
+				]
+			: []),
 		organization({
 			allowUserToCreateOrganization: false
 		})
