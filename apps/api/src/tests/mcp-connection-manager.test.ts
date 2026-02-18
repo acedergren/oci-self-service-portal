@@ -30,7 +30,8 @@ vi.mock('@portal/server/admin/mcp-repository', () => {
 			repository: null,
 			mcpClient: null,
 			container: null,
-			docker: null
+			docker: null,
+			logger: null
 		};
 	}
 
@@ -123,20 +124,40 @@ vi.mock('dockerode', () => {
 	};
 });
 
-vi.mock('@portal/server/logger', () => ({
-	createLogger: vi.fn(() => ({
+vi.mock('@portal/server/logger', () => {
+	if (!(globalThis as any).__testMocks) {
+		(globalThis as any).__testMocks = {
+			repository: null,
+			mcpClient: null,
+			container: null,
+			docker: null,
+			logger: null
+		};
+	}
+
+	const loggerMocks = {
 		info: vi.fn(),
 		warn: vi.fn(),
 		error: vi.fn(),
 		debug: vi.fn()
-	}))
-}));
+	};
+	(globalThis as any).__testMocks.logger = loggerMocks;
+
+	return {
+		createLogger: vi.fn(() => loggerMocks)
+	};
+});
 
 // ============================================================================
 // Type imports and regular imports (after mocks are registered)
 // ============================================================================
 
-import type { McpServer, DecryptedCredential, CachedTool } from '@portal/server/admin/mcp-types.js';
+import type {
+	McpServer,
+	DecryptedCredential,
+	CachedTool,
+	InvalidMcpServerRecord
+} from '@portal/server/admin/mcp-types.js';
 import { MCPConnectionManager } from '../services/mcp-connection-manager.js';
 
 // ============================================================================
@@ -182,6 +203,12 @@ const testServerWithDocker: McpServer = {
 	}
 };
 
+const makeServerList = (
+	servers: McpServer[] = [],
+	invalidServers: InvalidMcpServerRecord[] = []
+) => ({ servers, invalidServers });
+const emptyServerList = makeServerList();
+
 const testCredentials: DecryptedCredential[] = [
 	{
 		key: 'github-token',
@@ -222,8 +249,8 @@ beforeEach(() => {
 	vi.clearAllMocks();
 
 	// Repository mocks
-	mocks.repository.listByOrg.mockResolvedValue([]);
-	mocks.repository.listAllConnected.mockResolvedValue([]);
+	mocks.repository.listByOrg.mockResolvedValue(emptyServerList);
+	mocks.repository.listAllConnected.mockResolvedValue(emptyServerList);
 	mocks.repository.getById.mockResolvedValue(undefined);
 	mocks.repository.updateStatus.mockResolvedValue(undefined);
 	mocks.repository.updateDockerInfo.mockResolvedValue(undefined);
@@ -267,7 +294,7 @@ describe('MCPConnectionManager', () => {
 		it('completes when no previously connected servers exist', async () => {
 			const mocks = (globalThis as any).__testMocks;
 			const manager = new MCPConnectionManager();
-			mocks.repository.listAllConnected.mockResolvedValue([]);
+			mocks.repository.listAllConnected.mockResolvedValue(emptyServerList);
 
 			await expect(manager.initialize()).resolves.not.toThrow();
 			expect(mocks.repository.listAllConnected).toHaveBeenCalledWith({ limit: 100, offset: 0 });
@@ -280,7 +307,9 @@ describe('MCPConnectionManager', () => {
 			const server2: McpServer = { ...testServer, id: 'server-org2', orgId: 'org-456' };
 
 			// 2 servers on first page (< 100 page size → only one page fetch needed)
-			mocks.repository.listAllConnected.mockResolvedValueOnce([testServer, server2]);
+			mocks.repository.listAllConnected.mockResolvedValueOnce(
+				makeServerList([testServer, server2])
+			);
 
 			mocks.repository.getById.mockResolvedValueOnce(testServer).mockResolvedValueOnce(server2);
 			mocks.mcpClient.tools.mockResolvedValue(testTools);
@@ -301,8 +330,8 @@ describe('MCPConnectionManager', () => {
 			const server2: McpServer = { ...testServer, id: 'server-good' };
 
 			mocks.repository.listAllConnected
-				.mockResolvedValueOnce([testServer, server2])
-				.mockResolvedValueOnce([]);
+				.mockResolvedValueOnce(makeServerList([testServer, server2]))
+				.mockResolvedValueOnce(emptyServerList);
 
 			// First server fails to connect (getById returns undefined)
 			// Second server succeeds
@@ -329,7 +358,9 @@ describe('MCPConnectionManager', () => {
 				id: `server-p2-${i}`
 			}));
 
-			mocks.repository.listAllConnected.mockResolvedValueOnce(page1).mockResolvedValueOnce(page2);
+			mocks.repository.listAllConnected
+				.mockResolvedValueOnce(makeServerList(page1))
+				.mockResolvedValueOnce(makeServerList(page2));
 
 			// getById returns server for all (connectServer uses getById internally)
 			mocks.repository.getById.mockImplementation(async (id: string) => ({
@@ -350,6 +381,36 @@ describe('MCPConnectionManager', () => {
 				limit: 100,
 				offset: 100
 			});
+		});
+
+		it('logs warning when invalid servers are returned during initialize', async () => {
+			const mocks = (globalThis as any).__testMocks;
+			const manager = new MCPConnectionManager();
+			const invalid: InvalidMcpServerRecord = {
+				id: 'bad-server',
+				serverName: 'broken',
+				field: 'config',
+				reason: 'Invalid JSON payload'
+			};
+
+			mocks.repository.listAllConnected.mockResolvedValueOnce(
+				makeServerList([testServer], [invalid])
+			);
+			mocks.repository.getById.mockResolvedValue(testServer);
+			mocks.mcpClient.tools.mockResolvedValue(testTools);
+
+			await manager.initialize();
+
+			expect(mocks.logger.warn).toHaveBeenCalledWith(
+				expect.objectContaining({
+					offset: 0,
+					limit: 100,
+					invalidServers: expect.arrayContaining([
+						expect.objectContaining({ id: 'bad-server', field: 'config' })
+					])
+				}),
+				expect.stringMatching(/Skipping invalid MCP servers/)
+			);
 		});
 	});
 
@@ -524,10 +585,12 @@ describe('MCPConnectionManager', () => {
 
 			// Reset mocks and setup listByOrg
 			vi.clearAllMocks();
-			mocks.repository.listByOrg.mockResolvedValue([
-				{ ...testServer, status: 'connected', enabled: true },
-				{ ...testServer2, status: 'connected', enabled: true }
-			]);
+			mocks.repository.listByOrg.mockResolvedValue(
+				makeServerList([
+					{ ...testServer, status: 'connected', enabled: true },
+					{ ...testServer2, status: 'connected', enabled: true }
+				])
+			);
 			mocks.mcpClient.tools.mockResolvedValueOnce(testTools).mockResolvedValueOnce({
 				fs_read_file: {
 					description: 'Read a file',
@@ -549,7 +612,7 @@ describe('MCPConnectionManager', () => {
 		it('returns empty object when no connected servers', async () => {
 			const mocks = (globalThis as any).__testMocks;
 			const manager = new MCPConnectionManager();
-			mocks.repository.listByOrg.mockResolvedValue([]);
+			mocks.repository.listByOrg.mockResolvedValue(emptyServerList);
 
 			const toolsets = await manager.getToolsets(testOrgId);
 
@@ -565,6 +628,31 @@ describe('MCPConnectionManager', () => {
 
 			// Should return empty object instead of throwing
 			expect(toolsets).toEqual({});
+		});
+
+		it('logs warning when invalid servers are returned for toolsets', async () => {
+			const mocks = (globalThis as any).__testMocks;
+			const manager = new MCPConnectionManager();
+			const invalid: InvalidMcpServerRecord = {
+				id: 'poisoned',
+				serverName: 'bad-server',
+				field: 'config',
+				reason: 'Invalid JSON payload'
+			};
+
+			mocks.repository.listByOrg.mockResolvedValueOnce(
+				makeServerList([{ ...testServer, status: 'connected', enabled: true }], [invalid])
+			);
+
+			const toolsets = await manager.getToolsets(testOrgId);
+			expect(toolsets).toEqual({});
+			expect(mocks.logger.warn).toHaveBeenCalledWith(
+				expect.objectContaining({
+					orgId: testOrgId,
+					invalidServers: expect.arrayContaining([expect.objectContaining({ id: 'poisoned' })])
+				}),
+				expect.stringMatching(/Skipping invalid MCP servers while assembling toolsets/)
+			);
 		});
 	});
 

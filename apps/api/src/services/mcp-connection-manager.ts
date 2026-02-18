@@ -88,9 +88,20 @@ export class MCPConnectionManager {
 
 		// Paginate through all connected servers across all orgs
 		while (true) {
-			const servers = await mcpServerRepository.listAllConnected({ limit: pageSize, offset });
+			const { servers, invalidServers } = await mcpServerRepository.listAllConnected({
+				limit: pageSize,
+				offset
+			});
+			const rowCount = servers.length + invalidServers.length;
 
-			if (servers.length === 0) break;
+			if (invalidServers.length > 0) {
+				log.warn(
+					{ offset, limit: pageSize, invalidServers },
+					'Skipping invalid MCP servers during connection manager initialization'
+				);
+			}
+
+			if (rowCount === 0) break;
 
 			// Reconnect servers in parallel (per page), errors don't block others
 			const results = await Promise.allSettled(
@@ -105,7 +116,7 @@ export class MCPConnectionManager {
 				}
 			}
 
-			if (servers.length < pageSize) break;
+			if (rowCount < pageSize) break;
 			offset += pageSize;
 		}
 
@@ -293,7 +304,13 @@ export class MCPConnectionManager {
 	async getToolsets(orgId: string): Promise<Record<string, Tool>> {
 		try {
 			// 1. List connected+enabled servers for org
-			const servers = await mcpServerRepository.listByOrg(orgId);
+			const { servers, invalidServers } = await mcpServerRepository.listByOrg(orgId);
+			if (invalidServers.length > 0) {
+				log.warn(
+					{ orgId, invalidServers },
+					'Skipping invalid MCP servers while assembling toolsets'
+				);
+			}
 			const connectedServers = servers.filter(
 				(s) => s.enabled && s.status === 'connected' && this.clients.has(s.id)
 			);

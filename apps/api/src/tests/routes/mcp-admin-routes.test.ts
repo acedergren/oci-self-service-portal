@@ -14,7 +14,8 @@ import type {
 	McpCatalogItem,
 	McpServer,
 	CachedTool,
-	MetricsSummary
+	MetricsSummary,
+	InvalidMcpServerRecord
 } from '@portal/server/admin/mcp-types.js';
 
 // ============================================================================
@@ -311,7 +312,7 @@ describe('GET /api/admin/mcp/servers', () => {
 			{ ...createMockServer(), credentials: undefined },
 			{ ...createMockServer({ serverName: 'another-server' }), credentials: undefined }
 		];
-		mockListByOrg.mockResolvedValue(servers);
+		mockListByOrg.mockResolvedValue({ servers, invalidServers: [] });
 
 		const app = await buildTestApp();
 		app.addHook('onRequest', async (request) => {
@@ -330,11 +331,12 @@ describe('GET /api/admin/mcp/servers', () => {
 		const body = res.json();
 		expect(body.servers).toHaveLength(2);
 		expect(body.servers[0]).not.toHaveProperty('credentials');
+		expect(body.invalidServers).toEqual([]);
 		expect(mockListByOrg).toHaveBeenCalledWith('org-123');
 	});
 
 	it('returns empty array for org with no servers', async () => {
-		mockListByOrg.mockResolvedValue([]);
+		mockListByOrg.mockResolvedValue({ servers: [], invalidServers: [] });
 
 		const app = await buildTestApp();
 		app.addHook('onRequest', async (request) => {
@@ -352,6 +354,35 @@ describe('GET /api/admin/mcp/servers', () => {
 		expect(res.statusCode).toBe(200);
 		const body = res.json();
 		expect(body.servers).toHaveLength(0);
+		expect(body.invalidServers).toEqual([]);
+	});
+
+	it('exposes invalidServers metadata when repository skips rows', async () => {
+		const servers = [{ ...createMockServer(), credentials: undefined }];
+		const invalid: InvalidMcpServerRecord = {
+			id: 'bad-row',
+			serverName: 'poisoned',
+			field: 'config',
+			reason: 'Invalid JSON payload'
+		};
+		mockListByOrg.mockResolvedValue({ servers, invalidServers: [invalid] });
+
+		const app = await buildTestApp();
+		app.addHook('onRequest', async (request) => {
+			(request as any).user = { id: 'user-1' };
+			(request as any).permissions = ['admin:all'];
+			(request as any).session = { activeOrganizationId: 'org-123' };
+		});
+		await app.register(mcpAdminRoutes);
+		await app.ready();
+
+		const res = await app.inject({ method: 'GET', url: '/api/admin/mcp/servers' });
+		expect(res.statusCode).toBe(200);
+		const body = res.json();
+		expect(body.servers).toHaveLength(1);
+		expect(body.invalidServers).toEqual([
+			expect.objectContaining({ id: 'bad-row', field: 'config', reason: 'Invalid JSON payload' })
+		]);
 	});
 });
 

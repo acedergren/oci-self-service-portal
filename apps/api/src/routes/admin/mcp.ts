@@ -24,8 +24,16 @@ const log = createLogger('api:admin:mcp');
 // Response Schemas
 // ============================================================================
 
+const InvalidServerRecordSchema = z.object({
+	id: z.string(),
+	serverName: z.string(),
+	field: z.string(),
+	reason: z.string()
+});
+
 const McpServerListResponseSchema = z.object({
-	servers: z.array(McpServerSchema.omit({ credentials: true }))
+	servers: z.array(McpServerSchema.omit({ credentials: true })),
+	invalidServers: z.array(InvalidServerRecordSchema)
 });
 
 const McpCatalogResponseSchema = z.object({
@@ -153,8 +161,14 @@ export async function mcpAdminRoutes(app: FastifyInstance): Promise<void> {
 					throw new ValidationError('Organization context required');
 				}
 
-				const servers = await mcpServerRepository.listByOrg(orgId);
-				return reply.send({ servers });
+				const { servers, invalidServers } = await mcpServerRepository.listByOrg(orgId);
+				if (invalidServers.length > 0) {
+					log.warn(
+						{ orgId, invalidServers },
+						'Invalid MCP server metadata detected; operators should review affected rows'
+					);
+				}
+				return reply.send({ servers, invalidServers });
 			} catch (err) {
 				log.error({ err }, 'Failed to list MCP servers');
 				throw toPortalError(err);
