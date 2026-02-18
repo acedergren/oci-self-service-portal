@@ -1,0 +1,57 @@
+version: '3.9'
+
+services:
+  tempo:
+    image: grafana/tempo:latest
+    container_name: tempo
+    command: -config.file=/etc/tempo.yaml
+    ports:
+      - "3200:3200"   # tempo
+      - "4317:4317"   # otlp grpc receiver
+      - "4318:4318"   # otlp http receiver
+    volumes:
+      - ./tempo/tempo-config.yaml:/etc/tempo.yaml
+      - tempo-storage:/var/tempo
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3200/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - observability
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+      - grafana-storage:/var/lib/grafana
+    depends_on:
+      tempo:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - observability
+
+volumes:
+  tempo-storage:
+    driver: local
+  grafana-storage:
+    driver: local
+
+networks:
+  observability:
+    driver: bridge

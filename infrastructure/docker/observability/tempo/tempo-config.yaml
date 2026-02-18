@@ -1,0 +1,52 @@
+server:
+  http_listen_port: 3200
+  grpc_listen_port: 4317
+  log_level: info
+
+distributor:
+  rate_limit_enabled: true
+  rate_limit: 10000
+
+ingester:
+  trace_idle_period: 10s
+  max_block_duration: 5m
+
+memberlist:
+  node_name: tempo
+  bind_port: 7946
+  retransmit_factor: 4
+  retransmit_timeout: 100ms
+
+compactor:
+  compaction:
+    compacted_block_retention: 10m
+
+storage:
+  trace:
+    backend: local
+    local:
+      path: /var/tempo/traces
+    wal:
+      path: /var/tempo/wal
+
+metrics_generator:
+  registry:
+    external_labels:
+      cluster: docker
+  storage:
+    path: /var/tempo/metrics
+
+querier:
+  max_concurrent_queries: 20
+
+query_frontend:
+  max_cache_freshness_time: 10m
+  compression: gzip
+
+overrides:
+  defaults:
+    metrics_generator:
+      processors: [service-graphs, span-metrics]
+      service_graphs:
+        histogram_buckets: [100ms, 250ms, 500ms, 1s, 2.5s, 5s, 10s]
+  metrics_generator_processors: [service-graphs, span-metrics]
