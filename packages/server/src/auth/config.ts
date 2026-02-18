@@ -25,12 +25,8 @@ import {
 	stashIdcsProfile,
 	consumeIdcsProfile,
 	resolveIdcsOrg,
-	provisionFromIdcsGroups,
-	mapIdcsGroupsToRole
+	provisionFromIdcsGroups
 } from './idcs-provisioning';
-
-// Re-export for backward compatibility (tests import from auth/config)
-export { mapIdcsGroupsToRole };
 
 const log = createLogger('auth-config');
 const isProduction = process.env.NODE_ENV === 'production';
