@@ -7,6 +7,7 @@ import {
 	normalizeSDKResponse,
 	camelToKebab
 } from '@portal/shared/tools/executor-sdk.js';
+import { executeSDKOperation } from '../executor-sdk.js';
 
 const compartmentIdSchema = z
 	.string()
@@ -29,37 +30,27 @@ export const computeTools: ToolEntry[] = [
 		}),
 		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			try {
-				const request: Record<string, unknown> = { compartmentId, limit: 1000 };
-				if (args.displayName) request.displayName = args.displayName as string;
-				if (args.lifecycleState) request.lifecycleState = args.lifecycleState as string;
-				return await executeAndSlim('compute', 'listInstances', request, [
-					'display-name',
-					'id',
-					'lifecycle-state',
-					'shape',
-					'shape-config',
-					'availability-domain',
-					'time-created',
-					'region',
-					'fault-domain'
-				]);
-			} catch {
-				const cliArgs = ['compute', 'instance', 'list', '--compartment-id', compartmentId, '--all'];
-				if (args.displayName) cliArgs.push('--display-name', args.displayName as string);
-				if (args.lifecycleState) cliArgs.push('--lifecycle-state', args.lifecycleState as string);
-				return slimOCIResponse(executeOCI(cliArgs), [
-					'display-name',
-					'id',
-					'lifecycle-state',
-					'shape',
-					'shape-config',
-					'availability-domain',
-					'time-created',
-					'region',
-					'fault-domain'
-				]);
-			}
+			const request: Record<string, unknown> = { compartmentId, limit: 1000 };
+			if (args.displayName) request.displayName = args.displayName as string;
+			if (args.lifecycleState) request.lifecycleState = args.lifecycleState as string;
+			const result = await executeSDKOperation<{ items?: unknown[] }>(
+				'compute',
+				'listInstances',
+				request,
+				{ compartmentId }
+			);
+			if (!result.success) return { error: result.error.message };
+			return slimOCIResponse(normalizeSDKResponse(result.data), [
+				'display-name',
+				'id',
+				'lifecycle-state',
+				'shape',
+				'shape-config',
+				'availability-domain',
+				'time-created',
+				'region',
+				'fault-domain'
+			]);
 		}
 	},
 	{
@@ -73,38 +64,26 @@ export const computeTools: ToolEntry[] = [
 		}),
 		executeAsync: async (args) => {
 			const instanceId = args.instanceId as string;
-			try {
-				return await executeAndSlim('compute', 'getInstance', { instanceId }, [
-					'display-name',
-					'id',
-					'lifecycle-state',
-					'shape',
-					'shape-config',
-					'availability-domain',
-					'time-created',
-					'region',
-					'fault-domain',
-					'source-details',
-					'launch-options'
-				]);
-			} catch {
-				return slimOCIResponse(
-					executeOCI(['compute', 'instance', 'get', '--instance-id', instanceId]),
-					[
-						'display-name',
-						'id',
-						'lifecycle-state',
-						'shape',
-						'shape-config',
-						'availability-domain',
-						'time-created',
-						'region',
-						'fault-domain',
-						'source-details',
-						'launch-options'
-					]
-				);
-			}
+			const result = await executeSDKOperation<unknown>(
+				'compute',
+				'getInstance',
+				{ instanceId },
+				{ instanceId }
+			);
+			if (!result.success) return { error: result.error.message };
+			return slimOCIResponse(normalizeSDKResponse(result.data), [
+				'display-name',
+				'id',
+				'lifecycle-state',
+				'shape',
+				'shape-config',
+				'availability-domain',
+				'time-created',
+				'region',
+				'fault-domain',
+				'source-details',
+				'launch-options'
+			]);
 		}
 	},
 	{
@@ -123,43 +102,26 @@ export const computeTools: ToolEntry[] = [
 		}),
 		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			try {
-				const request = {
-					launchInstanceDetails: {
-						compartmentId,
-						availabilityDomain: args.availabilityDomain as string,
-						displayName: args.displayName as string,
-						shape: args.shape as string,
-						sourceDetails: {
-							sourceType: 'image',
-							imageId: args.imageId as string
-						},
-						createVnicDetails: {
-							subnetId: args.subnetId as string
-						}
-					}
-				};
-				const response = await executeOCISDK('compute', 'launchInstance', request);
-				return normalizeSDKResponse(response);
-			} catch {
-				return executeOCI([
-					'compute',
-					'instance',
-					'launch',
-					'--compartment-id',
+			const request = {
+				launchInstanceDetails: {
 					compartmentId,
-					'--availability-domain',
-					args.availabilityDomain as string,
-					'--display-name',
-					args.displayName as string,
-					'--shape',
-					args.shape as string,
-					'--image-id',
-					args.imageId as string,
-					'--subnet-id',
-					args.subnetId as string
-				]);
-			}
+					availabilityDomain: args.availabilityDomain as string,
+					displayName: args.displayName as string,
+					shape: args.shape as string,
+					sourceDetails: {
+						sourceType: 'image',
+						imageId: args.imageId as string
+					},
+					createVnicDetails: {
+						subnetId: args.subnetId as string
+					}
+				}
+			};
+			const result = await executeSDKOperation<unknown>('compute', 'launchInstance', request, {
+				compartmentId
+			});
+			if (!result.success) return { error: result.error.message };
+			return normalizeSDKResponse(result.data);
 		}
 	},
 	{
@@ -173,24 +135,14 @@ export const computeTools: ToolEntry[] = [
 		}),
 		executeAsync: async (args) => {
 			const instanceId = args.instanceId as string;
-			try {
-				const request = {
-					instanceId,
-					instanceActionDetails: { action: 'STOP' }
-				};
-				const response = await executeOCISDK('compute', 'instanceAction', request);
-				return normalizeSDKResponse(response);
-			} catch {
-				return executeOCI([
-					'compute',
-					'instance',
-					'action',
-					'--action',
-					'STOP',
-					'--instance-id',
-					instanceId
-				]);
-			}
+			const result = await executeSDKOperation<unknown>(
+				'compute',
+				'instanceAction',
+				{ instanceId, instanceActionDetails: { action: 'STOP' } },
+				{ instanceId }
+			);
+			if (!result.success) return { error: result.error.message };
+			return normalizeSDKResponse(result.data);
 		}
 	},
 	{
@@ -206,23 +158,13 @@ export const computeTools: ToolEntry[] = [
 		executeAsync: async (args) => {
 			const instanceId = args.instanceId as string;
 			const preserveBootVolume = args.preserveBootVolume as boolean;
-			try {
-				const request: Record<string, unknown> = { instanceId };
-				if (preserveBootVolume) request.preserveBootVolume = true;
-				const response = await executeOCISDK('compute', 'terminateInstance', request);
-				return normalizeSDKResponse(response);
-			} catch {
-				const cliArgs = [
-					'compute',
-					'instance',
-					'terminate',
-					'--instance-id',
-					instanceId,
-					'--force'
-				];
-				if (preserveBootVolume) cliArgs.push('--preserve-boot-volume', 'true');
-				return executeOCI(cliArgs);
-			}
+			const request: Record<string, unknown> = { instanceId };
+			if (preserveBootVolume) request.preserveBootVolume = true;
+			const result = await executeSDKOperation<unknown>('compute', 'terminateInstance', request, {
+				instanceId
+			});
+			if (!result.success) return { error: result.error.message };
+			return normalizeSDKResponse(result.data);
 		}
 	},
 	{

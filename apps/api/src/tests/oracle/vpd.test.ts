@@ -400,7 +400,7 @@ describe('017-vpd.sql migration', () => {
 		expect(existsSync(migrationPath)).toBe(true);
 	});
 
-	it('should contain six table policy definitions', () => {
+	it('should contain ten table policy definitions', () => {
 		const migrationPath = join(
 			process.cwd(),
 			'../../packages/server/src/oracle/migrations/017-vpd.sql'
@@ -408,14 +408,18 @@ describe('017-vpd.sql migration', () => {
 
 		const content = readFileSync(migrationPath, 'utf-8');
 
-		// Check for all 6 policies
+		// Check for all 10 policies
 		const expectedTables = [
 			'WORKFLOW_DEFINITIONS',
 			'WORKFLOW_RUNS',
 			'CHAT_SESSIONS',
 			'API_KEYS',
 			'MCP_SERVERS',
-			'AGENT_SESSIONS'
+			'AGENT_SESSIONS',
+			'TOOL_EXECUTIONS',
+			'WEBHOOK_SUBSCRIPTIONS',
+			'AUDIT_BLOCKCHAIN',
+			'MCP_SERVER_METRICS'
 		];
 
 		for (const table of expectedTables) {
@@ -424,7 +428,7 @@ describe('017-vpd.sql migration', () => {
 
 		// Count total ADD_POLICY calls
 		const policyCount = (content.match(/DBMS_RLS\.ADD_POLICY/g) || []).length;
-		expect(policyCount).toBe(6);
+		expect(policyCount).toBe(10);
 	});
 
 	it('should set update_check => TRUE for all policies', () => {
@@ -435,9 +439,9 @@ describe('017-vpd.sql migration', () => {
 
 		const content = readFileSync(migrationPath, 'utf-8');
 
-		// All policies should have update_check => TRUE
+		// 9 of 10 policies have update_check => TRUE (AUDIT_BLOCKCHAIN uses FALSE — immutable table)
 		const updateCheckCount = (content.match(/update_check\s*=>\s*TRUE/gi) || []).length;
-		expect(updateCheckCount).toBe(6);
+		expect(updateCheckCount).toBe(9);
 	});
 
 	it('should define application context PORTAL_CTX', () => {
@@ -498,14 +502,15 @@ describe('017-vpd.sql migration', () => {
 
 		const content = readFileSync(migrationPath, 'utf-8');
 
-		// All policies should cover these DML operations
+		// 9 of 10 policies use SELECT,INSERT,UPDATE,DELETE; AUDIT_BLOCKCHAIN uses SELECT,INSERT only
 		const statementTypes = (content.match(/statement_types\s*=>\s*'([^']+)'/g) || []).map((s) =>
 			s.replace(/.*'([^']+)'.*/, '$1')
 		);
 
-		expect(statementTypes).toHaveLength(6);
-		statementTypes.forEach((types) => {
-			expect(types).toBe('SELECT,INSERT,UPDATE,DELETE');
-		});
+		expect(statementTypes).toHaveLength(10);
+		const fullDml = statementTypes.filter((t) => t === 'SELECT,INSERT,UPDATE,DELETE');
+		const insertSelectOnly = statementTypes.filter((t) => t === 'SELECT,INSERT');
+		expect(fullDml).toHaveLength(9);
+		expect(insertSelectOnly).toHaveLength(1);
 	});
 });

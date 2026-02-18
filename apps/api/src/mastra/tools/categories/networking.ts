@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import type { ToolEntry } from '../types.js';
-import { executeOCI, requireCompartmentId } from '../executor.js';
-import { executeOCISDK, normalizeSDKResponse } from '@portal/shared/tools/executor-sdk.js';
+import { requireCompartmentId } from '../executor.js';
+import { normalizeSDKResponse } from '@portal/shared/tools/executor-sdk.js';
+import { executeSDKOperation } from '../executor-sdk.js';
 
 const compartmentIdSchema = z
 	.string()
@@ -23,16 +24,34 @@ export const networkingTools: ToolEntry[] = [
 		}),
 		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			try {
-				const request: Record<string, unknown> = { compartmentId, limit: 1000 };
-				if (args.displayName) request.displayName = args.displayName as string;
-				const response = await executeOCISDK('virtualNetwork', 'listVcns', request);
-				return normalizeSDKResponse(response);
-			} catch {
-				const cliArgs = ['network', 'vcn', 'list', '--compartment-id', compartmentId, '--all'];
-				if (args.displayName) cliArgs.push('--display-name', args.displayName as string);
-				return executeOCI(cliArgs);
-			}
+			const request: Record<string, unknown> = { compartmentId, limit: 1000 };
+			if (args.displayName) request.displayName = args.displayName as string;
+			const result = await executeSDKOperation<unknown>('virtualNetwork', 'listVcns', request, {
+				compartmentId
+			});
+			if (!result.success) return { error: result.error.message };
+			return normalizeSDKResponse(result.data);
+		}
+	},
+	{
+		name: 'getVcn',
+		description:
+			'Get details for a specific Virtual Cloud Network by its OCID. Returns CIDR block, DNS label, state, and creation time. Use after createVcn or to inspect an existing VCN before creating subnets.',
+		category: 'networking',
+		approvalLevel: 'auto',
+		parameters: z.object({
+			vcnId: z.string().describe('The OCID of the VCN')
+		}),
+		executeAsync: async (args) => {
+			const vcnId = args.vcnId as string;
+			const result = await executeSDKOperation<unknown>(
+				'virtualNetwork',
+				'getVcn',
+				{ vcnId },
+				{ vcnId }
+			);
+			if (!result.success) return { error: result.error.message };
+			return normalizeSDKResponse(result.data);
 		}
 	},
 	{
@@ -48,29 +67,18 @@ export const networkingTools: ToolEntry[] = [
 		}),
 		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			try {
-				const request = {
-					createVcnDetails: {
-						compartmentId,
-						displayName: args.displayName as string,
-						cidrBlock: args.cidrBlock as string
-					}
-				};
-				const response = await executeOCISDK('virtualNetwork', 'createVcn', request);
-				return normalizeSDKResponse(response);
-			} catch {
-				return executeOCI([
-					'network',
-					'vcn',
-					'create',
-					'--compartment-id',
+			const request = {
+				createVcnDetails: {
 					compartmentId,
-					'--display-name',
-					args.displayName as string,
-					'--cidr-block',
-					args.cidrBlock as string
-				]);
-			}
+					displayName: args.displayName as string,
+					cidrBlock: args.cidrBlock as string
+				}
+			};
+			const result = await executeSDKOperation<unknown>('virtualNetwork', 'createVcn', request, {
+				compartmentId
+			});
+			if (!result.success) return { error: result.error.message };
+			return normalizeSDKResponse(result.data);
 		}
 	},
 	{
@@ -84,12 +92,14 @@ export const networkingTools: ToolEntry[] = [
 		}),
 		executeAsync: async (args) => {
 			const vcnId = args.vcnId as string;
-			try {
-				const response = await executeOCISDK('virtualNetwork', 'deleteVcn', { vcnId });
-				return normalizeSDKResponse(response);
-			} catch {
-				return executeOCI(['network', 'vcn', 'delete', '--vcn-id', vcnId, '--force']);
-			}
+			const result = await executeSDKOperation<unknown>(
+				'virtualNetwork',
+				'deleteVcn',
+				{ vcnId },
+				{ vcnId }
+			);
+			if (!result.success) return { error: result.error.message };
+			return normalizeSDKResponse(result.data);
 		}
 	},
 	{
@@ -104,16 +114,13 @@ export const networkingTools: ToolEntry[] = [
 		}),
 		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			try {
-				const request: Record<string, unknown> = { compartmentId, limit: 1000 };
-				if (args.vcnId) request.vcnId = args.vcnId as string;
-				const response = await executeOCISDK('virtualNetwork', 'listSubnets', request);
-				return normalizeSDKResponse(response);
-			} catch {
-				const cliArgs = ['network', 'subnet', 'list', '--compartment-id', compartmentId, '--all'];
-				if (args.vcnId) cliArgs.push('--vcn-id', args.vcnId as string);
-				return executeOCI(cliArgs);
-			}
+			const request: Record<string, unknown> = { compartmentId, limit: 1000 };
+			if (args.vcnId) request.vcnId = args.vcnId as string;
+			const result = await executeSDKOperation<unknown>('virtualNetwork', 'listSubnets', request, {
+				compartmentId
+			});
+			if (!result.success) return { error: result.error.message };
+			return normalizeSDKResponse(result.data);
 		}
 	}
 ];
