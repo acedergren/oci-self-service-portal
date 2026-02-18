@@ -163,7 +163,7 @@ describe('WorkflowExecutor', () => {
 		it('approval node suspends execution', async () => {
 			const nodes = [
 				makeNode('n1', 'input'),
-				makeNode('n2', 'approval'),
+				makeNode('n2', 'approval', { message: 'Please approve the VCN deletion.' }),
 				makeNode('n3', 'tool', { toolName: 'delete-vcn' })
 			];
 			const edges = [makeEdge('n1', 'n2'), makeEdge('n2', 'n3')];
@@ -277,7 +277,7 @@ describe('WorkflowExecutor', () => {
 		it('resumes after approval node and completes remaining nodes', async () => {
 			const nodes = [
 				makeNode('n1', 'input'),
-				makeNode('n2', 'approval'),
+				makeNode('n2', 'approval', { message: 'Please approve the VCN deletion.' }),
 				makeNode('n3', 'tool', { toolName: 'delete-vcn', args: {} }),
 				makeNode('n4', 'output')
 			];

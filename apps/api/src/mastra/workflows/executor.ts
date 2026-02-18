@@ -813,6 +813,14 @@ export class WorkflowExecutor {
 
 				if (branchSkipped.has(nodeId)) continue;
 
+				// Reject approval nodes before execution — they cannot suspend inside branches
+				if (branchNode.type === 'approval') {
+					throw new ValidationError('Approval nodes cannot be used inside parallel branches', {
+						nodeId,
+						branchIndex
+					});
+				}
+
 				const nodeResult = await this.executeNode(
 					branchNode,
 					edges,

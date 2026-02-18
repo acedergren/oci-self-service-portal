@@ -38,7 +38,8 @@ vi.mock('@mastra/evals/scorers/prebuilt', () => ({
 vi.mock('./guardrails.js', () => ({
 	promptInjectionDetector: { name: 'prompt-injection-detector' },
 	piiDetector: { name: 'pii-detector' },
-	createTokenLimiter: vi.fn(() => ({ name: 'token-limiter' }))
+	createTokenLimiter: vi.fn(() => ({ name: 'token-limiter' })),
+	createOutputTokenLimiter: vi.fn(() => ({ name: 'output-token-limiter' }))
 }));
 
 import {
