@@ -98,23 +98,19 @@ log.debug({ userId, orgId }, 'Processing request');
 
 **Never use `console.log`** - it bypasses structured logging and won't appear in production logs.
 
-### 5. Oracle Fallback Pattern
+### 5. Oracle Error Handling
 
-All Oracle-dependent services must have fallbacks:
+Oracle operations use `withConnection()`. Let errors propagate — Fastify's error handler converts `DatabaseError` to 503 automatically:
 
 ```typescript
 import { withConnection } from '@portal/shared/server/oracle/connection';
 
 async function getData(id: string) {
-	try {
-		return await withConnection(async (conn) => {
-			const result = await conn.execute('SELECT * FROM data WHERE id = :id', [id]);
-			return result.rows[0];
-		});
-	} catch (error) {
-		log.warn({ error }, 'Oracle unavailable, using fallback');
-		return fallbackStorage.get(id); // SQLite, JSONL, in-memory, etc.
-	}
+	return await withConnection(async (conn) => {
+		const result = await conn.execute('SELECT * FROM data WHERE id = :id', [id]);
+		return result.rows[0];
+	});
+	// DatabaseError propagates → Fastify error handler → 503
 }
 ```
 
@@ -236,13 +232,12 @@ Admin console repositories and configuration management.
 
 ### server/agent-state/
 
-SQLite-based agent state persistence for AI chat sessions.
+Oracle-backed agent state persistence for AI chat sessions (sessions + turns).
 
 **Key Files:**
 
-- `repository.ts` - Agent state CRUD with SQLite fallback
-- `connection.ts` - SQLite connection management
-- `schema.ts` - Table definitions
+- `oracle-repository.ts` - `OracleAgentStateRepository` — async session/turn CRUD via `withConnection()`
+- `types.ts` - Shared type definitions (Session, Turn, CreateSessionInput, etc.)
 
 ### server/mcp-client/
 
