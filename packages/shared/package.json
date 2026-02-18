@@ -17,9 +17,6 @@
 		"./server/admin": "./src/server/admin/index.ts",
 		"./server/admin/*.js": "./src/server/admin/*.ts",
 		"./server/admin/*": "./src/server/admin/*.ts",
-		"./server/agent-state": "./src/server/agent-state/index.ts",
-		"./server/agent-state/*.js": "./src/server/agent-state/*.ts",
-		"./server/agent-state/*": "./src/server/agent-state/*.ts",
 		"./server/auth/*.js": "./src/server/auth/*.ts",
 		"./server/auth/*": "./src/server/auth/*.ts",
 		"./server/oracle/*.js": "./src/server/oracle/*.ts",
@@ -58,7 +55,6 @@
 		"@modelcontextprotocol/sdk": "^1.26.0",
 		"ai": "^6.0.69",
 		"better-auth": "^1.4.18",
-		"better-sqlite3": "^12.6.2",
 		"oci-sdk": "^2.125.0",
 		"oracledb": "^6.10.0",
 		"pino": "^10.3.0",
@@ -67,7 +63,6 @@
 		"zod-validation-error": "^5.0.0"
 	},
 	"devDependencies": {
-		"@types/better-sqlite3": "^7.6.13",
 		"typescript": "^5.9.3"
 	},
 	"peerDependencies": {

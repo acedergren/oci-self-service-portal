@@ -22,7 +22,7 @@ FROM node:22-alpine AS deps
 
 RUN corepack enable
 
-# Native build tools for better-sqlite3 (fallback database)
+# Native build tools for oracledb native bindings
 RUN apk add --no-cache python3 make g++
 
 WORKDIR /app
@@ -103,7 +103,7 @@ COPY --from=builder --chown=portal:nodejs /app/packages/shared/dist ./packages/s
 COPY --from=builder --chown=portal:nodejs /app/packages/shared/package.json ./packages/shared/
 
 # Volume mount points:
-#   /app/data          - Persistent application data (SQLite, audit logs)
+#   /app/data          - Persistent application data (audit logs)
 #   /wallets           - Oracle Database wallet files
 #   /home/portal/.oci  - OCI CLI configuration (config, key files)
 VOLUME ["/app/data", "/wallets", "/home/portal/.oci"]

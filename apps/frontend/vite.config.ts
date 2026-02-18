@@ -17,7 +17,6 @@ export default defineConfig({
 		external: [
 			// Database drivers (native binaries)
 			'oracledb',
-			'better-sqlite3',
 			// Heavy server SDKs
 			'oci-sdk',
 			// Server utilities
@@ -43,7 +42,6 @@ export default defineConfig({
 				'ws',
 				'@sentry/node',
 				'oracledb',
-				'better-sqlite3',
 				'oci-sdk',
 				'pino',
 				'@modelcontextprotocol/sdk',
