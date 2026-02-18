@@ -13,6 +13,64 @@ vi.mock('@portal/server/logger', () => ({
 	})
 }));
 
+// ── Mock external Mastra dependencies ────────────────────────────────
+// These are class-based mocks (not vi.fn()) so they survive mockReset: true.
+// The plugin structure (decorators + route prefixes) is what's under test —
+// Mastra internals have their own suite. Without these mocks:
+//   - createOCI() probes the OCI IMDS endpoint (~30 s timeout when OCI_REGION is unset)
+//   - MastraServer.init() registers multipart/form-data; a 30 s timeout in test 1
+//     leaves that registration running async, causing test 2 to see "already present".
+
+vi.mock('@acedergren/oci-genai-provider', () => ({
+	createOCI: () => ({
+		embeddingModel: () => ({
+			specificationVersion: '1' as const,
+			provider: 'oci',
+			modelId: 'cohere.embed-english-v3.0',
+			dimensions: 1024,
+			doEmbed: async () => ({ embeddings: [], usage: { tokens: 0 } })
+		})
+	})
+}));
+
+vi.mock('@mastra/core', () => ({
+	Mastra: class {
+		constructor() {}
+	}
+}));
+
+vi.mock('@mastra/memory', () => ({
+	Memory: class {
+		constructor() {}
+	}
+}));
+
+vi.mock('@mastra/fastify', () => ({
+	// Stub MastraServer so it doesn't register a multipart parser.
+	// init() registers one route at the plugin prefix so printRoutes includes /api/mastra.
+	MastraServer: class {
+		private opts: { app: FastifyInstance; prefix?: string };
+		constructor(opts: { app: FastifyInstance; prefix?: string }) {
+			this.opts = opts;
+		}
+		async init() {
+			this.opts.app.get(`${this.opts.prefix ?? '/api/mastra'}/status`, async () => ({ ok: true }));
+		}
+	}
+}));
+
+vi.mock('@mastra/sentry', () => ({
+	SentryExporter: class {
+		constructor() {}
+	}
+}));
+
+vi.mock('@mastra/observability', () => ({
+	Observability: class {
+		constructor() {}
+	}
+}));
+
 describe('mastra plugin', { timeout: 30_000 }, () => {
 	let app: FastifyInstance;
 
