@@ -1,6 +1,11 @@
 import { z } from 'zod';
 import type { ToolEntry } from '../types.js';
 import { executeOCI, slimOCIResponse, requireCompartmentId } from '../executor.js';
+import {
+	executeOCISDK,
+	normalizeSDKResponse,
+	executeAndSlim
+} from '@portal/shared/tools/executor-sdk.js';
 
 const compartmentIdSchema = z
 	.string()
@@ -20,18 +25,11 @@ export const databaseTools: ToolEntry[] = [
 			compartmentId: compartmentIdSchema,
 			dbWorkload: z.enum(['OLTP', 'DW', 'AJD', 'APEX']).optional()
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			const cliArgs = [
-				'db',
-				'autonomous-database',
-				'list',
-				'--compartment-id',
-				compartmentId,
-				'--all'
-			];
-			if (args.dbWorkload) cliArgs.push('--db-workload', args.dbWorkload as string);
-			return slimOCIResponse(executeOCI(cliArgs), [
+			const request: Record<string, unknown> = { compartmentId, limit: 1000 };
+			if (args.dbWorkload) request.dbWorkload = args.dbWorkload as string;
+			const pickFields = [
 				'display-name',
 				'id',
 				'db-name',
@@ -43,7 +41,21 @@ export const databaseTools: ToolEntry[] = [
 				'is-free-tier',
 				'db-version',
 				'infrastructure-type'
-			]);
+			];
+			try {
+				return await executeAndSlim('database', 'listAutonomousDatabases', request, pickFields);
+			} catch {
+				const cliArgs = [
+					'db',
+					'autonomous-database',
+					'list',
+					'--compartment-id',
+					compartmentId,
+					'--all'
+				];
+				if (args.dbWorkload) cliArgs.push('--db-workload', args.dbWorkload as string);
+				return slimOCIResponse(executeOCI(cliArgs), pickFields);
+			}
 		}
 	},
 	{
@@ -63,27 +75,42 @@ export const databaseTools: ToolEntry[] = [
 			cpuCoreCount: z.number(),
 			dataStorageSizeInTBs: z.number()
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			return executeOCI([
-				'db',
-				'autonomous-database',
-				'create',
-				'--compartment-id',
-				compartmentId,
-				'--display-name',
-				args.displayName as string,
-				'--db-name',
-				args.dbName as string,
-				'--db-workload',
-				args.dbWorkload as string,
-				'--cpu-core-count',
-				String(args.cpuCoreCount),
-				'--data-storage-size-in-tbs',
-				String(args.dataStorageSizeInTBs),
-				'--admin-password',
-				args.adminPassword as string
-			]);
+			try {
+				const response = await executeOCISDK('database', 'createAutonomousDatabase', {
+					createAutonomousDatabaseDetails: {
+						compartmentId,
+						displayName: args.displayName as string,
+						dbName: args.dbName as string,
+						dbWorkload: args.dbWorkload as string,
+						cpuCoreCount: args.cpuCoreCount as number,
+						dataStorageSizeInTBs: args.dataStorageSizeInTBs as number,
+						adminPassword: args.adminPassword as string
+					}
+				});
+				return normalizeSDKResponse(response);
+			} catch {
+				return executeOCI([
+					'db',
+					'autonomous-database',
+					'create',
+					'--compartment-id',
+					compartmentId,
+					'--display-name',
+					args.displayName as string,
+					'--db-name',
+					args.dbName as string,
+					'--db-workload',
+					args.dbWorkload as string,
+					'--cpu-core-count',
+					String(args.cpuCoreCount),
+					'--data-storage-size-in-tbs',
+					String(args.dataStorageSizeInTBs),
+					'--admin-password',
+					args.adminPassword as string
+				]);
+			}
 		}
 	},
 	{
@@ -95,15 +122,22 @@ export const databaseTools: ToolEntry[] = [
 		parameters: z.object({
 			autonomousDatabaseId: z.string()
 		}),
-		execute: (args) => {
-			return executeOCI([
-				'db',
-				'autonomous-database',
-				'delete',
-				'--autonomous-database-id',
-				args.autonomousDatabaseId as string,
-				'--force'
-			]);
+		executeAsync: async (args) => {
+			try {
+				const response = await executeOCISDK('database', 'deleteAutonomousDatabase', {
+					autonomousDatabaseId: args.autonomousDatabaseId as string
+				});
+				return normalizeSDKResponse(response);
+			} catch {
+				return executeOCI([
+					'db',
+					'autonomous-database',
+					'delete',
+					'--autonomous-database-id',
+					args.autonomousDatabaseId as string,
+					'--force'
+				]);
+			}
 		}
 	}
 ];

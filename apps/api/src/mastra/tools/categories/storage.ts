@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { ToolEntry } from '../types.js';
-import { executeOCI, executeOCIAsync, requireCompartmentId } from '../executor.js';
+import { executeOCIAsync, requireCompartmentId } from '../executor.js';
+import { executeOCISDK, normalizeSDKResponse } from '@portal/shared/tools/executor-sdk.js';
 
 const compartmentIdSchema = z
 	.string()
@@ -8,6 +9,18 @@ const compartmentIdSchema = z
 	.describe(
 		'The OCID of the compartment (optional - uses OCI_COMPARTMENT_ID env var if not provided)'
 	);
+
+/** Resolve the Object Storage namespace via SDK, falling back to CLI. */
+async function resolveNamespace(hint?: string): Promise<string> {
+	if (hint) return hint;
+	try {
+		const nsResp = await executeOCISDK('objectStorage', 'getNamespace', {});
+		return normalizeSDKResponse(nsResp).data as string;
+	} catch {
+		const nsResult = (await executeOCIAsync(['os', 'ns', 'get'])) as { data: string };
+		return nsResult.data;
+	}
+}
 
 export const storageTools: ToolEntry[] = [
 	{
@@ -25,23 +38,26 @@ export const storageTools: ToolEntry[] = [
 		}),
 		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			let namespace = args.namespace as string | undefined;
-			if (!namespace) {
-				const nsResult = (await executeOCIAsync(['os', 'ns', 'get'])) as {
-					data: string;
-				};
-				namespace = nsResult.data;
+			const namespace = await resolveNamespace(args.namespace as string | undefined);
+			try {
+				const response = await executeOCISDK('objectStorage', 'listBuckets', {
+					namespaceName: namespace,
+					compartmentId,
+					limit: 1000
+				});
+				return normalizeSDKResponse(response);
+			} catch {
+				return executeOCIAsync([
+					'os',
+					'bucket',
+					'list',
+					'--compartment-id',
+					compartmentId,
+					'--namespace',
+					namespace,
+					'--all'
+				]);
 			}
-			return executeOCIAsync([
-				'os',
-				'bucket',
-				'list',
-				'--compartment-id',
-				compartmentId,
-				'--namespace',
-				namespace,
-				'--all'
-			]);
 		}
 	},
 	{
@@ -61,26 +77,33 @@ export const storageTools: ToolEntry[] = [
 		}),
 		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			let namespace = args.namespace as string | undefined;
-			if (!namespace) {
-				const nsResult = (await executeOCIAsync(['os', 'ns', 'get'])) as {
-					data: string;
-				};
-				namespace = nsResult.data;
+			const namespace = await resolveNamespace(args.namespace as string | undefined);
+			const publicAccessType = (args.publicAccessType as string) || 'NoPublicAccess';
+			try {
+				const response = await executeOCISDK('objectStorage', 'createBucket', {
+					namespaceName: namespace,
+					createBucketDetails: {
+						compartmentId,
+						name: args.name as string,
+						publicAccessType
+					}
+				});
+				return normalizeSDKResponse(response);
+			} catch {
+				return executeOCIAsync([
+					'os',
+					'bucket',
+					'create',
+					'--compartment-id',
+					compartmentId,
+					'--namespace',
+					namespace,
+					'--name',
+					args.name as string,
+					'--public-access-type',
+					publicAccessType
+				]);
 			}
-			return executeOCIAsync([
-				'os',
-				'bucket',
-				'create',
-				'--compartment-id',
-				compartmentId,
-				'--namespace',
-				namespace,
-				'--name',
-				args.name as string,
-				'--public-access-type',
-				(args.publicAccessType as string) || 'NoPublicAccess'
-			]);
 		}
 	},
 	{
@@ -97,23 +120,25 @@ export const storageTools: ToolEntry[] = [
 			bucketName: z.string()
 		}),
 		executeAsync: async (args) => {
-			let namespace = args.namespace as string | undefined;
-			if (!namespace) {
-				const nsResult = (await executeOCIAsync(['os', 'ns', 'get'])) as {
-					data: string;
-				};
-				namespace = nsResult.data;
+			const namespace = await resolveNamespace(args.namespace as string | undefined);
+			try {
+				const response = await executeOCISDK('objectStorage', 'deleteBucket', {
+					namespaceName: namespace,
+					bucketName: args.bucketName as string
+				});
+				return normalizeSDKResponse(response);
+			} catch {
+				return executeOCIAsync([
+					'os',
+					'bucket',
+					'delete',
+					'--namespace',
+					namespace,
+					'--bucket-name',
+					args.bucketName as string,
+					'--force'
+				]);
 			}
-			return executeOCIAsync([
-				'os',
-				'bucket',
-				'delete',
-				'--namespace',
-				namespace,
-				'--bucket-name',
-				args.bucketName as string,
-				'--force'
-			]);
 		}
 	},
 	{
@@ -123,8 +148,13 @@ export const storageTools: ToolEntry[] = [
 		category: 'storage',
 		approvalLevel: 'auto',
 		parameters: z.object({}),
-		execute: () => {
-			return executeOCI(['os', 'ns', 'get']);
+		executeAsync: async () => {
+			try {
+				const response = await executeOCISDK('objectStorage', 'getNamespace', {});
+				return normalizeSDKResponse(response);
+			} catch {
+				return executeOCIAsync(['os', 'ns', 'get']);
+			}
 		}
 	},
 	{
@@ -136,17 +166,25 @@ export const storageTools: ToolEntry[] = [
 		parameters: z.object({
 			compartmentId: compartmentIdSchema
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			return executeOCI([
-				'artifacts',
-				'container',
-				'repository',
-				'list',
-				'--compartment-id',
-				compartmentId,
-				'--all'
-			]);
+			try {
+				const response = await executeOCISDK('artifacts', 'listContainerRepositories', {
+					compartmentId,
+					limit: 1000
+				});
+				return normalizeSDKResponse(response);
+			} catch {
+				return executeOCIAsync([
+					'artifacts',
+					'container',
+					'repository',
+					'list',
+					'--compartment-id',
+					compartmentId,
+					'--all'
+				]);
+			}
 		}
 	},
 	{
@@ -160,20 +198,28 @@ export const storageTools: ToolEntry[] = [
 			repositoryName: z.string().optional().describe('Filter by repository name'),
 			imageVersion: z.string().optional().describe('Filter by image version/tag')
 		}),
-		execute: (args) => {
+		executeAsync: async (args) => {
 			const compartmentId = requireCompartmentId(args);
-			const cliArgs = [
-				'artifacts',
-				'container',
-				'image',
-				'list',
-				'--compartment-id',
-				compartmentId,
-				'--all'
-			];
-			if (args.repositoryName) cliArgs.push('--repository-name', args.repositoryName as string);
-			if (args.imageVersion) cliArgs.push('--display-name', args.imageVersion as string);
-			return executeOCI(cliArgs);
+			try {
+				const request: Record<string, unknown> = { compartmentId, limit: 1000 };
+				if (args.repositoryName) request.repositoryName = args.repositoryName as string;
+				if (args.imageVersion) request.displayName = args.imageVersion as string;
+				const response = await executeOCISDK('artifacts', 'listContainerImages', request);
+				return normalizeSDKResponse(response);
+			} catch {
+				const cliArgs = [
+					'artifacts',
+					'container',
+					'image',
+					'list',
+					'--compartment-id',
+					compartmentId,
+					'--all'
+				];
+				if (args.repositoryName) cliArgs.push('--repository-name', args.repositoryName as string);
+				if (args.imageVersion) cliArgs.push('--display-name', args.imageVersion as string);
+				return executeOCIAsync(cliArgs);
+			}
 		}
 	}
 ];

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import type { ToolEntry } from '../types.js';
 import { executeOCIAsync, toMidnightUTC, requireCompartmentId } from '../executor.js';
+import { executeOCISDK, normalizeSDKResponse } from '@portal/shared/tools/executor-sdk.js';
 
 const compartmentIdSchema = z
 	.string()
@@ -62,40 +63,59 @@ export const billingTools: ToolEntry[] = [
 			// Resolve tenancy OCID — region-subscription list returns it without needing to know it first (B-4)
 			let tenancyId: string;
 			try {
-				const subscriptions = (await executeOCIAsync(['iam', 'region-subscription', 'list'])) as {
-					data: Array<{ 'tenancy-id'?: string }>;
-				};
-				tenancyId = subscriptions.data?.[0]?.['tenancy-id'] ?? compartmentId;
+				const subResp = await executeOCISDK('identity', 'listRegionSubscriptions', {
+					tenancyId: compartmentId
+				});
+				const normalized = normalizeSDKResponse(subResp);
+				const items = Array.isArray(normalized.data)
+					? (normalized.data as Array<Record<string, unknown>>)
+					: [];
+				tenancyId = (items[0]?.tenancyId as string) ?? compartmentId;
 			} catch {
-				tenancyId = compartmentId;
+				try {
+					const subscriptions = (await executeOCIAsync(['iam', 'region-subscription', 'list'])) as {
+						data: Array<{ 'tenancy-id'?: string }>;
+					};
+					tenancyId = subscriptions.data?.[0]?.['tenancy-id'] ?? compartmentId;
+				} catch {
+					tenancyId = compartmentId;
+				}
 			}
 
-			const result = await executeOCIAsync([
-				'usage-api',
-				'usage-summary',
-				'request-summarized-usages',
-				'--tenant-id',
-				tenancyId,
-				'--time-usage-started',
-				toMidnightUTC(startDate),
-				'--time-usage-ended',
-				toMidnightUTC(endDate),
-				'--granularity',
-				granularity,
-				'--group-by',
-				JSON.stringify([groupBy])
-			]);
-
-			return {
-				period,
-				groupBy,
-				granularity,
-				timeRange: {
-					start: toMidnightUTC(startDate),
-					end: toMidnightUTC(endDate)
-				},
-				data: result
+			const timeRange = {
+				start: toMidnightUTC(startDate),
+				end: toMidnightUTC(endDate)
 			};
+
+			try {
+				const result = await executeOCISDK('usageApi', 'requestSummarizedUsages', {
+					requestSummarizedUsagesDetails: {
+						tenantId: tenancyId,
+						timeUsageStarted: timeRange.start,
+						timeUsageEnded: timeRange.end,
+						granularity,
+						groupBy: [groupBy]
+					}
+				});
+				return { period, groupBy, granularity, timeRange, data: normalizeSDKResponse(result) };
+			} catch {
+				const result = await executeOCIAsync([
+					'usage-api',
+					'usage-summary',
+					'request-summarized-usages',
+					'--tenant-id',
+					tenancyId,
+					'--time-usage-started',
+					timeRange.start,
+					'--time-usage-ended',
+					timeRange.end,
+					'--granularity',
+					granularity,
+					'--group-by',
+					JSON.stringify([groupBy])
+				]);
+				return { period, groupBy, granularity, timeRange, data: result };
+			}
 		}
 	}
 ];
