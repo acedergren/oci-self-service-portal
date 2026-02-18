@@ -8,4 +8,7 @@ export { default as ConditionNode } from './nodes/ConditionNode.svelte';
 export { default as ApprovalNode } from './nodes/ApprovalNode.svelte';
 export { default as InputNode } from './nodes/InputNode.svelte';
 export { default as OutputNode } from './nodes/OutputNode.svelte';
+export { default as AIStepNode } from './nodes/AIStepNode.svelte';
+export { default as LoopNode } from './nodes/LoopNode.svelte';
+export { default as ParallelNode } from './nodes/ParallelNode.svelte';
 export type * from './types.js';
