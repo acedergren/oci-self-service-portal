@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "pnpm --filter @portal/frontend dev",
-		"dev:api": "NODE_OPTIONS=--env-file=../../.env pnpm --filter @portal/api dev",
+		"dev:api": "pnpm --filter @portal/api dev",
 		"build": "pnpm --filter @portal/frontend build",
 		"build:api": "pnpm --filter @portal/api build",
 		"test": "pnpm --recursive run test",

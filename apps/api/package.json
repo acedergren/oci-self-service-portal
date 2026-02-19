@@ -4,7 +4,7 @@
 	"private": true,
 	"type": "module",
 	"scripts": {
-		"dev": "tsx watch src/server.ts",
+		"dev": "sh -c 'set -a && . ../../.env && set +a && tsx watch src/server.ts'",
 		"build": "tsc",
 		"start": "node dist/server.js",
 		"check": "tsc --noEmit",
