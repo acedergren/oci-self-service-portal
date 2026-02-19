@@ -12,7 +12,7 @@ export const load: PageServerLoad = async ({ fetch }) => {
 	}
 
 	if (isComplete) {
-		throw redirect(303, '/self-service');
+		throw redirect(303, '/');
 	}
 
 	// Try to detect environment variables for pre-filling the form

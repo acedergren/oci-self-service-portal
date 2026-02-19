@@ -25,7 +25,7 @@
 
 		<nav class="nav">
 			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-			<a href="/self-service" class="nav-link active">
+			<a href="/" class="nav-link active">
 				<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
 					<path
 						stroke-linecap="round"
@@ -37,7 +37,7 @@
 				Home
 			</a>
 			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-			<a href="/self-service" class="nav-link">
+			<a href="/" class="nav-link">
 				<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
 					<path
 						stroke-linecap="round"
@@ -49,7 +49,7 @@
 				Services
 			</a>
 			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -->
-			<a href="/" class="nav-link">
+			<a href="/chat" class="nav-link">
 				<svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
 					<path
 						stroke-linecap="round"

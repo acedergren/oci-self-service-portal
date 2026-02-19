@@ -75,7 +75,7 @@ describe('Auth Session Flow', () => {
 		}
 
 		it('non-public paths should require auth', () => {
-			const protectedPaths = ['/api/chat', '/api/tools/execute', '/self-service', '/'];
+			const protectedPaths = ['/api/chat', '/api/tools/execute', '/chat', '/'];
 			for (const path of protectedPaths) {
 				const isPublic =
 					path === '/api/health' || path.startsWith('/api/auth') || path === '/login';
