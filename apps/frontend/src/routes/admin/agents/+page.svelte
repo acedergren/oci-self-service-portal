@@ -729,8 +729,8 @@
 	}
 
 	.error-banner {
-		background: color-mix(in oklch, var(--status-error, oklch(0.7 0.25 30)) 15%, transparent);
-		color: var(--status-error, oklch(0.7 0.25 30));
+		background: color-mix(in srgb, var(--semantic-error) 15%, transparent);
+		color: var(--semantic-error);
 		padding: var(--space-sm) var(--space-md);
 		font-size: var(--text-sm);
 	}
@@ -796,11 +796,11 @@
 	}
 
 	.tool-card[data-status='success'] {
-		border-left-color: var(--status-success, oklch(0.75 0.2 155));
+		border-left-color: var(--semantic-success);
 	}
 
 	.tool-card[data-status='error'] {
-		border-left-color: var(--status-error, oklch(0.7 0.25 30));
+		border-left-color: var(--semantic-error);
 	}
 
 	.tool-card__header {

@@ -123,7 +123,11 @@
 		color: var(--accent-primary);
 		background: var(--bg-elevated);
 		border-radius: var(--radius-md);
-		animation: bioluminescent-pulse 3s ease-in-out infinite;
+		transition: box-shadow var(--transition-normal);
+	}
+
+	.logo-diamond:hover {
+		box-shadow: 0 0 16px -2px var(--accent-primary);
 	}
 
 	.sidebar-title {

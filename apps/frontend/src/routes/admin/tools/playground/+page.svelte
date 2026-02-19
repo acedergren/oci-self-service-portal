@@ -494,7 +494,7 @@
 	}
 
 	.required {
-		color: oklch(0.7 0.2 30);
+		color: var(--semantic-error);
 	}
 
 	.param-type {
@@ -562,12 +562,12 @@
 
 	.result-section.success {
 		background: var(--bg-tertiary);
-		border: 1px solid color-mix(in oklch, var(--accent-primary) 30%, transparent);
+		border: 1px solid color-mix(in srgb, var(--accent-primary) 30%, transparent);
 	}
 
 	.result-section.error {
-		background: color-mix(in oklch, var(--status-error, oklch(0.7 0.25 30)) 10%, transparent);
-		border: 1px solid var(--status-error, oklch(0.7 0.25 30));
+		background: color-mix(in srgb, var(--semantic-error) 10%, transparent);
+		border: 1px solid var(--semantic-error);
 	}
 
 	.result-header {
@@ -615,17 +615,16 @@
 	}
 
 	.error-text {
-		color: var(--status-error, oklch(0.8 0.15 30));
+		color: var(--semantic-error);
 	}
 
 	.approval-warning {
-		background: color-mix(in oklch, var(--status-warning, oklch(0.78 0.18 80)) 18%, transparent);
-		color: var(--status-warning, oklch(0.78 0.18 80));
+		background: color-mix(in srgb, var(--semantic-warning) 18%, transparent);
+		color: var(--semantic-warning);
 		padding: var(--space-md);
 		border-radius: var(--radius-md);
 		font-size: var(--text-sm);
-		border: 1px solid
-			color-mix(in oklch, var(--status-warning, oklch(0.78 0.18 80)) 40%, transparent);
+		border: 1px solid color-mix(in srgb, var(--semantic-warning) 40%, transparent);
 	}
 
 	.execution-metrics {

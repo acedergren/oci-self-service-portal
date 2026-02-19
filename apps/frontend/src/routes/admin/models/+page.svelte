@@ -750,8 +750,8 @@
 	}
 
 	.badge-success {
-		background: oklch(0.7 0.15 145 / 0.2);
-		color: oklch(0.8 0.15 145);
+		background: color-mix(in srgb, var(--semantic-success) 20%, transparent);
+		color: var(--semantic-success);
 	}
 
 	.badge-disabled {
@@ -781,7 +781,7 @@
 	.modal-overlay {
 		position: fixed;
 		inset: 0;
-		background: oklch(0 0 0 / 0.8);
+		background: rgba(0, 0, 0, 0.8);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -797,7 +797,7 @@
 		max-width: 600px;
 		max-height: 90vh;
 		overflow-y: auto;
-		box-shadow: 0 20px 60px -10px oklch(0 0 0 / 0.5);
+		box-shadow: 0 20px 60px -10px rgba(0, 0, 0, 0.5);
 	}
 
 	.modal-header {
@@ -888,13 +888,13 @@
 	}
 
 	.field-error {
-		color: oklch(0.7 0.2 25);
+		color: var(--semantic-error);
 		font-size: var(--text-xs);
 		margin-top: var(--space-xs);
 	}
 
 	.form-error {
-		border-color: oklch(0.7 0.2 25) !important;
+		border-color: var(--semantic-error) !important;
 	}
 
 	@media (max-width: 768px) {

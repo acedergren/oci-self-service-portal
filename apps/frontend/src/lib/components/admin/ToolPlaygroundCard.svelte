@@ -251,7 +251,7 @@
 
 	.tool-card:hover {
 		border-color: var(--border-focused);
-		box-shadow: 0 2px 8px -2px oklch(0 0 0 / 0.1);
+		box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.1);
 	}
 
 	.tool-header {
@@ -376,7 +376,7 @@
 	.form-input:focus {
 		outline: none;
 		border-color: var(--accent-primary);
-		box-shadow: 0 0 0 2px oklch(0.78 0.22 45 / 0.2);
+		box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 30%, transparent);
 	}
 
 	.checkbox-label {

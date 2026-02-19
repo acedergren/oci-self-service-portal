@@ -110,11 +110,11 @@
 	// ── Helpers ───────────────────────────────────────────────────────────
 
 	const STATUS_COLORS: Record<WorkflowRun['status'], string> = {
-		completed: 'oklch(0.55 0.15 155)',
-		running: 'oklch(0.55 0.15 230)',
-		failed: 'oklch(0.55 0.15 30)',
-		suspended: 'oklch(0.55 0.15 80)',
-		cancelled: 'oklch(0.55 0.1 0)'
+		completed: '#10b981',
+		running: '#3b82f6',
+		failed: '#ef4444',
+		suspended: '#f59e0b',
+		cancelled: '#64748b'
 	};
 
 	const STATUS_LABELS: Record<WorkflowRun['status'], string> = {
@@ -519,13 +519,13 @@
 	}
 
 	.health-banner.healthy {
-		background: oklch(0.35 0.08 155);
-		color: oklch(0.85 0.15 155);
+		background: color-mix(in srgb, var(--semantic-success) 20%, var(--bg-secondary));
+		color: var(--semantic-success);
 	}
 
 	.health-banner.degraded {
-		background: oklch(0.35 0.12 30);
-		color: oklch(0.85 0.15 30);
+		background: color-mix(in srgb, var(--semantic-error) 20%, var(--bg-secondary));
+		color: var(--semantic-error);
 	}
 
 	.health-dot {
@@ -536,13 +536,13 @@
 	}
 
 	.healthy .health-dot {
-		background: oklch(0.75 0.2 155);
-		box-shadow: 0 0 8px oklch(0.75 0.2 155);
+		background: var(--semantic-success);
+		box-shadow: 0 0 8px var(--semantic-success);
 	}
 
 	.degraded .health-dot {
-		background: oklch(0.75 0.2 30);
-		box-shadow: 0 0 8px oklch(0.75 0.2 30);
+		background: var(--semantic-error);
+		box-shadow: 0 0 8px var(--semantic-error);
 	}
 
 	.health-uptime {
@@ -612,7 +612,7 @@
 
 	.error-count {
 		font-weight: 600;
-		color: oklch(0.8 0.15 30);
+		color: var(--semantic-error);
 	}
 
 	.error-pct {
@@ -830,7 +830,7 @@
 	}
 
 	:global(.fill-accent.opacity-50) {
-		fill: oklch(from var(--accent-primary) l c h / 0.5);
+		fill: color-mix(in srgb, var(--accent-primary) 50%, transparent);
 	}
 
 	:global(.layerchart-axis text) {

@@ -94,13 +94,13 @@
 	function statusColor(status: string): string {
 		switch (status) {
 			case 'completed':
-				return 'var(--status-success, oklch(0.75 0.2 155))';
+				return 'var(--semantic-success)';
 			case 'running':
-				return 'var(--status-info, oklch(0.75 0.15 230))';
+				return 'var(--semantic-info)';
 			case 'failed':
-				return 'var(--status-error, oklch(0.75 0.2 30))';
+				return 'var(--semantic-error)';
 			case 'suspended':
-				return 'var(--status-warning, oklch(0.78 0.18 80))';
+				return 'var(--semantic-warning)';
 			case 'pending':
 				return 'var(--fg-tertiary)';
 			case 'cancelled':
@@ -887,19 +887,19 @@
 	}
 
 	.step-card[data-status='completed'] {
-		border-left-color: var(--status-success, oklch(0.75 0.2 155));
+		border-left-color: var(--semantic-success);
 	}
 
 	.step-card[data-status='running'] {
-		border-left-color: var(--status-info, oklch(0.75 0.15 230));
+		border-left-color: var(--semantic-info);
 	}
 
 	.step-card[data-status='failed'] {
-		border-left-color: var(--status-error, oklch(0.75 0.2 30));
+		border-left-color: var(--semantic-error);
 	}
 
 	.step-card[data-status='suspended'] {
-		border-left-color: var(--status-warning, oklch(0.78 0.18 80));
+		border-left-color: var(--semantic-warning);
 	}
 
 	.step-heading {

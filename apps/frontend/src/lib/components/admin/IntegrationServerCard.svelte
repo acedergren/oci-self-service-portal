@@ -142,7 +142,7 @@
 
 	.server-card:hover {
 		border-color: var(--border-focused);
-		box-shadow: 0 4px 12px -2px oklch(0 0 0 / 0.1);
+		box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.1);
 	}
 
 	.card-header {
@@ -243,7 +243,7 @@
 		align-items: start;
 		gap: var(--space-sm);
 		padding: var(--space-sm);
-		background: oklch(from var(--semantic-error) l c h / 0.1);
+		background: color-mix(in srgb, var(--semantic-error) 10%, transparent);
 		border: 1px solid var(--semantic-error);
 		border-radius: var(--radius-sm);
 		color: var(--semantic-error);

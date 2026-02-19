@@ -322,7 +322,7 @@
 	.modal-backdrop {
 		position: fixed;
 		inset: 0;
-		background: oklch(0 0 0 / 0.5);
+		background: rgba(0, 0, 0, 0.5);
 		backdrop-filter: blur(4px);
 		z-index: 999;
 		animation: fade-in 0.2s ease-out;
@@ -339,7 +339,7 @@
 		background: var(--bg-secondary);
 		border: 1px solid var(--border-default);
 		border-radius: var(--radius-lg);
-		box-shadow: 0 20px 40px -10px oklch(0 0 0 / 0.3);
+		box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.3);
 		z-index: 1000;
 		animation: slide-in-up 0.3s ease-out;
 		display: flex;
@@ -427,7 +427,7 @@
 	.form-select:focus {
 		outline: none;
 		border-color: var(--accent-primary);
-		box-shadow: 0 0 0 2px oklch(0.78 0.22 45 / 0.2);
+		box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 30%, transparent);
 	}
 
 	.form-input:disabled {
@@ -442,13 +442,13 @@
 	}
 
 	.field-error {
-		color: oklch(0.7 0.2 25);
+		color: var(--semantic-error);
 		font-size: var(--text-xs);
 		margin-top: var(--space-xs);
 	}
 
 	.form-error {
-		border-color: oklch(0.7 0.2 25) !important;
+		border-color: var(--semantic-error) !important;
 	}
 
 	.form-divider {

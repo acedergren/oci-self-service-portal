@@ -630,7 +630,7 @@
 	.search-input:focus {
 		outline: none;
 		border-color: var(--accent-primary);
-		box-shadow: 0 0 0 2px oklch(0.78 0.22 45 / 0.2);
+		box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 30%, transparent);
 	}
 
 	.filter-select {
@@ -647,7 +647,7 @@
 	.filter-select:focus {
 		outline: none;
 		border-color: var(--accent-primary);
-		box-shadow: 0 0 0 2px oklch(0.78 0.22 45 / 0.2);
+		box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 30%, transparent);
 	}
 
 	/* Grids */

@@ -736,8 +736,8 @@
 	}
 
 	.badge-success {
-		background: oklch(0.7 0.15 145 / 0.2);
-		color: oklch(0.8 0.15 145);
+		background: color-mix(in srgb, var(--semantic-success) 20%, transparent);
+		color: var(--semantic-success);
 	}
 
 	.badge-disabled {
@@ -746,8 +746,8 @@
 	}
 
 	.badge-warning {
-		background: oklch(0.7 0.15 60 / 0.2);
-		color: oklch(0.8 0.15 60);
+		background: color-mix(in srgb, var(--semantic-warning) 20%, transparent);
+		color: var(--semantic-warning);
 	}
 
 	.form-grid {
@@ -841,7 +841,7 @@
 	}
 
 	.form-error:focus {
-		box-shadow: 0 0 0 3px oklch(0.65 0.28 25 / 0.2) !important;
+		box-shadow: 0 0 0 3px color-mix(in srgb, var(--semantic-error) 30%, transparent) !important;
 	}
 
 	.color-input-group .form-input {
