@@ -89,13 +89,13 @@ describe('I-1: Column injection prevention', () => {
 			expect(typeof adapterModule!.validateTableName).toBe('function');
 		});
 
-		it('accepts known Better Auth table names', () => {
+		it('accepts known Better Auth table names and maps to physical Oracle names', () => {
 			const validate = adapterModule!.validateTableName as (name: string) => string;
-			// Better Auth uses these tables
-			expect(validate('user')).toBe('user');
-			expect(validate('session')).toBe('session');
-			expect(validate('account')).toBe('account');
-			expect(validate('verification')).toBe('verification');
+			// Better Auth model names are accepted and mapped to physical Oracle table names
+			expect(validate('user')).toBe('users');
+			expect(validate('session')).toBe('auth_sessions');
+			expect(validate('account')).toBe('accounts');
+			expect(validate('verification')).toBe('verifications');
 		});
 
 		it('rejects unknown table names', () => {

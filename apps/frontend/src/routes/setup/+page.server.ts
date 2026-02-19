@@ -1,44 +1,31 @@
 import { redirect, isRedirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
+import { settingsRepository } from '@portal/server/admin';
 
 export const load: PageServerLoad = async ({ fetch }) => {
+	// Check setup status directly via DB (avoids Vite proxy round-trip in SSR context)
+	let isComplete = false;
 	try {
-		// Check if setup is already complete.
-		// Note: this endpoint requires a setup token; when setup is done the token
-		// is invalidated and the API returns 403 {"error":"Setup is already complete"}.
-		// Both 403 and a successful response with setupComplete=true should redirect.
-		const response = await fetch('/api/setup/status');
-
-		if (response.status === 403) {
-			// 403 means setup is complete and the setup token is gone — redirect to home
-			throw redirect(303, '/');
-		}
-
-		if (response.ok) {
-			const data = await response.json();
-
-			// Handle both response shapes: {setupComplete} and {isSetupComplete}
-			if (data.setupComplete || data.isSetupComplete) {
-				throw redirect(303, '/');
-			}
-		}
-
-		// Try to detect environment variables for pre-filling
-		const envResponse = await fetch('/api/setup/detect-env');
-		const detectedEnv = envResponse.ok ? await envResponse.json() : {};
-
-		return {
-			detectedEnv
-		};
-	} catch (error) {
-		// If it's a redirect, re-throw it
-		if (isRedirect(error)) {
-			throw error;
-		}
-
-		// Otherwise, allow setup to proceed (setup status check failed)
-		return {
-			detectedEnv: {}
-		};
+		isComplete = await settingsRepository.isSetupComplete();
+	} catch {
+		// DB unavailable — allow setup to proceed in degraded mode
 	}
+
+	if (isComplete) {
+		throw redirect(303, '/');
+	}
+
+	// Try to detect environment variables for pre-filling the form
+	let detectedEnv: Record<string, string> = {};
+	try {
+		const envResponse = await fetch('/api/setup/detect-env');
+		if (envResponse.ok) {
+			detectedEnv = await envResponse.json();
+		}
+	} catch (err) {
+		if (isRedirect(err)) throw err;
+		// Non-fatal — form still usable without pre-filled env values
+	}
+
+	return { detectedEnv };
 };
