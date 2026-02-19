@@ -147,13 +147,12 @@ describe('Component Extraction (Phase 5.1)', () => {
 		});
 	});
 
-	describe('self-service page', () => {
-		it('self-service page file exists at root route', () => {
+	describe('portal root page', () => {
+		it('portal root page file exists', () => {
 			const pagePath = resolve(process.cwd(), 'src/routes/+page.svelte');
-			expect(
-				existsSync(pagePath),
-				'Self-service page should exist at src/routes/+page.svelte'
-			).toBe(true);
+			expect(existsSync(pagePath), 'Portal root page should exist at src/routes/+page.svelte').toBe(
+				true
+			);
 		});
 	});
 });

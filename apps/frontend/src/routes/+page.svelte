@@ -132,7 +132,9 @@
 	<title>CloudNow</title>
 </svelte:head>
 
-<div class="portal" onkeydown={handleKeyDown}>
+<svelte:window onkeydown={handleKeyDown} />
+
+<div class="portal">
 	<HeroSection
 		quickActions={QUICK_ACTIONS}
 		{loadingAction}

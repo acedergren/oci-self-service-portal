@@ -320,6 +320,10 @@ const executeStep = createStep({
 						compensateAction,
 						compensateArgs: step.input
 					});
+				} else {
+					console.warn(
+						`No compensation action found for tool "${step.tool}" (tried "${compensateAction}") — step will not be rolled back`
+					);
 				}
 
 				results.push({ step: stepId, tool: step.tool, result, success: true });

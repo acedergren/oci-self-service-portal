@@ -69,7 +69,8 @@
 		flex-shrink: 0;
 		position: sticky;
 		top: 0;
-		z-index: 100;
+		z-index: var(--z-header, 100);
+		background: var(--bg-secondary); /* fallback for browsers without color-mix() */
 		background: color-mix(in srgb, var(--bg-secondary) 78%, transparent);
 		backdrop-filter: blur(32px) saturate(160%);
 		-webkit-backdrop-filter: blur(32px) saturate(160%);

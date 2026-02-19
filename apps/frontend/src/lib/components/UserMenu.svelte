@@ -45,7 +45,7 @@
 	</button>
 
 	{#if menuOpen}
-		<div class="user-menu-dropdown glass animate-slide-in-up">
+		<div class="user-menu-dropdown glass animate-slide-in-up" role="menu">
 			<div class="user-menu-header">
 				{#if user.image}
 					<img src={user.image} alt="" class="user-avatar-lg" />
