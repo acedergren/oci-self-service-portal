@@ -21,21 +21,14 @@
 
 {#if open}
 	<div class="command-overlay">
-		<button class="command-backdrop" onclick={onClose} aria-label="Close AI assistant"></button>
-		<div class="command-palette" role="dialog" aria-modal="true" aria-label="AI Assistant">
+		<button class="command-backdrop" onclick={onClose} aria-label="Close Charlie"></button>
+		<div class="command-palette glass-charlie" role="dialog" aria-modal="true" aria-label="Charlie">
 			<div class="command-header">
 				<h3 class="command-title">
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" class="command-icon">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="1.5"
-							d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-						/>
-					</svg>
-					AI Assistant
+					<span class="charlie-mark">C</span>
+					Charlie
 				</h3>
-				<button class="command-close" onclick={onClose} aria-label="Close AI assistant">
+				<button class="command-close" onclick={onClose} aria-label="Close Charlie">
 					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
 						<path
 							stroke-linecap="round"
@@ -73,13 +66,13 @@
 		align-items: flex-start;
 		justify-content: center;
 		padding: 5vh 1rem;
-		animation: fadeIn 0.15s ease;
+		animation: fadeIn var(--transition-fast);
 	}
 
 	.command-backdrop {
 		position: absolute;
 		inset: 0;
-		background: rgba(15, 23, 42, 0.6);
+		background: color-mix(in srgb, var(--fg-primary) 60%, transparent);
 		backdrop-filter: blur(4px);
 		border: none;
 		cursor: pointer;
@@ -100,12 +93,25 @@
 		width: 100%;
 		max-width: 700px;
 		max-height: 80vh;
-		background: var(--portal-white, #ffffff);
 		border-radius: 16px;
-		box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+		box-shadow: 0 25px 50px -12px color-mix(in srgb, var(--fg-primary) 25%, transparent);
 		display: flex;
 		flex-direction: column;
-		animation: slideUp 0.2s ease;
+		animation: slideUp var(--transition-normal);
+	}
+
+	.charlie-mark {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 24px;
+		height: 24px;
+		border-radius: 50%;
+		background: var(--charlie-accent, var(--accent-primary));
+		color: white;
+		font-weight: 700;
+		font-size: var(--text-xs, 0.75rem);
+		flex-shrink: 0;
 	}
 
 	@keyframes slideUp {
@@ -124,7 +130,7 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: 1rem 1.5rem;
-		border-bottom: 1px solid #e2e8f0;
+		border-bottom: 1px solid var(--border-default);
 	}
 
 	.command-title {
@@ -133,13 +139,7 @@
 		gap: 0.5rem;
 		font-size: 1rem;
 		font-weight: 600;
-		color: var(--portal-navy, #1e293b);
-	}
-
-	.command-icon {
-		width: 20px;
-		height: 20px;
-		color: var(--portal-teal, #0d9488);
+		color: var(--fg-primary);
 	}
 
 	.command-close {
@@ -150,15 +150,15 @@
 		justify-content: center;
 		background: transparent;
 		border: none;
-		color: var(--portal-slate, #64748b);
+		color: var(--fg-tertiary);
 		border-radius: 6px;
 		cursor: pointer;
-		transition: all 0.15s ease;
+		transition: all var(--transition-fast);
 	}
 
 	.command-close:hover {
-		background: var(--portal-light, #f1f5f9);
-		color: var(--portal-navy, #1e293b);
+		background: var(--bg-tertiary);
+		color: var(--fg-primary);
 	}
 
 	.command-close svg {
@@ -166,57 +166,43 @@
 		height: 18px;
 	}
 
-	/* Workflow panel container with design system variable overrides */
+	/* Workflow panel container — maps component-specific vars to design system tokens */
 	.workflow-panel-container {
-		border-bottom: 1px solid #e2e8f0;
+		border-bottom: 1px solid var(--border-default);
 		padding: 1rem 1.5rem;
-		background: var(--portal-white, #ffffff);
+		background: var(--bg-secondary);
 		max-height: 40vh;
 		overflow-y: auto;
 		flex-shrink: 0;
 
-		--text-primary: var(--portal-navy, #1e293b);
-		--text-secondary: var(--portal-navy-light, #334155);
-		--text-tertiary: var(--portal-slate, #64748b);
-		--bg-tertiary: #f1f5f9;
-		--bg-secondary: var(--portal-light, #f1f5f9);
-		--bg-elevated: #e2e8f0;
-		--bg-hover: #cbd5e1;
-		--border-default: #cbd5e1;
-		--border-muted: #e2e8f0;
+		/* Map legacy --text-* names to design system fg tokens */
+		--text-primary: var(--fg-primary);
+		--text-secondary: var(--fg-secondary);
+		--text-tertiary: var(--fg-tertiary);
+
+		/* Workflow execution state colors */
 		--color-success: #10b981;
-		--color-executing: var(--portal-teal, #0d9488);
+		--color-executing: var(--accent-primary);
 		--color-error: #ef4444;
 		--color-info: #3b82f6;
 		--color-warning: #f59e0b;
-		--fg-primary: var(--portal-navy, #1e293b);
-		--fg-secondary: var(--portal-slate, #64748b);
-		--fg-tertiary: var(--portal-gray, #94a3b8);
-		--accent-primary: var(--portal-teal, #0d9488);
 		--semantic-success: #10b981;
 		--semantic-error: #ef4444;
 		--semantic-warning: #f59e0b;
 		--semantic-info: #3b82f6;
-		--radius-md: 8px;
-		--radius-lg: 12px;
-		--radius-full: 9999px;
-		--space-sm: 0.5rem;
-		--space-md: 1rem;
-		--transition-fast: 150ms ease;
-		--transition-normal: 250ms ease;
 	}
 
 	/* Panel styles for Collapsible component inside workflow container */
 	.workflow-panel-container :global(.panel) {
-		background-color: var(--portal-white, #ffffff);
-		border: 1px solid #e2e8f0;
+		background-color: var(--bg-secondary);
+		border: 1px solid var(--border-default);
 		border-radius: 8px;
 		margin-bottom: 0;
 	}
 
 	.workflow-panel-container :global(.panel-header) {
-		background-color: var(--portal-light, #f1f5f9);
-		border-bottom: 1px solid #e2e8f0;
+		background-color: var(--bg-tertiary);
+		border-bottom: 1px solid var(--border-default);
 		padding: 0.5rem 1rem;
 		cursor: pointer;
 		user-select: none;
@@ -224,24 +210,24 @@
 	}
 
 	.workflow-panel-container :global(.panel-header:hover) {
-		background-color: #e2e8f0;
+		background-color: var(--border-default);
 	}
 
 	.workflow-panel-container :global(.panel-content) {
 		padding: 1rem;
-		background: var(--portal-white, #ffffff);
+		background: var(--bg-secondary);
 		border-radius: 0 0 8px 8px;
 	}
 
 	/* Text utilities for workflow container */
 	.workflow-panel-container :global(.text-primary) {
-		color: var(--portal-navy, #1e293b);
+		color: var(--fg-primary);
 	}
 	.workflow-panel-container :global(.text-secondary) {
-		color: var(--portal-slate, #64748b);
+		color: var(--fg-tertiary);
 	}
 	.workflow-panel-container :global(.text-tertiary) {
-		color: var(--portal-gray, #94a3b8);
+		color: var(--fg-disabled);
 	}
 	.workflow-panel-container :global(.text-success) {
 		color: #10b981;
@@ -261,8 +247,8 @@
 	}
 
 	.workflow-panel-container :global(.badge-default) {
-		background-color: #e2e8f0;
-		color: var(--portal-slate, #64748b);
+		background-color: var(--border-default);
+		color: var(--fg-tertiary);
 	}
 
 	.workflow-panel-container :global(.badge-success) {
@@ -283,7 +269,7 @@
 	}
 
 	.workflow-panel-container :global(.animate-slide-in-up) {
-		animation: slideUp 0.15s ease;
+		animation: slideUp var(--transition-fast);
 	}
 	.workflow-panel-container :global(.flex) {
 		display: flex;
@@ -329,7 +315,7 @@
 		transform: rotate(90deg);
 	}
 	.workflow-panel-container :global(.transition-transform) {
-		transition: transform 0.15s ease;
+		transition: transform var(--transition-fast);
 	}
 
 	@media (max-width: 768px) {

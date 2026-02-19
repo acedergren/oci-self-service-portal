@@ -48,11 +48,7 @@
 		</div>
 	{:else}
 		<div class="message-avatar assistant">
-			<svg viewBox="0 0 24 24" fill="currentColor">
-				<path
-					d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"
-				/>
-			</svg>
+			<span class="charlie-letter">C</span>
 		</div>
 		<div class="message-content">
 			{#each toolParts as part (part.toolCallId)}
@@ -91,17 +87,19 @@
 	}
 
 	.message-avatar.user {
-		background: var(--portal-light, #f1f5f9);
-		color: var(--portal-slate, #64748b);
+		background: var(--bg-tertiary);
+		color: var(--fg-tertiary);
 	}
 
 	.message-avatar.assistant {
-		background: linear-gradient(
-			135deg,
-			var(--portal-teal, #0d9488),
-			var(--portal-teal-dark, #0f766e)
-		);
+		background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+	}
+
+	.charlie-letter {
 		color: white;
+		font-weight: 700;
+		font-size: var(--text-xs, 0.75rem);
+		line-height: 1;
 	}
 
 	.message-avatar svg {
@@ -115,18 +113,18 @@
 	}
 
 	.message[data-role='user'] .message-content p {
-		background: var(--portal-light, #f1f5f9);
+		background: color-mix(in srgb, var(--accent-primary) 8%, var(--bg-primary));
 		padding: 0.75rem 1rem;
 		border-radius: 12px;
 		border-top-left-radius: 4px;
 		font-size: 0.9375rem;
-		color: var(--portal-navy, #1e293b);
+		color: var(--fg-primary);
 		display: inline-block;
 	}
 
 	.message-content :global(.assistant-text) {
 		font-size: 0.9375rem;
-		color: var(--portal-navy, #1e293b);
+		color: var(--fg-primary);
 		line-height: 1.6;
 	}
 </style>

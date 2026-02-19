@@ -8,7 +8,7 @@
 <section class="workflows-section">
 	<div class="workflows-header">
 		<h2 class="workflows-title">Guided Workflows</h2>
-		<p class="workflows-subtitle">AI-assisted multi-step operations for common tasks</p>
+		<p class="workflows-subtitle">AI-assisted multi-step operations with Charlie</p>
 	</div>
 	<div class="workflows-grid">
 		{#each workflows as workflow (workflow.id)}
@@ -25,25 +25,25 @@
 	}
 
 	.workflows-header {
-		margin-bottom: 1.5rem;
+		margin-bottom: var(--space-lg);
 	}
 
 	.workflows-title {
-		font-size: 1.25rem;
+		font-size: var(--text-xl);
 		font-weight: 700;
-		color: var(--portal-navy, #1e293b);
-		margin-bottom: 0.25rem;
+		color: var(--fg-primary);
+		margin-bottom: var(--space-xs);
 	}
 
 	.workflows-subtitle {
-		font-size: 0.875rem;
-		color: var(--portal-slate, #64748b);
+		font-size: var(--text-sm);
+		color: var(--fg-tertiary);
 	}
 
 	.workflows-grid {
 		display: grid;
 		grid-template-columns: repeat(2, 1fr);
-		gap: 1rem;
+		gap: var(--space-md);
 	}
 
 	@media (max-width: 768px) {

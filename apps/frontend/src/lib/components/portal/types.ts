@@ -5,8 +5,7 @@
  * All portal components live under src/lib/components/portal/.
  *
  * Architecture:
- *   +page.svelte (orchestrator, ~120 lines)
- *   +-- PortalHeader
+ *   +page.svelte (orchestrator)
  *   +-- HeroSection
  *   |   +-- SearchBox (existing, reused from ui/)
  *   |   +-- QuickActionBar
@@ -77,16 +76,6 @@ export interface ActivityItem {
 export interface ResourceLink {
 	label: string;
 	href: string;
-}
-
-// ---------------------------------------------------------------------------
-// PortalHeader
-// Used by: src/lib/components/portal/PortalHeader.svelte
-// ---------------------------------------------------------------------------
-
-export interface PortalHeaderProps {
-	/** Notification count badge */
-	notificationCount?: number;
 }
 
 // ---------------------------------------------------------------------------

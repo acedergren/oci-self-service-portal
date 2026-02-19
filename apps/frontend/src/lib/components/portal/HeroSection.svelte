@@ -13,7 +13,7 @@
 			{#if userName}
 				<p class="greeting">Hello {userName},</p>
 			{/if}
-			<h1 class="hero-title">Welcome to Cloud Self-Service</h1>
+			<h1 class="hero-title">What can Charlie help you with?</h1>
 			<p class="hero-subtitle">
 				Provision and manage your OCI resources with AI-powered assistance
 			</p>
@@ -48,21 +48,7 @@
 			<div class="graphic-ring ring-2"></div>
 			<div class="graphic-ring ring-3"></div>
 			<div class="graphic-center">
-				<svg viewBox="0 0 48 48" fill="none">
-					<path
-						d="M24 4L44 14V34L24 44L4 34V14L24 4Z"
-						stroke="currentColor"
-						stroke-width="1.5"
-						fill="none"
-					/>
-					<path
-						d="M24 4V44M4 14L44 34M44 14L4 34"
-						stroke="currentColor"
-						stroke-width="1"
-						opacity="0.3"
-					/>
-					<circle cx="24" cy="24" r="6" fill="currentColor" opacity="0.2" />
-				</svg>
+				<div class="charlie-hero-mark">C</div>
 			</div>
 		</div>
 	</div>
@@ -70,15 +56,10 @@
 
 <style>
 	.hero {
-		background: linear-gradient(
-			135deg,
-			var(--portal-white, #ffffff) 0%,
-			var(--portal-light, #f1f5f9) 100%
-		);
-		padding: 3rem 2rem;
+		padding: var(--space-xxl) 2rem;
 		display: grid;
 		grid-template-columns: 1fr auto;
-		gap: 3rem;
+		gap: var(--space-xxl);
 		max-width: 1400px;
 		margin: 0 auto;
 		align-items: center;
@@ -89,26 +70,26 @@
 	}
 
 	.greeting {
-		color: var(--portal-teal, #0d9488);
-		font-size: 1.125rem;
+		color: var(--accent-primary);
+		font-size: var(--text-lg);
 		font-weight: 600;
 		font-style: italic;
-		margin-bottom: 0.25rem;
+		margin-bottom: var(--space-xs);
 	}
 
 	.hero-title {
-		font-size: 2.5rem;
+		font-size: var(--text-hero);
 		font-weight: 700;
-		color: var(--portal-navy, #1e293b);
+		color: var(--fg-primary);
 		letter-spacing: -0.03em;
 		line-height: 1.2;
-		margin-bottom: 0.75rem;
+		margin-bottom: var(--space-sm);
 	}
 
 	.hero-subtitle {
-		color: var(--portal-slate, #64748b);
-		font-size: 1.0625rem;
-		margin-bottom: 2rem;
+		color: var(--fg-tertiary);
+		font-size: var(--text-lg);
+		margin-bottom: var(--space-xl);
 	}
 
 	.search-container {
@@ -118,33 +99,33 @@
 	.quick-links {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
-		margin-top: 1rem;
+		gap: var(--space-sm);
+		margin-top: var(--space-md);
 		flex-wrap: wrap;
 	}
 
 	.quick-label {
-		color: var(--portal-slate, #64748b);
-		font-size: 0.8125rem;
+		color: var(--fg-tertiary);
+		font-size: var(--text-xs);
 		font-weight: 500;
 	}
 
 	.quick-link {
-		color: var(--portal-teal, #0d9488);
-		font-size: 0.8125rem;
+		color: var(--accent-primary);
+		font-size: var(--text-xs);
 		font-weight: 500;
 		text-decoration: none;
-		padding: 0.375rem 0.75rem;
-		background: rgba(13, 148, 136, 0.08);
+		padding: var(--space-xs) var(--space-sm);
+		background: color-mix(in srgb, var(--accent-primary) 8%, transparent);
 		border: none;
-		border-radius: 100px;
+		border-radius: var(--radius-full);
 		cursor: pointer;
-		transition: all 0.15s ease;
+		transition: all var(--transition-fast);
 		font-family: inherit;
 	}
 
 	.quick-link:hover {
-		background: rgba(13, 148, 136, 0.15);
+		background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
 	}
 
 	.quick-link:disabled {
@@ -155,8 +136,8 @@
 	.quick-link.loading {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
-		background: rgba(13, 148, 136, 0.2);
+		gap: var(--space-sm);
+		background: color-mix(in srgb, var(--accent-primary) 20%, transparent);
 	}
 
 	.quick-link.loading .label-text {
@@ -182,7 +163,7 @@
 	.graphic-ring {
 		position: absolute;
 		border-radius: 50%;
-		border: 1px solid rgba(13, 148, 136, 0.15);
+		border: 1px solid color-mix(in srgb, var(--accent-primary) 15%, transparent);
 		animation: pulse 4s ease-in-out infinite;
 	}
 
@@ -215,15 +196,24 @@
 	}
 
 	.graphic-center {
-		width: 80px;
-		height: 80px;
-		color: var(--portal-teal, #0d9488);
 		z-index: 1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
 	}
 
-	.graphic-center svg {
-		width: 100%;
-		height: 100%;
+	.charlie-hero-mark {
+		width: 80px;
+		height: 80px;
+		border-radius: var(--radius-full);
+		background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+		color: white;
+		font-size: 2.5rem;
+		font-weight: 700;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		box-shadow: 0 0 40px color-mix(in srgb, var(--accent-primary) 30%, transparent);
 	}
 
 	@media (max-width: 1024px) {
@@ -237,10 +227,7 @@
 
 	@media (max-width: 768px) {
 		.hero {
-			padding: 2rem 1rem;
-		}
-		.hero-title {
-			font-size: 1.75rem;
+			padding: var(--space-xl) 1rem;
 		}
 	}
 </style>

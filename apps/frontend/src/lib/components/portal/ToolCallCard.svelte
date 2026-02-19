@@ -77,64 +77,64 @@
 
 <style>
 	.tool-card {
-		background: var(--portal-light, #f1f5f9);
-		border-radius: 8px;
-		padding: 0.75rem 1rem;
-		margin-bottom: 0.75rem;
-		border-left: 3px solid var(--portal-teal, #0d9488);
+		background: var(--bg-tertiary);
+		border-radius: var(--radius-md);
+		padding: var(--space-sm) var(--space-md);
+		margin-bottom: var(--space-sm);
+		border-left: 3px solid var(--accent-primary);
 	}
 
 	.tool-card[data-state='call'] {
-		border-left-color: var(--portal-warning, #f59e0b);
+		border-left-color: var(--semantic-warning);
 	}
 
 	.tool-card[data-state='result'] {
-		border-left-color: var(--portal-success, #10b981);
+		border-left-color: var(--semantic-success);
 	}
 
 	.tool-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		margin-bottom: 0.5rem;
+		margin-bottom: var(--space-xs);
 	}
 
 	.tool-name {
-		font-size: 0.8125rem;
+		font-size: var(--text-xs);
 		font-weight: 600;
-		color: var(--portal-navy, #1e293b);
-		font-family: 'JetBrains Mono', monospace;
+		color: var(--fg-primary);
+		font-family: 'JetBrains Mono', ui-monospace, monospace;
 	}
 
 	.tool-status {
 		display: flex;
 		align-items: center;
-		gap: 0.375rem;
-		font-size: 0.75rem;
-		color: var(--portal-slate, #64748b);
+		gap: 6px;
+		font-size: var(--text-xs);
+		color: var(--fg-tertiary);
 	}
 
 	.status-dot {
 		width: 8px;
 		height: 8px;
-		border-radius: 50%;
+		border-radius: var(--radius-full);
 	}
 
 	.status-dot.running {
-		background: var(--portal-warning, #f59e0b);
+		background: var(--agent-executing);
 		animation: blink 1s infinite;
 	}
 
 	.status-dot.completed {
-		background: var(--portal-success, #10b981);
+		background: var(--semantic-success);
 	}
 
 	.status-dot.pending {
-		background: var(--portal-gray, #94a3b8);
+		background: var(--fg-disabled);
 	}
 
 	.status-dot.error {
-		background: var(--portal-error, #ef4444);
+		background: var(--semantic-error);
 	}
 
 	@keyframes blink {
@@ -148,29 +148,29 @@
 	}
 
 	.tool-result {
-		margin-top: 0.5rem;
+		margin-top: var(--space-xs);
 	}
 
 	.result-data {
-		font-family: 'JetBrains Mono', monospace;
-		font-size: 0.75rem;
-		background: var(--portal-white, #ffffff);
-		padding: 0.75rem;
-		border-radius: 6px;
+		font-family: 'JetBrains Mono', ui-monospace, monospace;
+		font-size: var(--text-xs);
+		background: var(--bg-secondary);
+		padding: var(--space-sm);
+		border-radius: var(--radius-sm);
 		overflow-x: auto;
 		max-height: 200px;
 		overflow-y: auto;
-		color: var(--portal-navy-light, #334155);
+		color: var(--fg-secondary);
 	}
 
 	.result-error {
-		font-size: 0.8125rem;
-		color: var(--portal-error, #ef4444);
+		font-size: var(--text-xs);
+		color: var(--semantic-error);
 	}
 
 	.elapsed {
 		font-size: 0.6875rem;
-		color: var(--portal-gray, #94a3b8);
-		margin-left: 0.125rem;
+		color: var(--fg-disabled);
+		margin-left: 2px;
 	}
 </style>

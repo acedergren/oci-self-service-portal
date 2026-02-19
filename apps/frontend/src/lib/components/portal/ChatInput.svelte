@@ -3,7 +3,7 @@
 
 	let {
 		disabled = false,
-		placeholder = 'Ask a follow-up question...',
+		placeholder = 'Ask Charlie anything about your cloud...',
 		onSubmit
 	}: ChatInputProps = $props();
 
@@ -39,27 +39,27 @@
 		display: flex;
 		gap: 0.75rem;
 		padding: 1rem 1.5rem;
-		border-top: 1px solid #e2e8f0;
+		border-top: 1px solid var(--border-default);
 	}
 
 	.chat-input input {
 		flex: 1;
 		padding: 0.75rem 1rem;
-		border: 1px solid #e2e8f0;
+		border: 1px solid var(--border-default);
 		border-radius: 8px;
 		font-size: 0.9375rem;
-		color: var(--portal-navy, #1e293b);
+		color: var(--fg-primary);
 		outline: none;
-		transition: border-color 0.15s ease;
+		transition: border-color var(--transition-fast);
 		font-family: inherit;
 	}
 
 	.chat-input input:focus {
-		border-color: var(--portal-teal, #0d9488);
+		border-color: var(--border-focused);
 	}
 
 	.chat-input input::placeholder {
-		color: var(--portal-gray, #94a3b8);
+		color: var(--fg-disabled);
 	}
 
 	.chat-input button {
@@ -68,16 +68,12 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		background: linear-gradient(
-			135deg,
-			var(--portal-teal, #0d9488),
-			var(--portal-teal-dark, #0f766e)
-		);
+		background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
 		color: white;
 		border: none;
 		border-radius: 8px;
 		cursor: pointer;
-		transition: all 0.15s ease;
+		transition: all var(--transition-fast);
 	}
 
 	.chat-input button:hover:not(:disabled) {

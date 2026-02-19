@@ -4,6 +4,7 @@
 	import { Toaster } from 'svelte-sonner';
 	import { resolve } from '$app/paths';
 	import UserMenu from '$lib/components/UserMenu.svelte';
+	import NotificationBell from '$lib/components/NotificationBell.svelte';
 
 	// Create query client with CloudNow defaults
 	// Using QueryClient directly from svelte-query to avoid version mismatches
@@ -36,10 +37,13 @@
 			<div class="header-left">
 				<a href={resolve('/')} class="app-title">CloudNow</a>
 				<nav class="header-nav">
+					<a href={resolve('/chat')} class="nav-link">Chat with Charlie</a>
 					<a href={resolve('/workflows')} class="nav-link">Workflows</a>
+					<a href={resolve('/admin')} class="nav-link">Admin</a>
 				</nav>
 			</div>
 			<div class="header-right">
+				<NotificationBell />
 				<UserMenu user={data.user} />
 			</div>
 		</header>
@@ -113,5 +117,6 @@
 	.header-right {
 		display: flex;
 		align-items: center;
+		gap: var(--space-sm);
 	}
 </style>

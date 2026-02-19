@@ -18,7 +18,7 @@
 			<span class="workflow-time">~{workflow.estimatedDuration} min</span>
 		</div>
 	</div>
-	<span class="workflow-arrow">&rarr;</span>
+	<span class="workflow-cta">Start with Charlie →</span>
 </button>
 
 <style>
@@ -27,18 +27,18 @@
 		align-items: center;
 		gap: 1rem;
 		padding: 1.25rem;
-		background: var(--portal-white, #ffffff);
-		border: 1px solid #e2e8f0;
+		background: var(--bg-secondary);
+		border: 1px solid var(--border-default);
 		border-radius: 12px;
 		cursor: pointer;
 		text-align: left;
-		transition: all 0.2s ease;
+		transition: all var(--transition-normal);
 		font-family: inherit;
 	}
 
 	.workflow-card:hover {
-		border-color: var(--portal-teal, #0d9488);
-		box-shadow: 0 4px 12px rgba(13, 148, 136, 0.15);
+		border-color: var(--accent-primary);
+		box-shadow: 0 4px 12px color-mix(in srgb, var(--accent-primary) 15%, transparent);
 		transform: translateY(-2px);
 	}
 
@@ -55,13 +55,13 @@
 	.workflow-name {
 		font-size: 1rem;
 		font-weight: 600;
-		color: var(--portal-navy, #1e293b);
+		color: var(--fg-primary);
 		margin-bottom: 0.25rem;
 	}
 
 	.workflow-description {
 		font-size: 0.8125rem;
-		color: var(--portal-slate, #64748b);
+		color: var(--fg-tertiary);
 		margin-bottom: 0.5rem;
 		line-height: 1.4;
 	}
@@ -70,19 +70,28 @@
 		display: flex;
 		gap: 1rem;
 		font-size: 0.75rem;
-		color: var(--portal-gray, #94a3b8);
+		color: var(--fg-disabled);
 	}
 
-	.workflow-arrow {
-		color: var(--portal-teal, #0d9488);
-		font-size: 1.25rem;
+	.workflow-cta {
+		color: var(--accent-primary);
+		font-size: var(--text-xs, 0.75rem);
+		font-weight: 500;
+		white-space: nowrap;
 		opacity: 0;
 		transform: translateX(-4px);
-		transition: all 0.2s ease;
+		transition: all var(--transition-normal);
 	}
 
-	.workflow-card:hover .workflow-arrow {
+	.workflow-card:hover .workflow-cta {
 		opacity: 1;
 		transform: translateX(0);
+	}
+
+	@media (max-width: 768px) {
+		.workflow-cta {
+			opacity: 1;
+			transform: translateX(0);
+		}
 	}
 </style>

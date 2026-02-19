@@ -8,7 +8,6 @@
 	import type { AgentPlan } from '$lib/components/panels/types.js';
 	import type { ServiceAction } from '$lib/components/portal/types.js';
 	import {
-		PortalHeader,
 		HeroSection,
 		ServiceCategoryGrid,
 		WorkflowGallery,
@@ -18,10 +17,11 @@
 	import {
 		SERVICE_CATEGORIES,
 		QUICK_ACTIONS,
-		MOCK_RECENT_ACTIVITY,
 		RESOURCE_LINKS,
 		FEATURED_WORKFLOW_IDS
 	} from '$lib/components/portal/data.js';
+	import AdvisorSummaryWidget from '$lib/components/cloud-advisor/AdvisorSummaryWidget.svelte';
+	import { createQuery } from '@tanstack/svelte-query';
 
 	// ── Chat state ──────────────────────────────────────────────────────────
 	let selectedModel = $state('meta.llama-3.3-70b-instruct');
@@ -37,6 +37,48 @@
 	const featuredWorkflows = WORKFLOW_TEMPLATES.filter((w) =>
 		(FEATURED_WORKFLOW_IDS as readonly string[]).includes(w.id)
 	);
+
+	// ── Recent activity from API ───────────────────────────────────────────
+	interface ActivityResponse {
+		activities: { id: string; toolName: string; createdAt: string; status: string }[];
+	}
+
+	const activityQuery = createQuery<ActivityResponse>(() => ({
+		queryKey: ['activity'],
+		queryFn: async () => {
+			const res = await fetch('/api/activity');
+			if (!res.ok) throw new Error('Failed to fetch activity');
+			return res.json();
+		}
+	}));
+
+	const recentActivity = $derived(
+		(activityQuery.data?.activities ?? []).map(
+			(a: { id: string; toolName: string; createdAt: string; status: string }) => ({
+				id: a.id?.slice(0, 8) ?? '—',
+				type: a.toolName?.includes('database')
+					? 'database'
+					: a.toolName?.includes('network') || a.toolName?.includes('vcn')
+						? 'networking'
+						: 'compute',
+				action: a.toolName?.replace(/^oci[_-]/, '').replace(/[_-]/g, ' ') ?? 'Unknown',
+				time: getRelativeTime(a.createdAt),
+				status: (a.status as 'completed' | 'pending' | 'failed') ?? 'completed'
+			})
+		)
+	);
+
+	function getRelativeTime(dateStr: string): string {
+		if (!dateStr) return '';
+		const diff = Date.now() - new Date(dateStr).getTime();
+		const minutes = Math.floor(diff / 60000);
+		if (minutes < 1) return 'just now';
+		if (minutes < 60) return `${minutes} min ago`;
+		const hours = Math.floor(minutes / 60);
+		if (hours < 24) return `${hours}h ago`;
+		const days = Math.floor(hours / 24);
+		return `${days}d ago`;
+	}
 
 	// ── Custom fetch with model injection ──────────────────────────────────
 	const modelAwareFetch: typeof fetch = async (input, init) => {
@@ -91,10 +133,7 @@
 </svelte:head>
 
 <div class="portal" onkeydown={handleKeyDown}>
-	<PortalHeader />
-
 	<HeroSection
-		userName="Alex"
 		quickActions={QUICK_ACTIONS}
 		{loadingAction}
 		onSearch={sendPrompt}
@@ -105,11 +144,11 @@
 
 	<WorkflowGallery workflows={featuredWorkflows} onStart={handleStartWorkflow} />
 
-	<BottomInfoSection
-		recentActivity={MOCK_RECENT_ACTIVITY}
-		resourceLinks={RESOURCE_LINKS}
-		onAskAI={handleQuickAction}
-	/>
+	<section class="advisor-section">
+		<AdvisorSummaryWidget />
+	</section>
+
+	<BottomInfoSection {recentActivity} resourceLinks={RESOURCE_LINKS} onAskAI={handleQuickAction} />
 
 	<ChatOverlay
 		open={showCommandPalette}
@@ -128,27 +167,13 @@
 
 <style>
 	.portal {
-		--portal-teal: #0d9488;
-		--portal-teal-dark: #0f766e;
-		--portal-teal-light: #14b8a6;
-		--portal-navy: #1e293b;
-		--portal-navy-light: #334155;
-		--portal-slate: #64748b;
-		--portal-gray: #94a3b8;
-		--portal-light: #f1f5f9;
-		--portal-white: #ffffff;
-		--portal-bg: #f8fafc;
-		--portal-success: #10b981;
-		--portal-warning: #f59e0b;
-		--portal-error: #ef4444;
-
-		font-family:
-			'Plus Jakarta Sans',
-			-apple-system,
-			BlinkMacSystemFont,
-			sans-serif;
-		background: var(--portal-bg);
 		min-height: 100vh;
-		color: var(--portal-navy);
+		color: var(--fg-primary);
+	}
+
+	.advisor-section {
+		max-width: 1400px;
+		margin: 0 auto;
+		padding: 0 2rem var(--space-lg);
 	}
 </style>

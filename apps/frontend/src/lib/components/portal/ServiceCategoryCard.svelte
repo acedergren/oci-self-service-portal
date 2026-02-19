@@ -19,7 +19,7 @@
 	};
 </script>
 
-<article class="service-card" data-color={category.color}>
+<article class="service-card glass" data-color={category.color}>
 	<div class="service-icon">
 		<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
 			<!-- eslint-disable-next-line svelte/no-at-html-tags -- safe: hardcoded SVG lookup -->
@@ -41,17 +41,16 @@
 
 <style>
 	.service-card {
-		background: var(--portal-white, #ffffff);
-		border-radius: 12px;
-		padding: 1.5rem;
-		border: 1px solid #e2e8f0;
-		transition: all 0.2s ease;
+		border-radius: var(--radius-lg);
+		padding: var(--space-lg);
+		border: 1px solid var(--border-default);
+		transition: all var(--transition-normal);
 		display: flex;
-		gap: 1rem;
+		gap: var(--space-md);
 	}
 
 	.service-card:hover {
-		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+		box-shadow: var(--shadow-md);
 		transform: translateY(-2px);
 		border-color: transparent;
 	}
@@ -59,7 +58,7 @@
 	.service-icon {
 		width: 48px;
 		height: 48px;
-		border-radius: 10px;
+		border-radius: var(--radius-md);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -67,28 +66,28 @@
 	}
 
 	.service-card[data-color='teal'] .service-icon {
-		background: rgba(13, 148, 136, 0.1);
-		color: var(--portal-teal, #0d9488);
+		background: color-mix(in srgb, var(--accent-primary) 10%, transparent);
+		color: var(--accent-primary);
 	}
 	.service-card[data-color='indigo'] .service-icon {
-		background: rgba(79, 70, 229, 0.1);
-		color: #4f46e5;
+		background: color-mix(in srgb, var(--agent-waiting) 10%, transparent);
+		color: var(--agent-waiting);
 	}
 	.service-card[data-color='emerald'] .service-icon {
-		background: rgba(16, 185, 129, 0.1);
-		color: #10b981;
+		background: color-mix(in srgb, var(--semantic-success) 10%, transparent);
+		color: var(--semantic-success);
 	}
 	.service-card[data-color='amber'] .service-icon {
-		background: rgba(245, 158, 11, 0.1);
-		color: #f59e0b;
+		background: color-mix(in srgb, var(--semantic-warning) 10%, transparent);
+		color: var(--semantic-warning);
 	}
 	.service-card[data-color='rose'] .service-icon {
-		background: rgba(244, 63, 94, 0.1);
-		color: #f43f5e;
+		background: color-mix(in srgb, var(--semantic-error) 10%, transparent);
+		color: var(--semantic-error);
 	}
 	.service-card[data-color='violet'] .service-icon {
-		background: rgba(139, 92, 246, 0.1);
-		color: #8b5cf6;
+		background: color-mix(in srgb, var(--agent-waiting) 10%, transparent);
+		color: var(--agent-waiting);
 	}
 
 	.service-icon svg {
@@ -102,46 +101,46 @@
 	}
 
 	.service-title {
-		font-size: 1rem;
+		font-size: var(--text-base);
 		font-weight: 600;
-		color: var(--portal-navy, #1e293b);
-		margin-bottom: 0.25rem;
+		color: var(--fg-primary);
+		margin-bottom: var(--space-xs);
 	}
 
 	.service-description {
-		font-size: 0.8125rem;
-		color: var(--portal-slate, #64748b);
-		margin-bottom: 0.75rem;
+		font-size: var(--text-xs);
+		color: var(--fg-tertiary);
+		margin-bottom: var(--space-sm);
 		line-height: 1.5;
 	}
 
 	.service-actions {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 0.5rem;
+		gap: var(--space-sm);
 	}
 
 	.service-action {
-		font-size: 0.75rem;
+		font-size: var(--text-xs);
 		font-weight: 500;
-		color: var(--portal-teal, #0d9488);
+		color: var(--accent-primary);
 		background: transparent;
 		border: none;
 		padding: 0;
 		cursor: pointer;
 		text-decoration: underline;
 		text-underline-offset: 2px;
-		transition: color 0.15s ease;
+		transition: color var(--transition-fast);
 	}
 
 	.service-action:hover {
-		color: var(--portal-teal-dark, #0f766e);
+		color: var(--accent-secondary);
 	}
 
 	.service-action:not(:last-child)::after {
 		content: '|';
-		margin-left: 0.5rem;
-		color: #cbd5e1;
+		margin-left: var(--space-sm);
+		color: var(--border-default);
 		text-decoration: none;
 		display: inline-block;
 	}

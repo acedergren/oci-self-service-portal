@@ -6,7 +6,6 @@
  *
  * Architect spec (types.ts):
  *   +page.svelte (orchestrator, ~120 lines)
- *   +-- PortalHeader
  *   +-- HeroSection (contains SearchBox, QuickActionBar, HeroGraphic)
  *   +-- ServiceCategoryGrid (contains ServiceCategoryCard)
  *   +-- WorkflowGallery (contains WorkflowCard)
@@ -26,7 +25,6 @@ const PORTAL_DIR = resolve(process.cwd(), 'src/lib/components/portal');
 // ── Top-level components expected from portal barrel ──────────────────────
 
 const TOP_LEVEL_COMPONENTS = [
-	'PortalHeader',
 	'HeroSection',
 	'ServiceCategoryGrid',
 	'WorkflowGallery',
@@ -146,7 +144,6 @@ describe('Component Extraction (Phase 5.1)', () => {
 
 			expect(barrelSource).toContain('ServiceCategory');
 			expect(barrelSource).toContain('ActivityItem');
-			expect(barrelSource).toContain('PortalHeaderProps');
 		});
 	});
 

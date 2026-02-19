@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import type { BottomInfoSectionProps } from './types.js';
 
 	let { recentActivity, resourceLinks, onAskAI, onViewAllActivity }: BottomInfoSectionProps =
@@ -18,79 +19,100 @@
 		if (type === 'database') return iconPaths.database;
 		return iconPaths.network;
 	}
+
+	const hasActivity = $derived(recentActivity.length > 0);
 </script>
 
 <section class="bottom-section">
 	<div class="bottom-grid">
 		<!-- Recent Activity -->
-		<div class="activity-panel">
+		<div class="activity-panel glass">
 			<div class="panel-header">
 				<h2 class="panel-title">Recent Activity</h2>
 				{#if onViewAllActivity}
 					<button class="panel-action" onclick={onViewAllActivity}>View All</button>
 				{/if}
 			</div>
-			<div class="activity-list">
-				{#each recentActivity as item (item.id)}
-					<div class="activity-item">
-						<div class="activity-icon" data-type={item.type}>
-							<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-								<!-- eslint-disable-next-line svelte/no-at-html-tags -- safe: hardcoded SVG lookup -->
-								{@html getIconForType(item.type)}
-							</svg>
-						</div>
-						<div class="activity-details">
-							<span class="activity-action">{item.action}</span>
-							<span class="activity-id">{item.id} - {item.time}</span>
-						</div>
-						<span class="activity-status" data-status={item.status}>
-							{item.status}
-						</span>
+			<div class="panel-body">
+				{#if hasActivity}
+					<div class="activity-list">
+						{#each recentActivity as item (item.id)}
+							<div class="activity-item">
+								<div class="activity-icon" data-type={item.type}>
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+										<!-- eslint-disable-next-line svelte/no-at-html-tags -- safe: hardcoded SVG lookup -->
+										{@html getIconForType(item.type)}
+									</svg>
+								</div>
+								<div class="activity-details">
+									<span class="activity-action">{item.action}</span>
+									<span class="activity-id">{item.id} - {item.time}</span>
+								</div>
+								<span class="activity-status" data-status={item.status}>
+									{item.status}
+								</span>
+							</div>
+						{/each}
 					</div>
-				{/each}
+				{:else}
+					<div class="empty-state">
+						<p>No recent activity. Try asking Charlie to check your infrastructure.</p>
+					</div>
+				{/if}
 			</div>
 		</div>
 
 		<!-- Resources -->
-		<div class="resources-panel">
+		<div class="resources-panel glass">
 			<div class="panel-header">
 				<h2 class="panel-title">Resources</h2>
 			</div>
-			<div class="resources-list">
-				{#each resourceLinks as link (link.label)}
-					<a
-						href={link.href}
-						target="_blank"
-						rel="external noopener noreferrer"
-						class="resource-link"
-					>
-						{link.label}
-					</a>
-				{/each}
+			<div class="panel-body">
+				<div class="resources-list">
+					{#each resourceLinks as link (link.label)}
+						<a
+							href={link.href}
+							target="_blank"
+							rel="external noopener noreferrer"
+							class="resource-link"
+						>
+							{link.label}
+						</a>
+					{/each}
+				</div>
 			</div>
 		</div>
 
-		<!-- Help -->
-		<div class="help-panel">
-			<div class="panel-header">
-				<h2 class="panel-title">Need Help?</h2>
+		<!-- Charlie Help -->
+		<div class="help-panel glass-charlie">
+			<div class="panel-header charlie-header">
+				<h2 class="panel-title">
+					<span class="charlie-mark">C</span>
+					Ask Charlie
+				</h2>
 			</div>
-			<div class="help-content">
-				<p class="help-text">Use the AI assistant for instant help with any cloud operations.</p>
-				<button
-					class="help-btn"
-					onclick={() => onAskAI('Help me understand my current OCI infrastructure and costs')}
-				>
-					<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							stroke-width="1.5"
-							d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
-						/>
-					</svg>
-					Ask AI Assistant
-				</button>
+			<div class="panel-body">
+				<div class="help-content">
+					<p class="help-text">
+						Charlie can help with any cloud operation — from cost analysis to infrastructure
+						provisioning.
+					</p>
+					<button
+						class="help-btn"
+						onclick={() => onAskAI('Help me understand my current OCI infrastructure and costs')}
+					>
+						<svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="1.5"
+								d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+							/>
+						</svg>
+						Chat with Charlie
+					</button>
+					<a href={resolve('/chat')} class="chat-link"> Open full chat → </a>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -109,41 +131,50 @@
 		gap: 1.5rem;
 	}
 
-	.activity-panel,
-	.resources-panel,
-	.help-panel {
-		background: var(--portal-white, #ffffff);
-		border-radius: 12px;
-		overflow: hidden;
-		border: 1px solid #e2e8f0;
-	}
-
 	.panel-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 1rem 1.5rem;
-		background: linear-gradient(135deg, rgba(13, 148, 136, 0.08), rgba(13, 148, 136, 0.15));
-		border-bottom: 1px solid rgba(13, 148, 136, 0.2);
+		padding: var(--space-md) var(--space-lg);
+		border-bottom: 1px solid var(--border-muted);
 	}
 
-	.activity-panel .panel-header ~ *,
-	.resources-panel .panel-header ~ *,
-	.help-panel .panel-header ~ * {
-		padding: 1.5rem;
+	.charlie-header {
+		border-bottom-color: color-mix(in srgb, var(--charlie-accent) 20%, transparent);
+	}
+
+	.panel-body {
+		padding: var(--space-lg);
 	}
 
 	.panel-title {
-		font-size: 0.875rem;
+		font-size: var(--text-sm);
 		font-weight: 600;
-		color: var(--portal-teal-dark, #0f766e);
+		color: var(--fg-secondary);
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
+		display: flex;
+		align-items: center;
+		gap: var(--space-sm);
+	}
+
+	.charlie-mark {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 20px;
+		height: 20px;
+		border-radius: var(--radius-full);
+		background: var(--charlie-accent);
+		color: white;
+		font-size: var(--text-xs);
+		font-weight: 700;
+		flex-shrink: 0;
 	}
 
 	.panel-action {
-		font-size: 0.8125rem;
-		color: var(--portal-teal, #0d9488);
+		font-size: var(--text-xs);
+		color: var(--accent-primary);
 		background: transparent;
 		border: none;
 		cursor: pointer;
@@ -158,22 +189,22 @@
 	.activity-list {
 		display: flex;
 		flex-direction: column;
-		gap: 0.75rem;
+		gap: var(--space-sm);
 	}
 
 	.activity-item {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
-		padding: 0.75rem;
-		background: var(--portal-light, #f1f5f9);
-		border-radius: 8px;
+		gap: var(--space-sm);
+		padding: var(--space-sm);
+		background: var(--bg-tertiary);
+		border-radius: var(--radius-md);
 	}
 
 	.activity-icon {
 		width: 32px;
 		height: 32px;
-		border-radius: 6px;
+		border-radius: var(--radius-sm);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -181,16 +212,16 @@
 	}
 
 	.activity-icon[data-type='compute'] {
-		background: rgba(13, 148, 136, 0.15);
-		color: var(--portal-teal, #0d9488);
+		background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
+		color: var(--accent-primary);
 	}
 	.activity-icon[data-type='database'] {
-		background: rgba(79, 70, 229, 0.15);
-		color: #4f46e5;
+		background: color-mix(in srgb, var(--semantic-info) 15%, transparent);
+		color: var(--semantic-info);
 	}
 	.activity-icon[data-type='networking'] {
-		background: rgba(16, 185, 129, 0.15);
-		color: #10b981;
+		background: color-mix(in srgb, var(--semantic-success) 15%, transparent);
+		color: var(--semantic-success);
 	}
 
 	.activity-icon svg {
@@ -205,15 +236,15 @@
 
 	.activity-action {
 		display: block;
-		font-size: 0.875rem;
+		font-size: var(--text-sm);
 		font-weight: 500;
-		color: var(--portal-navy, #1e293b);
+		color: var(--fg-primary);
 	}
 
 	.activity-id {
 		display: block;
-		font-size: 0.75rem;
-		color: var(--portal-slate, #64748b);
+		font-size: var(--text-xs);
+		color: var(--fg-tertiary);
 	}
 
 	.activity-status {
@@ -222,41 +253,41 @@
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
 		padding: 0.25rem 0.625rem;
-		border-radius: 100px;
+		border-radius: var(--radius-full);
 	}
 
 	.activity-status[data-status='completed'] {
-		background: rgba(16, 185, 129, 0.15);
-		color: #059669;
+		background: color-mix(in srgb, var(--semantic-success) 15%, transparent);
+		color: var(--semantic-success);
 	}
 	.activity-status[data-status='pending'] {
-		background: rgba(245, 158, 11, 0.15);
-		color: #d97706;
+		background: color-mix(in srgb, var(--semantic-warning) 15%, transparent);
+		color: var(--semantic-warning);
 	}
 	.activity-status[data-status='failed'] {
-		background: rgba(239, 68, 68, 0.15);
-		color: #dc2626;
+		background: color-mix(in srgb, var(--semantic-error) 15%, transparent);
+		color: var(--semantic-error);
 	}
 
 	/* Resources List */
 	.resources-list {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: var(--space-sm);
 	}
 
 	.resource-link {
 		display: block;
-		font-size: 0.875rem;
-		color: var(--portal-teal, #0d9488);
+		font-size: var(--text-sm);
+		color: var(--accent-primary);
 		text-decoration: none;
 		padding: 0.625rem 0;
-		border-bottom: 1px solid #e2e8f0;
-		transition: color 0.15s ease;
+		border-bottom: 1px solid var(--border-muted);
+		transition: color var(--transition-fast);
 	}
 
 	.resource-link:hover {
-		color: var(--portal-teal-dark, #0f766e);
+		color: var(--accent-secondary);
 		text-decoration: underline;
 	}
 
@@ -270,40 +301,62 @@
 	}
 
 	.help-text {
-		font-size: 0.875rem;
-		color: var(--portal-slate, #64748b);
-		margin-bottom: 1rem;
+		font-size: var(--text-sm);
+		color: var(--fg-secondary);
+		margin-bottom: var(--space-md);
 		line-height: 1.5;
 	}
 
 	.help-btn {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.5rem;
-		background: linear-gradient(
-			135deg,
-			var(--portal-teal, #0d9488),
-			var(--portal-teal-dark, #0f766e)
-		);
+		gap: var(--space-sm);
+		background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
 		color: white;
-		font-size: 0.875rem;
+		font-size: var(--text-sm);
 		font-weight: 600;
-		padding: 0.75rem 1.5rem;
+		padding: var(--space-sm) var(--space-lg);
 		border: none;
-		border-radius: 8px;
+		border-radius: var(--radius-md);
 		cursor: pointer;
-		transition: all 0.2s ease;
+		transition: all var(--transition-normal);
 		font-family: inherit;
 	}
 
 	.help-btn:hover {
 		transform: translateY(-1px);
-		box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+		box-shadow: 0 4px 12px color-mix(in srgb, var(--accent-primary) 30%, transparent);
 	}
 
 	.help-btn svg {
 		width: 18px;
 		height: 18px;
+	}
+
+	.chat-link {
+		display: block;
+		margin-top: var(--space-md);
+		font-size: var(--text-xs);
+		color: var(--accent-primary);
+		text-decoration: none;
+		transition: color var(--transition-fast);
+	}
+
+	.chat-link:hover {
+		color: var(--accent-secondary);
+		text-decoration: underline;
+	}
+
+	/* Empty state */
+	.empty-state {
+		text-align: center;
+		padding: var(--space-lg) 0;
+	}
+
+	.empty-state p {
+		font-size: var(--text-sm);
+		color: var(--fg-tertiary);
+		line-height: 1.5;
 	}
 
 	@media (max-width: 1024px) {

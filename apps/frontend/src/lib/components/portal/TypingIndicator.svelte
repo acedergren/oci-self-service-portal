@@ -8,18 +8,18 @@
 	.typing-indicator {
 		display: flex;
 		gap: 4px;
-		padding: 0.75rem 1rem;
-		background: var(--portal-light, #f1f5f9);
-		border-radius: 12px;
-		border-top-left-radius: 4px;
+		padding: var(--space-sm) var(--space-md);
+		background: var(--bg-tertiary);
+		border-radius: var(--radius-lg);
+		border-top-left-radius: var(--radius-xs);
 		width: fit-content;
 	}
 
 	.typing-indicator span {
 		width: 8px;
 		height: 8px;
-		background: var(--portal-gray, #94a3b8);
-		border-radius: 50%;
+		background: var(--fg-disabled);
+		border-radius: var(--radius-full);
 		animation: typing 1.4s infinite ease-in-out;
 	}
 

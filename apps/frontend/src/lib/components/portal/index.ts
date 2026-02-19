@@ -1,7 +1,6 @@
 // Portal component barrel exports
 
 // Top-level components
-export { default as PortalHeader } from './PortalHeader.svelte';
 export { default as HeroSection } from './HeroSection.svelte';
 export { default as ServiceCategoryGrid } from './ServiceCategoryGrid.svelte';
 export { default as WorkflowGallery } from './WorkflowGallery.svelte';
@@ -36,7 +35,6 @@ export type {
 	ServiceIconMap,
 
 	// Component props
-	PortalHeaderProps,
 	HeroSectionProps,
 	QuickActionBarProps,
 	ServiceCategoryGridProps,

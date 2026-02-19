@@ -1,4 +1,4 @@
-import type { ServiceCategory, QuickAction, ActivityItem, ResourceLink } from './types.js';
+import type { ServiceCategory, QuickAction, ResourceLink } from './types.js';
 
 /** Service categories for the portal grid */
 export const SERVICE_CATEGORIES: ServiceCategory[] = [
@@ -191,31 +191,6 @@ export const QUICK_ACTIONS: QuickAction[] = [
 		label: 'Database setup wizard',
 		prompt:
 			'Help me set up an Oracle Autonomous Database. Explain the workload types (OLTP, DW, AJD, APEX), recommend one for my use case, and walk me through the creation process.'
-	}
-];
-
-/** Mock recent activity (will be replaced by real API data in Phase 5.3) */
-export const MOCK_RECENT_ACTIVITY: ActivityItem[] = [
-	{
-		id: 'REQ001',
-		type: 'compute',
-		action: 'Listed Instances',
-		time: '5 mins ago',
-		status: 'completed'
-	},
-	{
-		id: 'REQ002',
-		type: 'database',
-		action: 'Created ADB',
-		time: '1 hour ago',
-		status: 'completed'
-	},
-	{
-		id: 'REQ003',
-		type: 'networking',
-		action: 'VCN Query',
-		time: '2 hours ago',
-		status: 'completed'
 	}
 ];
 
