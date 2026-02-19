@@ -22,6 +22,7 @@ import {
 	FindingStatusSchema
 } from '../mastra/findings.js';
 import { requireAuth } from '../plugins/rbac.js';
+import { DatabaseError } from '@portal/server/errors.js';
 import { createFindingsRepository } from '../services/findings-repository.js';
 import { triggerAnalysis } from '../mastra/scheduler.js';
 import type { SchedulerConfig } from '../mastra/scheduler.js';
@@ -59,7 +60,7 @@ const cloudAdvisorRoutes: FastifyPluginAsync = async (fastify) => {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		(fastify as any).oracle?.withConnection ??
 			(async () => {
-				throw new Error('Oracle not available — CloudAdvisor findings require database access');
+				throw new DatabaseError('Oracle connection required for CloudAdvisor findings');
 			})
 	);
 

@@ -23,6 +23,9 @@ import { emitWorkflowStep, emitWorkflowStatus } from '../../events.js';
 import { requiresApproval, getRiskLevel, type RiskLevel } from '../../risk.js';
 import { CompensationPlan, runCompensations } from '../compensation.js';
 import { CHARLIE_TOOLS, executeTool } from '../../tools/index.js';
+import { createLogger } from '@portal/server/logger.js';
+
+const log = createLogger('charlie:action-workflow');
 
 // ── Schemas ───────────────────────────────────────────────────────────────────
 
@@ -321,8 +324,9 @@ const executeStep = createStep({
 						compensateArgs: step.input
 					});
 				} else {
-					console.warn(
-						`No compensation action found for tool "${step.tool}" (tried "${compensateAction}") — step will not be rolled back`
+					log.warn(
+						{ tool: step.tool, compensateAction },
+						'No compensation action found — step will not be rolled back'
 					);
 				}
 
@@ -341,8 +345,9 @@ const executeStep = createStep({
 						await runCompensations(plan.entries(), async (action, args) => {
 							await executeTool(action, args);
 						});
-					} catch {
+					} catch (compensationErr: unknown) {
 						// Compensation itself failed — log but don't re-throw
+						log.warn({ err: compensationErr, runId }, 'Saga compensation failed');
 					}
 				}
 

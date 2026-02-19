@@ -18,6 +18,7 @@ import { FALLBACK_MODEL_ALLOWLIST, DEFAULT_MODEL } from '../mastra/agents/charli
 import { getProviderRegistry, getEnabledModelIds } from '../mastra/models/index.js';
 import { requireAuth, resolveOrgId } from '../plugins/rbac.js';
 import { createWorkflowRunRepository } from '../services/workflow-repository.js';
+import { emitWorkflowStream } from '../services/workflow-stream-bus.js';
 
 // ── Constants ────────────────────────────────────────────────────────────
 
@@ -137,16 +138,30 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
 						const actionRun = await fastify.mastra.getWorkflow('charlieActionWorkflow').createRun();
 						const runId = actionRun.runId;
 						// Fire-and-forget — frontend subscribes via SSE stream for progress
-						void actionRun.start({
-							inputData: {
-								conversationId: effectiveThreadId,
-								message: lastMessage,
-								// eslint-disable-next-line @typescript-eslint/no-explicit-any
-								history: messages as any,
-								mcpToolsets: (mcpToolsets as Record<string, unknown>) ?? {},
-								userId
-							}
-						});
+						actionRun
+							.start({
+								inputData: {
+									conversationId: effectiveThreadId,
+									message: lastMessage,
+									// eslint-disable-next-line @typescript-eslint/no-explicit-any
+									history: messages as any,
+									mcpToolsets: (mcpToolsets as Record<string, unknown>) ?? {},
+									userId
+								}
+							})
+							.catch((err: unknown) => {
+								request.log.error(
+									{ err, runId: actionRun.runId },
+									'Charlie action workflow failed to start'
+								);
+								emitWorkflowStream({
+									type: 'status',
+									runId: actionRun.runId,
+									status: 'failed',
+									error: String(err),
+									output: null
+								});
+							});
 						clearTimeout(timeout);
 						reply.raw.writeHead(200, {
 							'Content-Type': 'text/event-stream',

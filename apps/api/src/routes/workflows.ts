@@ -21,7 +21,12 @@ import type { FastifyPluginAsync } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
 import { WorkflowStatusSchema, type WorkflowRun } from '@portal/shared/workflows/types.js';
-import { ValidationError, NotFoundError, toPortalError } from '@portal/server/errors.js';
+import {
+	ValidationError,
+	NotFoundError,
+	DatabaseError,
+	toPortalError
+} from '@portal/server/errors.js';
 import {
 	createWorkflowRepository,
 	createWorkflowRunRepository,
@@ -89,7 +94,7 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 	// Create repositories lazily — oracle plugin may not be registered (tests)
 	function getRepos() {
 		if (!fastify.hasDecorator('oracle') || !fastify.oracle.isAvailable()) {
-			throw new Error('Database not available');
+			throw new DatabaseError('Oracle connection required');
 		}
 		return {
 			workflows: createWorkflowRepository(fastify.oracle.withConnection),
