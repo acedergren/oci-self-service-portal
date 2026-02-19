@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "pnpm --filter @portal/frontend dev",
-		"dev:api": "pnpm --filter @portal/api dev",
+		"dev:api": "NODE_OPTIONS=--env-file=../../.env pnpm --filter @portal/api dev",
 		"build": "pnpm --filter @portal/frontend build",
 		"build:api": "pnpm --filter @portal/api build",
 		"test": "pnpm --recursive run test",
@@ -26,6 +26,7 @@
 		"@eslint/js": "^9.39.2",
 		"@stoplight/spectral-cli": "^6.15.0",
 		"@stoplight/spectral-owasp-ruleset": "^2.0.1",
+		"dotenv-cli": "^8.0.0",
 		"eslint": "^9.39.2",
 		"eslint-plugin-svelte": "^3.14.0",
 		"globals": "^17.3.0",
