@@ -6,8 +6,21 @@
  * mockReset: true config requires forwarding mock pattern.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { buildTestApp, simulateSession, simulateOrgSession } from './test-helpers.js';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { buildTestApp as _buildTestApp, simulateSession, simulateOrgSession } from './test-helpers.js';
+import type { FastifyInstance } from 'fastify';
+
+// Track all created apps for cleanup after each test
+const _appsToClose: FastifyInstance[] = [];
+afterEach(async () => {
+	await Promise.all(_appsToClose.splice(0).map((a) => a.close()));
+});
+function buildTestApp(opts?: Parameters<typeof _buildTestApp>[0]): Promise<FastifyInstance> {
+	return _buildTestApp(opts).then((app) => {
+		_appsToClose.push(app);
+		return app;
+	});
+}
 import { mcpAdminRoutes } from '../../routes/admin/mcp.js';
 import { NotFoundError } from '@portal/server/errors.js';
 import type {

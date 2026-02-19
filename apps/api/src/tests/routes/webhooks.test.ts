@@ -1,6 +1,19 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
-import { buildTestApp, simulateSession } from './test-helpers.js';
+import { buildTestApp as _buildTestApp, simulateSession } from './test-helpers.js';
+import type { FastifyInstance } from 'fastify';
+
+// Track all created apps for cleanup after each test
+const _appsToClose: FastifyInstance[] = [];
+afterEach(async () => {
+	await Promise.all(_appsToClose.splice(0).map((a) => a.close()));
+});
+function buildTestApp(opts?: Parameters<typeof _buildTestApp>[0]): Promise<FastifyInstance> {
+	return _buildTestApp(opts).then((app) => {
+		_appsToClose.push(app);
+		return app;
+	});
+}
 import { webhookRoutes } from '../../routes/webhooks.js';
 
 /** simulateSession + set session.activeOrganizationId for resolveOrgId */
