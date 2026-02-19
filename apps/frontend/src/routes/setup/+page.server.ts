@@ -3,14 +3,22 @@ import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ fetch }) => {
 	try {
-		// Check if setup is already complete
+		// Check if setup is already complete.
+		// Note: this endpoint requires a setup token; when setup is done the token
+		// is invalidated and the API returns 403 {"error":"Setup is already complete"}.
+		// Both 403 and a successful response with setupComplete=true should redirect.
 		const response = await fetch('/api/setup/status');
 
-		if (response.ok) {
-			const { setupComplete } = await response.json();
+		if (response.status === 403) {
+			// 403 means setup is complete and the setup token is gone — redirect to home
+			throw redirect(303, '/');
+		}
 
-			// If setup is already complete, redirect to home
-			if (setupComplete) {
+		if (response.ok) {
+			const data = await response.json();
+
+			// Handle both response shapes: {setupComplete} and {isSetupComplete}
+			if (data.setupComplete || data.isSetupComplete) {
 				throw redirect(303, '/');
 			}
 		}

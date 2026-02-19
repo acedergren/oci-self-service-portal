@@ -120,6 +120,36 @@ async function requireSetupToken(request: FastifyRequest, reply: FastifyReply): 
 }
 
 export async function setupRoutes(app: FastifyInstance): Promise<void> {
+	/**
+	 * Detect environment variables for pre-filling the setup wizard form.
+	 * Returns non-sensitive env vars only (no secrets). Publicly accessible
+	 * (no setup token required) so the form can pre-fill before the admin
+	 * enters their token.
+	 */
+	app.get(
+		'/api/setup/detect-env',
+		{
+			schema: {
+				response: {
+					200: z.object({
+						tenantUrl: z.string().optional(),
+						clientId: z.string().optional(),
+						discoveryUrl: z.string().optional(),
+						region: z.string().optional()
+					})
+				}
+			}
+		},
+		async (_request, reply) => {
+			return reply.send({
+				tenantUrl: process.env.OCI_IAM_TENANT_URL,
+				clientId: process.env.OCI_IAM_CLIENT_ID,
+				discoveryUrl: process.env.OCI_IAM_DISCOVERY_URL,
+				region: process.env.OCI_REGION
+			});
+		}
+	);
+
 	app.get(
 		'/api/setup/status',
 		{
