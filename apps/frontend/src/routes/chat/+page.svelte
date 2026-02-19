@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { PageData } from './$types';
+	import { page } from '$app/state';
 	import { Spinner, Badge, ModelPicker, ApprovalDialog } from '$lib/components/ui/index.js';
 	import MarkdownRenderer from '$lib/components/ui/MarkdownRenderer.svelte';
 	import { ThoughtPanel, ToolPanel, AgentWorkflowPanel } from '$lib/components/panels/index.js';
@@ -39,6 +40,22 @@
 			localSessionId = data.currentSessionId;
 		}
 	});
+
+	// Auto-send prompt from URL query parameter
+	$effect(() => {
+		const promptParam = page.url.searchParams.get('prompt');
+		if (promptParam && chat.messages.length === 0) {
+			input = promptParam;
+			setTimeout(() => {
+				chat.sendMessage({ text: promptParam });
+				input = '';
+				const url = new URL(window.location.href);
+				url.searchParams.delete('prompt');
+				window.history.replaceState({}, '', url.toString());
+			}, 100);
+		}
+	});
+
 	let sidePanelOpen = $state(true);
 	let input = $state('');
 
@@ -407,10 +424,13 @@
 		}
 
 		if (ctx.pendingApproval) {
-			if (event.key === 'y') {
-				handleToolApprove(ctx.pendingApproval.toolCallId);
-			} else if (event.key === 'n') {
-				handleToolReject(ctx.pendingApproval.toolCallId);
+			const tag = document.activeElement?.tagName;
+			if (tag !== 'INPUT' && tag !== 'TEXTAREA') {
+				if (event.key === 'y') {
+					handleToolApprove(ctx.pendingApproval.toolCallId);
+				} else if (event.key === 'n') {
+					handleToolReject(ctx.pendingApproval.toolCallId);
+				}
 			}
 		}
 
@@ -474,13 +494,13 @@
 			<div class="p-4 border-b border-muted">
 				<div class="flex items-center gap-3">
 					<div
-						class="h-10 w-10 rounded-lg bg-accent flex items-center justify-center text-primary font-bold"
+						class="h-10 w-10 rounded-lg bg-accent flex items-center justify-center text-white font-bold text-lg"
 					>
-						◆
+						C
 					</div>
 					<div>
-						<h1 class="font-bold text-lg text-primary">OCI GenAI</h1>
-						<p class="text-xs text-tertiary">Agentic Chat</p>
+						<h1 class="font-bold text-lg text-primary">Charlie</h1>
+						<p class="text-xs text-tertiary">AI Cloud Assistant</p>
 					</div>
 				</div>
 			</div>
@@ -512,13 +532,13 @@
 		<div class="p-4 border-b border-muted">
 			<div class="flex items-center gap-3">
 				<div
-					class="h-10 w-10 rounded-lg bg-accent flex items-center justify-center text-primary font-bold"
+					class="h-10 w-10 rounded-lg bg-accent flex items-center justify-center text-white font-bold text-lg"
 				>
-					◆
+					C
 				</div>
 				<div>
-					<h1 class="font-bold text-lg text-primary">OCI GenAI</h1>
-					<p class="text-xs text-tertiary">Agentic Chat</p>
+					<h1 class="font-bold text-lg text-primary">Charlie</h1>
+					<p class="text-xs text-tertiary">AI Cloud Assistant</p>
 				</div>
 			</div>
 		</div>
@@ -557,7 +577,10 @@
 			<!-- Header -->
 			<header class="flex items-center justify-between p-4 border-b border-default bg-secondary">
 				<div class="flex items-center gap-3">
-					<span class="text-accent font-bold">◆</span>
+					<span
+						class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-accent text-white font-bold text-sm"
+						>C</span
+					>
 					<button
 						onclick={() => (modelPickerOpen = true)}
 						class="hover:opacity-80 transition-fast cursor-pointer"
@@ -608,11 +631,15 @@
 				{#if chat.messages.length === 0}
 					<div class="flex items-center justify-center h-full">
 						<div class="text-center space-y-4">
-							<div class="text-6xl text-accent animate-pulse-glow">◆</div>
-							<h2 class="text-xl font-semibold text-primary">OCI GenAI Agent</h2>
+							<div
+								class="w-16 h-16 rounded-full bg-accent flex items-center justify-center text-white font-bold text-3xl animate-pulse-glow mx-auto"
+							>
+								C
+							</div>
+							<h2 class="text-xl font-semibold text-primary">Charlie</h2>
 							<p class="text-secondary max-w-md">
-								Manage your Oracle Cloud Infrastructure resources with natural language. Ask me to
-								list instances, create VCNs, manage databases, and more.
+								Ask Charlie to manage your Oracle Cloud Infrastructure with natural language. List
+								instances, create VCNs, manage databases, and more.
 							</p>
 							<div class="flex flex-wrap justify-center gap-2 mt-4">
 								<Badge variant="default">Compute</Badge>
@@ -723,7 +750,7 @@
 				<div class="flex gap-2 lg:gap-3">
 					<input
 						bind:value={input}
-						placeholder="Ask about OCI resources or compare cloud costs..."
+						placeholder="Ask Charlie anything about your cloud..."
 						class="chat-input flex-1 px-3 lg:px-4 py-3 rounded-lg text-base"
 						disabled={isLoading}
 					/>
