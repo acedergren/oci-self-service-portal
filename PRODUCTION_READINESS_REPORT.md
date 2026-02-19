@@ -312,6 +312,55 @@ actionRun.start({ inputData: { ... } }).catch(err => {
 
 ---
 
+### [LOW-12] 23 ad-hoc error responses in `workflows.ts` bypass PortalError
+
+**Source**: Error consistency sub-agent
+**File**: `apps/api/src/routes/workflows.ts` (lines 173, 221, 247, 256, 279, 285, 305, 315, 338, 348, 444, 483, 490, 492, 604, 610, 719, 779, 890, 924, 933, 979+)
+**Risk**: Three distinct error shapes exist across routes — `PortalError.toResponseBody()`, `{ error: string }`, and `{ error, code, message }`. The global error handler catches thrown errors correctly, but these `reply.send()` calls bypass it entirely, producing inconsistent shapes that complicate frontend error handling.
+**Fix**: Replace ad-hoc `reply.code(4xx).send({ error: '...' })` with `throw new ValidationError(...)` or `throw new NotFoundError(...)` — let the global handler serialize via `toResponseBody()`. **Effort: M**
+
+---
+
+### [LOW-13] Health endpoint missing Mastra and Valkey checks
+
+**Source**: Health endpoint sub-agent
+**File**: `apps/api/src/routes/health.ts`, `packages/server/src/health.ts`
+**Risk**: The `/health` readiness probe checks Oracle, OCI CLI, Sentry, and Prometheus — but not the Mastra workflow engine or Valkey cache. A degraded Mastra instance returns 200 healthy while Charlie is non-functional.
+**Missing items**: Mastra plugin availability check, Valkey connectivity verification, `/startup` probe for K8s slow-boot scenarios (Oracle migrations take 15-30s on first boot).
+**Fix**: Add `checks.mastra` using `fastify.hasDecorator('mastra')` + basic capability check; add `checks.cache` using `fastify.cache.get('__healthcheck__')`; add `/api/startup` endpoint. **Effort: M**
+
+---
+
+### [LOW-14] No workflow/job/webhook cancellation on graceful shutdown
+
+**Source**: Health endpoint sub-agent
+**File**: `apps/api/src/app.ts:356-364`
+**Risk**: SIGTERM drains HTTP connections and closes Oracle/Valkey — but long-running Mastra workflows are not signaled, scheduled cron jobs are not cancelled, and pending webhook deliveries are not flushed. Workflows in-progress at shutdown will be orphaned (status stuck as "running").
+**Fix**: Add `onClose` hooks for Mastra workflow cancellation, schedule plugin shutdown, and webhook queue flush. **Effort: M**
+
+---
+
+### [LOW-15] Two frontend catch blocks swallow errors without user feedback
+
+**Source**: Frontend error sub-agent
+**Files**: `apps/frontend/src/routes/chat/+page.svelte:346`, `apps/frontend/src/routes/admin/workflows/runs/+page.svelte:276`
+**Risk**:
+
+1. `chat/+page.svelte:346` — When approval logging fails, the user receives no feedback and believes the approval succeeded. The backend rejection is invisible.
+2. `admin/workflows/runs/+page.svelte:276` — SSE step-event parse errors are swallowed; workflow steps silently disappear from the UI without any degradation indicator.
+   **Fix**: Add `showError(...)` call in chat approval catch; add degradation flag in workflow SSE catch. **Effort: S**
+
+---
+
+### [LOW-16] ID logging in 16 locations enables activity correlation
+
+**Source**: PII/log sub-agent
+**Files**: `apps/api/src/plugins/rbac.ts`, `apps/api/src/routes/sessions.ts`, `apps/api/src/routes/workflows.ts`, `packages/server/src/auth/api-keys.ts`
+**Risk**: `userId`, `keyId`, `orgId`, `sessionId`, and `toolCallId` are logged in structured objects across 16 call sites. No raw credentials are exposed (auth headers redacted correctly), but ID logging creates an activity correlation trail that aids targeted phishing or privilege escalation reconnaissance.
+**Assessment**: Acceptable for audit/compliance purposes; worth reviewing which IDs are operationally necessary. No action required unless compliance posture demands stricter log hygiene. **Effort: S-M**
+
+---
+
 ## Production Readiness Checklist
 
 | Item                             | Status | Action Required                                      |
@@ -330,7 +379,11 @@ actionRun.start({ inputData: { ... } }).catch(err => {
 | Rate limiting                    | ✅     | Dual-layer: in-memory + Oracle                       |
 | LLM token guardrails             | ✅     | 50k input chars, 4000 output tokens                  |
 | Frontend error boundary          | ✅     | +error.svelte handles 4xx/5xx cleanly                |
-| Structured logging (no PII)      | ✅     | Pino redacts auth headers                            |
+| Frontend catch blocks            | ⚠️     | 2 silent swallows with no user feedback (LOW-15)     |
+| Structured logging (no PII)      | ✅     | Pino redacts auth headers; no credential leakage     |
+| Error response consistency       | ⚠️     | 23 ad-hoc responses in workflows.ts (LOW-12)         |
+| Health checks (Mastra/Valkey)    | ⚠️     | Missing from /health readiness probe (LOW-13)        |
+| Graceful shutdown (workflows)    | ⚠️     | No workflow/job/webhook cancellation (LOW-14)        |
 | Type safety                      | ✅     | 0 TypeScript errors, no implicit any leakage         |
 | Test coverage                    | ⚠️     | 5 pre-existing failures in frontend suite            |
 
@@ -350,3 +403,5 @@ actionRun.start({ inputData: { ... } }).catch(err => {
 ---
 
 _Report generated: 2026-02-19 | Source reports: REVIEW_SECURITY.md, REVIEW_OBSERVABILITY.md, REVIEW_PERFORMANCE.md, REVIEW_QUALITY.md, REVIEW_TESTING.md_
+_Additional deep-dive sub-agents: route-error-review, frontend-error-review, pii-log-review, error-consistency-review, health-endpoint-review_
+_Total findings: 3 CRITICAL, 6 HIGH, 10 MEDIUM, 16 LOW_
