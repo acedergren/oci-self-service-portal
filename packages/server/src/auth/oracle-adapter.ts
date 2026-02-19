@@ -33,6 +33,23 @@ const ALLOWED_TABLES = new Set([
 ]);
 
 /**
+ * Maps the singular model names that Better Auth passes (with usePlural: false)
+ * to the actual physical Oracle table names created by migrations.
+ * This avoids renaming tables (which would break app code) and avoids creating
+ * views (which would require INSTEAD-OF triggers for DML).
+ * Note: 'user' and 'session' are Oracle reserved words and cannot be table names.
+ */
+const TABLE_NAME_MAP: Record<string, string> = {
+	user: 'users',
+	session: 'auth_sessions',
+	account: 'accounts',
+	verification: 'verifications',
+	organization: 'organizations',
+	member: 'org_members',
+	invitation: 'org_invitations'
+};
+
+/**
  * Validate a column name after snake_case conversion.
  * Throws if the name contains characters that could enable SQL injection.
  */
@@ -57,7 +74,8 @@ export function validateTableName(name: string): string {
 	if (!ALLOWED_TABLES.has(name)) {
 		throw new Error(`Unknown table name: "${name}". Allowed: ${[...ALLOWED_TABLES].join(', ')}`);
 	}
-	return name;
+	// Map singular model names to actual physical Oracle table names
+	return TABLE_NAME_MAP[name] ?? name;
 }
 
 export function toSnakeCase(str: string): string {

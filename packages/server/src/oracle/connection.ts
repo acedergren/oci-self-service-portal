@@ -8,6 +8,11 @@ const log = createLogger('oracle');
 // Thin mode: no Oracle Client needed. Set global defaults.
 oracledb.outFormat = oracledb.OUT_FORMAT_OBJECT;
 oracledb.autoCommit = true;
+// Fetch CLOB/NCLOB columns as JavaScript strings automatically.
+// Without this, oracledb returns Lob stream objects for CLOB columns,
+// which cannot be JSON.parse()'d and break repositories that treat
+// extra_config, model_allowlist, etc. as string values.
+oracledb.fetchAsString = [oracledb.CLOB];
 
 /** Re-export DB_TYPE_VECTOR so apps/api can use it without a direct oracledb dependency */
 export const DB_TYPE_VECTOR: number = oracledb.DB_TYPE_VECTOR;

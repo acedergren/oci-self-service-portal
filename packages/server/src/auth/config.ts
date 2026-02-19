@@ -65,7 +65,7 @@ async function findOidcSub(userId: string): Promise<string | null> {
 		const { withConnection } = await import('../oracle/connection');
 		return await withConnection(async (conn) => {
 			const result = await conn.execute(
-				`SELECT account_id FROM account
+				`SELECT account_id FROM accounts
 				 WHERE user_id = :userId AND provider_id = 'oci-iam'
 				 FETCH FIRST 1 ROWS ONLY`,
 				{ userId }
