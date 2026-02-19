@@ -95,7 +95,6 @@
 		background-color: var(--accent-primary);
 		color: var(--bg-primary);
 		box-shadow: 0 0 20px -5px var(--accent-primary);
-		animation: bioluminescent-pulse 3s ease-in-out infinite;
 	}
 
 	.step.completed .step-indicator {

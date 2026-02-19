@@ -494,7 +494,7 @@
 		cursor: pointer;
 		transition: all var(--transition-fast);
 		box-shadow: 0 0 30px -10px var(--accent-primary);
-		animation: bioluminescent-pulse 3s ease-in-out infinite;
+		animation: accent-pulse 3s ease-in-out infinite;
 	}
 
 	.btn-complete:hover:not(:disabled) {

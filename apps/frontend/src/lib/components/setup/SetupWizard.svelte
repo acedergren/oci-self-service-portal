@@ -196,7 +196,7 @@
 		color: var(--accent-primary);
 		background: var(--bg-elevated);
 		border-radius: var(--radius-lg);
-		animation: bioluminescent-pulse 3s ease-in-out infinite;
+		box-shadow: 0 0 24px -4px color-mix(in srgb, var(--accent-primary) 40%, transparent);
 	}
 
 	.wizard-title {

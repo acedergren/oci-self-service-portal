@@ -167,12 +167,12 @@
 
 	.result.success {
 		color: var(--semantic-success);
-		background-color: oklch(0.7 0.18 145 / 0.1);
+		background-color: color-mix(in srgb, var(--semantic-success) 10%, transparent);
 	}
 
 	.result.error {
 		color: var(--semantic-error);
-		background-color: oklch(0.65 0.2 25 / 0.1);
+		background-color: color-mix(in srgb, var(--semantic-error) 10%, transparent);
 	}
 
 	.result svg {
