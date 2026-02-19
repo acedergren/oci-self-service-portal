@@ -126,7 +126,7 @@ async function deliverToWebhook(
 
 	// Add HMAC signature if secret is configured
 	if (webhook.SECRET) {
-		headers['X-Webhook-Signature'] = generateSignature(payload, webhook.SECRET);
+		headers['X-Webhook-Signature'] = `sha256=${generateSignature(payload, webhook.SECRET)}`;
 	}
 
 	// Validate URL (SSRF prevention with DNS resolution to prevent rebinding)

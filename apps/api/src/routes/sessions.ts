@@ -212,9 +212,8 @@ export async function sessionRoutes(app: FastifyInstance): Promise<void> {
 					return reply.status(resp.status).send(resp);
 				}
 
-				// Verify session ownership (prevent IDOR)
-				// Null userId check allows legacy sessions created before user tracking
-				if (session.userId && session.userId !== userId) {
+				// Verify session ownership (prevent IDOR) — fail-closed for legacy null userId
+				if (!session.userId || session.userId !== userId) {
 					log.warn({ sessionId, userId, ownerId: session.userId }, 'Session ownership mismatch');
 					return reply.status(403).send({
 						error: 'Forbidden',

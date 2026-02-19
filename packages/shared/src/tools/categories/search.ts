@@ -58,7 +58,9 @@ export const searchTools: ToolEntry[] = [
 			const displayName = args.displayName as string;
 			const resourceType = args.resourceType as string | undefined;
 			const typeClause = resourceType ? `${resourceType} resources` : 'all resources';
-			const queryText = `query ${typeClause} where displayName = '${displayName}'`;
+			// Escape single quotes to prevent OCI query injection
+			const escapedName = displayName.replace(/'/g, "''");
+			const queryText = `query ${typeClause} where displayName = '${escapedName}'`;
 			const response = await executeOCISDK('resourceSearch', 'searchResources', {
 				searchDetails: {
 					type: 'Structured',
