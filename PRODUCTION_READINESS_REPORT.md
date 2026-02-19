@@ -1,9 +1,9 @@
 # Production Readiness Report — CloudNow Portal
 
 **Date**: 2026-02-19
-**Reviewers**: Security, Observability, Performance, Quality, Testing (baseline only)
+**Reviewers**: Security, Observability, Performance, Quality, Testing
 **Scope**: Full monorepo — `apps/frontend`, `apps/api`, `packages/*`
-**Baseline**: 1643/1644 API tests passing; 932/937 frontend tests passing
+**Baseline**: 1619/1622 API tests passing; 938/942 frontend tests passing
 
 ---
 
@@ -19,23 +19,24 @@ The remaining high/medium findings are production-quality improvements — impor
 
 ## Quality Gate Results
 
-| Gate                  | Status       | Detail                                             |
-| --------------------- | ------------ | -------------------------------------------------- |
-| API Tests             | ✅ 1643/1644 | 1 skipped (expected)                               |
-| Frontend Tests        | ⚠️ 932/937   | 5 pre-existing failures in removed component tests |
-| TypeScript (API)      | ✅ Clean     | 0 errors                                           |
-| TypeScript (Frontend) | ✅ Clean     | 0 svelte-check errors                              |
-| Lint (API)            | ✅ Clean     | 0 ESLint errors                                    |
-| Semgrep               | ✅ Clean     | 0 security findings                                |
-| SQL Injection         | ✅ Clean     | 14 repository files audited, 0 vulnerabilities     |
-| Cross-app imports     | ✅ Clean     | No boundary violations detected                    |
-| Debug statements      | ✅ Clean     | No console.log in production code                  |
+| Gate                  | Status       | Detail                                         |
+| --------------------- | ------------ | ---------------------------------------------- |
+| API Tests             | ⚠️ 1619/1622 | 3 pre-existing failures (auth edge cases)      |
+| Frontend Tests        | ⚠️ 938/942   | 2 pre-existing failures (Phase 8 timeouts)     |
+| TypeScript (API)      | ✅ Clean     | 0 errors                                       |
+| TypeScript (Frontend) | ✅ Clean     | 0 svelte-check errors                          |
+| Lint (API)            | ✅ Clean     | 0 ESLint errors                                |
+| Semgrep               | ✅ Clean     | 0 security findings                            |
+| SQL Injection         | ✅ Clean     | 14 repository files audited, 0 vulnerabilities |
+| Cross-app imports     | ✅ Clean     | No boundary violations detected                |
+| Debug statements      | ✅ Clean     | No console.log in production code              |
+| Route coverage        | ⚠️ 24/25     | `cloud-advisor.ts` route has no test file      |
+| Workflow coverage     | ⚠️ 1/4       | `classify-intent`, `correct`, `query` untested |
 
-**Frontend test failures** (pre-existing, unrelated to current work):
+**Pre-existing test failures:**
 
-- `routing-restructure.test.ts` — references removed `PortalHeader` component
-- `phase5/component-extraction.test.ts` — same
-- `phase4/rate-limiter.test.ts` — SQL assertion mismatch (`MERGE INTO` vs `DELETE`)
+- API: `audit.test.ts`, `admin-rbac.test.ts`, `cors.test.ts` — mock factory registration order issues
+- Frontend: `phase8/integration.test.ts` (hook timeout 10s), `phase8/webhooks.test.ts` (test timeout 5s)
 
 ---
 
@@ -287,11 +288,27 @@ actionRun.start({ inputData: { ... } }).catch(err => {
 
 ---
 
-### [LOW-9] 5 pre-existing frontend test failures
+### [LOW-9] `cloud-advisor.ts` route has no test file
+
+**Source**: Test reviewer
+**File**: `apps/api/src/routes/cloud-advisor.ts`
+**Note**: Only uncovered route in the entire API. Silent failures in cost/right-sizing analysis would go undetected. Create `tests/routes/cloud-advisor.test.ts` with `buildTestApp` + auth + happy path. **Effort: S**
+
+---
+
+### [LOW-10] Charlie classify-intent, correct, query workflows have no tests
+
+**Source**: Test reviewer
+**Files**: `apps/api/src/mastra/workflows/charlie/classify-intent.ts`, `correct.ts`, `query.ts`
+**Note**: Wrong intent classification could route destructive operations through read-only workflow path. Use counter-based mock pattern for sequential LLM responses. **Effort: M-L**
+
+---
+
+### [LOW-11] Pre-existing frontend test failures (Phase 8)
 
 **Source**: Test baseline
-**Files**: `apps/frontend/src/tests/routing-restructure.test.ts`, `phase5/component-extraction.test.ts`, `phase4/rate-limiter.test.ts`
-**Note**: All reference removed `PortalHeader` component or stale SQL patterns. Unrelated to current work. Fix as part of Phase 11 test hygiene.
+**Files**: `apps/frontend/src/tests/phase8/integration.test.ts`, `phase8/webhooks.test.ts`
+**Note**: Hook timeout and test timeout. Fix: move expensive setup to `beforeAll`, increase timeout, mock webhook HTTP dispatch. Unrelated to current work. Fix as Phase 11 test hygiene.
 
 ---
 
@@ -332,5 +349,4 @@ actionRun.start({ inputData: { ... } }).catch(err => {
 
 ---
 
-_Report generated: 2026-02-19 | Source reports: REVIEW_SECURITY.md, REVIEW_OBSERVABILITY.md, REVIEW_PERFORMANCE.md, REVIEW_QUALITY.md_
-_Test coverage report (REVIEW_TESTING.md) not available — agent did not complete in time._
+_Report generated: 2026-02-19 | Source reports: REVIEW_SECURITY.md, REVIEW_OBSERVABILITY.md, REVIEW_PERFORMANCE.md, REVIEW_QUALITY.md, REVIEW_TESTING.md_

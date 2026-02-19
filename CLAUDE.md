@@ -7,6 +7,11 @@ Monorepo for CloudNow: SvelteKit frontend + Fastify 5 API + shared packages. Clo
 - **Stay focused**: Do not expand scope beyond what was requested. If you notice something interesting but out-of-scope, mention it briefly and move on.
 - **Verify before assuming**: Check actual file paths, package exports, and config before referencing them in code or docs.
 - **Fail fast on blockers**: If blocked by a hook, permission, or missing dependency, report it immediately rather than working around it silently.
+- **Plan before acting**: For any task with 3+ steps or an architectural decision, enter plan mode first. Write a spec before writing code.
+- **Stop and re-plan when sideways**: If an approach isn't working, STOP. Don't keep pushing. Re-examine assumptions and re-plan before continuing.
+- **Autonomous bug fixing**: When given a bug report, diagnose it fully — read logs, failing tests, error traces — then fix it. Don't ask for hand-holding on the mechanics.
+- **Verify before starting**: Before implementing anything, check `git log --oneline -20`, grep the codebase for existing implementations, and confirm the work isn't already done. Duplicate effort is a known failure mode in this codebase.
+- **Never rename without asking**: Never rename MCP server entries, config keys, or identifiers without explicit instruction. Preserve existing naming conventions.
 
 ## Task Scope Discipline
 
@@ -119,6 +124,13 @@ Critical reminders: Plugin registration order is load-bearing. `mockReset: true`
 **Versions**: Vitest 4.0.18, Fastify 5.7.4. Run: `npx vitest run apps/api` (API), `npx vitest run apps/frontend` (frontend).
 
 **TDD workflow**: Write tests first. Ensure all tests pass and TypeScript compiles cleanly before committing. Do not start work on a subsequent phase until the current one is green.
+
+**Test directory**: Always run from the monorepo root with a workspace filter — never from inside a workspace subdirectory. Wrong directory causes spurious failures by picking up test files from multiple workspaces:
+
+```bash
+npx vitest run apps/api      # API tests only (from repo root)
+npx vitest run apps/frontend # Frontend tests only (from repo root)
+```
 
 ### Vitest Configuration
 
@@ -278,6 +290,10 @@ For content writing tasks (LinkedIn posts, docs, communications): Use a direct, 
 - **Commit early and often**: After each logical unit of work, not batched at the end
 - **Pre-validate before committing**: Run lint + typecheck + full test suite BEFORE staging and committing, not as part of the pre-commit hook discovery. If pre-commit hooks block due to pre-existing lint errors in files you didn't touch, fix them first or use `--no-verify` with a documented note. Never leave work uncommitted because of pre-commit hook failures.
 - **TDD by default**: Write tests first (TDD). Ensure all tests pass and TypeScript compiles cleanly. Commit with conventional message format. Do not start any subsequent phase until the current one is green.
+- **Upfront investigation**: Before implementing, run: 1) `git log --oneline -20` for recent related changes 2) `grep -r` for existing implementations 3) verify the target package and directory are correct. Only then write code.
+- **Scripted bulk operations**: For multi-file migrations (import path changes, package renames), prefer `grep -rl | xargs sed -i` over file-by-file Edit tool calls. It's faster and less error-prone for the frequent migration work in this repo.
+- **Elegance check**: For non-trivial changes, pause and ask "is there a more elegant way?" before implementing. If the first solution feels hacky, implement the clean version. Skip for simple obvious fixes — don't over-engineer.
+- **Verification self-check**: Before marking any task done, ask: "Would a staff engineer approve this?" Run tests, check logs, demonstrate correctness. A task is not done until the commit exists and quality gates pass.
 
 ## Agent Team Coordination
 
