@@ -20,6 +20,8 @@ import { Observability } from '@mastra/observability';
 import { OracleVectorStore } from '../mastra/rag/oracle-vector-store.js';
 import { createMastra } from '../mastra/index.js';
 import { mcpConnectionManager } from '../services/mcp-connection-manager.js';
+import { createFindingsRepository } from '../services/findings-repository.js';
+import { startCloudAdvisorScheduler } from '../mastra/scheduler.js';
 
 declare module 'fastify' {
 	interface FastifyInstance {
@@ -130,6 +132,18 @@ const mastraPlugin: FastifyPluginAsync = async (fastify) => {
 	});
 
 	await server.init();
+
+	// ── CloudAdvisor scheduler ─────────────────────────────────────────
+	// Start scheduled analyses after Mastra + Oracle are both ready.
+	// No-op if CLOUDADVISOR_ENABLED=false or Oracle is unavailable.
+	if (hasOracle) {
+		const findingsRepo = createFindingsRepository(fastify.oracle.withConnection);
+		startCloudAdvisorScheduler({
+			mastra,
+			findingsRepository: findingsRepo,
+			compartmentId: process.env.OCI_COMPARTMENT_ID
+		});
+	}
 
 	// ── Add cleanup hook for MCP connection manager ────────────────────
 	fastify.addHook('onClose', async () => {

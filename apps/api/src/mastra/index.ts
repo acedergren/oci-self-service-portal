@@ -19,11 +19,17 @@ import { OracleStore } from './storage/oracle-store.js';
 import { OracleVectorStore } from './rag/oracle-vector-store.js';
 import { buildMastraTools } from './tools/registry.js';
 import { createCharlieAgent, DEFAULT_MODEL } from './agents/charlie.js';
+import { createCloudAdvisorAgent } from './agents/cloud-advisor.js';
 import { actionWorkflow } from './workflows/action-workflow.js';
 import { classifyIntentWorkflow } from './workflows/charlie/classify-intent.js';
 import { queryWorkflow } from './workflows/charlie/query.js';
 import { charlieActionWorkflow } from './workflows/charlie/action.js';
 import { correctWorkflow } from './workflows/charlie/correct.js';
+import { costAnalysisWorkflow } from './workflows/cloud-advisor/cost-analysis.js';
+import { securityAnalysisWorkflow } from './workflows/cloud-advisor/security-analysis.js';
+import { rightSizingWorkflow } from './workflows/cloud-advisor/right-sizing.js';
+import { aiPerformanceWorkflow } from './workflows/cloud-advisor/ai-performance.js';
+import { fullAnalysisWorkflow } from './workflows/cloud-advisor/full-analysis.js';
 
 type WithConnectionFn = <T>(fn: (conn: OracleConnection) => Promise<T>) => Promise<T>;
 
@@ -80,9 +86,10 @@ export function createMastra(config: MastraConfig): MastraBundle {
 	});
 
 	const charlie = createCharlieAgent({ model: DEFAULT_MODEL, memory, compartmentId });
+	const cloudAdvisor = createCloudAdvisorAgent();
 
 	const mastra = new Mastra({
-		agents: { charlie },
+		agents: { charlie, cloudAdvisor },
 		tools,
 		storage,
 		memory: { charlie: memory },
@@ -92,7 +99,12 @@ export function createMastra(config: MastraConfig): MastraBundle {
 			classifyIntentWorkflow,
 			queryWorkflow,
 			charlieActionWorkflow,
-			correctWorkflow
+			correctWorkflow,
+			costAnalysisWorkflow,
+			securityAnalysisWorkflow,
+			rightSizingWorkflow,
+			aiPerformanceWorkflow,
+			fullAnalysisWorkflow
 		}
 	});
 
