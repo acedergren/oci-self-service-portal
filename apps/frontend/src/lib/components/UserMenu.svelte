@@ -45,7 +45,7 @@
 	</button>
 
 	{#if menuOpen}
-		<div class="user-menu-dropdown panel-glass animate-slide-in-up">
+		<div class="user-menu-dropdown glass animate-slide-in-up">
 			<div class="user-menu-header">
 				{#if user.image}
 					<img src={user.image} alt="" class="user-avatar-lg" />
@@ -130,6 +130,7 @@
 		min-width: 240px;
 		padding: var(--space-sm);
 		z-index: 50;
+		border-radius: var(--radius-lg);
 	}
 
 	.user-menu-header {

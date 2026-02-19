@@ -10,7 +10,7 @@
 </script>
 
 <div class="login-page">
-	<div class="login-card panel-glass">
+	<div class="login-card glass-charlie">
 		<div class="login-logo">
 			<div class="logo-diamond">&#9670;</div>
 		</div>
@@ -40,6 +40,7 @@
 		max-width: 400px;
 		padding: var(--space-xxl) var(--space-xl);
 		text-align: center;
+		border-radius: var(--radius-xl);
 	}
 
 	.login-logo {

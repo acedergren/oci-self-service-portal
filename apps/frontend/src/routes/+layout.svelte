@@ -61,10 +61,18 @@
 		align-items: center;
 		justify-content: space-between;
 		padding: var(--space-sm) var(--space-md);
-		border-bottom: 1px solid var(--border-muted);
-		background: var(--bg-secondary);
 		height: 48px;
 		flex-shrink: 0;
+		position: sticky;
+		top: 0;
+		z-index: 100;
+		background: color-mix(in srgb, var(--bg-secondary) 78%, transparent);
+		backdrop-filter: blur(32px) saturate(160%);
+		-webkit-backdrop-filter: blur(32px) saturate(160%);
+		border-bottom: 1px solid var(--glass-border);
+		box-shadow:
+			0 1px 0 var(--glass-highlight) inset,
+			0 4px 24px color-mix(in srgb, var(--fg-primary) 7%, transparent);
 	}
 
 	.header-left {

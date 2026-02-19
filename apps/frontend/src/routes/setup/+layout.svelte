@@ -5,6 +5,6 @@
 <style>
 	.setup-layout {
 		min-height: 100dvh;
-		background-color: var(--bg-primary);
+		background-color: transparent;
 	}
 </style>

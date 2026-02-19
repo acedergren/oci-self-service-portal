@@ -93,14 +93,17 @@
 		display: grid;
 		grid-template-columns: 280px 1fr;
 		min-height: 100dvh;
-		background: var(--bg-primary);
+		background: transparent;
 	}
 
 	.admin-sidebar {
 		display: flex;
 		flex-direction: column;
-		background: var(--bg-secondary);
-		border-right: 1px solid var(--border-default);
+		background: color-mix(in srgb, var(--bg-secondary) 65%, transparent);
+		backdrop-filter: var(--glass-blur);
+		-webkit-backdrop-filter: var(--glass-blur);
+		border-right: 1px solid var(--glass-border);
+		box-shadow: 1px 0 0 var(--glass-highlight) inset;
 		padding: var(--space-lg);
 	}
 

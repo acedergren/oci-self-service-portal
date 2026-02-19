@@ -65,6 +65,8 @@
 	--radius-sm: 0.25rem;
 	--radius-md: 0.5rem;
 	--radius-lg: 0.75rem;
+	--radius-xl: 1rem;
+	--radius-2xl: 1.25rem;
 	--radius-full: 9999px;
 
 	/* Transitions */
@@ -92,6 +94,39 @@
 	--space-fluid-md: clamp(0.5rem, 0.4rem + 0.75vw, 1rem);
 	--space-fluid-lg: clamp(0.75rem, 0.5rem + 1vw, 1.5rem);
 	--space-fluid-xl: clamp(1rem, 0.75rem + 1.5vw, 2rem);
+
+	/* Shadow system — soft, large-radius for floating-panel feel */
+	--shadow-sm:
+		0 2px 8px color-mix(in srgb, var(--fg-primary) 7%, transparent),
+		0 1px 2px color-mix(in srgb, var(--fg-primary) 5%, transparent);
+	--shadow-md:
+		0 8px 32px color-mix(in srgb, var(--fg-primary) 10%, transparent),
+		0 2px 8px color-mix(in srgb, var(--fg-primary) 6%, transparent);
+	--shadow-lg:
+		0 24px 64px color-mix(in srgb, var(--fg-primary) 14%, transparent),
+		0 8px 24px color-mix(in srgb, var(--fg-primary) 8%, transparent);
+
+	/* Glass tokens — light mode */
+	--glass-fill: color-mix(in srgb, var(--bg-secondary) 72%, transparent);
+	--glass-border: color-mix(in srgb, white 32%, transparent);
+	--glass-highlight: color-mix(in srgb, white 68%, transparent);
+	--glass-edge: color-mix(in srgb, var(--fg-primary) 8%, transparent);
+	--glass-rim: color-mix(in srgb, white 30%, transparent);
+	--glass-edge-shadow: color-mix(in srgb, var(--fg-primary) 5%, transparent);
+	--glass-blur: blur(16px) saturate(160%);
+	--glass-shadow:
+		0 16px 48px color-mix(in srgb, var(--fg-primary) 10%, transparent),
+		0 2px 8px color-mix(in srgb, var(--fg-primary) 6%, transparent);
+
+	/* Actor tokens */
+	--charlie-accent: var(--accent-primary);
+	--charlie-bg: color-mix(in srgb, var(--accent-primary) 8%, var(--bg-primary));
+	--advisor-accent: var(--semantic-warning);
+	--advisor-bg: color-mix(in srgb, var(--semantic-warning) 8%, var(--bg-secondary));
+	--advisor-border: var(--semantic-warning);
+
+	/* Message background aliases */
+	--message-user-bg: color-mix(in srgb, var(--accent-primary) 8%, var(--bg-primary));
 }
 
 /* Dark mode — sober slate */
@@ -138,11 +173,48 @@
 
 	/* Message backgrounds */
 	--message-user: color-mix(in srgb, #14b8a6 10%, #1e293b);
+
+	/* Glass tokens — dark mode */
+	--glass-fill: color-mix(in srgb, var(--bg-secondary) 55%, transparent);
+	--glass-border: color-mix(in srgb, white 12%, transparent);
+	--glass-highlight: color-mix(in srgb, white 24%, transparent);
+	--glass-edge: color-mix(in srgb, black 25%, transparent);
+	--glass-rim: color-mix(in srgb, white 7%, transparent);
+	--glass-edge-shadow: color-mix(in srgb, black 20%, transparent);
+	--glass-blur: blur(20px) saturate(200%);
+	--glass-shadow:
+		0 20px 60px color-mix(in srgb, black 30%, transparent),
+		0 4px 12px color-mix(in srgb, black 20%, transparent);
 }
 
 /* Base styles */
+
+/* Background mesh — required for backdrop-filter depth on glass surfaces */
+html {
+	min-height: 100%;
+	background:
+		radial-gradient(
+			ellipse 80% 60% at 20% -10%,
+			color-mix(in srgb, var(--accent-primary) 18%, transparent) 0%,
+			transparent 70%
+		),
+		radial-gradient(
+			ellipse 60% 50% at 80% 15%,
+			color-mix(in srgb, var(--agent-waiting) 12%, transparent) 0%,
+			transparent 60%
+		),
+		radial-gradient(
+			ellipse 70% 40% at 50% 80%,
+			color-mix(in srgb, var(--accent-primary) 10%, transparent) 0%,
+			transparent 60%
+		),
+		var(--bg-primary);
+	background-attachment: fixed;
+	transition: background var(--transition-slow);
+}
+
 body {
-	background-color: var(--bg-primary);
+	background-color: transparent;
 	color: var(--fg-primary);
 	font-family:
 		'Plus Jakarta Sans',
@@ -495,6 +567,106 @@ code {
 
 .panel-content {
 	padding: var(--space-md);
+}
+
+/* Glass utility classes */
+.glass {
+	background: var(--glass-fill);
+	backdrop-filter: var(--glass-blur);
+	-webkit-backdrop-filter: var(--glass-blur);
+	border: 1px solid var(--glass-border);
+	box-shadow:
+		0 1px 0 var(--glass-highlight) inset,
+		0 -1px 0 var(--glass-edge) inset,
+		1px 0 0 var(--glass-highlight) inset,
+		0 0 0 1px var(--glass-rim),
+		var(--glass-shadow);
+}
+
+/* Glass with teal tint — Charlie (AI assistant) surfaces */
+.glass-charlie {
+	background: color-mix(
+		in srgb,
+		var(--accent-primary) 9%,
+		color-mix(in srgb, var(--bg-secondary) 92%, transparent)
+	);
+	backdrop-filter: var(--glass-blur);
+	-webkit-backdrop-filter: var(--glass-blur);
+	border: 1px solid color-mix(in srgb, var(--accent-primary) 30%, var(--border-default));
+	box-shadow:
+		0 1px 0 var(--glass-highlight) inset,
+		0 -1px 0 var(--glass-edge) inset,
+		1px 0 0 var(--glass-highlight) inset,
+		0 0 0 1px color-mix(in srgb, var(--accent-primary) 15%, var(--glass-rim)),
+		0 24px 64px color-mix(in srgb, var(--accent-primary) 14%, transparent),
+		0 4px 16px color-mix(in srgb, var(--fg-primary) 8%, transparent);
+}
+
+/* Glass with amber tint — CloudAdvisor surfaces */
+.glass-advisor {
+	background: color-mix(
+		in srgb,
+		var(--semantic-warning) 8%,
+		color-mix(in srgb, var(--bg-secondary) 92%, transparent)
+	);
+	backdrop-filter: var(--glass-blur);
+	-webkit-backdrop-filter: var(--glass-blur);
+	border-left: 3px solid color-mix(in srgb, var(--advisor-accent) 80%, transparent);
+	border-top: 1px solid color-mix(in srgb, var(--semantic-warning) 20%, var(--glass-border));
+	border-right: 1px solid var(--glass-border);
+	border-bottom: 1px solid var(--glass-border);
+	box-shadow:
+		0 1px 0 var(--glass-highlight) inset,
+		0 -1px 0 var(--glass-edge) inset,
+		1px 0 0 var(--glass-highlight) inset,
+		0 0 0 1px color-mix(in srgb, var(--advisor-accent) 20%, var(--glass-rim)),
+		0 24px 64px color-mix(in srgb, var(--semantic-warning) 10%, transparent),
+		0 4px 16px color-mix(in srgb, var(--fg-primary) 8%, transparent);
+}
+
+/* Dark mode overrides — reduced glow for actor cards */
+[data-theme='dark'] .glass-charlie {
+	background: color-mix(
+		in srgb,
+		var(--accent-primary) 12%,
+		color-mix(in srgb, var(--bg-secondary) 55%, transparent)
+	);
+	box-shadow:
+		0 1px 0 var(--glass-highlight) inset,
+		0 -1px 0 var(--glass-edge) inset,
+		1px 0 0 var(--glass-highlight) inset,
+		0 0 0 1px color-mix(in srgb, var(--accent-primary) 8%, var(--glass-rim)),
+		0 12px 40px color-mix(in srgb, var(--accent-primary) 8%, transparent),
+		0 4px 16px color-mix(in srgb, var(--fg-primary) 6%, transparent);
+}
+
+[data-theme='dark'] .glass-advisor {
+	background: color-mix(
+		in srgb,
+		var(--semantic-warning) 8%,
+		color-mix(in srgb, var(--bg-secondary) 55%, transparent)
+	);
+	box-shadow:
+		0 1px 0 var(--glass-highlight) inset,
+		0 -1px 0 var(--glass-edge) inset,
+		1px 0 0 var(--glass-highlight) inset,
+		0 0 0 1px color-mix(in srgb, var(--advisor-accent) 8%, var(--glass-rim)),
+		0 12px 40px color-mix(in srgb, var(--semantic-warning) 5%, transparent),
+		0 4px 16px color-mix(in srgb, var(--fg-primary) 6%, transparent);
+}
+
+/* Alias for panel-glass — used by login + UserMenu until Wave 2 migration */
+.panel-glass {
+	background: var(--glass-fill);
+	backdrop-filter: var(--glass-blur);
+	-webkit-backdrop-filter: var(--glass-blur);
+	border: 1px solid var(--glass-border);
+	box-shadow:
+		0 1px 0 var(--glass-highlight) inset,
+		0 -1px 0 var(--glass-edge) inset,
+		1px 0 0 var(--glass-highlight) inset,
+		0 0 0 1px var(--glass-rim),
+		var(--glass-shadow);
 }
 
 /* Message styling */
