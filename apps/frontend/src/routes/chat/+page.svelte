@@ -34,6 +34,16 @@
 	let localSessionId = $state<string | null>(null);
 	let sidebarOpen = $state(true);
 
+	// Apply dark theme + sage-smoke palette on mount
+	$effect(() => {
+		if (typeof document !== 'undefined') {
+			document.documentElement.setAttribute('data-theme', theme);
+			if (theme === 'dark') {
+				document.documentElement.setAttribute('data-palette', 'sage-smoke');
+			}
+		}
+	});
+
 	// Sync initial session ID from server data (only on first load)
 	$effect(() => {
 		if (localSessionId === null && data.currentSessionId) {
@@ -78,6 +88,11 @@
 		theme = theme === 'dark' ? 'light' : 'dark';
 		if (typeof document !== 'undefined') {
 			document.documentElement.setAttribute('data-theme', theme);
+			if (theme === 'dark') {
+				document.documentElement.setAttribute('data-palette', 'sage-smoke');
+			} else {
+				document.documentElement.removeAttribute('data-palette');
+			}
 		}
 	}
 
@@ -165,6 +180,9 @@
 		return fetch(input, init);
 	};
 
+	const THOUGHT_CLEAR_DELAY_MS = 2000;
+	const SESSION_TITLE_REFRESH_DELAY_MS = 1000;
+
 	// Create shared chat context — encapsulates Chat instance + derived state
 	const ctx = createChatContext({ customFetch: modelAwareFetch });
 	const { chat } = ctx;
@@ -186,19 +204,23 @@
 		// Simulate thinking state
 		ctx.currentThought = 'Analyzing your request...';
 
-		chat.sendMessage({ text: input });
+		try {
+			await chat.sendMessage({ text: input });
+		} catch (err) {
+			showError(err instanceof Error ? err.message : 'Failed to send message');
+		}
 		input = '';
 
 		// Clear thought after a delay
 		setTimeout(() => {
 			ctx.currentThought = undefined;
-		}, 2000);
+		}, THOUGHT_CLEAR_DELAY_MS);
 
 		// Refresh session title after first message
 		if (isFirstMessage) {
 			setTimeout(() => {
 				queryClient.invalidateQueries({ queryKey: queryKeys.sessions.all() });
-			}, 1000);
+			}, SESSION_TITLE_REFRESH_DELAY_MS);
 		}
 	}
 
@@ -235,6 +257,7 @@
 			ctx.clearAgentState();
 		} catch (error) {
 			console.error('Failed to load session:', error);
+			showError('Failed to load session. Please try again.');
 		}
 	}
 
@@ -286,8 +309,7 @@
 			const result = await response.json();
 
 			if (result.success) {
-				// Tool executed successfully - could add the result to chat
-				console.log('Tool executed:', result);
+				// Tool executed successfully
 			} else {
 				showError(`Tool execution failed: ${result.error || 'Unknown error'}`);
 			}
@@ -651,7 +673,7 @@
 						</div>
 					</div>
 				{:else}
-					{#each chat.messages as message, index (index)}
+					{#each chat.messages as message, index (message.id)}
 						<div class="message flex {message.role === 'user' ? 'justify-end' : 'justify-start'}">
 							<div
 								class="max-w-[80%] rounded-lg px-4 py-3 {message.role === 'user'
@@ -748,7 +770,9 @@
 			<!-- Input form -->
 			<form onsubmit={handleSubmit} class="p-4 border-t border-default bg-secondary safe-bottom">
 				<div class="flex gap-2 lg:gap-3">
+					<label for="chat-input" class="sr-only">Chat message</label>
 					<input
+						id="chat-input"
 						bind:value={input}
 						placeholder="Ask Charlie anything about your cloud..."
 						class="chat-input flex-1 px-3 lg:px-4 py-3 rounded-lg text-base"

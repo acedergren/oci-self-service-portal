@@ -187,6 +187,29 @@
 		0 4px 12px color-mix(in srgb, black 20%, transparent);
 }
 
+/* Dark palette: sage-smoke — green-undertone variant */
+[data-theme='dark'][data-palette='sage-smoke'] {
+	/* Backgrounds */
+	--bg-primary: #111714; /* grey-green, nearly black */
+	--bg-secondary: #181f1b; /* slate with green undertone */
+	--bg-tertiary: #232c26; /* lifted card surface */
+	--bg-elevated: #2d3a30; /* modal / dropdown */
+	--bg-hover: #3a4a3d; /* hover state */
+
+	/* Foreground */
+	--fg-primary: #f0f5f1; /* warm white with green tint */
+	--fg-secondary: #c8d5ca; /* muted text */
+	--fg-tertiary: #8aa58e; /* very muted / timestamps */
+	--fg-disabled: #5f7a63; /* disabled, green-muted */
+
+	/* Borders — green-tinted to match bg */
+	--border-default: #2d3a30; /* matches bg-elevated */
+	--border-muted: #1e2a21; /* between secondary/tertiary */
+
+	/* Message — adapted for green bg */
+	--message-user: color-mix(in srgb, #14b8a6 10%, #181f1b);
+}
+
 /* Base styles */
 
 /* Background mesh — required for backdrop-filter depth on glass surfaces */
