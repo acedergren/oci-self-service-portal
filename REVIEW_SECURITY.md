@@ -27,12 +27,12 @@ The codebase has a **solid security posture overall** with consistent auth check
 - **Fix**: Make the IDOR check mandatory. If the check cannot be performed (Oracle down or no orgId), deny the operation:
   ```typescript
   if (!orgId || !fastify.hasDecorator('oracle') || !fastify.oracle.isAvailable()) {
-      // Cannot verify ownership — deny
-      clearTimeout(timeout);
-      reply.raw.writeHead(403, { 'Content-Type': 'application/json' });
-      reply.raw.write(JSON.stringify({ error: 'Cannot verify workflow ownership' }));
-      reply.raw.end();
-      return;
+  	// Cannot verify ownership — deny
+  	clearTimeout(timeout);
+  	reply.raw.writeHead(403, { 'Content-Type': 'application/json' });
+  	reply.raw.write(JSON.stringify({ error: 'Cannot verify workflow ownership' }));
+  	reply.raw.end();
+  	return;
   }
   ```
 
@@ -68,7 +68,9 @@ The codebase has a **solid security posture overall** with consistent auth check
 - **Fix**: Invert the logic to deny by default:
   ```typescript
   if (!session.userId || session.userId !== userId) {
-      return reply.status(403).send({ error: 'Forbidden', message: 'Session does not belong to you' });
+  	return reply
+  		.status(403)
+  		.send({ error: 'Forbidden', message: 'Session does not belong to you' });
   }
   ```
 
@@ -91,10 +93,10 @@ The codebase has a **solid security posture overall** with consistent auth check
 - **Fix**: Validate MCP HTTP/SSE URLs through `isValidExternalUrl()` before connecting:
   ```typescript
   if (server.transportType !== 'stdio') {
-      const { isValidExternalUrl } = await import('@portal/server/url-validation.js');
-      if (!(await isValidExternalUrl(server.config.url))) {
-          throw new Error(`MCP server URL blocked by SSRF filter: ${server.config.url}`);
-      }
+  	const { isValidExternalUrl } = await import('@portal/server/url-validation.js');
+  	if (!(await isValidExternalUrl(server.config.url))) {
+  		throw new Error(`MCP server URL blocked by SSRF filter: ${server.config.url}`);
+  	}
   }
   ```
 
@@ -164,7 +166,7 @@ The codebase has a **solid security posture overall** with consistent auth check
 - **Fix**: Validate that `corsOrigin` is not `*` in production mode. Add a startup guard:
   ```typescript
   if (process.env.NODE_ENV === 'production' && opts.corsOrigin === '*') {
-      throw new Error('CORS origin must not be wildcard in production');
+  	throw new Error('CORS origin must not be wildcard in production');
   }
   ```
 
@@ -185,18 +187,146 @@ A dedicated audit of **all Oracle repository files** found **zero SQL injection 
 
 ## Positive Findings (Reviewed, No Issues)
 
-| Area | Status | Notes |
-|------|--------|-------|
-| **Webhook SSRF prevention** | Solid | `isValidExternalUrl()` checks private IPs, loopback, cloud metadata, DNS rebinding via `ipaddr.js`. HTTPS required. |
-| **Webhook HMAC signing** | Solid | `crypto.timingSafeEqual` for signature verification. SHA-256 with per-webhook secret. |
-| **LIKE injection escaping** | Solid | Both `session-repository.ts:223` and `workflow-repository.ts:361` properly escape `%`, `_`, `\` with `ESCAPE '\\'` clause. Oracle adapter also has `escapeLikeValue()`. |
-| **SQL bind parameters** | Solid | All Oracle queries use `:paramName` bind variables. No string interpolation of user input into SQL observed in repositories. |
-| **Zod input validation** | Solid | All route handlers use Zod schemas for request validation (body, params, querystring). |
-| **RBAC on all non-health routes** | Solid | Every route handler uses `requireAuth(permission)` as preHandler. |
-| **Workflow IDOR fixes (approve/reject)** | Solid | `workflows.ts:1138-1141` and `1178-1181` use `getByIdForUser(runId, userId, orgId)` — proper mandatory IDOR guard. |
-| **Docker image validation** | Solid | `mcp-connection-manager.ts:510-513` validates image names against `/^[a-z0-9._/-]+$/` and tags against `/^[a-zA-Z0-9._-]+$/`. |
-| **Cookie security** | Solid | `httpOnly: true`, `secure` in production, `sameSite: lax` by default, with `SameSite=None` requiring `Secure`. |
-| **Session timeout** | Acceptable | 30-day session expiry with 24h refresh. Long but configurable. |
-| **Rate limiting** | Solid | Dual-layer: in-memory + Oracle-backed. Per-user/key/IP tracking. Fail-open on DB errors (acceptable for availability). |
-| **Error responses** | Solid | `toPortalError()` → `toResponseBody()` strips internal details. Pino redacts auth headers. |
-| **Tool approval system** | Solid | Server-side `consumeApproval()` prevents client-side bypass. Single-use tokens. |
+| Area                                     | Status     | Notes                                                                                                                                                                   |
+| ---------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Webhook SSRF prevention**              | Solid      | `isValidExternalUrl()` checks private IPs, loopback, cloud metadata, DNS rebinding via `ipaddr.js`. HTTPS required.                                                     |
+| **Webhook HMAC signing**                 | Solid      | `crypto.timingSafeEqual` for signature verification. SHA-256 with per-webhook secret.                                                                                   |
+| **LIKE injection escaping**              | Solid      | Both `session-repository.ts:223` and `workflow-repository.ts:361` properly escape `%`, `_`, `\` with `ESCAPE '\\'` clause. Oracle adapter also has `escapeLikeValue()`. |
+| **SQL bind parameters**                  | Solid      | All Oracle queries use `:paramName` bind variables. No string interpolation of user input into SQL observed in repositories.                                            |
+| **Zod input validation**                 | Solid      | All route handlers use Zod schemas for request validation (body, params, querystring).                                                                                  |
+| **RBAC on all non-health routes**        | Solid      | Every route handler uses `requireAuth(permission)` as preHandler.                                                                                                       |
+| **Workflow IDOR fixes (approve/reject)** | Solid      | `workflows.ts:1138-1141` and `1178-1181` use `getByIdForUser(runId, userId, orgId)` — proper mandatory IDOR guard.                                                      |
+| **Docker image validation**              | Solid      | `mcp-connection-manager.ts:510-513` validates image names against `/^[a-z0-9._/-]+$/` and tags against `/^[a-zA-Z0-9._-]+$/`.                                           |
+| **Cookie security**                      | Solid      | `httpOnly: true`, `secure` in production, `sameSite: lax` by default, with `SameSite=None` requiring `Secure`.                                                          |
+| **Session timeout**                      | Acceptable | 30-day session expiry with 24h refresh. Long but configurable.                                                                                                          |
+| **Rate limiting**                        | Solid      | Dual-layer: in-memory + Oracle-backed. Per-user/key/IP tracking. Fail-open on DB errors (acceptable for availability).                                                  |
+| **Error responses**                      | Solid      | `toPortalError()` → `toResponseBody()` strips internal details. Pino redacts auth headers.                                                                              |
+| **Tool approval system**                 | Solid      | Server-side `consumeApproval()` prevents client-side bypass. Single-use tokens.                                                                                         |
+
+---
+
+## Additional Findings (Security Auditor Agent — Second Pass)
+
+The following findings were identified in a second-pass review and supplement the findings above.
+
+### HIGH: OCI Query Injection in Shared Search Tool (No Escaping)
+
+- **File:** `packages/shared/src/tools/categories/search.ts:61`
+- **Code:** `const queryText = \`query ${typeClause} where displayName = '${displayName}'\`;`
+- **Description:** User-supplied `displayName` is interpolated directly into an OCI structured query without any escaping. The Mastra copy at `apps/api/src/mastra/tools/categories/search.ts:74-76` correctly escapes single quotes, but the **shared package version does NOT**.
+- **Risk:** An attacker providing `displayName` containing single quotes can break out of the query string and modify the OCI Resource Search query, potentially returning unauthorized resources.
+- **Fix:** Apply the same escaping: `const escaped = displayName.replace(/'/g, "''");`
+
+---
+
+### HIGH: Unauthenticated Prometheus Metrics Endpoint
+
+- **File:** `apps/api/src/routes/metrics.ts:10`
+- **Auth exclusion:** `apps/api/src/app.ts:371` — `/api/metrics` is in the `excludePaths` list
+- **Description:** The `/api/metrics` endpoint exposes Prometheus metrics (request rates, error counts, latency histograms, heap usage, event loop lag) without any authentication.
+- **Risk:** Information disclosure aids reconnaissance. Exposes business intelligence (traffic patterns, error rates).
+- **Fix:** Add `preHandler: requireAuth('admin:audit')` or bind to internal-only port.
+
+---
+
+### MEDIUM: Webhook Signature Format Inconsistency
+
+- **File:** `packages/server/src/webhooks.ts:129`
+- **Code:** `headers['X-Webhook-Signature'] = generateSignature(payload, webhook.SECRET);` — sends raw hex
+- **Expected (per CLAUDE.md + tests):** `sha256=<hex>` format per `apps/frontend/src/tests/phase8/integration.test.ts:189`
+- **Risk:** Consumers implementing webhook verification per the documented format will fail to validate. Spec-vs-implementation mismatch.
+- **Fix:** `headers['X-Webhook-Signature'] = \`sha256=\${generateSignature(payload, webhook.SECRET)}\`;`
+
+---
+
+### MEDIUM: OpenAPI Spec Exposed Without Authentication
+
+- **File:** `apps/api/src/routes/openapi.ts:11-36`
+- **Auth exclusion:** `apps/api/src/app.ts:376`
+- **Description:** `/api/v1/openapi.json` is unauthenticated and cached for 1 hour. Exposes the complete API schema including all endpoints, request/response schemas, and parameter types.
+- **Risk:** Complete API surface map for attacker reconnaissance.
+- **Fix:** Require authentication or disable in production.
+
+---
+
+### MEDIUM: Detect-Env Endpoint Exposes Cloud Configuration
+
+- **File:** `apps/api/src/routes/setup.ts:129-151`
+- **Description:** `/api/setup/detect-env` is fully unauthenticated and returns `OCI_IAM_TENANT_URL`, `OCI_IAM_CLIENT_ID`, `OCI_IAM_DISCOVERY_URL`, `OCI_REGION`.
+- **Risk:** Combined values enable targeted phishing or OAuth attacks against the tenant.
+- **Fix:** Gate behind setup token to match other setup endpoints.
+
+---
+
+### MEDIUM: Helmet CSP Missing Several Directives
+
+- **File:** `apps/api/src/plugins/helmet.ts:8-12`
+- **Description:** Only `defaultSrc: ["'none'"]` and `frameAncestors: ["'none'"]` are set. Missing `scriptSrc`, `styleSrc`, `imgSrc`, `connectSrc`, `objectSrc`.
+- **Risk:** If Swagger UI is enabled, missing CSP directives could allow content injection.
+- **Fix:** Add explicit directives for at least `scriptSrc`, `styleSrc`, `objectSrc`.
+
+---
+
+### MEDIUM: Rate Limiter Configured to Fail Open
+
+- **File:** `apps/api/src/app.ts:314`
+- **Code:** `skipOnError: true`
+- **Description:** When the rate limit backend (Valkey) is unavailable, rate limiting is silently disabled entirely.
+- **Risk:** During Valkey outages, all rate limiting disappears. An attacker can amplify this.
+- **Fix:** Add in-memory fallback rate limiter when primary backend unavailable.
+
+---
+
+### LOW: Unauthenticated Models Endpoint Leaks Provider Configuration
+
+- **File:** `apps/api/src/routes/models.ts:30-67`
+- **Auth exclusion:** `apps/api/src/app.ts:375`
+- **Description:** `/api/models` reveals configured AI providers, model IDs, region, and dynamic loading status.
+- **Fix:** Add `preHandler: requireAuth('sessions:read')`.
+
+---
+
+### LOW: trustProxy Defaults to True
+
+- **File:** `apps/api/src/app.ts:147`
+- **Code:** `trustProxy: fastifyOptions.trustProxy ?? true`
+- **Description:** Trusts all proxy headers unconditionally. If exposed directly, attackers can spoof `X-Forwarded-For`, bypassing IP-based rate limiting.
+- **Fix:** Set to specific proxy IP/CIDR or `'loopback'` in production.
+
+---
+
+### LOW: Dynamic SQL Column Building Without validateColumnName in Several Repositories
+
+- **Files:** `packages/shared/src/server/workflows/repository.ts:374,425,544,685`, `packages/server/src/oracle/repositories/session-repository.ts:157`, `apps/api/src/services/workflow-repository.ts:419,470,633,806`
+- **Description:** These repositories build `SET` clauses from object entries without calling `validateColumnName()`. Currently safe because callers pass hardcoded fields, but fragile against future changes.
+- **Fix:** Apply `validateColumnName()` to all dynamically built column references for defense in depth.
+
+---
+
+## Combined Priority Matrix
+
+| #   | Finding                                 | Severity | Source      |
+| --- | --------------------------------------- | -------- | ----------- |
+| 1   | `BETTER_AUTH_SECRET` hardcoded fallback | CRITICAL | First pass  |
+| 2   | Chat approval IDOR bypass               | HIGH     | First pass  |
+| 3   | MCP admin routes IDOR bypass            | HIGH     | First pass  |
+| 4   | OCI query injection (shared search)     | HIGH     | Second pass |
+| 5   | Unauthenticated `/api/metrics`          | HIGH     | Second pass |
+| 6   | Session continue IDOR (legacy)          | MEDIUM   | Both passes |
+| 7   | MCP server SSRF (no URL validation)     | MEDIUM   | First pass  |
+| 8   | MCP stdio command execution             | MEDIUM   | First pass  |
+| 9   | Setup AI test endpoint no auth          | MEDIUM   | Both passes |
+| 10  | CloudAdvisor missing org scoping        | MEDIUM   | First pass  |
+| 11  | Webhook signature format mismatch       | MEDIUM   | Second pass |
+| 12  | OpenAPI spec unauthenticated            | MEDIUM   | Second pass |
+| 13  | Detect-env exposes cloud config         | MEDIUM   | Second pass |
+| 14  | Helmet CSP incomplete                   | MEDIUM   | Second pass |
+| 15  | Rate limiter fail-open                  | MEDIUM   | Second pass |
+| 16  | Session refresh / membership gap        | MEDIUM   | First pass  |
+| 17  | AI provider routes not org-scoped       | LOW      | First pass  |
+| 18  | Models endpoint leaks config            | LOW      | Second pass |
+| 19  | trustProxy defaults true                | LOW      | Second pass |
+| 20  | Dynamic SQL without validateColumnName  | LOW      | Second pass |
+| 21  | CORS origin validation                  | LOW      | First pass  |
+
+_Combined security review completed 2026-02-19_

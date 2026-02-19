@@ -69,6 +69,8 @@ describe('W1-1: hooks.server.ts — /api/* middleware stripped', () => {
 	};
 
 	beforeEach(async () => {
+		// Satisfy startup guard: BETTER_AUTH_SECRET must be set when dev=false
+		process.env.BETTER_AUTH_SECRET ??= 'test-only-secret';
 		vi.clearAllMocks();
 		// Dynamic import after mocks are registered
 		hooksModule = (await import('../../hooks.server.js')) as typeof hooksModule;

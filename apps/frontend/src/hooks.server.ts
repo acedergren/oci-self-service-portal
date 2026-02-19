@@ -19,9 +19,9 @@ async function ensureDatabase(): Promise<boolean> {
 	if (dbInitialized) return dbAvailable;
 	dbInitialized = true;
 
-	// Validate auth secret at runtime (not build time)
+	// Validate auth secret at runtime (not build time) — fail fast in production
 	if (!dev && !process.env.BETTER_AUTH_SECRET) {
-		log.error('BETTER_AUTH_SECRET is not set — sessions will use an insecure default secret');
+		throw new Error('BETTER_AUTH_SECRET is required in production — refusing to start');
 	}
 
 	// Initialise Sentry (no-op if SENTRY_DSN is not set)
