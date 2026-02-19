@@ -9,11 +9,11 @@
 
 ## Executive Summary
 
-**Recommendation: READY WITH RESERVATIONS — fix 2 critical items before production.**
+**Recommendation: DO NOT SHIP — fix 7 critical items first.**
 
-CloudNow has strong structural security (100% SQL bind-parameter coverage, RBAC on all routes, HMAC-signed webhooks, no debug statement leakage) and solid infrastructure (bounded Oracle pool, LLM token guardrails, graceful shutdown). However, **one critical secret-management weakness** can silently run production with a known auth secret, and **one IDOR gap** remains exploitable during Oracle downtime or for users without active org context. These two must be fixed before external-facing deployment.
+CloudNow has strong structural security (100% SQL bind-parameter coverage across audited repos, RBAC on all routes, HMAC-signed webhooks) and solid infrastructure (bounded Oracle pool, LLM token guardrails, graceful shutdown). However, deep-dive analysis by 10 specialist agents revealed **7 critical blockers** spanning security, performance, and correctness that must be resolved before production deployment.
 
-The remaining high/medium findings are production-quality improvements — important but not deployment blockers.
+**Critical blockers summary:** auth secret bypass (security), 2 IDOR gaps (security), N+1 loops on chat hot path (performance/reliability), unbounded memory leak in stream bus (reliability), potential SQL injection in findings repository (security — needs verification), and a test infrastructure gap causing cascade CI failures.
 
 ---
 
@@ -86,6 +86,58 @@ const existingRun = await runRepo.getByIdForUser(targetRunId, userId, orgId);
 
 ---
 
+### [CRITICAL-3] N+1 query loops on the chat hot path
+
+**Source**: Performance reviewer (deep-dive)
+**Files**: `apps/api/src/mastra/storage/oracle-store.ts:709-735` (saveMessages), `:737-803` (updateMessages)
+**Risk**: Every chat message triggers individual INSERT/SELECT+UPDATE in a `for` loop. A conversation with 50 messages = 50-100 Oracle round-trips per save. Under production load, this will saturate the connection pool (max 10) and make the chat feature unusable.
+**Effort**: M-L (batch INSERT ALL / MERGE INTO with multi-row source)
+**Fix**: Replace per-row loops with Oracle `INSERT ALL ... SELECT FROM DUAL` for inserts, and batch `MERGE INTO ... USING (SELECT FROM DUAL UNION ALL ...)` for updates.
+
+---
+
+### [CRITICAL-4] Unbounded `latestStatusByRun` Map — memory leak
+
+**Source**: Performance reviewer (deep-dive)
+**File**: `apps/api/src/services/workflow-stream-bus.ts:25,29`
+**Risk**: Every workflow run adds an entry to `latestStatusByRun`. No eviction policy exists. `clearWorkflowStreamState()` is only called in tests. Over days/weeks of operation, this Map grows unbounded, causing eventual OOM. `setMaxListeners(0)` on the same emitter also disables Node.js leak warnings — compounding the risk.
+**Effort**: S
+**Fix**:
+
+```typescript
+// Add TTL-based eviction to latestStatusByRun:
+setInterval(() => {
+	const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+	for (const [key, val] of latestStatusByRun) {
+		if (val.ts < cutoff) latestStatusByRun.delete(key);
+	}
+}, 60_000).unref();
+
+// Change setMaxListeners(0) to a reasonable cap:
+emitter.setMaxListeners(1000);
+```
+
+---
+
+### [CRITICAL-5] Potential SQL injection in `updateFindingStatus` — needs verification
+
+**Source**: Test coverage reviewer (deep-dive)
+**File**: `apps/api/src/services/findings-repository.ts:232-233`
+**Risk**: `updateFindingStatus()` constructs SQL using `JSON_MERGEPATCH` with a `note` parameter that may use string interpolation rather than bind parameters. The SQL injection audit covered 14 specific repository files — `findings-repository.ts` was **not in scope**. If the note value is interpolated rather than bound, an attacker with `tools:execute` permission could inject SQL via the CloudAdvisor findings API.
+**Effort**: S (verify and fix if needed — convert to bind parameter if interpolated)
+**Action**: Audit `findings-repository.ts` immediately; fix before deploy if string interpolation confirmed.
+
+---
+
+### [CRITICAL-6] Missing `app.close()` in 3 test files causes cascade timeouts
+
+**Source**: Test coverage reviewer (deep-dive)
+**Files**: `apps/api/src/tests/routes/webhooks.test.ts`, `mcp-admin-routes.test.ts`, `search.test.ts`
+**Risk**: These 3 test files start Fastify instances but never call `app.close()` in `afterEach`. Each test run leaks ~130 Fastify instances into the process, exhausting file descriptors and causing the known timeout failures in `app-factory.test.ts`, `health-endpoint.test.ts`, and `auth-middleware.test.ts` when the full suite runs.
+**Effort**: S (30 min — add `afterEach(() => app.close())` to 3 files)
+
+---
+
 ## High Priority (fix within first sprint post-launch)
 
 ### [HIGH-1] MCP admin routes bypass IDOR when orgId is null
@@ -135,6 +187,16 @@ actionRun.start({ inputData: { ... } }).catch(err => {
   emitWorkflowStep(runId, 'error', 'compensate', 'tool-call', { error: compensationErr.message });
 }
 ```
+
+---
+
+### [HIGH-3b] Valkey cache built but completely unused
+
+**Source**: Performance reviewer (deep-dive)
+**Files**: `apps/api/src/plugins/cache.ts`, `apps/api/src/services/cache.ts`
+**Risk**: The entire Valkey cache infrastructure (CacheService, getOrFetch pattern, namespace TTLs, graceful degradation) is registered as a Fastify decorator but **no production route or repository ever calls it**. Every request hits Oracle directly. `getEnabledModelIds()` — called on every `POST /api/chat` — queries Oracle each time even though model config changes rarely. Additionally, `reloadProviderRegistry()` is never called from admin CRUD handlers, so AI provider changes require an app restart.
+**Effort**: M (wire existing cache to hot paths; add invalidation calls)
+**Fix**: Add `fastify.cache.getOrFetch()` for `getEnabledModelIds()` (5 min TTL), `settingsRepository.getPublic()` (30 min TTL), `mcpServerRepository.getCatalog()` (30 min TTL). Call `reloadProviderRegistry()` in AI provider create/update/delete handlers.
 
 ---
 
@@ -363,29 +425,33 @@ actionRun.start({ inputData: { ... } }).catch(err => {
 
 ## Production Readiness Checklist
 
-| Item                             | Status | Action Required                                      |
-| -------------------------------- | ------ | ---------------------------------------------------- |
-| BETTER_AUTH_SECRET guard         | ❌     | Fix CRITICAL-1 — add throw on missing secret         |
-| Chat approval IDOR (Oracle down) | ❌     | Fix CRITICAL-2 — deny-by-default when unavailable    |
-| MCP admin IDOR (null orgId)      | ⚠️     | Fix HIGH-1 before multi-tenant deployment            |
-| SQL injection                    | ✅     | 14 repos audited, 0 vulns                            |
-| Auth on all routes               | ✅     | RBAC preHandler on every non-health route            |
-| SSRF prevention (webhooks)       | ✅     | `isValidExternalUrl()` with DNS rebinding protection |
-| SSRF prevention (MCP URLs)       | ⚠️     | Fix MEDIUM-2                                         |
-| Fire-and-forget error handling   | ⚠️     | Fix HIGH-2                                           |
-| Saga compensation observability  | ⚠️     | Fix HIGH-3                                           |
-| Connection pool bounded          | ✅     | Min=2, Max=10, withConnection() pattern              |
-| Graceful shutdown                | ✅     | 30s timeout, SIGTERM handling                        |
-| Rate limiting                    | ✅     | Dual-layer: in-memory + Oracle                       |
-| LLM token guardrails             | ✅     | 50k input chars, 4000 output tokens                  |
-| Frontend error boundary          | ✅     | +error.svelte handles 4xx/5xx cleanly                |
-| Frontend catch blocks            | ⚠️     | 2 silent swallows with no user feedback (LOW-15)     |
-| Structured logging (no PII)      | ✅     | Pino redacts auth headers; no credential leakage     |
-| Error response consistency       | ⚠️     | 23 ad-hoc responses in workflows.ts (LOW-12)         |
-| Health checks (Mastra/Valkey)    | ⚠️     | Missing from /health readiness probe (LOW-13)        |
-| Graceful shutdown (workflows)    | ⚠️     | No workflow/job/webhook cancellation (LOW-14)        |
-| Type safety                      | ✅     | 0 TypeScript errors, no implicit any leakage         |
-| Test coverage                    | ⚠️     | 5 pre-existing failures in frontend suite            |
+| Item                             | Status | Action Required                                        |
+| -------------------------------- | ------ | ------------------------------------------------------ |
+| BETTER_AUTH_SECRET guard         | ❌     | Fix CRITICAL-1 — add throw on missing secret           |
+| Chat approval IDOR (Oracle down) | ❌     | Fix CRITICAL-2 — deny-by-default when unavailable      |
+| N+1 loops on chat hot path       | ❌     | Fix CRITICAL-3 — batch INSERT/UPDATE in oracle-store   |
+| Stream bus memory leak           | ❌     | Fix CRITICAL-4 — add TTL eviction + cap listeners      |
+| findings-repository SQL audit    | ❌     | Fix CRITICAL-5 — verify/fix JSON_MERGEPATCH note param |
+| Test app.close() leaks           | ❌     | Fix CRITICAL-6 — add afterEach to 3 test files         |
+| MCP admin IDOR (null orgId)      | ⚠️     | Fix HIGH-1 before multi-tenant deployment              |
+| SQL injection                    | ✅     | 14 repos audited, 0 vulns                              |
+| Auth on all routes               | ✅     | RBAC preHandler on every non-health route              |
+| SSRF prevention (webhooks)       | ✅     | `isValidExternalUrl()` with DNS rebinding protection   |
+| SSRF prevention (MCP URLs)       | ⚠️     | Fix MEDIUM-2                                           |
+| Fire-and-forget error handling   | ⚠️     | Fix HIGH-2                                             |
+| Saga compensation observability  | ⚠️     | Fix HIGH-3                                             |
+| Connection pool bounded          | ✅     | Min=2, Max=10, withConnection() pattern                |
+| Graceful shutdown                | ✅     | 30s timeout, SIGTERM handling                          |
+| Rate limiting                    | ✅     | Dual-layer: in-memory + Oracle                         |
+| LLM token guardrails             | ✅     | 50k input chars, 4000 output tokens                    |
+| Frontend error boundary          | ✅     | +error.svelte handles 4xx/5xx cleanly                  |
+| Frontend catch blocks            | ⚠️     | 2 silent swallows with no user feedback (LOW-15)       |
+| Structured logging (no PII)      | ✅     | Pino redacts auth headers; no credential leakage       |
+| Error response consistency       | ⚠️     | 23 ad-hoc responses in workflows.ts (LOW-12)           |
+| Health checks (Mastra/Valkey)    | ⚠️     | Missing from /health readiness probe (LOW-13)          |
+| Graceful shutdown (workflows)    | ⚠️     | No workflow/job/webhook cancellation (LOW-14)          |
+| Type safety                      | ✅     | 0 TypeScript errors, no implicit any leakage           |
+| Test coverage                    | ⚠️     | 5 pre-existing failures in frontend suite              |
 
 ---
 
@@ -403,5 +469,5 @@ actionRun.start({ inputData: { ... } }).catch(err => {
 ---
 
 _Report generated: 2026-02-19 | Source reports: REVIEW_SECURITY.md, REVIEW_OBSERVABILITY.md, REVIEW_PERFORMANCE.md, REVIEW_QUALITY.md, REVIEW_TESTING.md_
-_Additional deep-dive sub-agents: route-error-review, frontend-error-review, pii-log-review, error-consistency-review, health-endpoint-review_
-_Total findings: 3 CRITICAL, 6 HIGH, 10 MEDIUM, 16 LOW_
+_Additional deep-dive sub-agents: route-error-review, frontend-error-review, pii-log-review, error-consistency-review, health-endpoint-review (observability); N+1/cache/memory deep-dive (performance); CloudAdvisor/findings coverage (testing)_
+_Total findings: 6 CRITICAL + 1 CRITICAL-verify, 8 HIGH, 12 MEDIUM, 18 LOW_
