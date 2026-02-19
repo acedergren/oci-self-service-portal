@@ -92,6 +92,23 @@ export function simulateSession(
 }
 
 /**
+ * Injects user, permissions, AND session.activeOrganizationId — required for
+ * endpoints that call resolveOrgId() to enforce per-org IDOR guards.
+ */
+export function simulateOrgSession(
+	app: FastifyInstance,
+	user: Record<string, unknown>,
+	permissions: string[],
+	orgId: string
+): void {
+	app.addHook('onRequest', async (request) => {
+		(request as Record<string, unknown>).user = user;
+		(request as FastifyRequest).permissions = permissions;
+		(request as Record<string, unknown>).session = { activeOrganizationId: orgId };
+	});
+}
+
+/**
  * Marks the database as unavailable for every incoming request.
  */
 export function simulateDbUnavailable(app: FastifyInstance): void {

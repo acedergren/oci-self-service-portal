@@ -7,7 +7,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { buildTestApp, simulateSession } from './test-helpers.js';
+import { buildTestApp, simulateSession, simulateOrgSession } from './test-helpers.js';
 import { mcpAdminRoutes } from '../../routes/admin/mcp.js';
 import { NotFoundError } from '@portal/server/errors.js';
 import type {
@@ -392,7 +392,7 @@ describe('GET /api/admin/mcp/servers/:id', () => {
 		mockGetById.mockResolvedValue(server);
 
 		const app = await buildTestApp();
-		simulateSession(app, { id: 'user-1', activeOrganizationId: 'org-123' }, ['admin:all']);
+		simulateOrgSession(app, { id: 'user-1' }, ['admin:all'], 'org-123');
 		await app.register(mcpAdminRoutes);
 		await app.ready();
 
@@ -411,7 +411,7 @@ describe('GET /api/admin/mcp/servers/:id', () => {
 		mockGetById.mockResolvedValue(null);
 
 		const app = await buildTestApp();
-		simulateSession(app, { id: 'user-1', activeOrganizationId: 'org-123' }, ['admin:all']);
+		simulateOrgSession(app, { id: 'user-1' }, ['admin:all'], 'org-123');
 		await app.register(mcpAdminRoutes);
 		await app.ready();
 
@@ -485,7 +485,7 @@ describe('POST /api/admin/mcp/servers', () => {
 
 	it('rejects invalid serverName format', async () => {
 		const app = await buildTestApp();
-		simulateSession(app, { id: 'user-1', activeOrganizationId: 'org-123' }, ['admin:all']);
+		simulateOrgSession(app, { id: 'user-1' }, ['admin:all'], 'org-123');
 		await app.register(mcpAdminRoutes);
 		await app.ready();
 
@@ -505,7 +505,7 @@ describe('POST /api/admin/mcp/servers', () => {
 
 	it('returns 400 for missing required fields', async () => {
 		const app = await buildTestApp();
-		simulateSession(app, { id: 'user-1', activeOrganizationId: 'org-123' }, ['admin:all']);
+		simulateOrgSession(app, { id: 'user-1' }, ['admin:all'], 'org-123');
 		await app.register(mcpAdminRoutes);
 		await app.ready();
 
@@ -590,7 +590,7 @@ describe('PUT /api/admin/mcp/servers/:id', () => {
 		mockUpdate.mockResolvedValue(updated);
 
 		const app = await buildTestApp();
-		simulateSession(app, { id: 'user-1', activeOrganizationId: 'org-123' }, ['admin:all']);
+		simulateOrgSession(app, { id: 'user-1' }, ['admin:all'], 'org-123');
 		await app.register(mcpAdminRoutes);
 		await app.ready();
 
@@ -615,7 +615,7 @@ describe('DELETE /api/admin/mcp/servers/:id', () => {
 		mockDelete.mockResolvedValue(true);
 
 		const app = await buildTestApp();
-		simulateSession(app, { id: 'user-1', activeOrganizationId: 'org-123' }, ['admin:all']);
+		simulateOrgSession(app, { id: 'user-1' }, ['admin:all'], 'org-123');
 		await app.register(mcpAdminRoutes);
 		await app.ready();
 
@@ -635,7 +635,7 @@ describe('DELETE /api/admin/mcp/servers/:id', () => {
 		mockDelete.mockResolvedValue(true);
 
 		const app = await buildTestApp();
-		simulateSession(app, { id: 'user-1', activeOrganizationId: 'org-123' }, ['admin:all']);
+		simulateOrgSession(app, { id: 'user-1' }, ['admin:all'], 'org-123');
 		await app.register(mcpAdminRoutes);
 		await app.ready();
 
@@ -659,7 +659,7 @@ describe('POST /api/admin/mcp/servers/:id/connect', () => {
 		mockConnectServer.mockResolvedValue(undefined);
 
 		const app = await buildTestApp();
-		simulateSession(app, { id: 'user-1', activeOrganizationId: 'org-123' }, ['admin:all']);
+		simulateOrgSession(app, { id: 'user-1' }, ['admin:all'], 'org-123');
 		await app.register(mcpAdminRoutes);
 		await app.ready();
 
@@ -679,7 +679,7 @@ describe('POST /api/admin/mcp/servers/:id/connect', () => {
 		mockConnectServer.mockRejectedValue(new Error('Connection timeout'));
 
 		const app = await buildTestApp();
-		simulateSession(app, { id: 'user-1', activeOrganizationId: 'org-123' }, ['admin:all']);
+		simulateOrgSession(app, { id: 'user-1' }, ['admin:all'], 'org-123');
 		await app.register(mcpAdminRoutes);
 		await app.ready();
 
@@ -698,7 +698,7 @@ describe('POST /api/admin/mcp/servers/:id/disconnect', () => {
 		mockDisconnectServer.mockResolvedValue(undefined);
 
 		const app = await buildTestApp();
-		simulateSession(app, { id: 'user-1', activeOrganizationId: 'org-123' }, ['admin:all']);
+		simulateOrgSession(app, { id: 'user-1' }, ['admin:all'], 'org-123');
 		await app.register(mcpAdminRoutes);
 		await app.ready();
 
@@ -719,7 +719,7 @@ describe('POST /api/admin/mcp/servers/:id/restart', () => {
 		mockRestartServer.mockResolvedValue(undefined);
 
 		const app = await buildTestApp();
-		simulateSession(app, { id: 'user-1', activeOrganizationId: 'org-123' }, ['admin:all']);
+		simulateOrgSession(app, { id: 'user-1' }, ['admin:all'], 'org-123');
 		await app.register(mcpAdminRoutes);
 		await app.ready();
 
@@ -744,7 +744,7 @@ describe('PUT /api/admin/mcp/servers/:id/credentials/:key', () => {
 		mockSetCredential.mockResolvedValue(undefined);
 
 		const app = await buildTestApp();
-		simulateSession(app, { id: 'user-1', activeOrganizationId: 'org-123' }, ['admin:all']);
+		simulateOrgSession(app, { id: 'user-1' }, ['admin:all'], 'org-123');
 		await app.register(mcpAdminRoutes);
 		await app.ready();
 
@@ -767,7 +767,7 @@ describe('PUT /api/admin/mcp/servers/:id/credentials/:key', () => {
 
 	it('rejects empty value', async () => {
 		const app = await buildTestApp();
-		simulateSession(app, { id: 'user-1', activeOrganizationId: 'org-123' }, ['admin:all']);
+		simulateOrgSession(app, { id: 'user-1' }, ['admin:all'], 'org-123');
 		await app.register(mcpAdminRoutes);
 		await app.ready();
 
@@ -790,7 +790,7 @@ describe('DELETE /api/admin/mcp/servers/:id/credentials/:key', () => {
 		mockDeleteCredential.mockResolvedValue(undefined);
 
 		const app = await buildTestApp();
-		simulateSession(app, { id: 'user-1', activeOrganizationId: 'org-123' }, ['admin:all']);
+		simulateOrgSession(app, { id: 'user-1' }, ['admin:all'], 'org-123');
 		await app.register(mcpAdminRoutes);
 		await app.ready();
 
@@ -818,7 +818,7 @@ describe('GET /api/admin/mcp/servers/:id/tools', () => {
 		mockListServerTools.mockResolvedValue(tools);
 
 		const app = await buildTestApp();
-		simulateSession(app, { id: 'user-1', activeOrganizationId: 'org-123' }, ['admin:all']);
+		simulateOrgSession(app, { id: 'user-1' }, ['admin:all'], 'org-123');
 		await app.register(mcpAdminRoutes);
 		await app.ready();
 
@@ -843,7 +843,7 @@ describe('POST /api/admin/mcp/servers/:id/tools/:toolName/test', () => {
 		});
 
 		const app = await buildTestApp();
-		simulateSession(app, { id: 'user-1', activeOrganizationId: 'org-123' }, ['admin:all']);
+		simulateOrgSession(app, { id: 'user-1' }, ['admin:all'], 'org-123');
 		await app.register(mcpAdminRoutes);
 		await app.ready();
 
@@ -867,7 +867,7 @@ describe('POST /api/admin/mcp/servers/:id/tools/:toolName/test', () => {
 		mockExecuteToolOnServer.mockResolvedValue({ result: { data: hugeString }, durationMs: 50 });
 
 		const app = await buildTestApp();
-		simulateSession(app, { id: 'user-1', activeOrganizationId: 'org-123' }, ['admin:all']);
+		simulateOrgSession(app, { id: 'user-1' }, ['admin:all'], 'org-123');
 		await app.register(mcpAdminRoutes);
 		await app.ready();
 
@@ -892,7 +892,7 @@ describe('POST /api/admin/mcp/servers/:id/tools/:toolName/test', () => {
 		mockExecuteToolOnServer.mockResolvedValue({ result: smallResult, durationMs: 10 });
 
 		const app = await buildTestApp();
-		simulateSession(app, { id: 'user-1', activeOrganizationId: 'org-123' }, ['admin:all']);
+		simulateOrgSession(app, { id: 'user-1' }, ['admin:all'], 'org-123');
 		await app.register(mcpAdminRoutes);
 		await app.ready();
 
@@ -936,7 +936,7 @@ describe('GET /api/admin/mcp/servers/:id/metrics', () => {
 		mockGetMetrics.mockResolvedValue(metrics);
 
 		const app = await buildTestApp();
-		simulateSession(app, { id: 'user-1', activeOrganizationId: 'org-123' }, ['admin:all']);
+		simulateOrgSession(app, { id: 'user-1' }, ['admin:all'], 'org-123');
 		await app.register(mcpAdminRoutes);
 		await app.ready();
 
@@ -962,7 +962,7 @@ describe('GET /api/admin/mcp/servers/:id/metrics', () => {
 		});
 
 		const app = await buildTestApp();
-		simulateSession(app, { id: 'user-1', activeOrganizationId: 'org-123' }, ['admin:all']);
+		simulateOrgSession(app, { id: 'user-1' }, ['admin:all'], 'org-123');
 		await app.register(mcpAdminRoutes);
 		await app.ready();
 

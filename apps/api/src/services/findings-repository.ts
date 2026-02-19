@@ -229,13 +229,15 @@ export function createFindingsRepository(withConnection: WithConnectionFn) {
 	): Promise<void> {
 		await withConnection(async (conn) => {
 			const metaUpdate = note
-				? `, metadata = JSON_MERGEPATCH(NVL(metadata, '{}'), '{"note": "${note.replace(/"/g, '\\"')}"}')`
+				? `, metadata = JSON_MERGEPATCH(NVL(metadata, '{}'), :notePatch)`
 				: '';
+			const binds: Record<string, unknown> = { status, id };
+			if (note) binds.notePatch = JSON.stringify({ note });
 			await conn.execute(
 				`UPDATE cloud_advisor_findings
 				 SET status = :status, updated_at = SYSTIMESTAMP${metaUpdate}
 				 WHERE id = :id`,
-				{ status, id }
+				binds
 			);
 			await conn.commit();
 		});

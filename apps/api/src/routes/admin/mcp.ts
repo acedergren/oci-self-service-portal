@@ -205,9 +205,10 @@ export async function mcpAdminRoutes(app: FastifyInstance): Promise<void> {
 					throw new NotFoundError(`MCP server not found: ${id}`);
 				}
 
-				// Verify org ownership (IDOR prevention)
+				// Verify org ownership (IDOR prevention) — fail-closed
 				const orgId = resolveOrgId(request);
-				if (orgId && server.orgId !== orgId) {
+				if (!orgId) throw new ValidationError('Organization context required');
+				if (server.orgId !== orgId) {
 					throw new NotFoundError(`MCP server not found: ${id}`);
 				}
 
@@ -320,12 +321,13 @@ export async function mcpAdminRoutes(app: FastifyInstance): Promise<void> {
 				const { id } = request.params as { id: string };
 				const orgId = resolveOrgId(request);
 
-				// Verify ownership
+				// Verify ownership — fail-closed
 				const existing = await mcpServerRepository.getById(id);
 				if (!existing) {
 					throw new NotFoundError(`MCP server not found: ${id}`);
 				}
-				if (orgId && existing.orgId !== orgId) {
+				if (!orgId) throw new ValidationError('Organization context required');
+				if (existing.orgId !== orgId) {
 					throw new NotFoundError(`MCP server not found: ${id}`);
 				}
 
@@ -367,12 +369,13 @@ export async function mcpAdminRoutes(app: FastifyInstance): Promise<void> {
 				const { id } = request.params as { id: string };
 				const orgId = resolveOrgId(request);
 
-				// Verify ownership
+				// Verify ownership — fail-closed
 				const existing = await mcpServerRepository.getById(id);
 				if (!existing) {
 					throw new NotFoundError(`MCP server not found: ${id}`);
 				}
-				if (orgId && existing.orgId !== orgId) {
+				if (!orgId) throw new ValidationError('Organization context required');
+				if (existing.orgId !== orgId) {
 					throw new NotFoundError(`MCP server not found: ${id}`);
 				}
 
@@ -428,12 +431,13 @@ export async function mcpAdminRoutes(app: FastifyInstance): Promise<void> {
 				const { id } = request.params as { id: string };
 				const orgId = resolveOrgId(request);
 
-				// Verify ownership
+				// Verify ownership — fail-closed
 				const existing = await mcpServerRepository.getById(id);
 				if (!existing) {
 					throw new NotFoundError(`MCP server not found: ${id}`);
 				}
-				if (orgId && existing.orgId !== orgId) {
+				if (!orgId) throw new ValidationError('Organization context required');
+				if (existing.orgId !== orgId) {
 					throw new NotFoundError(`MCP server not found: ${id}`);
 				}
 
@@ -474,12 +478,13 @@ export async function mcpAdminRoutes(app: FastifyInstance): Promise<void> {
 				const { id } = request.params as { id: string };
 				const orgId = resolveOrgId(request);
 
-				// Verify ownership
+				// Verify ownership — fail-closed
 				const existing = await mcpServerRepository.getById(id);
 				if (!existing) {
 					throw new NotFoundError(`MCP server not found: ${id}`);
 				}
-				if (orgId && existing.orgId !== orgId) {
+				if (!orgId) throw new ValidationError('Organization context required');
+				if (existing.orgId !== orgId) {
 					throw new NotFoundError(`MCP server not found: ${id}`);
 				}
 
@@ -520,12 +525,13 @@ export async function mcpAdminRoutes(app: FastifyInstance): Promise<void> {
 				const { id } = request.params as { id: string };
 				const orgId = resolveOrgId(request);
 
-				// Verify ownership
+				// Verify ownership — fail-closed
 				const existing = await mcpServerRepository.getById(id);
 				if (!existing) {
 					throw new NotFoundError(`MCP server not found: ${id}`);
 				}
-				if (orgId && existing.orgId !== orgId) {
+				if (!orgId) throw new ValidationError('Organization context required');
+				if (existing.orgId !== orgId) {
 					throw new NotFoundError(`MCP server not found: ${id}`);
 				}
 
@@ -572,12 +578,13 @@ export async function mcpAdminRoutes(app: FastifyInstance): Promise<void> {
 				const { id, key } = request.params as { id: string; key: string };
 				const orgId = resolveOrgId(request);
 
-				// Verify ownership
+				// Verify ownership — fail-closed
 				const existing = await mcpServerRepository.getById(id);
 				if (!existing) {
 					throw new NotFoundError(`MCP server not found: ${id}`);
 				}
-				if (orgId && existing.orgId !== orgId) {
+				if (!orgId) throw new ValidationError('Organization context required');
+				if (existing.orgId !== orgId) {
 					throw new NotFoundError(`MCP server not found: ${id}`);
 				}
 
@@ -620,12 +627,13 @@ export async function mcpAdminRoutes(app: FastifyInstance): Promise<void> {
 				const { id, key } = request.params as { id: string; key: string };
 				const orgId = resolveOrgId(request);
 
-				// Verify ownership
+				// Verify ownership — fail-closed
 				const existing = await mcpServerRepository.getById(id);
 				if (!existing) {
 					throw new NotFoundError(`MCP server not found: ${id}`);
 				}
-				if (orgId && existing.orgId !== orgId) {
+				if (!orgId) throw new ValidationError('Organization context required');
+				if (existing.orgId !== orgId) {
 					throw new NotFoundError(`MCP server not found: ${id}`);
 				}
 
@@ -670,12 +678,13 @@ export async function mcpAdminRoutes(app: FastifyInstance): Promise<void> {
 				const { id } = request.params as { id: string };
 				const orgId = resolveOrgId(request);
 
-				// Verify ownership
+				// Verify ownership — fail-closed
 				const existing = await mcpServerRepository.getById(id);
 				if (!existing) {
 					throw new NotFoundError(`MCP server not found: ${id}`);
 				}
-				if (orgId && existing.orgId !== orgId) {
+				if (!orgId) throw new ValidationError('Organization context required');
+				if (existing.orgId !== orgId) {
 					throw new NotFoundError(`MCP server not found: ${id}`);
 				}
 
@@ -716,12 +725,13 @@ export async function mcpAdminRoutes(app: FastifyInstance): Promise<void> {
 				const { id, toolName } = request.params as { id: string; toolName: string };
 				const orgId = resolveOrgId(request);
 
-				// Verify ownership
+				// Verify ownership — fail-closed
 				const existing = await mcpServerRepository.getById(id);
 				if (!existing) {
 					throw new NotFoundError(`MCP server not found: ${id}`);
 				}
-				if (orgId && existing.orgId !== orgId) {
+				if (!orgId) throw new ValidationError('Organization context required');
+				if (existing.orgId !== orgId) {
 					throw new NotFoundError(`MCP server not found: ${id}`);
 				}
 
@@ -796,12 +806,13 @@ export async function mcpAdminRoutes(app: FastifyInstance): Promise<void> {
 				const { since } = request.query as { since?: string };
 				const orgId = resolveOrgId(request);
 
-				// Verify ownership
+				// Verify ownership — fail-closed
 				const existing = await mcpServerRepository.getById(id);
 				if (!existing) {
 					throw new NotFoundError(`MCP server not found: ${id}`);
 				}
-				if (orgId && existing.orgId !== orgId) {
+				if (!orgId) throw new ValidationError('Organization context required');
+				if (existing.orgId !== orgId) {
 					throw new NotFoundError(`MCP server not found: ${id}`);
 				}
 
@@ -842,12 +853,13 @@ export async function mcpAdminRoutes(app: FastifyInstance): Promise<void> {
 				const { id } = request.params as { id: string };
 				const orgId = resolveOrgId(request);
 
-				// Verify ownership
+				// Verify ownership — fail-closed
 				const existing = await mcpServerRepository.getById(id);
 				if (!existing) {
 					throw new NotFoundError(`MCP server not found: ${id}`);
 				}
-				if (orgId && existing.orgId !== orgId) {
+				if (!orgId) throw new ValidationError('Organization context required');
+				if (existing.orgId !== orgId) {
 					throw new NotFoundError(`MCP server not found: ${id}`);
 				}
 

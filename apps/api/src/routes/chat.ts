@@ -162,25 +162,29 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
 					}
 
 					if (intent === 'approval' && targetRunId) {
-						// IDOR guard: verify run belongs to this user's org before resuming.
+						// IDOR guard: must verify ownership before resuming; fail-closed if Oracle unavailable.
 						// targetRunId comes from LLM classification of user text — never trust it directly.
-						if (fastify.hasDecorator('oracle') && fastify.oracle.isAvailable() && orgId) {
-							const runRepo = createWorkflowRunRepository(fastify.oracle.withConnection);
-							const existingRun = await runRepo.getByIdForUser(targetRunId, userId, orgId);
-							if (!existingRun) {
-								clearTimeout(timeout);
-								reply.raw.writeHead(200, {
-									'Content-Type': 'text/event-stream',
-									'Cache-Control': 'no-cache',
-									Connection: 'keep-alive'
-								});
-								reply.raw.write(
-									`data: ${JSON.stringify({ error: 'Workflow run not found', runId: targetRunId })}\n\n`
-								);
-								reply.raw.write('data: [DONE]\n\n');
-								reply.raw.end();
-								return;
-							}
+						if (!orgId || !fastify.hasDecorator('oracle') || !fastify.oracle.isAvailable()) {
+							clearTimeout(timeout);
+							return reply
+								.code(503)
+								.send({ error: 'Cannot process approval: service unavailable' });
+						}
+						const runRepo = createWorkflowRunRepository(fastify.oracle.withConnection);
+						const existingRun = await runRepo.getByIdForUser(targetRunId, userId, orgId);
+						if (!existingRun) {
+							clearTimeout(timeout);
+							reply.raw.writeHead(200, {
+								'Content-Type': 'text/event-stream',
+								'Cache-Control': 'no-cache',
+								Connection: 'keep-alive'
+							});
+							reply.raw.write(
+								`data: ${JSON.stringify({ error: 'Workflow run not found', runId: targetRunId })}\n\n`
+							);
+							reply.raw.write('data: [DONE]\n\n');
+							reply.raw.end();
+							return;
 						}
 						const resumeRun = await fastify.mastra
 							.getWorkflow('charlieActionWorkflow')
