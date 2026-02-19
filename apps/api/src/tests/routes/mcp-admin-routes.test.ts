@@ -7,8 +7,21 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { buildTestApp as _buildTestApp, simulateSession, simulateOrgSession } from './test-helpers.js';
+import {
+	buildTestApp as _buildTestApp,
+	simulateSession,
+	simulateOrgSession
+} from './test-helpers.js';
 import type { FastifyInstance } from 'fastify';
+import { mcpAdminRoutes } from '../../routes/admin/mcp.js';
+import { NotFoundError } from '@portal/server/errors.js';
+import type {
+	McpCatalogItem,
+	McpServer,
+	CachedTool,
+	MetricsSummary,
+	InvalidMcpServerRecord
+} from '@portal/server/admin/mcp-types.js';
 
 // Track all created apps for cleanup after each test
 const _appsToClose: FastifyInstance[] = [];
@@ -21,15 +34,6 @@ function buildTestApp(opts?: Parameters<typeof _buildTestApp>[0]): Promise<Fasti
 		return app;
 	});
 }
-import { mcpAdminRoutes } from '../../routes/admin/mcp.js';
-import { NotFoundError } from '@portal/server/errors.js';
-import type {
-	McpCatalogItem,
-	McpServer,
-	CachedTool,
-	MetricsSummary,
-	InvalidMcpServerRecord
-} from '@portal/server/admin/mcp-types.js';
 
 // ============================================================================
 // Mock setup — forwarding pattern for mockReset: true

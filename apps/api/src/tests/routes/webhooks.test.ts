@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { buildTestApp as _buildTestApp, simulateSession } from './test-helpers.js';
-import type { FastifyInstance } from 'fastify';
+import { webhookRoutes } from '../../routes/webhooks.js';
 
 // Track all created apps for cleanup after each test
 const _appsToClose: FastifyInstance[] = [];
@@ -14,7 +14,6 @@ function buildTestApp(opts?: Parameters<typeof _buildTestApp>[0]): Promise<Fasti
 		return app;
 	});
 }
-import { webhookRoutes } from '../../routes/webhooks.js';
 
 /** simulateSession + set session.activeOrganizationId for resolveOrgId */
 function simulateOrgSession(
