@@ -587,7 +587,7 @@
 						onclick={toggleTheme}
 						class="btn btn-secondary text-sm"
 						aria-label="Toggle theme"
-						title={theme === 'dark' ? 'Switch to Golden Hour' : 'Switch to Bioluminescence'}
+						title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
 					>
 						{theme === 'dark' ? '☀' : '🌙'}
 					</button>

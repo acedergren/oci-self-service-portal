@@ -73,9 +73,9 @@ export function getCSPHeader(nonce?: string): string {
 	const directives = [
 		"default-src 'self'",
 		scriptSrc,
-		"style-src 'self' 'unsafe-inline'",
+		"style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
 		"img-src 'self' data: blob:",
-		"font-src 'self'",
+		"font-src 'self' https://fonts.gstatic.com",
 		"connect-src 'self' https://identity.oraclecloud.com https://*.identity.oraclecloud.com",
 		"frame-src 'none'",
 		"object-src 'none'",

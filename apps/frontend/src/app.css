@@ -1,56 +1,57 @@
 @import 'tailwindcss';
 
 /*
- * Running Days Theme - Design System
+ * CloudNow Design System
  *
- * OKLCH-based colors for perceptual uniformity.
- * Two variants:
- * - Dark: Bioluminescent ocean aesthetics with deep blues and warm accents
- * - Light: Golden hour aesthetics with warm creams and sunset colors
+ * Enterprise portal style — Tailwind slate palette + teal accent.
+ * Light mode default (slate-50 bg, teal-600 accent).
+ * Dark mode: sober slate (slate-900 bg, teal-400 accent).
  */
 
-/* Dark theme (Bioluminescence) - Default */
-:root,
-:root[data-theme='dark'] {
-	/* Background colors - deep ocean blues with depth */
-	--bg-primary: oklch(0.12 0.03 260);
-	--bg-secondary: oklch(0.16 0.035 265);
-	--bg-tertiary: oklch(0.1 0.025 258);
-	--bg-elevated: oklch(0.19 0.04 262);
-	--bg-hover: oklch(0.23 0.045 264);
+/* Light mode — enterprise portal default */
+:root {
+	/* Backgrounds */
+	--bg-primary: #f8fafc; /* slate-50 */
+	--bg-secondary: #ffffff; /* white */
+	--bg-tertiary: #f1f5f9; /* slate-100 */
+	--bg-elevated: #e2e8f0; /* slate-200 */
+	--bg-hover: #cbd5e1; /* slate-300 */
 
-	/* Foreground colors - soft whites with luminescence */
-	--fg-primary: oklch(0.96 0.03 200);
-	--fg-secondary: oklch(0.78 0.04 205);
-	--fg-tertiary: oklch(0.58 0.03 210);
-	--fg-disabled: oklch(0.42 0.02 215);
+	/* Foreground */
+	--fg-primary: #1e293b; /* slate-800 */
+	--fg-secondary: #334155; /* slate-700 */
+	--fg-tertiary: #64748b; /* slate-500 */
+	--fg-disabled: #94a3b8; /* slate-400 */
 
-	/* Accent colors - vivid bioluminescent glow */
-	--accent-primary: oklch(0.78 0.22 45);
-	--accent-secondary: oklch(0.72 0.18 52);
-	--accent-muted: oklch(0.6 0.14 48);
+	/* Accent — teal */
+	--accent-primary: #0d9488; /* teal-600 */
+	--accent-secondary: #0f766e; /* teal-700 */
+	--accent-muted: #ccfbf1; /* teal-100 */
 
-	/* Agent state colors */
-	--agent-thinking: oklch(0.7 0.15 180);
-	--agent-executing: oklch(0.75 0.18 40);
-	--agent-waiting: oklch(0.6 0.12 280);
-	--agent-streaming: oklch(0.72 0.16 160);
+	/* Borders */
+	--border-default: #e2e8f0; /* slate-200 */
+	--border-focused: #0d9488; /* teal-600 */
+	--border-muted: #f1f5f9; /* slate-100 */
 
-	/* Semantic colors */
-	--semantic-success: oklch(0.7 0.18 145);
-	--semantic-warning: oklch(0.75 0.18 75);
-	--semantic-error: oklch(0.65 0.2 25);
-	--semantic-info: oklch(0.7 0.15 230);
+	/* Semantic */
+	--semantic-success: #10b981; /* emerald-500 */
+	--semantic-warning: #f59e0b; /* amber-500 */
+	--semantic-error: #ef4444; /* red-500 */
+	--semantic-info: #3b82f6; /* blue-500 */
 
-	/* Tool approval colors */
-	--tool-safe: oklch(0.7 0.18 145);
-	--tool-caution: oklch(0.75 0.18 75);
-	--tool-danger: oklch(0.65 0.2 25);
+	/* Tool approval */
+	--tool-safe: #10b981;
+	--tool-caution: #f59e0b;
+	--tool-danger: #ef4444;
 
-	/* Border colors */
-	--border-default: oklch(0.3 0.03 260);
-	--border-focused: oklch(0.75 0.18 40);
-	--border-muted: oklch(0.22 0.02 260);
+	/* Agent state */
+	--agent-thinking: #14b8a6; /* teal-400 */
+	--agent-executing: #0d9488; /* teal-600 */
+	--agent-waiting: #8b5cf6; /* violet-500 */
+	--agent-streaming: #10b981; /* emerald-500 */
+
+	/* Message backgrounds */
+	--message-user: color-mix(in srgb, #0d9488 8%, #f8fafc);
 
 	/* Spacing */
 	--space-xs: 0.25rem;
@@ -93,67 +94,61 @@
 	--space-fluid-xl: clamp(1rem, 0.75rem + 1.5vw, 2rem);
 }
 
-/* Light theme (Golden Hour) */
-:root[data-theme='light'] {
-	/* Background colors - warm creams and soft golds */
-	--bg-primary: oklch(0.97 0.02 75);
-	--bg-secondary: oklch(0.94 0.025 70);
-	--bg-tertiary: oklch(0.99 0.015 80);
-	--bg-elevated: oklch(0.92 0.03 65);
-	--bg-hover: oklch(0.9 0.035 68);
+/* Dark mode — sober slate */
+:root[data-theme='dark'] {
+	/* Backgrounds */
+	--bg-primary: #0f172a; /* slate-900 */
+	--bg-secondary: #1e293b; /* slate-800 */
+	--bg-tertiary: #0a0f1a; /* deeper than slate-900 */
+	--bg-elevated: #334155; /* slate-700 */
+	--bg-hover: #475569; /* slate-600 */
 
-	/* Foreground colors - warm darks */
-	--fg-primary: oklch(0.25 0.02 60);
-	--fg-secondary: oklch(0.45 0.02 55);
-	--fg-tertiary: oklch(0.6 0.02 50);
-	--fg-disabled: oklch(0.7 0.01 50);
+	/* Foreground */
+	--fg-primary: #f1f5f9; /* slate-100 */
+	--fg-secondary: #cbd5e1; /* slate-300 */
+	--fg-tertiary: #94a3b8; /* slate-400 */
+	--fg-disabled: #64748b; /* slate-500 */
 
-	/* Accent colors - sunset warmth */
-	--accent-primary: oklch(0.65 0.18 45);
-	--accent-secondary: oklch(0.7 0.15 55);
-	--accent-muted: oklch(0.75 0.1 50);
+	/* Accent — brighter teal for dark backgrounds */
+	--accent-primary: #14b8a6; /* teal-400 */
+	--accent-secondary: #0d9488; /* teal-600 */
+	--accent-muted: #134e4a; /* teal-900 */
 
-	/* Agent state colors - warm variants */
-	--agent-thinking: oklch(0.6 0.15 200);
-	--agent-executing: oklch(0.65 0.18 45);
-	--agent-waiting: oklch(0.7 0.12 285);
-	--agent-streaming: oklch(0.62 0.16 165);
+	/* Borders */
+	--border-default: #334155; /* slate-700 */
+	--border-focused: #14b8a6; /* teal-400 */
+	--border-muted: #1e293b; /* slate-800 */
 
-	/* Semantic colors - light mode adjusted */
-	--semantic-success: oklch(0.55 0.18 150);
-	--semantic-warning: oklch(0.6 0.18 70);
-	--semantic-error: oklch(0.55 0.2 30);
-	--semantic-info: oklch(0.55 0.15 235);
+	/* Semantic — lighter for dark bg */
+	--semantic-success: #34d399; /* emerald-400 */
+	--semantic-warning: #fbbf24; /* amber-400 */
+	--semantic-error: #f87171; /* red-400 */
+	--semantic-info: #60a5fa; /* blue-400 */
 
-	/* Tool approval colors */
-	--tool-safe: oklch(0.55 0.18 150);
-	--tool-caution: oklch(0.6 0.18 70);
-	--tool-danger: oklch(0.55 0.2 30);
+	/* Tool approval (dark) */
+	--tool-safe: #34d399;
+	--tool-caution: #fbbf24;
+	--tool-danger: #f87171;
 
-	/* Border colors - soft golden tones */
-	--border-default: oklch(0.82 0.03 65);
-	--border-focused: oklch(0.65 0.18 45);
-	--border-muted: oklch(0.88 0.02 70);
+	/* Agent state — lighter for dark bg */
+	--agent-thinking: #5eead4; /* teal-300 */
+	--agent-executing: #14b8a6; /* teal-400 */
+	--agent-waiting: #a78bfa; /* violet-400 */
+	--agent-streaming: #34d399; /* emerald-400 */
+
+	/* Message backgrounds */
+	--message-user: color-mix(in srgb, #14b8a6 10%, #1e293b);
 }
 
 /* Base styles */
 body {
 	background-color: var(--bg-primary);
 	color: var(--fg-primary);
-	font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, monospace;
-	/* Add subtle animated gradient for living ocean effect (dark mode only) */
-	background-image:
-		radial-gradient(ellipse at 20% 50%, oklch(0.18 0.08 220 / 0.3), transparent 50%),
-		radial-gradient(ellipse at 80% 30%, oklch(0.15 0.06 180 / 0.25), transparent 50%),
-		radial-gradient(ellipse at 50% 80%, oklch(0.14 0.05 260 / 0.2), transparent 50%);
-	background-size: 200% 200%;
-	animation: ocean-breathe 20s ease-in-out infinite;
-}
-
-/* Light theme removes animated background */
-:root[data-theme='light'] body {
-	background-image: none;
-	animation: none;
+	font-family:
+		'Plus Jakarta Sans',
+		system-ui,
+		-apple-system,
+		sans-serif;
 }
 
 /* Scrollbar styling */
@@ -220,7 +215,6 @@ body {
 
 	.text-accent {
 		color: var(--accent-primary);
-		text-shadow: 0 0 8px oklch(0.78 0.22 45 / 0.4);
 	}
 	.text-accent-secondary {
 		color: var(--accent-secondary);
@@ -265,7 +259,7 @@ body {
 	.bg-accent {
 		background-color: var(--accent-primary);
 		box-shadow: 0 0 20px -5px var(--accent-primary);
-		animation: bioluminescent-pulse 3s ease-in-out infinite;
+		animation: accent-pulse 3s ease-in-out infinite;
 	}
 	.bg-success {
 		background-color: var(--semantic-success);
@@ -345,39 +339,13 @@ body {
 	}
 }
 
-@keyframes ocean-breathe {
+@keyframes accent-pulse {
 	0%,
 	100% {
-		background-position: 0% 50%;
-		filter: brightness(1);
-	}
-	25% {
-		background-position: 50% 60%;
-		filter: brightness(1.05);
+		box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent-primary) 30%, transparent);
 	}
 	50% {
-		background-position: 100% 50%;
-		filter: brightness(1);
-	}
-	75% {
-		background-position: 50% 40%;
-		filter: brightness(0.98);
-	}
-}
-
-@keyframes bioluminescent-pulse {
-	0%,
-	100% {
-		box-shadow:
-			0 0 10px -2px var(--accent-primary),
-			0 0 20px -5px var(--accent-secondary);
-		filter: brightness(1);
-	}
-	50% {
-		box-shadow:
-			0 0 15px 0px var(--accent-primary),
-			0 0 30px -2px var(--accent-secondary);
-		filter: brightness(1.15);
+		box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent-primary) 0%, transparent);
 	}
 }
 
@@ -478,7 +446,7 @@ body {
 		box-shadow: 0 0 0 0 var(--agent-streaming);
 	}
 	50% {
-		box-shadow: 0 0 20px 4px oklch(0.72 0.16 160 / 0.3);
+		box-shadow: 0 0 20px 4px color-mix(in srgb, var(--agent-streaming) 30%, transparent);
 	}
 }
 
@@ -489,7 +457,8 @@ body {
 /* Code block styling */
 pre,
 code {
-	font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, monospace;
+	font-family:
+		'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, monospace;
 }
 
 .code-block {
@@ -528,37 +497,13 @@ code {
 	padding: var(--space-md);
 }
 
-/* Glassmorphism panels */
-.panel-glass {
-	background: oklch(0.18 0.025 260 / 0.8);
-	backdrop-filter: blur(12px) saturate(1.2);
-	border: 1px solid oklch(0.3 0.03 260 / 0.5);
-	border-radius: var(--radius-lg);
-}
-
-/* Atmospheric background */
-.bg-atmosphere {
-	background:
-		radial-gradient(ellipse at 20% 80%, oklch(0.25 0.08 200 / 0.3), transparent 50%),
-		radial-gradient(ellipse at 80% 20%, oklch(0.2 0.06 40 / 0.2), transparent 40%),
-		var(--bg-primary);
-}
-
-/* Gradient mesh for hero sections */
-.gradient-mesh {
-	background:
-		radial-gradient(at 40% 20%, oklch(0.3 0.1 200 / 0.4) 0px, transparent 50%),
-		radial-gradient(at 80% 0%, oklch(0.25 0.08 40 / 0.3) 0px, transparent 50%),
-		radial-gradient(at 0% 50%, oklch(0.2 0.06 260 / 0.2) 0px, transparent 50%);
-}
-
 /* Message styling */
 .message {
 	animation: slide-in-up var(--transition-fast);
 }
 
 .message-user {
-	background-color: var(--accent-muted);
+	background-color: var(--message-user);
 	border: 1px solid var(--accent-primary);
 }
 
@@ -594,7 +539,7 @@ code {
 
 .chat-input:focus {
 	border-color: var(--accent-primary);
-	box-shadow: 0 0 0 2px color-mix(in oklch, var(--accent-primary) 30%, transparent);
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 20%, transparent);
 }
 
 .chat-input::placeholder {
@@ -616,7 +561,7 @@ code {
 
 .btn-primary {
 	background-color: var(--accent-primary);
-	color: var(--bg-primary);
+	color: #ffffff;
 }
 
 .btn-primary:hover:not(:disabled) {
@@ -636,12 +581,12 @@ code {
 
 .btn-danger {
 	background-color: var(--semantic-error);
-	color: var(--fg-primary);
+	color: #ffffff;
 }
 
 .btn-success {
 	background-color: var(--semantic-success);
-	color: var(--bg-primary);
+	color: #ffffff;
 }
 
 .btn:disabled {
@@ -666,25 +611,25 @@ code {
 
 .badge-success {
 	background-color: var(--semantic-success);
-	color: var(--bg-primary);
+	color: #ffffff;
 }
 
 .badge-warning {
 	background-color: var(--semantic-warning);
-	color: var(--bg-primary);
+	color: #ffffff;
 }
 
 .badge-error {
 	background-color: var(--semantic-error);
-	color: var(--fg-primary);
+	color: #ffffff;
 }
 
 .badge-info {
 	background-color: var(--semantic-info);
-	color: var(--bg-primary);
+	color: #ffffff;
 }
 
 .badge-accent {
 	background-color: var(--accent-primary);
-	color: var(--bg-primary);
+	color: #ffffff;
 }
