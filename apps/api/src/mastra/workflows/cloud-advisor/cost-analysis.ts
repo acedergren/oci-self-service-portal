@@ -14,7 +14,6 @@
 import { createStep, createWorkflow } from '@mastra/core/workflows';
 import { z } from 'zod';
 import { generateText } from 'ai';
-import { randomUUID } from 'node:crypto';
 import { selectModel } from '../../providers.js';
 import { emitWorkflowStep, emitWorkflowStatus } from '../../events.js';
 import { CLOUDADVISOR_TOOLS, executeTool } from '../../tools/index.js';
