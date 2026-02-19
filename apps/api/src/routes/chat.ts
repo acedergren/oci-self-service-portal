@@ -110,6 +110,145 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
 					'chat request'
 				);
 
+				// ── Intent classification ─────────────────────────────────────────────
+				// Run classify-intent first (fast, structured output) to route the message.
+				const lastMessage = messages[messages.length - 1]?.content ?? '';
+				try {
+					const ciRun = await fastify.mastra.getWorkflow('classifyIntentWorkflow').createRun();
+					const ciResult = await ciRun.start({
+						inputData: {
+							conversationId: effectiveThreadId,
+							message: lastMessage,
+							// eslint-disable-next-line @typescript-eslint/no-explicit-any
+							history: messages as any
+						}
+					});
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					const classifyOutput = (ciResult as any)?.results?.classify?.output as
+						| { intent: string; targetRunId?: string }
+						| undefined;
+					const intent = classifyOutput?.intent ?? 'clarification';
+					const targetRunId = classifyOutput?.targetRunId;
+
+					request.log.info({ intent, targetRunId }, 'intent classified');
+
+					if (intent === 'action') {
+						const actionRun = await fastify.mastra.getWorkflow('charlieActionWorkflow').createRun();
+						const runId = actionRun.runId;
+						// Fire-and-forget — frontend subscribes via SSE stream for progress
+						void actionRun.start({
+							inputData: {
+								conversationId: effectiveThreadId,
+								message: lastMessage,
+								// eslint-disable-next-line @typescript-eslint/no-explicit-any
+								history: messages as any,
+								mcpToolsets: (mcpToolsets as Record<string, unknown>) ?? {},
+								userId
+							}
+						});
+						clearTimeout(timeout);
+						reply.raw.writeHead(200, {
+							'Content-Type': 'text/event-stream',
+							'Cache-Control': 'no-cache',
+							Connection: 'keep-alive'
+						});
+						reply.raw.write(
+							`data: ${JSON.stringify({ runId, intent: 'action', message: "I'm planning your request..." })}\n\n`
+						);
+						reply.raw.write('data: [DONE]\n\n');
+						reply.raw.end();
+						return;
+					}
+
+					if (intent === 'approval' && targetRunId) {
+						const resumeRun = await fastify.mastra
+							.getWorkflow('charlieActionWorkflow')
+							.createRun({ runId: targetRunId });
+						await resumeRun.resume({
+							step: 'pre_execution_summary',
+							resumeData: { approved: true }
+						});
+						clearTimeout(timeout);
+						reply.raw.writeHead(200, {
+							'Content-Type': 'text/event-stream',
+							'Cache-Control': 'no-cache',
+							Connection: 'keep-alive'
+						});
+						reply.raw.write(
+							`data: ${JSON.stringify({ status: 'resumed', runId: targetRunId })}\n\n`
+						);
+						reply.raw.write('data: [DONE]\n\n');
+						reply.raw.end();
+						return;
+					}
+
+					if (intent === 'query') {
+						const qRun = await fastify.mastra.getWorkflow('queryWorkflow').createRun();
+						const qResult = await qRun.start({
+							inputData: {
+								conversationId: effectiveThreadId,
+								message: lastMessage,
+								// eslint-disable-next-line @typescript-eslint/no-explicit-any
+								history: messages as any,
+								mcpToolsets: (mcpToolsets as Record<string, unknown>) ?? {}
+							}
+						});
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
+						const qOut = qResult as any;
+						const qResponse: string =
+							qOut?.results?.persist?.output?.response ??
+							qOut?.results?.synthesise?.output?.response ??
+							'';
+						clearTimeout(timeout);
+						reply.raw.writeHead(200, {
+							'Content-Type': 'text/event-stream',
+							'Cache-Control': 'no-cache',
+							Connection: 'keep-alive'
+						});
+						reply.raw.write(`data: ${JSON.stringify({ text: qResponse })}\n\n`);
+						reply.raw.write('data: [DONE]\n\n');
+						reply.raw.end();
+						return;
+					}
+
+					if (intent === 'correction') {
+						const cRun = await fastify.mastra.getWorkflow('correctWorkflow').createRun();
+						const cResult = await cRun.start({
+							inputData: {
+								conversationId: effectiveThreadId,
+								message: lastMessage,
+								previousOutput:
+									typeof messages[messages.length - 2]?.content === 'string'
+										? String(messages[messages.length - 2]!.content)
+										: '',
+								// eslint-disable-next-line @typescript-eslint/no-explicit-any
+								history: messages as any
+							}
+						});
+						// eslint-disable-next-line @typescript-eslint/no-explicit-any
+						const cOut = cResult as any;
+						const cResponse: string = cOut?.results?.respond_or_retry?.output?.response ?? '';
+						clearTimeout(timeout);
+						reply.raw.writeHead(200, {
+							'Content-Type': 'text/event-stream',
+							'Cache-Control': 'no-cache',
+							Connection: 'keep-alive'
+						});
+						reply.raw.write(`data: ${JSON.stringify({ text: cResponse })}\n\n`);
+						reply.raw.write('data: [DONE]\n\n');
+						reply.raw.end();
+						return;
+					}
+					// 'clarification' falls through to existing agent.stream() below
+				} catch (intentErr) {
+					// Intent classification failure is non-fatal — fall through to agent.stream()
+					request.log.warn(
+						{ err: intentErr },
+						'Intent classification failed, falling back to agent.stream()'
+					);
+				}
+				// ── End intent routing ─────────────────────────────────────────────
+
 				// Mastra's MessageListInput accepts { role, content }[] (MessageInput[])
 				// eslint-disable-next-line @typescript-eslint/no-explicit-any
 				const result = await agent.stream(messages as any, {

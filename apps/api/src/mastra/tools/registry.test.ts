@@ -5,8 +5,10 @@ import {
 	getToolsByCategory,
 	buildMastraTools,
 	createAISDKTools,
-	executeTool
+	executeTool,
+	toolDefinitions
 } from './registry.js';
+import { CHARLIE_TOOLS, CLOUDADVISOR_TOOLS } from './index.js';
 
 describe('tool registry', () => {
 	describe('getAllToolDefinitions', () => {
@@ -160,4 +162,41 @@ describe('tool categories', () => {
 			expect(tools.length).toBeGreaterThan(0);
 		});
 	}
+});
+
+describe('CHARLIE_TOOLS', () => {
+	it('contains all registered tool names', () => {
+		const allNames = Array.from(toolDefinitions.keys());
+		expect(CHARLIE_TOOLS.length).toBe(allNames.length);
+		for (const name of allNames) {
+			expect(CHARLIE_TOOLS).toContain(name);
+		}
+	});
+
+	it('is frozen (immutable)', () => {
+		expect(Object.isFrozen(CHARLIE_TOOLS)).toBe(true);
+	});
+});
+
+describe('CLOUDADVISOR_TOOLS', () => {
+	it('contains only tools with approvalLevel === "auto"', () => {
+		expect(CLOUDADVISOR_TOOLS.length).toBeGreaterThan(0);
+		for (const name of CLOUDADVISOR_TOOLS) {
+			const def = toolDefinitions.get(name);
+			expect(def).toBeDefined();
+			expect(def!.approvalLevel).toBe('auto');
+		}
+	});
+
+	it('is a strict subset of CHARLIE_TOOLS', () => {
+		for (const name of CLOUDADVISOR_TOOLS) {
+			expect(CHARLIE_TOOLS).toContain(name);
+		}
+		// Must be a strict subset — not all tools are auto-approved
+		expect(CLOUDADVISOR_TOOLS.length).toBeLessThan(CHARLIE_TOOLS.length);
+	});
+
+	it('is frozen (immutable)', () => {
+		expect(Object.isFrozen(CLOUDADVISOR_TOOLS)).toBe(true);
+	});
 });

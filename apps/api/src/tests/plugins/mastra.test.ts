@@ -89,7 +89,9 @@ vi.mock('../../mastra/rag/oracle-vector-store.js', () => ({
 }));
 
 vi.mock('../../mastra/tools/registry.js', () => ({
-	buildMastraTools: () => ({})
+	buildMastraTools: () => ({}),
+	// toolDefinitions is imported by action-workflow.ts (via mastra/index.ts workflow registration)
+	toolDefinitions: new Map()
 }));
 
 vi.mock('../../mastra/agents/charlie.js', () => ({

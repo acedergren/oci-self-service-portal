@@ -1115,6 +1115,63 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 		}
 	);
 
+	// ── POST /api/v1/workflows/charlie/:runId/approve ────────────────────
+	// Approves a suspended charlieActionWorkflow run, resuming execution.
+
+	app.post(
+		'/api/v1/workflows/charlie/:runId/approve',
+		{
+			schema: {
+				params: z.object({ runId: z.string() }),
+				body: z.object({ note: z.string().optional() })
+			},
+			preHandler: requireAuth('workflows:execute')
+		},
+		async (request, reply) => {
+			const { runId } = request.params;
+			const orgId = resolveOrgId(request);
+			if (!orgId) return reply.code(400).send({ error: 'Organization context required' });
+
+			const userId = request.user?.id;
+			if (!userId) return reply.code(400).send({ error: 'User context required' });
+
+			const run = await fastify.mastra.getWorkflow('charlieActionWorkflow').createRun({ runId });
+			await run.resume({
+				step: 'pre_execution_summary',
+				resumeData: { approved: true }
+			});
+
+			return reply.send({ status: 'resumed', runId });
+		}
+	);
+
+	// ── POST /api/v1/workflows/charlie/:runId/reject ──────────────────────
+	// Rejects a suspended charlieActionWorkflow run, cancelling execution.
+
+	app.post(
+		'/api/v1/workflows/charlie/:runId/reject',
+		{
+			schema: {
+				params: z.object({ runId: z.string() }),
+				body: z.object({ reason: z.string().optional() })
+			},
+			preHandler: requireAuth('workflows:execute')
+		},
+		async (request, reply) => {
+			const { runId } = request.params;
+			const orgId = resolveOrgId(request);
+			if (!orgId) return reply.code(400).send({ error: 'Organization context required' });
+
+			const run = await fastify.mastra.getWorkflow('charlieActionWorkflow').createRun({ runId });
+			await run.resume({
+				step: 'pre_execution_summary',
+				resumeData: { approved: false, reason: request.body.reason }
+			});
+
+			return reply.send({ status: 'cancelled', runId });
+		}
+	);
+
 	// ── Crash Recovery ──────────────────────────────────────────────────
 	// On server start, mark any runs stuck in 'running' status as failed.
 	// These are runs that were interrupted by a server crash/restart.

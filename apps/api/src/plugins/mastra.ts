@@ -12,16 +12,13 @@
 import fp from 'fastify-plugin';
 import type { FastifyPluginAsync } from 'fastify';
 import type { EmbeddingModel } from 'ai';
-import { Mastra } from '@mastra/core';
+import type { Mastra } from '@mastra/core';
 import { MastraServer } from '@mastra/fastify';
-import { Memory } from '@mastra/memory';
 import { createOCI } from '@acedergren/oci-genai-provider';
 import { SentryExporter } from '@mastra/sentry';
 import { Observability } from '@mastra/observability';
-import { OracleStore } from '../mastra/storage/oracle-store.js';
 import { OracleVectorStore } from '../mastra/rag/oracle-vector-store.js';
-import { buildMastraTools } from '../mastra/tools/registry.js';
-import { createCharlieAgent, DEFAULT_MODEL } from '../mastra/agents/charlie.js';
+import { createMastra } from '../mastra/index.js';
 import { mcpConnectionManager } from '../services/mcp-connection-manager.js';
 
 declare module 'fastify' {
@@ -36,19 +33,8 @@ declare module 'fastify' {
 const MASTRA_PREFIX = '/api/mastra';
 
 const mastraPlugin: FastifyPluginAsync = async (fastify) => {
-	// ── Oracle storage adapter ──────────────────────────────────────────
+	// ── Oracle availability check ────────────────────────────────────────
 	const hasOracle = fastify.hasDecorator('oracle') && fastify.oracle.isAvailable();
-	const storage = hasOracle
-		? new OracleStore({
-				withConnection: fastify.oracle.withConnection,
-				disableInit: true // migrations handle DDL
-			})
-		: undefined;
-
-	// ── Oracle Vector Store (for RAG / semantic search) ─────────────────
-	const vectorStore = hasOracle
-		? new OracleVectorStore({ withConnection: fastify.oracle.withConnection })
-		: undefined;
 
 	// ── OCI GenAI Embedder (AI SDK interface) ─────────────────────────
 	// Uses the native OCI SDK via @acedergren/oci-genai-provider.
@@ -56,36 +42,7 @@ const mastraPlugin: FastifyPluginAsync = async (fastify) => {
 	const oci = createOCI({ region: process.env.OCI_REGION });
 	const ociEmbedder = oci.embeddingModel('cohere.embed-english-v3.0');
 
-	// ── Build Mastra tools from the OCI tool registry ──────────────────
-	const tools = buildMastraTools();
-
-	// ── Create Mastra Memory (conversation persistence + semantic recall)
-	const memory = new Memory({
-		storage,
-		vector: vectorStore,
-		embedder: ociEmbedder,
-		options: {
-			lastMessages: 40,
-			workingMemory: { enabled: true },
-			semanticRecall: vectorStore
-				? {
-						topK: 3,
-						messageRange: { before: 2, after: 1 },
-						scope: 'resource'
-					}
-				: false
-		}
-	});
-
-	// ── Create Charlie agent ──────────────────────────────────────────
-	const compartmentId = process.env.OCI_COMPARTMENT_ID;
-	const charlie = createCharlieAgent({
-		model: DEFAULT_MODEL,
-		memory,
-		compartmentId
-	});
-
-	// ── Configure Sentry observability (A-2.06) ────────────────────────
+	// ── Configure Sentry observability ────────────────────────────────
 	// Sentry AI spans: AGENT_RUN, MODEL_GENERATION, TOOL_CALL with OpenTelemetry semantic conventions.
 	// Sample rate: 10% in production (controlled via SENTRY_TRACE_SAMPLE_RATE env var).
 	const observability = process.env.SENTRY_DSN
@@ -97,7 +54,10 @@ const mastraPlugin: FastifyPluginAsync = async (fastify) => {
 							new SentryExporter({
 								dsn: process.env.SENTRY_DSN,
 								environment: process.env.NODE_ENV || 'production',
-								tracesSampleRate: Number(process.env.SENTRY_TRACE_SAMPLE_RATE) || 0.1 // 10% sampling
+								tracesSampleRate:
+									process.env.SENTRY_TRACE_SAMPLE_RATE !== undefined
+										? Number(process.env.SENTRY_TRACE_SAMPLE_RATE)
+										: 0.1
 							})
 						]
 					}
@@ -105,14 +65,21 @@ const mastraPlugin: FastifyPluginAsync = async (fastify) => {
 			})
 		: undefined;
 
-	// ── Create Mastra instance ─────────────────────────────────────────
-	const mastra = new Mastra({
-		agents: { charlie },
-		tools,
-		storage,
-		memory: { charlie: memory },
+	// ── Build Mastra instance via factory ─────────────────────────────
+	const { mastra, tools, vectorStore } = createMastra({
+		withConnection: hasOracle ? fastify.oracle.withConnection : undefined,
+		ociEmbedder,
+		compartmentId: process.env.OCI_COMPARTMENT_ID,
 		observability
 	});
+
+	// Warn when falling back to in-memory storage (data lost on restart).
+	if (!vectorStore) {
+		fastify.log.warn(
+			{ oracleAvailable: hasOracle },
+			'Mastra storage falling back to in-memory — workflow snapshots and conversation memory will not persist across restarts'
+		);
+	}
 
 	if (!fastify.hasDecorator('mastra')) {
 		fastify.decorate('mastra', mastra);

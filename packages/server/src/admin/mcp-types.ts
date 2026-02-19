@@ -118,6 +118,15 @@ export type CatalogCredentialRequirement = z.infer<typeof CatalogCredentialRequi
 export const McpServerConfigSchema = z.object({
 	/** Transport type (overrides server-level transportType if specified) */
 	transport: McpTransportTypeSchema.optional(),
+	/** Docker image tag (e.g., "latest", "v1.2.0") — for Docker-based catalog servers */
+	imageTag: z
+		.string()
+		.max(128)
+		.regex(
+			/^[a-zA-Z0-9._-]+$/,
+			'Docker image tag must contain only alphanumeric characters, periods, underscores, or hyphens'
+		)
+		.optional(),
 	/** SSE/HTTP endpoint URL */
 	url: z.string().optional(),
 	/** stdio: Command to execute (e.g., "npx", "node", "python") */

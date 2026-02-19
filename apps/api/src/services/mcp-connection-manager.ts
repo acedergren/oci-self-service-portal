@@ -527,7 +527,12 @@ export class MCPConnectionManager {
 			}
 		}
 
-		const imageName = `${server.dockerImage}:${server.config.transport ?? 'latest'}`;
+		const imageTag = server.config.imageTag ?? 'latest';
+		const tagPattern = /^[a-zA-Z0-9._-]+$/;
+		if (!tagPattern.test(imageTag)) {
+			throw new Error(`Invalid Docker image tag: ${imageTag}`);
+		}
+		const imageName = `${server.dockerImage}:${imageTag}`;
 
 		log.info({ serverId: server.id, image: imageName }, 'Starting Docker container');
 
