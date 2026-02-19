@@ -17,6 +17,7 @@ import { ValidationError } from '@portal/server/errors.js';
 import { FALLBACK_MODEL_ALLOWLIST, DEFAULT_MODEL } from '../mastra/agents/charlie.js';
 import { getProviderRegistry, getEnabledModelIds } from '../mastra/models/index.js';
 import { requireAuth, resolveOrgId } from '../plugins/rbac.js';
+import { createWorkflowRunRepository } from '../services/workflow-repository.js';
 
 // ── Constants ────────────────────────────────────────────────────────────
 
@@ -161,6 +162,26 @@ const chatRoutes: FastifyPluginAsync = async (fastify) => {
 					}
 
 					if (intent === 'approval' && targetRunId) {
+						// IDOR guard: verify run belongs to this user's org before resuming.
+						// targetRunId comes from LLM classification of user text — never trust it directly.
+						if (fastify.hasDecorator('oracle') && fastify.oracle.isAvailable() && orgId) {
+							const runRepo = createWorkflowRunRepository(fastify.oracle.withConnection);
+							const existingRun = await runRepo.getByIdForUser(targetRunId, userId, orgId);
+							if (!existingRun) {
+								clearTimeout(timeout);
+								reply.raw.writeHead(200, {
+									'Content-Type': 'text/event-stream',
+									'Cache-Control': 'no-cache',
+									Connection: 'keep-alive'
+								});
+								reply.raw.write(
+									`data: ${JSON.stringify({ error: 'Workflow run not found', runId: targetRunId })}\n\n`
+								);
+								reply.raw.write('data: [DONE]\n\n');
+								reply.raw.end();
+								return;
+							}
+						}
 						const resumeRun = await fastify.mastra
 							.getWorkflow('charlieActionWorkflow')
 							.createRun({ runId: targetRunId });

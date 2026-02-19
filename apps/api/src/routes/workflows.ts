@@ -1122,7 +1122,7 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 		'/api/v1/workflows/charlie/:runId/approve',
 		{
 			schema: {
-				params: z.object({ runId: z.string() }),
+				params: z.object({ runId: z.string().uuid() }),
 				body: z.object({ note: z.string().optional() })
 			},
 			preHandler: requireAuth('workflows:execute')
@@ -1135,11 +1135,21 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 			const userId = request.user?.id;
 			if (!userId) return reply.code(400).send({ error: 'User context required' });
 
-			const run = await fastify.mastra.getWorkflow('charlieActionWorkflow').createRun({ runId });
-			await run.resume({
-				step: 'pre_execution_summary',
-				resumeData: { approved: true }
-			});
+			// IDOR guard: verify run belongs to this user's org before resuming
+			const { runs } = getRepos();
+			const existingRun = await runs.getByIdForUser(runId, userId, orgId);
+			if (!existingRun) throw new NotFoundError('Workflow run not found', { runId });
+
+			try {
+				const run = await fastify.mastra.getWorkflow('charlieActionWorkflow').createRun({ runId });
+				await run.resume({
+					step: 'pre_execution_summary',
+					resumeData: { approved: true }
+				});
+				fastify.log.info({ orgId, userId, runId }, 'Charlie workflow approved');
+			} catch (err) {
+				throw toPortalError(err);
+			}
 
 			return reply.send({ status: 'resumed', runId });
 		}
@@ -1152,7 +1162,7 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 		'/api/v1/workflows/charlie/:runId/reject',
 		{
 			schema: {
-				params: z.object({ runId: z.string() }),
+				params: z.object({ runId: z.string().uuid() }),
 				body: z.object({ reason: z.string().optional() })
 			},
 			preHandler: requireAuth('workflows:execute')
@@ -1162,11 +1172,24 @@ const workflowRoutes: FastifyPluginAsync = async (fastify) => {
 			const orgId = resolveOrgId(request);
 			if (!orgId) return reply.code(400).send({ error: 'Organization context required' });
 
-			const run = await fastify.mastra.getWorkflow('charlieActionWorkflow').createRun({ runId });
-			await run.resume({
-				step: 'pre_execution_summary',
-				resumeData: { approved: false, reason: request.body.reason }
-			});
+			const userId = request.user?.id;
+			if (!userId) return reply.code(400).send({ error: 'User context required' });
+
+			// IDOR guard: verify run belongs to this user's org before cancelling
+			const { runs } = getRepos();
+			const existingRun = await runs.getByIdForUser(runId, userId, orgId);
+			if (!existingRun) throw new NotFoundError('Workflow run not found', { runId });
+
+			try {
+				const run = await fastify.mastra.getWorkflow('charlieActionWorkflow').createRun({ runId });
+				await run.resume({
+					step: 'pre_execution_summary',
+					resumeData: { approved: false, reason: request.body.reason }
+				});
+				fastify.log.info({ orgId, userId, runId }, 'Charlie workflow rejected');
+			} catch (err) {
+				throw toPortalError(err);
+			}
 
 			return reply.send({ status: 'cancelled', runId });
 		}

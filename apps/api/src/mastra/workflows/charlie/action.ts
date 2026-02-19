@@ -93,14 +93,21 @@ async function runTool(
 	args: Record<string, unknown>,
 	mcpToolsets: Record<string, unknown>
 ): Promise<unknown> {
-	if (CHARLIE_TOOLS.includes(name)) {
+	// Explicit allowlist check — reject names not in either registry before execution.
+	// This prevents LLM-fabricated tool names from reaching any execution path.
+	const inOciRegistry = CHARLIE_TOOLS.includes(name);
+	const inMcpToolsets = Object.prototype.hasOwnProperty.call(mcpToolsets, name);
+	if (!inOciRegistry && !inMcpToolsets) {
+		throw new Error(`Tool "${name}" not found in OCI registry or MCP toolsets`);
+	}
+	if (inOciRegistry) {
 		return executeTool(name, args);
 	}
 	const mcpTool = mcpToolsets[name] as
 		| { execute: (args: unknown, ctx: unknown) => Promise<unknown> }
 		| undefined;
 	if (!mcpTool?.execute) {
-		throw new Error(`Tool "${name}" not found in OCI registry or MCP toolsets`);
+		throw new Error(`Tool "${name}" is registered but has no execute function`);
 	}
 	return mcpTool.execute(args, { messages: [], toolCallId: randomUUID() });
 }
@@ -302,13 +309,18 @@ const executeStep = createStep({
 			try {
 				const result = await runTool(step.tool, step.input, _mcpToolsets);
 
-				// Track compensation entry for saga rollback
-				plan.add({
-					nodeId: stepId,
-					toolName: step.tool,
-					compensateAction: `delete${step.tool.charAt(0).toUpperCase()}${step.tool.slice(1)}`,
-					compensateArgs: step.input
-				});
+				// Track compensation entry for saga rollback.
+				// Validate the auto-generated compensate action name against the tool registry
+				// before registering it — prevents LLM-fabricated names from reaching rollback.
+				const compensateAction = `delete${step.tool.charAt(0).toUpperCase()}${step.tool.slice(1)}`;
+				if (CHARLIE_TOOLS.includes(compensateAction)) {
+					plan.add({
+						nodeId: stepId,
+						toolName: step.tool,
+						compensateAction,
+						compensateArgs: step.input
+					});
+				}
 
 				results.push({ step: stepId, tool: step.tool, result, success: true });
 				emitWorkflowStep(runId, 'complete', `execute:${step.tool}`, 'tool-call');
