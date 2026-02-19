@@ -27,32 +27,32 @@
 	.quick-links {
 		display: flex;
 		align-items: center;
-		gap: 0.75rem;
-		margin-top: 1rem;
+		gap: var(--space-sm);
+		margin-top: var(--space-md);
 		flex-wrap: wrap;
 	}
 
 	.quick-label {
-		color: var(--portal-slate, #64748b);
-		font-size: 0.8125rem;
+		color: var(--fg-tertiary);
+		font-size: var(--text-sm);
 		font-weight: 500;
 	}
 
 	.quick-link {
-		color: var(--portal-teal, #0d9488);
-		font-size: 0.8125rem;
+		color: var(--accent-primary);
+		font-size: var(--text-sm);
 		font-weight: 500;
-		padding: 0.375rem 0.75rem;
-		background: rgba(13, 148, 136, 0.08);
+		padding: var(--space-xs) var(--space-sm);
+		background: color-mix(in srgb, var(--accent-primary) 8%, transparent);
 		border: none;
-		border-radius: 100px;
+		border-radius: var(--radius-full);
 		cursor: pointer;
-		transition: all 0.15s ease;
+		transition: all var(--transition-fast);
 		font-family: inherit;
 	}
 
 	.quick-link:hover {
-		background: rgba(13, 148, 136, 0.15);
+		background: color-mix(in srgb, var(--accent-primary) 15%, transparent);
 	}
 
 	.quick-link:disabled {
@@ -63,8 +63,8 @@
 	.quick-link.loading {
 		display: flex;
 		align-items: center;
-		gap: 0.5rem;
-		background: rgba(13, 148, 136, 0.2);
+		gap: var(--space-xs);
+		background: color-mix(in srgb, var(--accent-primary) 20%, transparent);
 	}
 
 	.quick-link.loading .label-text {

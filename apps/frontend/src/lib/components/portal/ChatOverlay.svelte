@@ -180,16 +180,12 @@
 		--text-secondary: var(--fg-secondary);
 		--text-tertiary: var(--fg-tertiary);
 
-		/* Workflow execution state colors */
-		--color-success: #10b981;
+		/* Workflow execution state colors — inherit from design system */
+		--color-success: var(--semantic-success);
 		--color-executing: var(--accent-primary);
-		--color-error: #ef4444;
-		--color-info: #3b82f6;
-		--color-warning: #f59e0b;
-		--semantic-success: #10b981;
-		--semantic-error: #ef4444;
-		--semantic-warning: #f59e0b;
-		--semantic-info: #3b82f6;
+		--color-error: var(--semantic-error);
+		--color-info: var(--semantic-info);
+		--color-warning: var(--semantic-warning);
 	}
 
 	/* Panel styles for Collapsible component inside workflow container */
@@ -230,10 +226,10 @@
 		color: var(--fg-disabled);
 	}
 	.workflow-panel-container :global(.text-success) {
-		color: #10b981;
+		color: var(--semantic-success);
 	}
 	.workflow-panel-container :global(.text-error) {
-		color: #ef4444;
+		color: var(--semantic-error);
 	}
 
 	/* Badge styles for workflow container */
@@ -252,19 +248,19 @@
 	}
 
 	.workflow-panel-container :global(.badge-success) {
-		background-color: #10b981;
+		background-color: var(--semantic-success);
 		color: white;
 	}
 	.workflow-panel-container :global(.badge-warning) {
-		background-color: #f59e0b;
+		background-color: var(--semantic-warning);
 		color: white;
 	}
 	.workflow-panel-container :global(.badge-error) {
-		background-color: #ef4444;
+		background-color: var(--semantic-error);
 		color: white;
 	}
 	.workflow-panel-container :global(.badge-info) {
-		background-color: #3b82f6;
+		background-color: var(--semantic-info);
 		color: white;
 	}
 

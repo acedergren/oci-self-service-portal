@@ -4,12 +4,17 @@
 	let { onAskAI }: HelpPanelProps = $props();
 </script>
 
-<div class="help-panel">
+<div class="help-panel glass-charlie">
 	<div class="panel-header">
-		<h2 class="panel-title">Need Help?</h2>
+		<h2 class="panel-title">
+			<span class="charlie-mark">C</span>
+			Ask Charlie
+		</h2>
 	</div>
 	<div class="help-content">
-		<p class="help-text">Use the AI assistant for instant help with any cloud operations.</p>
+		<p class="help-text">
+			Charlie can help with any cloud operation — from cost analysis to infrastructure provisioning.
+		</p>
 		<button
 			class="help-btn"
 			onclick={() => onAskAI('Help me understand my current OCI infrastructure and costs')}
@@ -19,41 +24,55 @@
 					stroke-linecap="round"
 					stroke-linejoin="round"
 					stroke-width="1.5"
-					d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"
+					d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
 				/>
 			</svg>
-			Ask AI Assistant
+			Chat with Charlie
 		</button>
 	</div>
 </div>
 
 <style>
 	.help-panel {
-		background: var(--portal-white, #ffffff);
-		border-radius: 12px;
+		border-radius: var(--radius-lg);
 		overflow: hidden;
-		border: 1px solid #e2e8f0;
 	}
 
 	.panel-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 1rem 1.5rem;
-		background: linear-gradient(135deg, rgba(13, 148, 136, 0.08), rgba(13, 148, 136, 0.15));
-		border-bottom: 1px solid rgba(13, 148, 136, 0.2);
+		padding: var(--space-md) var(--space-lg);
+		border-bottom: 1px solid color-mix(in srgb, var(--charlie-accent) 20%, transparent);
 	}
 
 	.panel-header ~ * {
-		padding: 1.5rem;
+		padding: var(--space-lg);
 	}
 
 	.panel-title {
-		font-size: 0.875rem;
+		font-size: var(--text-sm);
 		font-weight: 600;
-		color: var(--portal-teal-dark, #0f766e);
+		color: var(--fg-secondary);
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
+		display: flex;
+		align-items: center;
+		gap: var(--space-sm);
+	}
+
+	.charlie-mark {
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+		width: 20px;
+		height: 20px;
+		border-radius: var(--radius-full);
+		background: var(--charlie-accent);
+		color: white;
+		font-size: var(--text-xs);
+		font-weight: 700;
+		flex-shrink: 0;
 	}
 
 	.help-content {
@@ -61,35 +80,31 @@
 	}
 
 	.help-text {
-		font-size: 0.875rem;
-		color: var(--portal-slate, #64748b);
-		margin-bottom: 1rem;
+		font-size: var(--text-sm);
+		color: var(--fg-secondary);
+		margin-bottom: var(--space-md);
 		line-height: 1.5;
 	}
 
 	.help-btn {
 		display: inline-flex;
 		align-items: center;
-		gap: 0.5rem;
-		background: linear-gradient(
-			135deg,
-			var(--portal-teal, #0d9488),
-			var(--portal-teal-dark, #0f766e)
-		);
+		gap: var(--space-sm);
+		background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
 		color: white;
-		font-size: 0.875rem;
+		font-size: var(--text-sm);
 		font-weight: 600;
-		padding: 0.75rem 1.5rem;
+		padding: var(--space-sm) var(--space-lg);
 		border: none;
-		border-radius: 8px;
+		border-radius: var(--radius-md);
 		cursor: pointer;
-		transition: all 0.2s ease;
+		transition: all var(--transition-normal);
 		font-family: inherit;
 	}
 
 	.help-btn:hover {
 		transform: translateY(-1px);
-		box-shadow: 0 4px 12px rgba(13, 148, 136, 0.3);
+		box-shadow: 0 4px 12px color-mix(in srgb, var(--accent-primary) 30%, transparent);
 	}
 
 	.help-btn svg {

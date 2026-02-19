@@ -4,44 +4,48 @@
 	let { links }: ResourceLinksPanelProps = $props();
 </script>
 
-<div class="resources-panel">
+<div class="resources-panel glass">
 	<div class="panel-header">
 		<h2 class="panel-title">Resources</h2>
 	</div>
-	<div class="resources-list">
-		{#each links as link (link.label)}
-			<a href={link.href} target="_blank" rel="external noopener noreferrer" class="resource-link">
-				{link.label}
-			</a>
-		{/each}
+	<div class="panel-body">
+		<div class="resources-list">
+			{#each links as link (link.label)}
+				<a
+					href={link.href}
+					target="_blank"
+					rel="external noopener noreferrer"
+					class="resource-link"
+				>
+					{link.label}
+				</a>
+			{/each}
+		</div>
 	</div>
 </div>
 
 <style>
 	.resources-panel {
-		background: var(--portal-white, #ffffff);
-		border-radius: 12px;
+		border-radius: var(--radius-lg);
 		overflow: hidden;
-		border: 1px solid #e2e8f0;
 	}
 
 	.panel-header {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		padding: 1rem 1.5rem;
-		background: linear-gradient(135deg, rgba(13, 148, 136, 0.08), rgba(13, 148, 136, 0.15));
-		border-bottom: 1px solid rgba(13, 148, 136, 0.2);
+		padding: var(--space-md) var(--space-lg);
+		border-bottom: 1px solid var(--border-muted);
 	}
 
-	.panel-header ~ * {
-		padding: 1.5rem;
+	.panel-body {
+		padding: var(--space-lg);
 	}
 
 	.panel-title {
-		font-size: 0.875rem;
+		font-size: var(--text-sm);
 		font-weight: 600;
-		color: var(--portal-teal-dark, #0f766e);
+		color: var(--fg-secondary);
 		text-transform: uppercase;
 		letter-spacing: 0.05em;
 	}
@@ -49,21 +53,21 @@
 	.resources-list {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: var(--space-sm);
 	}
 
 	.resource-link {
 		display: block;
-		font-size: 0.875rem;
-		color: var(--portal-teal, #0d9488);
+		font-size: var(--text-sm);
+		color: var(--accent-primary);
 		text-decoration: none;
 		padding: 0.625rem 0;
-		border-bottom: 1px solid #e2e8f0;
-		transition: color 0.15s ease;
+		border-bottom: 1px solid var(--border-muted);
+		transition: color var(--transition-fast);
 	}
 
 	.resource-link:hover {
-		color: var(--portal-teal-dark, #0f766e);
+		color: var(--accent-secondary);
 		text-decoration: underline;
 	}
 
