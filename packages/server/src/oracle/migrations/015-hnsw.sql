@@ -57,6 +57,10 @@ BEGIN
       WHEN OTHERS THEN
         IF SQLCODE = -955 THEN
           DBMS_OUTPUT.PUT_LINE('HNSW index idx_embeddings_vector already exists');
+        ELSIF SQLCODE = -2158 THEN
+          -- ORA-02158: invalid CREATE INDEX option — HNSW not supported on this ADB tier.
+          -- Leave existing IVF index in place and continue.
+          DBMS_OUTPUT.PUT_LINE('HNSW not supported on this instance — skipping HNSW upgrade');
         ELSE
           RAISE;
         END IF;
@@ -67,9 +71,9 @@ BEGIN
   FOR idx_rec IN (
     SELECT index_name, table_name
     FROM user_indexes
-    WHERE table_name LIKE 'MASTRA\\_VECTOR\\_%' ESCAPE '\\'
+    WHERE table_name LIKE 'MASTRA\_VECTOR\_%' ESCAPE '\'
       AND index_type = 'VECTOR'
-      AND index_name LIKE 'IDX_%\\_VEC' ESCAPE '\\'
+      AND index_name LIKE 'IDX_%\_VEC' ESCAPE '\'
   ) LOOP
     BEGIN
       -- Drop existing IVF index

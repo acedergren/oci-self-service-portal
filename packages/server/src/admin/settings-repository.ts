@@ -97,7 +97,7 @@ export const settingsRepository = {
 	async get(key: string): Promise<PortalSetting | null> {
 		return withConnection(async (conn) => {
 			const result = await conn.execute<PortalSettingRow>(
-				'SELECT * FROM portal_settings WHERE key = :key',
+				'SELECT * FROM portal_settings WHERE "KEY" = :key',
 				{ key }
 			);
 
@@ -122,7 +122,7 @@ export const settingsRepository = {
 	async getByCategory(category: string): Promise<PortalSetting[]> {
 		return withConnection(async (conn) => {
 			const result = await conn.execute<PortalSettingRow>(
-				'SELECT * FROM portal_settings WHERE category = :category ORDER BY sort_order, key',
+				'SELECT * FROM portal_settings WHERE category = :category ORDER BY sort_order, "KEY"',
 				{ category }
 			);
 
@@ -137,7 +137,7 @@ export const settingsRepository = {
 	async getPublic(): Promise<PortalSetting[]> {
 		return withConnection(async (conn) => {
 			const result = await conn.execute<PortalSettingRow>(
-				'SELECT * FROM portal_settings WHERE is_public = 1 ORDER BY category, sort_order, key',
+				'SELECT * FROM portal_settings WHERE is_public = 1 ORDER BY category, sort_order, "KEY"',
 				{}
 			);
 
@@ -161,7 +161,7 @@ export const settingsRepository = {
 				 USING (
 					SELECT
 						:id AS id,
-						:key AS key,
+						:key AS "KEY",
 						:value AS value,
 						:valueType AS value_type,
 						:description AS description,
@@ -172,7 +172,7 @@ export const settingsRepository = {
 						SYSTIMESTAMP AS updated_at
 					FROM DUAL
 				 ) src
-				 ON (ps.key = src.key)
+				 ON (ps."KEY" = src."KEY")
 				 WHEN MATCHED THEN
 					UPDATE SET
 						ps.value = src.value,
@@ -183,8 +183,8 @@ export const settingsRepository = {
 						ps.sort_order = src.sort_order,
 						ps.updated_at = src.updated_at
 				 WHEN NOT MATCHED THEN
-					INSERT (id, key, value, value_type, description, category, is_public, sort_order, created_at, updated_at)
-					VALUES (src.id, src.key, src.value, src.value_type, src.description, src.category, src.is_public, src.sort_order, src.created_at, src.updated_at)`,
+					INSERT (id, "KEY", value, value_type, description, category, is_public, sort_order, created_at, updated_at)
+					VALUES (src.id, src."KEY", src.value, src.value_type, src.description, src.category, src.is_public, src.sort_order, src.created_at, src.updated_at)`,
 				{
 					id,
 					key: input.key,
@@ -217,7 +217,7 @@ export const settingsRepository = {
 					 USING (
 						SELECT
 							:id AS id,
-							:key AS key,
+							:key AS "KEY",
 							:value AS value,
 							:valueType AS value_type,
 							:description AS description,
@@ -228,7 +228,7 @@ export const settingsRepository = {
 							SYSTIMESTAMP AS updated_at
 						FROM DUAL
 					 ) src
-					 ON (ps.key = src.key)
+					 ON (ps."KEY" = src."KEY")
 					 WHEN MATCHED THEN
 						UPDATE SET
 							ps.value = src.value,
@@ -239,8 +239,8 @@ export const settingsRepository = {
 							ps.sort_order = src.sort_order,
 							ps.updated_at = src.updated_at
 					 WHEN NOT MATCHED THEN
-						INSERT (id, key, value, value_type, description, category, is_public, sort_order, created_at, updated_at)
-						VALUES (src.id, src.key, src.value, src.value_type, src.description, src.category, src.is_public, src.sort_order, src.created_at, src.updated_at)`,
+						INSERT (id, "KEY", value, value_type, description, category, is_public, sort_order, created_at, updated_at)
+						VALUES (src.id, src."KEY", src.value, src.value_type, src.description, src.category, src.is_public, src.sort_order, src.created_at, src.updated_at)`,
 					{
 						id,
 						key: input.key,
@@ -263,7 +263,7 @@ export const settingsRepository = {
 	async listAll(): Promise<PortalSetting[]> {
 		return withConnection(async (conn) => {
 			const result = await conn.execute<PortalSettingRow>(
-				'SELECT * FROM portal_settings ORDER BY category, sort_order, key',
+				'SELECT * FROM portal_settings ORDER BY category, sort_order, "KEY"',
 				{}
 			);
 
@@ -277,7 +277,7 @@ export const settingsRepository = {
 	 */
 	async delete(key: string): Promise<void> {
 		await withConnection(async (conn) => {
-			await conn.execute('DELETE FROM portal_settings WHERE key = :key', { key });
+			await conn.execute('DELETE FROM portal_settings WHERE "KEY" = :key', { key });
 		});
 	},
 

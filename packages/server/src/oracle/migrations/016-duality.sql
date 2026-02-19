@@ -38,7 +38,7 @@ CREATE OR REPLACE JSON DUALITY VIEW workflow_definitions_dv AS
     updatedAt   : updated_at
   };
 
-COMMENT ON JSON DUALITY VIEW workflow_definitions_dv IS
+COMMENT ON VIEW workflow_definitions_dv IS
   'JSON Duality View for workflow definitions. Supports insert/update/delete operations with automatic ACID consistency.';
 
 -- ============================================================================
@@ -68,7 +68,7 @@ CREATE OR REPLACE JSON DUALITY VIEW workflow_runs_dv AS
     updatedAt       : updated_at
   };
 
-COMMENT ON JSON DUALITY VIEW workflow_runs_dv IS
+COMMENT ON VIEW workflow_runs_dv IS
   'JSON Duality View for workflow run state. Enables real-time status monitoring via JSON queries.';
 
 -- ============================================================================
@@ -103,7 +103,7 @@ CREATE OR REPLACE JSON DUALITY VIEW mcp_servers_dv AS
     updatedAt         : updated_at
   };
 
-COMMENT ON JSON DUALITY VIEW mcp_servers_dv IS
+COMMENT ON VIEW mcp_servers_dv IS
   'JSON Duality View for MCP server management. Supports full CRUD via JSON documents with automatic validation.';
 
 -- ============================================================================

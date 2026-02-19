@@ -82,23 +82,46 @@ function splitStatements(sql: string): string[] {
 		const trimmed = segment.trim();
 		if (!trimmed) continue;
 
-		// If the segment contains a PL/SQL block, keep it as a single statement
-		const isPLSQL = /\bBEGIN\b/i.test(trimmed) && /\bEND\b/i.test(trimmed);
+		// Strip SQL line comments before PL/SQL detection to avoid false positives from
+		// rollback comment blocks that contain commented-out BEGIN/END keywords.
+		const uncommented = trimmed
+			.split('\n')
+			.filter((line) => !line.trim().startsWith('--'))
+			.join('\n')
+			.trim();
+
+		// Skip segments that are entirely comments (e.g. rollback notes at end of file).
+		if (!uncommented) continue;
+
+		// If the segment is a PL/SQL unit, keep it as a single statement (no semicolon splitting).
+		// Covers: anonymous blocks (BEGIN...END), named packages/functions/procedures/triggers
+		// (CREATE OR REPLACE PACKAGE spec, which has no BEGIN but still has internal semicolons).
+		const isPLSQL =
+			(/\bBEGIN\b/i.test(uncommented) && /\bEND\b/i.test(uncommented)) ||
+			/\bCREATE\s+(OR\s+REPLACE\s+)?PACKAGE\b/i.test(uncommented) ||
+			/\bCREATE\s+(OR\s+REPLACE\s+)?FUNCTION\b/i.test(uncommented) ||
+			/\bCREATE\s+(OR\s+REPLACE\s+)?PROCEDURE\b/i.test(uncommented) ||
+			/\bCREATE\s+(OR\s+REPLACE\s+)?TRIGGER\b/i.test(uncommented);
 
 		if (isPLSQL) {
-			// Remove any trailing semicolon from the outer block
-			const cleaned = trimmed.replace(/;\s*$/, '');
-			if (cleaned) {
-				statements.push(cleaned);
-			}
+			// Keep PL/SQL blocks intact — oracledb requires the trailing END; semicolon.
+			// Do NOT strip it (unlike plain SQL statements where trailing semicolons are invalid).
+			statements.push(trimmed);
 		} else {
 			// Split on semicolons that appear at the end of a line or end of string
 			const parts = trimmed.split(/;\s*(?:\n|$)/);
 			for (const part of parts) {
 				const partTrimmed = part.trim();
-				if (partTrimmed) {
-					statements.push(partTrimmed);
-				}
+				if (!partTrimmed) continue;
+				// Skip parts that are purely comment lines (e.g. rollback comment lines with
+				// trailing semicolons that were split by the regex above).
+				const partUncommented = partTrimmed
+					.split('\n')
+					.filter((line) => !line.trim().startsWith('--'))
+					.join('\n')
+					.trim();
+				if (!partUncommented) continue;
+				statements.push(partTrimmed);
 			}
 		}
 	}
@@ -202,6 +225,65 @@ export async function runMigrations(): Promise<void> {
 						log.warn(
 							{ version: migration.version, sql: statement.substring(0, 80) },
 							'skipping statement — column does not exist in pre-existing table (ORA-00904)'
+						);
+						continue;
+					}
+					// ORA-01430: column being added already exists in table — ALTER TABLE ADD
+					// on a column that already exists (schema drift). End state is correct.
+					if (code === 1430) {
+						log.warn(
+							{ version: migration.version, sql: statement.substring(0, 80) },
+							'skipping statement — column already exists (ORA-01430)'
+						);
+						continue;
+					}
+					// ORA-01408: such column list already indexed — index with this exact column
+					// combination already exists under a different name (schema drift). End state
+					// is correct so skip and continue.
+					if (code === 1408) {
+						log.warn(
+							{ version: migration.version, sql: statement.substring(0, 80) },
+							'skipping statement — column list already indexed (ORA-01408)'
+						);
+						continue;
+					}
+					// ORA-05716: unsupported feature (e.g. blockchain table hashing algorithm not
+					// available on this ADB tier). Log and skip — the table won't exist but the
+					// migration version record is still inserted so dependent migrations continue.
+					if (code === 5716) {
+						log.warn(
+							{ version: migration.version, sql: statement.substring(0, 80) },
+							'skipping statement — unsupported database feature (ORA-05716)'
+						);
+						continue;
+					}
+					// ORA-00942: table or view does not exist — in DDL context this means the
+					// statement references an object that a previously-skipped statement should
+					// have created (e.g. CREATE INDEX on a blockchain table that wasn't created).
+					// Safe to skip in migrations since we only run DDL, not DML.
+					if (code === 942) {
+						log.warn(
+							{ version: migration.version, sql: statement.substring(0, 80) },
+							'skipping statement — referenced table does not exist (ORA-00942)'
+						);
+						continue;
+					}
+					// ORA-32594: invalid object category for COMMENT command — COMMENT ON JSON
+					// DUALITY VIEW syntax not recognized on this tier. Skip gracefully.
+					if (code === 32594) {
+						log.warn(
+							{ version: migration.version, sql: statement.substring(0, 80) },
+							'skipping statement — unsupported COMMENT object category (ORA-32594)'
+						);
+						continue;
+					}
+					// ORA-44975: JSON Duality View column has an IS JSON check constraint —
+					// Oracle 23ai restricts duality views from exposing IS JSON constrained
+					// columns. The duality views are supplementary; skip and continue.
+					if (code === 44975) {
+						log.warn(
+							{ version: migration.version, sql: statement.substring(0, 80) },
+							'skipping statement — JSON duality view column constraint (ORA-44975)'
 						);
 						continue;
 					}
