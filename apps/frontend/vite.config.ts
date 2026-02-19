@@ -4,6 +4,17 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
 	plugins: [sveltekit(), tailwindcss()],
+	server: {
+		host: '0.0.0.0', // Bind to all interfaces so Chrome can reach 127.0.0.1:5173
+		proxy: {
+			// In production, nginx routes /api/* to Fastify (port 3001).
+			// In dev, Vite proxies /api/* to the local Fastify API (port 3000).
+			'/api': {
+				target: process.env.FASTIFY_URL || 'http://localhost:3000',
+				changeOrigin: true
+			}
+		}
+	},
 	optimizeDeps: {
 		exclude: ['@tanstack/svelte-query']
 	},
