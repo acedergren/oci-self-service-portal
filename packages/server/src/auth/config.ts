@@ -13,7 +13,7 @@
  *
  *   The IDCS application must be configured as a "Confidential Application" with:
  *   - Grant type: Authorization Code
- *   - Redirect URI: {BETTER_AUTH_URL}/api/auth/callback/oci-iam
+ *   - Redirect URI: {BETTER_AUTH_URL}/api/auth/oauth2/callback/oci-iam
  *   - Allowed scopes: openid, email, profile, urn:opc:idm:__myscopes__
  */
 import { betterAuth } from 'better-auth';
@@ -139,6 +139,15 @@ export const auth = betterAuth({
 								// which includes group and app role claims in the token
 								scopes: ['openid', 'email', 'profile', 'urn:opc:idm:__myscopes__'],
 								pkce: true,
+								// When OCI_IAM_IDP_NAME is set, add idp hint to bypass the IDCS
+								// local login form and redirect directly to the federated IdP
+								// (e.g. Oracle corporate SSO). Value is the IdP name from
+								// IDCS Security > Identity Providers.
+								...(process.env.OCI_IAM_IDP_NAME && {
+									authorizationUrlParams: {
+										idp: process.env.OCI_IAM_IDP_NAME
+									}
+								}),
 								mapProfileToUser: (profile: Record<string, unknown>) => {
 									const p = profile as IdcsProfile;
 									const displayName = p.user_displayname || p.name || p.email || p.sub;
