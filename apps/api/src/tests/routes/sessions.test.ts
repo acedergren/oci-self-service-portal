@@ -596,7 +596,7 @@ describe('POST /api/sessions/:id/continue', () => {
 		expect(body.message).toContain('does not belong to you');
 	});
 
-	it('allows switching to legacy session with null userId', async () => {
+	it('rejects switching to legacy session with null userId (IDOR fail-closed)', async () => {
 		const sessionId = 'c1c2c3d4-e5f6-4a7b-8c9d-0e1f2a3b4c5d';
 		mockGetById.mockResolvedValue({
 			id: sessionId,
@@ -615,10 +615,9 @@ describe('POST /api/sessions/:id/continue', () => {
 			url: `/api/sessions/${sessionId}/continue`
 		});
 
-		expect(res.statusCode).toBe(200);
+		expect(res.statusCode).toBe(403);
 		const body = JSON.parse(res.body);
-		expect(body.success).toBe(true);
-		expect(body.sessionId).toBe(sessionId);
+		expect(body.message).toContain('does not belong to you');
 	});
 
 	it('sets session cookie with correct attributes', async () => {
