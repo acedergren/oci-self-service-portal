@@ -139,10 +139,10 @@ export const auth = betterAuth({
 								// which includes group and app role claims in the token
 								scopes: ['openid', 'email', 'profile', 'urn:opc:idm:__myscopes__'],
 								pkce: true,
-								// When OCI_IAM_IDP_NAME is set, add idp hint to bypass the IDCS
-								// local login form and redirect directly to the federated IdP
-								// (e.g. Oracle corporate SSO). Value is the IdP name from
-								// IDCS Security > Identity Providers.
+								// When OCI_IAM_IDP_NAME is set, add idp hint to the authorize URL.
+								// Value is the IdP partner name (e.g. "Oracle SSO") from IDCS.
+								// Note: auto-redirect requires an IDCS Identity Provider Policy
+								// that assigns only the SAML IdP to this application.
 								...(process.env.OCI_IAM_IDP_NAME && {
 									authorizationUrlParams: {
 										idp: process.env.OCI_IAM_IDP_NAME
