@@ -1,6 +1,6 @@
 import { redirect, isRedirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
-import { settingsRepository } from '@portal/server/admin';
+import { settingsRepository, idpRepository, aiProviderRepository } from '@portal/server/admin';
 
 export const load: PageServerLoad = async ({ fetch }) => {
 	// Check setup status directly via DB (avoids Vite proxy round-trip in SSR context)
@@ -11,8 +11,15 @@ export const load: PageServerLoad = async ({ fetch }) => {
 		// DB unavailable — allow setup to proceed in degraded mode
 	}
 
+	// Allow re-entry if providers are missing (admin may have deleted them)
 	if (isComplete) {
-		throw redirect(303, '/');
+		const [activeIdps, activeAiProviders] = await Promise.all([
+			idpRepository.listActive(),
+			aiProviderRepository.listActive()
+		]);
+		if (activeIdps.length > 0 && activeAiProviders.length > 0) {
+			throw redirect(303, '/');
+		}
 	}
 
 	// Try to detect environment variables for pre-filling the form

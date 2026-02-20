@@ -16,13 +16,21 @@ import { resolve } from 'path';
 
 // ── vi.hoisted: mock functions available before vi.mock() factory runs ────────
 
-const { mockIsSetupComplete } = vi.hoisted(() => ({
-	mockIsSetupComplete: vi.fn()
+const { mockIsSetupComplete, mockListActiveIdps, mockListActiveAiProviders } = vi.hoisted(() => ({
+	mockIsSetupComplete: vi.fn(),
+	mockListActiveIdps: vi.fn(),
+	mockListActiveAiProviders: vi.fn()
 }));
 
 vi.mock('@portal/server/admin', () => ({
 	settingsRepository: {
 		isSetupComplete: (...args: unknown[]) => mockIsSetupComplete(...args)
+	},
+	idpRepository: {
+		listActive: (...args: unknown[]) => mockListActiveIdps(...args)
+	},
+	aiProviderRepository: {
+		listActive: (...args: unknown[]) => mockListActiveAiProviders(...args)
 	}
 }));
 
@@ -69,10 +77,14 @@ describe('setup page redirect target', () => {
 	// Default: setup not yet complete — prevents redirect bleed between tests
 	beforeEach(() => {
 		mockIsSetupComplete.mockResolvedValue(false);
+		mockListActiveIdps.mockResolvedValue([]);
+		mockListActiveAiProviders.mockResolvedValue([]);
 	});
 
-	it('throws a 303 redirect to / when setup is complete', async () => {
+	it('throws a 303 redirect to / when setup is complete and providers are active', async () => {
 		mockIsSetupComplete.mockResolvedValue(true);
+		mockListActiveIdps.mockResolvedValue([{ id: 'idp-1' }]);
+		mockListActiveAiProviders.mockResolvedValue([{ id: 'ai-1' }]);
 		const { load } = await import('../routes/setup/+page.server.js');
 		const mockFetch = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }));
 
@@ -91,6 +103,8 @@ describe('setup page redirect target', () => {
 
 	it('redirect target is / and not /self-service', async () => {
 		mockIsSetupComplete.mockResolvedValue(true);
+		mockListActiveIdps.mockResolvedValue([{ id: 'idp-1' }]);
+		mockListActiveAiProviders.mockResolvedValue([{ id: 'ai-1' }]);
 		const { load } = await import('../routes/setup/+page.server.js');
 		const mockFetch = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }));
 
@@ -103,6 +117,18 @@ describe('setup page redirect target', () => {
 
 		const redirect = thrown as { location: string };
 		expect(redirect.location).not.toBe('/self-service');
+	});
+
+	it('does not redirect when setup is complete but providers are missing (re-entry)', async () => {
+		mockIsSetupComplete.mockResolvedValue(true);
+		mockListActiveIdps.mockResolvedValue([]); // no IDP configured
+		mockListActiveAiProviders.mockResolvedValue([{ id: 'ai-1' }]);
+		const { load } = await import('../routes/setup/+page.server.js');
+		const mockFetch = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }));
+
+		// Should return data (allow re-entry), not throw
+		const data = await (load as (e: MinimalEvent) => Promise<unknown>)({ fetch: mockFetch });
+		expect(data).toBeDefined();
 	});
 
 	it('does not redirect when setup is incomplete', async () => {

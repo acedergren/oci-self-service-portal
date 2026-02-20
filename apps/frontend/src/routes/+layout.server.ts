@@ -1,24 +1,66 @@
+import { redirect, isRedirect } from '@sveltejs/kit';
 import type { LayoutServerLoad } from './$types';
 import { createLogger } from '@portal/server/logger';
+import { settingsRepository, idpRepository, aiProviderRepository } from '@portal/server/admin';
 
 // Fastify backend URL for session fetch during SSR
 const FASTIFY_URL = process.env.FASTIFY_URL || 'http://localhost:3001';
 
+const log = createLogger('layout');
+
 /**
  * Root layout server load function.
  *
- * Fetches the user session from Fastify's auth endpoint during SSR.
- * Forwards the cookie header from the incoming request for session validation.
+ * Performs three checks in order:
+ * 1. Database availability (from hooks.server.ts)
+ * 2. Setup completeness (IDP + AI provider configured)
+ * 3. Session fetch from Fastify backend
  *
- * After Phase C-1.01 (Better Auth in Fastify), all auth logic lives in the
- * Fastify backend. SvelteKit just forwards cookies and hydrates the session.
+ * Returns a `systemStatus` field that the layout component uses to decide
+ * whether to render the normal app or a branded error/status page.
  */
-export const load: LayoutServerLoad = async ({ request, locals, fetch }) => {
+export const load: LayoutServerLoad = async ({ request, locals, fetch, url }) => {
+	// 1. Database health gate — if Oracle is unreachable, show status page
+	if (!locals.dbAvailable) {
+		return {
+			user: null,
+			session: null,
+			dbAvailable: false,
+			systemStatus: 'database_unavailable' as const
+		};
+	}
+
+	// 2. Setup completeness check (skip if already on /setup to avoid redirect loop)
+	if (!url.pathname.startsWith('/setup')) {
+		try {
+			const [isComplete, activeIdps, activeAiProviders] = await Promise.all([
+				settingsRepository.isSetupComplete(),
+				idpRepository.listActive(),
+				aiProviderRepository.listActive()
+			]);
+
+			if (!isComplete || activeIdps.length === 0 || activeAiProviders.length === 0) {
+				throw redirect(303, '/setup');
+			}
+		} catch (err) {
+			// SvelteKit redirects are thrown as special objects — must re-throw
+			if (isRedirect(err)) throw err;
+			// DB query failed mid-request — treat as degraded
+			log.error({ err }, 'Setup completeness check failed');
+			return {
+				user: null,
+				session: null,
+				dbAvailable: false,
+				systemStatus: 'database_unavailable' as const
+			};
+		}
+	}
+
+	// 3. Session fetch from Fastify (existing logic)
 	let user = null;
 	let session = null;
 
 	try {
-		// Fetch session from Fastify, forwarding cookies for auth validation
 		const cookieHeader = request.headers.get('cookie');
 
 		const sessionResponse = await fetch(`${FASTIFY_URL}/api/auth/session`, {
@@ -31,13 +73,20 @@ export const load: LayoutServerLoad = async ({ request, locals, fetch }) => {
 			session = sessionData.session ?? null;
 		}
 	} catch (err) {
-		// Log error but don't fail SSR - render page with null session
-		createLogger('layout').error({ err }, 'Failed to fetch session from Fastify');
+		// Fastify API is unreachable — show status page
+		log.error({ err }, 'Failed to fetch session from Fastify');
+		return {
+			user: null,
+			session: null,
+			dbAvailable: true,
+			systemStatus: 'api_unreachable' as const
+		};
 	}
 
 	return {
 		user,
 		session,
-		dbAvailable: locals.dbAvailable
+		dbAvailable: true,
+		systemStatus: 'ready' as const
 	};
 };
