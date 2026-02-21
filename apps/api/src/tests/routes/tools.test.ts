@@ -145,7 +145,9 @@ async function buildApp(): Promise<FastifyInstance> {
 	const rbacPlugin = (await import('../../plugins/rbac.js')).default;
 	await app.register(rbacPlugin);
 
-	const { toolRoutes } = await import('../../routes/tools.js');
+	// Legacy tools.ts was renamed to tools.legacy.ts (API audit C1).
+	// These tests validate the legacy handler behavior for regression safety.
+	const { toolRoutes } = await import('../../routes/tools.legacy.js');
 	await app.register(async (instance) => toolRoutes(instance));
 
 	return app;

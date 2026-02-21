@@ -20,7 +20,11 @@
 import type { FastifyPluginAsync } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { z } from 'zod';
-import { WorkflowStatusSchema, type WorkflowRun } from '@portal/shared/workflows/types.js';
+import {
+	WorkflowStatusSchema,
+	WorkflowRunStatusSchema,
+	type WorkflowRun
+} from '@portal/shared/workflows/types.js';
 import {
 	ValidationError,
 	NotFoundError,
@@ -84,6 +88,30 @@ const UpdateWorkflowBodySchema = z.object({
 
 const RunWorkflowBodySchema = z.object({
 	input: z.record(z.string(), z.unknown()).optional()
+});
+
+// ── Response DTO schemas ──────────────────────────────────────────────
+// Pinned response shapes aligned with WorkflowRunSchema from packages/types
+// but deliberately excluding internal fields (engineState, userId, orgId).
+
+const _WorkflowRunResponseSchema = z.object({
+	id: z.string(),
+	workflowId: z.string(),
+	status: WorkflowRunStatusSchema,
+	output: z.record(z.string(), z.unknown()).nullable().optional(),
+	error: z
+		.union([z.string(), z.record(z.string(), z.unknown())])
+		.nullable()
+		.optional()
+});
+
+const _WorkflowRunListItemSchema = z.object({
+	id: z.string(),
+	definitionId: z.string(),
+	status: WorkflowRunStatusSchema,
+	startedAt: z.string().nullable(),
+	completedAt: z.string().nullable(),
+	createdAt: z.string().nullable().optional()
 });
 
 // ── Route module ────────────────────────────────────────────────────────

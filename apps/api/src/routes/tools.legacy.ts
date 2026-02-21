@@ -1,3 +1,6 @@
+// LEGACY — superseded by routes/tools/ (execute.ts + approve.ts).
+// Safe to delete after confirming no production traffic relies on this registration.
+// Removed from app.ts registration on 2026-02-20.
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { logToolExecution, logToolApproval } from '@portal/server/audit';

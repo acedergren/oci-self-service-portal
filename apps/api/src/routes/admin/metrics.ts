@@ -8,8 +8,46 @@
  * into a structured JSON summary grouped by metric category.
  */
 import type { FastifyInstance } from 'fastify';
+import { z } from 'zod';
 import { requireAuth } from '../../plugins/rbac.js';
 import { registry } from '@portal/server/metrics';
+
+// Strict response schema — only these fields are sent to the client.
+// Prevents leakage of internal metric names, raw Prometheus text, or stack traces.
+const AdminMetricsSummarySchema = z.object({
+	timestamp: z.string().datetime(),
+	chat: z.object({
+		totalRequests: z.number(),
+		byModel: z.record(z.string(), z.number())
+	}),
+	tools: z.object({
+		totalExecutions: z.number(),
+		byTool: z.record(z.string(), z.number()),
+		byStatus: z.record(z.string(), z.number())
+	}),
+	sessions: z.object({
+		active: z.number()
+	}),
+	approvals: z.object({
+		pending: z.number()
+	}),
+	database: z.object({
+		poolActive: z.number(),
+		poolIdle: z.number()
+	}),
+	auth: z.object({
+		totalLogins: z.number(),
+		byStatus: z.record(z.string(), z.number())
+	}),
+	raw: z.array(
+		z.object({
+			name: z.string(),
+			help: z.string(),
+			type: z.enum(['counter', 'gauge', 'histogram']),
+			valueCount: z.number().int()
+		})
+	)
+});
 
 interface MetricEntry {
 	name: string;
@@ -68,7 +106,10 @@ function parsePrometheusText(text: string): MetricEntry[] {
 export async function adminMetricsRoutes(app: FastifyInstance): Promise<void> {
 	app.get(
 		'/api/admin/metrics/summary',
-		{ preHandler: requireAuth('admin:all') },
+		{
+			preHandler: requireAuth('admin:all'),
+			schema: { response: { 200: AdminMetricsSummarySchema } }
+		},
 		async (_request, reply) => {
 			const raw = registry.collect();
 			const parsed = parsePrometheusText(raw);
