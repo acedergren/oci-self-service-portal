@@ -126,7 +126,7 @@
 	}
 
 	.markdown-content :global(tr:hover) {
-		background: rgba(13, 148, 136, 0.04);
+		background: color-mix(in srgb, var(--accent-primary) 4%, transparent);
 	}
 
 	/* Code blocks */
@@ -164,7 +164,7 @@
 		border-left: 3px solid var(--portal-teal, #0d9488);
 		margin: 0.75rem 0;
 		padding: 0.5rem 1rem;
-		background: rgba(13, 148, 136, 0.06);
+		background: color-mix(in srgb, var(--accent-primary) 6%, transparent);
 		border-radius: 0 6px 6px 0;
 	}
 

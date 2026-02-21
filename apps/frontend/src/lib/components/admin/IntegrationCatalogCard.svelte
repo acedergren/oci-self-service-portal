@@ -94,7 +94,7 @@
 
 	.catalog-card:hover {
 		border-color: var(--border-focused);
-		box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.1);
+		box-shadow: 0 4px 12px -2px color-mix(in srgb, black 10%, transparent);
 	}
 
 	.card-header {

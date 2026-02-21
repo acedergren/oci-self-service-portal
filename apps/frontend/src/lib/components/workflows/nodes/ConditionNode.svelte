@@ -57,7 +57,7 @@
 	}
 
 	.condition-node.selected {
-		box-shadow: 0 0 0 2px rgba(0, 100, 255, 0.2);
+		box-shadow: 0 0 0 2px color-mix(in srgb, var(--semantic-info) 20%, transparent);
 	}
 
 	.diamond-shape {

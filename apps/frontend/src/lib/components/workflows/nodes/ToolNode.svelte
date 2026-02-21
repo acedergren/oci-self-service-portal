@@ -9,17 +9,17 @@
 
 	const approvalColors: Record<string, { bg: string; border: string; text: string }> = {
 		auto: {
-			bg: 'rgba(0, 200, 0, 0.08)',
+			bg: 'color-mix(in srgb, var(--semantic-success) 8%, transparent)',
 			border: 'var(--semantic-success)',
 			text: 'var(--semantic-success)'
 		},
 		confirm: {
-			bg: 'rgba(255, 180, 0, 0.08)',
+			bg: 'color-mix(in srgb, var(--semantic-warning) 8%, transparent)',
 			border: 'var(--semantic-warning)',
 			text: 'var(--semantic-warning)'
 		},
 		danger: {
-			bg: 'rgba(255, 0, 0, 0.08)',
+			bg: 'color-mix(in srgb, var(--semantic-error) 8%, transparent)',
 			border: 'var(--semantic-error)',
 			text: 'var(--semantic-error)'
 		}

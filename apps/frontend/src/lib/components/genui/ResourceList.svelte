@@ -151,7 +151,7 @@
 
 	.filter-input:focus {
 		border-color: var(--portal-teal, #0d9488);
-		box-shadow: 0 0 0 2px rgba(13, 148, 136, 0.1);
+		box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 10%, transparent);
 	}
 
 	.filter-input::placeholder {

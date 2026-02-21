@@ -151,7 +151,7 @@
 	.approval-overlay {
 		position: fixed;
 		inset: 0;
-		background: rgba(0, 0, 0, 0.7);
+		background: color-mix(in srgb, black 70%, transparent);
 		backdrop-filter: blur(4px);
 		z-index: 1000;
 		display: flex;
@@ -176,7 +176,7 @@
 		background: var(--bg-secondary, #1a1a2e);
 		border: 1px solid var(--border-default, #2d2d44);
 		border-radius: 12px;
-		box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+		box-shadow: 0 25px 50px -12px color-mix(in srgb, black 50%, transparent);
 		animation: slideUp 0.2s ease;
 		overflow: hidden;
 	}
@@ -202,8 +202,8 @@
 	}
 
 	.approval-header.danger {
-		background: rgba(239, 68, 68, 0.1);
-		border-bottom-color: rgba(239, 68, 68, 0.2);
+		background: color-mix(in srgb, var(--semantic-error) 10%, transparent);
+		border-bottom-color: color-mix(in srgb, var(--semantic-error) 20%, transparent);
 	}
 
 	.approval-icon {
@@ -218,7 +218,7 @@
 	}
 
 	.approval-header.danger .approval-icon {
-		background: rgba(239, 68, 68, 0.15);
+		background: color-mix(in srgb, var(--semantic-error) 15%, transparent);
 	}
 
 	.icon-danger {
@@ -257,12 +257,12 @@
 	}
 
 	.approval-badge.danger {
-		background: rgba(239, 68, 68, 0.2);
+		background: color-mix(in srgb, var(--semantic-error) 20%, transparent);
 		color: #f87171;
 	}
 
 	.approval-badge.confirm {
-		background: rgba(16, 185, 129, 0.2);
+		background: color-mix(in srgb, var(--semantic-success) 20%, transparent);
 		color: #34d399;
 	}
 
@@ -280,8 +280,8 @@
 		display: flex;
 		gap: 0.75rem;
 		padding: 1rem;
-		background: rgba(245, 158, 11, 0.1);
-		border: 1px solid rgba(245, 158, 11, 0.2);
+		background: color-mix(in srgb, var(--semantic-warning) 10%, transparent);
+		border: 1px solid color-mix(in srgb, var(--semantic-warning) 20%, transparent);
 		border-radius: 8px;
 		margin-bottom: 1rem;
 		color: #fbbf24;
@@ -323,7 +323,7 @@
 	.tool-name code {
 		font-family: 'JetBrains Mono', monospace;
 		color: #60a5fa;
-		background: rgba(96, 165, 250, 0.1);
+		background: color-mix(in srgb, var(--semantic-info) 10%, transparent);
 		padding: 0.2rem 0.4rem;
 		border-radius: 4px;
 	}
@@ -390,7 +390,7 @@
 		font-size: 0.7rem;
 		padding: 0.15rem 0.4rem;
 		border-radius: 4px;
-		background: rgba(0, 0, 0, 0.2);
+		background: color-mix(in srgb, black 20%, transparent);
 		color: inherit;
 		opacity: 0.7;
 	}

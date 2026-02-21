@@ -400,17 +400,17 @@
 	}
 
 	.step-icon.completed {
-		background: rgba(0, 200, 0, 0.15);
+		background: color-mix(in srgb, var(--semantic-success) 15%, transparent);
 		color: var(--semantic-success);
 	}
 
 	.step-icon.failed {
-		background: rgba(255, 0, 0, 0.15);
+		background: color-mix(in srgb, var(--semantic-error) 15%, transparent);
 		color: var(--semantic-error);
 	}
 
 	.step-icon.suspended {
-		background: rgba(255, 180, 0, 0.15);
+		background: color-mix(in srgb, var(--semantic-warning) 15%, transparent);
 		color: var(--semantic-warning);
 	}
 
