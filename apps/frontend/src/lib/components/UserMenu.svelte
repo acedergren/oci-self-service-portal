@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import { authClient } from '$lib/auth-client.js';
 
 	interface Props {
@@ -11,7 +12,13 @@
 	let menuOpen = $state(false);
 
 	function signOut() {
-		authClient.signOut();
+		authClient.signOut({
+			fetchOptions: {
+				onSuccess: () => {
+					window.location.href = resolve('/login');
+				}
+			}
+		});
 	}
 
 	function getInitials(name?: string, email?: string): string {
