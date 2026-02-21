@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
+
 	interface Summary {
 		findings: {
 			critical: number;
@@ -187,6 +189,8 @@
 				<span class="meta-value">{relativeTime(summary.lastRunAt)}</span>
 			</div>
 		</div>
+
+		<a href={resolve('/cloud-advisor')} class="view-all-link"> View all findings → </a>
 	{/if}
 </div>
 
@@ -399,7 +403,7 @@
 		display: inline-block;
 		width: 12px;
 		height: 12px;
-		border: 2px solid rgba(255, 255, 255, 0.4);
+		border: 2px solid color-mix(in srgb, white 40%, transparent);
 		border-top-color: #ffffff;
 		border-radius: var(--radius-full);
 		animation: spin 0.7s linear infinite;
@@ -409,5 +413,21 @@
 		to {
 			transform: rotate(360deg);
 		}
+	}
+
+	.view-all-link {
+		display: block;
+		text-align: center;
+		font-size: var(--text-xs);
+		font-weight: 500;
+		color: var(--advisor-accent);
+		text-decoration: none;
+		padding-top: var(--space-sm);
+		border-top: 1px solid color-mix(in srgb, var(--advisor-accent) 15%, transparent);
+		transition: color var(--transition-fast);
+	}
+
+	.view-all-link:hover {
+		color: var(--fg-primary);
 	}
 </style>

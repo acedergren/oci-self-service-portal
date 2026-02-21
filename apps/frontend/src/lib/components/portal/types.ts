@@ -208,6 +208,8 @@ export interface ChatOverlayProps {
 	workflowPanelOpen?: boolean;
 	/** Whether tool execution UI is hidden (show only results) */
 	hideToolExecution?: boolean;
+	/** Initial message to auto-send when the overlay opens (e.g. from FindingCard) */
+	initialMessage?: string;
 	/** Callback to close the overlay */
 	onClose: () => void;
 	/** Callback to toggle the workflow panel */

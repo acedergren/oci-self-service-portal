@@ -10,9 +10,20 @@
 		activeWorkflowPlan = undefined,
 		workflowPanelOpen = true,
 		hideToolExecution = true,
+		initialMessage = undefined,
 		onClose,
 		onToggleWorkflowPanel
 	}: ChatOverlayProps = $props();
+
+	// Track last auto-sent message to prevent duplicate sends on re-renders
+	let lastSentMessage = $state<string | undefined>(undefined);
+
+	$effect(() => {
+		if (open && initialMessage && initialMessage !== lastSentMessage) {
+			lastSentMessage = initialMessage;
+			chat.sendMessage({ text: initialMessage });
+		}
+	});
 
 	function handleChatSubmit(text: string) {
 		chat.sendMessage({ text });
