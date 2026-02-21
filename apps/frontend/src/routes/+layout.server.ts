@@ -63,14 +63,14 @@ export const load: LayoutServerLoad = async ({ request, locals, fetch, url }) =>
 	try {
 		const cookieHeader = request.headers.get('cookie');
 
-		const sessionResponse = await fetch(`${FASTIFY_URL}/api/auth/session`, {
+		const sessionResponse = await fetch(`${FASTIFY_URL}/api/auth/get-session`, {
 			headers: cookieHeader ? { cookie: cookieHeader } : {}
 		});
 
 		if (sessionResponse.ok) {
 			const sessionData = await sessionResponse.json();
-			user = sessionData.user ?? null;
-			session = sessionData.session ?? null;
+			user = sessionData?.user ?? null;
+			session = sessionData?.session ?? null;
 		}
 	} catch (err) {
 		// Fastify API is unreachable — show status page
@@ -81,6 +81,22 @@ export const load: LayoutServerLoad = async ({ request, locals, fetch, url }) =>
 			dbAvailable: true,
 			systemStatus: 'api_unreachable' as const
 		};
+	}
+
+	// Auth guard — runs after infrastructure checks so DB/API errors get their own error pages
+	const publicPaths = ['/login', '/setup'];
+	const isPublicPath = publicPaths.some(
+		(p) => url.pathname === p || url.pathname.startsWith(p + '/')
+	);
+
+	// Unauthenticated user on a protected route → redirect to login
+	if (!user && !isPublicPath) {
+		throw redirect(302, '/login');
+	}
+
+	// Authenticated user visiting /login → bounce home
+	if (user && url.pathname === '/login') {
+		throw redirect(302, '/');
 	}
 
 	return {

@@ -37,7 +37,7 @@
 		{ href: '/chat', label: 'Charlie', exact: false },
 		{ href: '/workflows', label: 'Workflows', exact: false },
 		{ href: '/admin', label: 'Admin', exact: false }
-	];
+	] as const;
 
 	function isActive(href: string, exact: boolean): boolean {
 		if (exact) return $page.url.pathname === href;
