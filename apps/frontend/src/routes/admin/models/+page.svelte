@@ -1,9 +1,12 @@
 <script lang="ts">
 	import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
 	import { toast } from 'svelte-sonner';
+	import { ConfirmDialog } from '$lib/components/ui/index.js';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
+
+	let confirmDeleteId = $state<string | null>(null);
 
 	interface AIProvider {
 		id: string;
@@ -205,8 +208,13 @@
 	}
 
 	function handleDelete(id: string) {
-		if (confirm('Are you sure you want to delete this AI provider?')) {
-			deleteMutation.mutate(id);
+		confirmDeleteId = id;
+	}
+
+	function confirmDelete() {
+		if (confirmDeleteId) {
+			deleteMutation.mutate(confirmDeleteId);
+			confirmDeleteId = null;
 		}
 	}
 
@@ -229,16 +237,60 @@
 		};
 		return labels[type] || type;
 	}
-
-	function getProviderIcon(type: string): string {
-		const icons: Record<string, string> = {
-			oci: '☁️',
-			openai: '🤖',
-			anthropic: '🧠'
-		};
-		return icons[type] || '🔮';
-	}
 </script>
+
+{#snippet providerIcon(type: string)}
+	{#if type === 'oci'}
+		<svg
+			class="provider-svg"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" /></svg
+		>
+	{:else if type === 'openai'}
+		<svg
+			class="provider-svg"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+			><rect x="3" y="11" width="18" height="11" rx="2" /><circle cx="12" cy="5" r="2" /><path
+				d="M12 7v4"
+			/><line x1="8" y1="16" x2="8" y2="16" /><line x1="16" y1="16" x2="16" y2="16" /></svg
+		>
+	{:else if type === 'anthropic'}
+		<svg
+			class="provider-svg"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+			><path
+				d="M12 2a8 8 0 0 0-8 8c0 3.4 2.1 6.3 5 7.5V20h6v-2.5c2.9-1.2 5-4.1 5-7.5a8 8 0 0 0-8-8z"
+			/><path d="M10 14h4" /><path d="M9 10h.01" /><path d="M15 10h.01" /></svg
+		>
+	{:else}
+		<svg
+			class="provider-svg"
+			viewBox="0 0 24 24"
+			fill="none"
+			stroke="currentColor"
+			stroke-width="2"
+			stroke-linecap="round"
+			stroke-linejoin="round"
+			><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5z" /><path
+				d="M18 15l.75 2.25L21 18l-2.25.75L18 21l-.75-2.25L15 18l2.25-.75z"
+			/></svg
+		>
+	{/if}
+{/snippet}
 
 <div class="models-page">
 	<div class="page-header">
@@ -259,12 +311,41 @@
 		</div>
 	{:else if providersQuery.error}
 		<div class="error-state">
-			<p class="error-message">❌ {providersQuery.error.message}</p>
+			<p class="error-message">
+				<svg
+					class="inline-icon icon-error"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line
+						x1="9"
+						y1="9"
+						x2="15"
+						y2="15"
+					/></svg
+				>
+				{providersQuery.error.message}
+			</p>
 			<button class="btn-secondary" onclick={() => providersQuery.refetch()}>Try Again</button>
 		</div>
 	{:else if providersQuery.data && providersQuery.data.length === 0}
 		<div class="empty-state">
-			<div class="empty-icon">🤖</div>
+			<div class="empty-icon">
+				<svg
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.5"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					width="48"
+					height="48"
+					><rect x="3" y="11" width="18" height="11" rx="2" /><circle cx="12" cy="5" r="2" /><path
+						d="M12 7v4"
+					/><line x1="8" y1="16" x2="8" y2="16" /><line x1="16" y1="16" x2="16" y2="16" /></svg
+				>
+			</div>
 			<h2 class="empty-title">No AI providers configured</h2>
 			<p class="empty-description">Add your first AI provider to start using AI-powered features</p>
 			<button class="btn-primary" onclick={openCreateModal}>
@@ -278,7 +359,7 @@
 				<div class="provider-card" class:disabled={!provider.enabled}>
 					<div class="card-header">
 						<div class="provider-title">
-							<span class="provider-icon">{getProviderIcon(provider.providerType)}</span>
+							<span class="provider-icon">{@render providerIcon(provider.providerType)}</span>
 							<h3 class="provider-name">{provider.displayName}</h3>
 						</div>
 						<div class="card-actions">
@@ -288,7 +369,20 @@
 									onclick={() => handleToggleEnabled(provider)}
 									title="Disable provider"
 								>
-									👁️
+									<svg
+										class="action-icon"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle
+											cx="12"
+											cy="12"
+											r="3"
+										/></svg
+									>
 								</button>
 							{:else}
 								<button
@@ -296,7 +390,18 @@
 									onclick={() => handleToggleEnabled(provider)}
 									title="Enable provider"
 								>
-									👁️‍🗨️
+									<svg
+										class="action-icon"
+										viewBox="0 0 24 24"
+										fill="none"
+										stroke="currentColor"
+										stroke-width="2"
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										><path
+											d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"
+										/><line x1="1" y1="1" x2="23" y2="23" /></svg
+									>
 								</button>
 							{/if}
 							<button
@@ -304,14 +409,36 @@
 								onclick={() => openEditModal(provider)}
 								title="Edit provider"
 							>
-								✏️
+								<svg
+									class="action-icon"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path
+										d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"
+									/></svg
+								>
 							</button>
 							<button
 								class="btn-icon-small btn-danger"
 								onclick={() => handleDelete(provider.id)}
 								title="Delete provider"
 							>
-								🗑️
+								<svg
+									class="action-icon"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									><polyline points="3 6 5 6 21 6" /><path
+										d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"
+									/></svg
+								>
 							</button>
 						</div>
 					</div>
@@ -491,6 +618,16 @@
 		</div>
 	</div>
 {/if}
+
+<ConfirmDialog
+	open={confirmDeleteId !== null}
+	title="Delete AI Provider"
+	message="Are you sure you want to delete this AI provider? This action cannot be undone."
+	confirmLabel="Delete"
+	variant="danger"
+	onConfirm={confirmDelete}
+	onCancel={() => (confirmDeleteId = null)}
+/>
 
 <style>
 	.models-page {
@@ -675,7 +812,30 @@
 	}
 
 	.provider-icon {
-		font-size: 1.5rem;
+		display: flex;
+		align-items: center;
+		color: var(--accent-primary);
+	}
+
+	.provider-svg {
+		width: 24px;
+		height: 24px;
+	}
+
+	.action-icon {
+		width: 16px;
+		height: 16px;
+	}
+
+	.inline-icon {
+		width: 16px;
+		height: 16px;
+		vertical-align: middle;
+		display: inline;
+	}
+
+	.icon-error {
+		color: var(--semantic-error);
 	}
 
 	.provider-name {
@@ -781,7 +941,7 @@
 	.modal-overlay {
 		position: fixed;
 		inset: 0;
-		background: rgba(0, 0, 0, 0.8);
+		background: color-mix(in srgb, black 80%, transparent);
 		display: flex;
 		align-items: center;
 		justify-content: center;
@@ -797,7 +957,7 @@
 		max-width: 600px;
 		max-height: 90vh;
 		overflow-y: auto;
-		box-shadow: 0 20px 60px -10px rgba(0, 0, 0, 0.5);
+		box-shadow: 0 20px 60px -10px color-mix(in srgb, black 50%, transparent);
 	}
 
 	.modal-header {

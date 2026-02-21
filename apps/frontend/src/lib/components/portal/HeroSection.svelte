@@ -1,5 +1,6 @@
 <script lang="ts">
 	import SearchBox from '$lib/components/ui/SearchBox.svelte';
+	import { CharlieAvatar } from '$lib/components/ui/index.js';
 	import { LoadingSpinner } from '@portal/ui';
 	import type { HeroSectionProps } from './types.js';
 
@@ -48,7 +49,7 @@
 			<div class="graphic-ring ring-2"></div>
 			<div class="graphic-ring ring-3"></div>
 			<div class="graphic-center">
-				<div class="charlie-hero-mark">C</div>
+				<CharlieAvatar size="xl" animate />
 			</div>
 		</div>
 	</div>
@@ -200,20 +201,6 @@
 		display: flex;
 		align-items: center;
 		justify-content: center;
-	}
-
-	.charlie-hero-mark {
-		width: 80px;
-		height: 80px;
-		border-radius: var(--radius-full);
-		background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-		color: white;
-		font-size: 2.5rem;
-		font-weight: 700;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		box-shadow: 0 0 40px color-mix(in srgb, var(--accent-primary) 30%, transparent);
 	}
 
 	@media (max-width: 1024px) {

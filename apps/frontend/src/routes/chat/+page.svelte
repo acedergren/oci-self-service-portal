@@ -1,7 +1,13 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { page } from '$app/state';
-	import { Spinner, Badge, ModelPicker, ApprovalDialog } from '$lib/components/ui/index.js';
+	import {
+		Spinner,
+		Badge,
+		ModelPicker,
+		ApprovalDialog,
+		CharlieAvatar
+	} from '$lib/components/ui/index.js';
 	import MarkdownRenderer from '$lib/components/ui/MarkdownRenderer.svelte';
 	import { ThoughtPanel, ToolPanel, AgentWorkflowPanel } from '$lib/components/panels/index.js';
 	import type { AgentPlan } from '$lib/components/panels/index.js';
@@ -34,19 +40,25 @@
 	let localSessionId = $state<string | null>(null);
 	let sidebarOpen = $state(true);
 
-	// Apply dark theme + sage-smoke palette on mount
+	// Restore session from localStorage or server data on first load
 	$effect(() => {
-		if (typeof document !== 'undefined') {
-			document.documentElement.setAttribute('data-theme', theme);
-			if (theme === 'dark') {
-				document.documentElement.setAttribute('data-palette', 'sage-smoke');
+		if (localSessionId !== null) return;
+
+		if (typeof window !== 'undefined') {
+			const storedId = localStorage.getItem(SESSION_STORAGE_KEY);
+			if (storedId) {
+				// Validate stored session exists, fall back to server data if 404
+				handleSelectSession(storedId).catch(() => {
+					localStorage.removeItem(SESSION_STORAGE_KEY);
+					if (data.currentSessionId) {
+						localSessionId = data.currentSessionId;
+					}
+				});
+				return;
 			}
 		}
-	});
 
-	// Sync initial session ID from server data (only on first load)
-	$effect(() => {
-		if (localSessionId === null && data.currentSessionId) {
+		if (data.currentSessionId) {
 			localSessionId = data.currentSessionId;
 		}
 	});
@@ -80,21 +92,6 @@
 	// Model state
 	let selectedModel = $state('meta.llama-3.3-70b-instruct');
 	let modelPickerOpen = $state(false);
-
-	// Theme state
-	let theme = $state<'dark' | 'light'>('dark');
-
-	function toggleTheme() {
-		theme = theme === 'dark' ? 'light' : 'dark';
-		if (typeof document !== 'undefined') {
-			document.documentElement.setAttribute('data-theme', theme);
-			if (theme === 'dark') {
-				document.documentElement.setAttribute('data-palette', 'sage-smoke');
-			} else {
-				document.documentElement.removeAttribute('data-palette');
-			}
-		}
-	}
 
 	// Mobile navigation state
 	let mobileNavActive = $state<'chat' | 'sessions' | 'tools' | 'settings'>('chat');
@@ -224,12 +221,17 @@
 		}
 	}
 
+	const SESSION_STORAGE_KEY = 'charlie-session-id';
+
 	async function handleNewSession() {
 		const result = await createSessionMutation.mutateAsync();
 
 		localSessionId = result.id;
 		chat.messages = [];
 		sessionTokens = { input: 0, output: 0, cost: 0 };
+		if (typeof window !== 'undefined') {
+			localStorage.setItem(SESSION_STORAGE_KEY, result.id);
+		}
 
 		// Clear agent state
 		ctx.clearAgentState();
@@ -240,6 +242,9 @@
 			const detail = await fetchSessionDetail(id);
 
 			localSessionId = detail.session.id;
+			if (typeof window !== 'undefined') {
+				localStorage.setItem(SESSION_STORAGE_KEY, detail.session.id);
+			}
 
 			// Load messages into chat
 			chat.messages = detail.messages.map((msg, index) => ({
@@ -515,11 +520,7 @@
 		>
 			<div class="p-4 border-b border-muted">
 				<div class="flex items-center gap-3">
-					<div
-						class="h-10 w-10 rounded-lg bg-accent flex items-center justify-center text-white font-bold text-lg"
-					>
-						C
-					</div>
+					<CharlieAvatar size="lg" />
 					<div>
 						<h1 class="font-bold text-lg text-primary">Charlie</h1>
 						<p class="text-xs text-tertiary">AI Cloud Assistant</p>
@@ -553,11 +554,7 @@
 	<Drawer isOpen={sessionDrawerOpen} side="left" onclose={() => (sessionDrawerOpen = false)}>
 		<div class="p-4 border-b border-muted">
 			<div class="flex items-center gap-3">
-				<div
-					class="h-10 w-10 rounded-lg bg-accent flex items-center justify-center text-white font-bold text-lg"
-				>
-					C
-				</div>
+				<CharlieAvatar size="lg" />
 				<div>
 					<h1 class="font-bold text-lg text-primary">Charlie</h1>
 					<p class="text-xs text-tertiary">AI Cloud Assistant</p>
@@ -599,10 +596,7 @@
 			<!-- Header -->
 			<header class="flex items-center justify-between p-4 border-b border-default bg-secondary">
 				<div class="flex items-center gap-3">
-					<span
-						class="inline-flex items-center justify-center w-7 h-7 rounded-full bg-accent text-white font-bold text-sm"
-						>C</span
-					>
+					<CharlieAvatar size="md" />
 					<button
 						onclick={() => (modelPickerOpen = true)}
 						class="hover:opacity-80 transition-fast cursor-pointer"
@@ -627,16 +621,6 @@
 						{/if}
 					</div>
 
-					<!-- Theme toggle -->
-					<button
-						onclick={toggleTheme}
-						class="btn btn-secondary text-sm"
-						aria-label="Toggle theme"
-						title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-					>
-						{theme === 'dark' ? '☀' : '🌙'}
-					</button>
-
 					<!-- Toggle side panel -->
 					<button
 						onclick={toggleSidePanel}
@@ -653,10 +637,8 @@
 				{#if chat.messages.length === 0}
 					<div class="flex items-center justify-center h-full">
 						<div class="text-center space-y-4">
-							<div
-								class="w-16 h-16 rounded-full bg-accent flex items-center justify-center text-white font-bold text-3xl animate-pulse-glow mx-auto"
-							>
-								C
+							<div class="mx-auto" style:width="fit-content">
+								<CharlieAvatar size="xl" animate />
 							</div>
 							<h2 class="text-xl font-semibold text-primary">Charlie</h2>
 							<p class="text-secondary max-w-md">
@@ -682,7 +664,7 @@
 							>
 								<div class="flex items-center gap-2 mb-2">
 									<span class={message.role === 'user' ? 'text-accent' : 'text-primary'}>
-										{message.role === 'user' ? 'You' : 'Agent'}
+										{message.role === 'user' ? 'You' : 'Charlie'}
 									</span>
 									{#if message.role === 'assistant' && index === chat.messages.length - 1 && isStreaming}
 										<Spinner variant="dots" size="sm" color="var(--agent-streaming)" />

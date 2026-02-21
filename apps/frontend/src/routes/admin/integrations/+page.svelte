@@ -8,9 +8,12 @@
 	import MCPServerModal from '$lib/components/admin/MCPServerModal.svelte';
 	import ToolPlaygroundCard from '$lib/components/admin/ToolPlaygroundCard.svelte';
 	import { fuzzySearch } from '$lib/utils/fuzzy-search.js';
+	import { ConfirmDialog } from '$lib/components/ui/index.js';
 	import type { McpCatalogItem, McpServer } from '@portal/server/admin/mcp-types';
 
 	let { data }: { data: PageData } = $props();
+
+	let confirmDeleteId = $state<string | null>(null);
 
 	const queryClient = useQueryClient();
 
@@ -308,8 +311,13 @@
 	}
 
 	function handleDelete(id: string) {
-		if (confirm('Are you sure you want to delete this MCP server?')) {
-			deleteMutation.mutate(id);
+		confirmDeleteId = id;
+	}
+
+	function confirmDelete() {
+		if (confirmDeleteId) {
+			deleteMutation.mutate(confirmDeleteId);
+			confirmDeleteId = null;
 		}
 	}
 
@@ -507,6 +515,16 @@
 			updateMutation.isPending}
 	/>
 {/if}
+
+<ConfirmDialog
+	open={confirmDeleteId !== null}
+	title="Delete MCP Server"
+	message="Are you sure you want to delete this MCP server? This action cannot be undone."
+	confirmLabel="Delete"
+	variant="danger"
+	onConfirm={confirmDelete}
+	onCancel={() => (confirmDeleteId = null)}
+/>
 
 <style>
 	.admin-page {
