@@ -12,6 +12,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { FastifyInstance } from 'fastify';
+import { z } from 'zod';
 import { buildTestApp, simulateSession } from './test-helpers.js';
 
 // ── Mocks ─────────────────────────────────────────────────────────────────
@@ -28,6 +29,12 @@ vi.mock('../../mastra/mcp/portal-mcp-server.js', () => ({
 		listResources = (...args: unknown[]) => mockListResources(...args);
 		getResource = (...args: unknown[]) => mockGetResource(...args);
 	}
+}));
+
+// Mock tool registry for per-tool validation (C2 fix)
+const mockGetToolDefinition = vi.fn();
+vi.mock('../../mastra/tools/registry.js', () => ({
+	getToolDefinition: (...args: unknown[]) => mockGetToolDefinition(...args)
 }));
 
 vi.mock('@portal/server/logger', () => ({
@@ -83,6 +90,14 @@ beforeEach(() => {
 	mockExecuteTool.mockResolvedValue(MOCK_TOOL_RESULT);
 	mockListResources.mockReturnValue(MOCK_RESOURCES);
 	mockGetResource.mockResolvedValue(MOCK_RESOURCE_CONTENT);
+	// Default tool definition with permissive parameters schema (accepts any object)
+	mockGetToolDefinition.mockReturnValue({
+		name: 'list-instances',
+		description: 'List compute instances',
+		category: 'compute',
+		approvalLevel: 'none',
+		parameters: z.object({}).passthrough()
+	});
 });
 
 afterEach(async () => {
@@ -164,6 +179,65 @@ describe('POST /api/mcp/tools/:name/execute', () => {
 		});
 		expect(res.statusCode).toBe(403);
 	});
+
+	it('returns 404 for unknown tool name', async () => {
+		mockGetToolDefinition.mockReturnValue(undefined);
+		app = await buildMcpApp();
+
+		const res = await app.inject({
+			method: 'POST',
+			url: '/api/mcp/tools/nonexistent-tool/execute',
+			payload: {}
+		});
+
+		expect(res.statusCode).toBe(404);
+		expect(res.json().code).toBe('NOT_FOUND');
+	});
+
+	it('returns 400 for invalid tool arguments (C2 validation)', async () => {
+		mockGetToolDefinition.mockReturnValue({
+			name: 'create-instance',
+			description: 'Create instance',
+			category: 'compute',
+			approvalLevel: 'confirm',
+			parameters: z.object({ displayName: z.string().min(1) })
+		});
+		app = await buildMcpApp();
+
+		const res = await app.inject({
+			method: 'POST',
+			url: '/api/mcp/tools/create-instance/execute',
+			payload: { displayName: '' }
+		});
+
+		expect(res.statusCode).toBe(400);
+	});
+
+	it('rejects SQL injection in tool name', async () => {
+		app = await buildMcpApp();
+
+		const res = await app.inject({
+			method: 'POST',
+			url: "/api/mcp/tools/'; DROP TABLE tools;--/execute",
+			payload: {}
+		});
+
+		expect(res.statusCode).toBe(400);
+	});
+
+	it('rejects body with too many keys', async () => {
+		app = await buildMcpApp();
+		const payload: Record<string, string> = {};
+		for (let i = 0; i < 35; i++) payload[`key${i}`] = 'value';
+
+		const res = await app.inject({
+			method: 'POST',
+			url: '/api/mcp/tools/list-instances/execute',
+			payload
+		});
+
+		expect(res.statusCode).toBe(400);
+	});
 });
 
 // ── GET /api/mcp/resources ──────────────────────────────────────────────
@@ -210,5 +284,28 @@ describe('GET /api/mcp/resources/:uri', () => {
 		});
 
 		expect(mockGetResource).toHaveBeenCalledWith('oci://regions/us-ashburn-1', expect.anything());
+	});
+
+	it('rejects path traversal in URI (C3 sanitization)', async () => {
+		app = await buildMcpApp();
+
+		const res = await app.inject({
+			method: 'GET',
+			url: `/api/mcp/resources/${encodeURIComponent('../../../etc/passwd')}`
+		});
+
+		expect(res.statusCode).toBe(400);
+	});
+
+	it('rejects empty URI', async () => {
+		app = await buildMcpApp();
+
+		const res = await app.inject({
+			method: 'GET',
+			url: '/api/mcp/resources/'
+		});
+
+		// Fastify treats trailing slash as different route — 404 is acceptable
+		expect([400, 404]).toContain(res.statusCode);
 	});
 });
