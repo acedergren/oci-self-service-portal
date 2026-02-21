@@ -79,7 +79,37 @@ const underPressurePlugin: FastifyPluginAsync<UnderPressurePluginOptions> = asyn
 		sampleInterval,
 		healthCheck: customHealthCheck,
 		pressureHandler,
-		exposeStatusRoute: '/api/pressure'
+		// Expose status route with admin-only auth gating.
+		// Event loop delay, heap, and RSS metrics could aid timing attacks
+		// or infrastructure reconnaissance if left public.
+		exposeStatusRoute: {
+			url: '/api/pressure',
+			routeOpts: {
+				config: {
+					// Skip global rate limiter for internal monitoring endpoint
+					rateLimit: false
+				}
+			},
+			routeResponseSchemaOpts: {
+				// Use default response schema from under-pressure
+			}
+		}
+	});
+
+	// Gate /api/pressure behind authentication. Under-pressure doesn't support
+	// preHandler in routeOpts, so we use a URL-scoped onRequest hook instead.
+	fastify.addHook('onRequest', async (request, reply) => {
+		if (request.url !== '/api/pressure') return;
+
+		// Require an authenticated session (request.user is set by auth plugin)
+		const user = (request as unknown as Record<string, unknown>).user as { id?: string } | null;
+		if (!user?.id) {
+			reply.code(401).send({
+				statusCode: 401,
+				error: 'Unauthorized',
+				message: 'Authentication required'
+			});
+		}
 	});
 
 	logger.info(

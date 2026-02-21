@@ -44,6 +44,11 @@ describe('under-pressure plugin', () => {
 		it('should return true when Oracle is available', async () => {
 			app = Fastify({ logger: false });
 
+			// Inject mock user BEFORE under-pressure plugin (hook order matters)
+			app.addHook('onRequest', async (request) => {
+				(request as unknown as Record<string, unknown>).user = { id: 'test-user' };
+			});
+
 			// Mock Oracle plugin decorator
 			const mockOraclePlugin = fp(
 				async (instance) => {
@@ -60,9 +65,6 @@ describe('under-pressure plugin', () => {
 			await app.register(underPressurePlugin);
 			await app.ready();
 
-			// Access the health check function directly from under-pressure options
-			// This is tricky - we need to verify the healthCheck was called with the right behavior
-			// For now, we'll test indirectly through the /api/pressure endpoint
 			const response = await app.inject({
 				method: 'GET',
 				url: '/api/pressure'
@@ -104,6 +106,11 @@ describe('under-pressure plugin', () => {
 
 		it('should return true when Oracle plugin is not registered (graceful degradation)', async () => {
 			app = Fastify({ logger: false });
+
+			// Inject mock user BEFORE under-pressure plugin (hook order matters)
+			app.addHook('onRequest', async (request) => {
+				(request as unknown as Record<string, unknown>).user = { id: 'test-user' };
+			});
 
 			// Do NOT register Oracle plugin
 			const { default: underPressurePlugin } = await import('../../plugins/under-pressure.js');
@@ -230,6 +237,11 @@ describe('under-pressure plugin', () => {
 		it('should expose /api/pressure status route', async () => {
 			app = Fastify({ logger: false });
 
+			// Inject mock user BEFORE under-pressure plugin (hook order matters)
+			app.addHook('onRequest', async (request) => {
+				(request as unknown as Record<string, unknown>).user = { id: 'test-user' };
+			});
+
 			const { default: underPressurePlugin } = await import('../../plugins/under-pressure.js');
 			await app.register(underPressurePlugin);
 			await app.ready();
@@ -243,6 +255,23 @@ describe('under-pressure plugin', () => {
 			// The body should contain metrics about the server's health
 			const body = response.json();
 			expect(body).toBeDefined();
+		});
+
+		it('should return 401 for /api/pressure without authenticated user (AUTH gate)', async () => {
+			app = Fastify({ logger: false });
+
+			const { default: underPressurePlugin } = await import('../../plugins/under-pressure.js');
+			await app.register(underPressurePlugin);
+			await app.ready();
+
+			const response = await app.inject({
+				method: 'GET',
+				url: '/api/pressure'
+			});
+
+			expect(response.statusCode).toBe(401);
+			const body = response.json();
+			expect(body.error).toBe('Unauthorized');
 		});
 	});
 });
