@@ -305,20 +305,17 @@ export async function setupRoutes(app: FastifyInstance): Promise<void> {
 	app.post(
 		'/api/setup/ai-provider/test',
 		{
+			preHandler: requireSetupToken,
 			schema: {
 				body: TestAiProviderInputSchema,
 				response: {
 					200: SetupTestResultSchema,
+					401: SetupErrorResponseSchema,
 					403: SetupErrorResponseSchema
 				}
 			}
 		},
 		async (request, reply) => {
-			const isSetupComplete = await settingsRepository.isSetupComplete();
-			if (isSetupComplete) {
-				return reply.status(403).send({ error: 'Setup is already complete' });
-			}
-
 			const input = request.body as z.infer<typeof TestAiProviderInputSchema>;
 			if (input.providerType === 'oci') {
 				return reply.send({

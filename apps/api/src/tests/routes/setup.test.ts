@@ -178,9 +178,7 @@ describe('Setup routes', () => {
 		expect(res.json().success).toBe(true);
 	});
 
-	it('returns 403 for ai-provider/test after setup complete', async () => {
-		mockIsSetupComplete.mockResolvedValue(true);
-
+	it('returns 401 for ai-provider/test without setup token (W5 fix)', async () => {
 		const app = await buildTestApp({ withRbac: false });
 		await app.register(setupRoutes);
 		await app.ready();
@@ -191,10 +189,10 @@ describe('Setup routes', () => {
 			payload: { providerType: 'oci' }
 		});
 
-		expect(res.statusCode).toBe(403);
+		expect(res.statusCode).toBe(401);
 	});
 
-	it('returns success for oci ai-provider/test without apiKey', async () => {
+	it('returns success for oci ai-provider/test with valid setup token', async () => {
 		const app = await buildTestApp({ withRbac: false });
 		await app.register(setupRoutes);
 		await app.ready();
@@ -202,6 +200,7 @@ describe('Setup routes', () => {
 		const res = await app.inject({
 			method: 'POST',
 			url: '/api/setup/ai-provider/test',
+			headers: { authorization: 'Bearer setup-token' },
 			payload: { providerType: 'oci', region: 'eu-frankfurt-1' }
 		});
 
