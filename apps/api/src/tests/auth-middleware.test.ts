@@ -73,7 +73,12 @@ vi.mock('@portal/server/auth/config', () => ({
 		api: {
 			getSession: vi.fn().mockResolvedValue(null)
 		}
-	}
+	},
+	reloadAuthProviders: vi.fn().mockResolvedValue(undefined)
+}));
+
+vi.mock('@portal/server/admin/env-bootstrap.js', () => ({
+	bootstrapEnvToDatabase: vi.fn().mockResolvedValue(undefined)
 }));
 
 // Use forwarding pattern for health mock so mockReset:true doesn't break it

@@ -11,6 +11,7 @@ import {
 import { stripIdpSecrets, stripIdpSecretsArray } from '@portal/server/admin/strip-secrets.js';
 import { NotFoundError, toPortalError } from '@portal/server/errors.js';
 import { createLogger } from '@portal/server/logger.js';
+import { reloadAuthProviders } from '@portal/server/auth/config.js';
 
 const log = createLogger('api:admin:idp');
 
@@ -79,6 +80,7 @@ export async function idpAdminRoutes(app: FastifyInstance): Promise<void> {
 			try {
 				const input = request.body as z.infer<typeof CreateIdpInputSchema>;
 				const created = await idpRepository.create(input);
+				await reloadAuthProviders();
 				reply.code(201);
 				return stripIdpSecrets(created);
 			} catch (err) {
@@ -113,6 +115,7 @@ export async function idpAdminRoutes(app: FastifyInstance): Promise<void> {
 				}
 
 				const updated = await idpRepository.update(id, input);
+				await reloadAuthProviders();
 				return stripIdpSecrets(updated);
 			} catch (err) {
 				if (err instanceof NotFoundError) throw err;
@@ -144,6 +147,7 @@ export async function idpAdminRoutes(app: FastifyInstance): Promise<void> {
 					throw new NotFoundError(`Identity provider not found: ${id}`);
 				}
 
+				await reloadAuthProviders();
 				reply.code(204);
 				return null;
 			} catch (err) {
@@ -180,6 +184,7 @@ export async function idpAdminRoutes(app: FastifyInstance): Promise<void> {
 
 				const status: z.infer<typeof IdpStatusSchema> = enabled ? 'active' : 'disabled';
 				const updated = await idpRepository.update(id, { status });
+				await reloadAuthProviders();
 				return stripIdpSecrets(updated);
 			} catch (err) {
 				if (err instanceof NotFoundError) throw err;

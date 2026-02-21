@@ -22,7 +22,8 @@ import {
 import { RATE_LIMIT_CONFIG } from '@portal/server/rate-limiter';
 import { generateRequestId } from '@portal/server/tracing';
 import { getAuthCookieAttributes } from '@portal/server/auth/cookies';
-import { initSetupToken } from '@portal/server/admin';
+import { initSetupToken, bootstrapEnvToDatabase } from '@portal/server/admin';
+import { reloadAuthProviders } from '@portal/server/auth/config';
 import otelPlugin from './plugins/otel.js';
 import underPressurePlugin from './plugins/under-pressure.js';
 import cachePlugin from './plugins/cache.js';
@@ -363,6 +364,10 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 		log.info('Graceful shutdown initiated - draining Oracle pool and Valkey cache');
 	});
 
+	// Bootstrap env vars → database (idempotent, error-safe).
+	// Must run after Oracle pool + migrations, before auth plugin.
+	await bootstrapEnvToDatabase();
+
 	await initSetupToken();
 	await app.register(authPlugin, {
 		excludePaths: [
@@ -395,6 +400,17 @@ export async function createApp(options: AppOptions = {}): Promise<FastifyInstan
 	// ── Mastra framework (agents, workflows, MCP) ─────────────────────
 
 	await app.register(mastraPlugin);
+
+	// ── Auth provider reload (DB-driven config) ─────────────────────────
+	// Replace env-var-seeded OAuth configs with database records.
+	// Runs after all plugins are registered so DB pool is fully available.
+	app.addHook('onReady', async () => {
+		try {
+			await reloadAuthProviders();
+		} catch (err) {
+			log.warn({ err }, 'Failed to reload auth providers from DB — using env-var config');
+		}
+	});
 
 	// ── Workflow crash recovery (E-3.05) ────────────────────────────────
 	// Resume stale workflow runs on startup (status = running/suspended, last update >5 min ago)

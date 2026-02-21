@@ -27,6 +27,7 @@ import {
 	resolveIdcsOrg,
 	provisionFromIdcsGroups
 } from './idcs-provisioning';
+import type { IdpProvider } from '../admin/types.js';
 
 const log = createLogger('auth-config');
 const isProduction = process.env.NODE_ENV === 'production';
@@ -94,6 +95,59 @@ if (!hasOidcConfig) {
 	log.warn('OCI_IAM_CLIENT_ID / OCI_IAM_CLIENT_SECRET not set — OIDC login disabled (dev mode)');
 }
 
+// ── Mutable OAuth config array ────────────────────────────────────────────
+// genericOAuth closes over this array reference. Route handlers use
+// config.find() on each request, so mutating contents via splice() is
+// picked up without recreating the betterAuth() instance.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const oauthConfigs: any[] = [];
+
+// Seed from env vars for initial startup (before DB is available)
+if (hasOidcConfig) {
+	oauthConfigs.push({
+		providerId: 'oci-iam',
+		clientId: oidcClientId!,
+		clientSecret: oidcClientSecret!,
+		discoveryUrl: process.env.OCI_IAM_DISCOVERY_URL,
+		scopes: ['openid', 'email', 'profile', 'urn:opc:idm:__myscopes__'],
+		pkce: true,
+		...(process.env.OCI_IAM_IDP_NAME && {
+			authorizationUrlParams: {
+				idp: process.env.OCI_IAM_IDP_NAME
+			}
+		}),
+		mapProfileToUser: buildIdcsProfileMapper()
+	});
+}
+
+/**
+ * Build the IDCS profile mapper for mapProfileToUser.
+ * Captures IDCS-specific claims during OAuth callback for post-login provisioning.
+ *
+ * @param idp - Optional IDP record for per-provider configuration (future use)
+ */
+function buildIdcsProfileMapper(_idp?: IdpProvider) {
+	return (profile: Record<string, unknown>) => {
+		const p = profile as IdcsProfile;
+		const displayName = p.user_displayname || p.name || p.email || p.sub;
+
+		// Stash IDCS profile for post-login provisioning.
+		// Always stash even without groups — provisioning assigns
+		// viewer role as minimum so the user is at least in org_members.
+		stashIdcsProfile(p.sub, p.groups ?? [], p.user_tenantname);
+		log.info(
+			{ sub: p.sub, groups: p.groups ?? [], tenant: p.user_tenantname },
+			'IDCS user signed in'
+		);
+
+		return {
+			name: displayName,
+			email: p.email || `${p.sub}@idcs.local`,
+			image: undefined
+		};
+	};
+}
+
 export const auth = betterAuth({
 	database: oracleAdapter(),
 	baseURL: process.env.BETTER_AUTH_URL || 'http://localhost:5173',
@@ -126,52 +180,9 @@ export const auth = betterAuth({
 		}
 	},
 	plugins: [
-		...(hasOidcConfig
-			? [
-					genericOAuth({
-						config: [
-							{
-								providerId: 'oci-iam',
-								clientId: oidcClientId!,
-								clientSecret: oidcClientSecret!,
-								discoveryUrl: process.env.OCI_IAM_DISCOVERY_URL,
-								// urn:opc:idm:__myscopes__ requests all IDCS app scopes,
-								// which includes group and app role claims in the token
-								scopes: ['openid', 'email', 'profile', 'urn:opc:idm:__myscopes__'],
-								pkce: true,
-								// When OCI_IAM_IDP_NAME is set, add idp hint to the authorize URL.
-								// Value is the IdP partner name (e.g. "Oracle SSO") from IDCS.
-								// Note: auto-redirect requires an IDCS Identity Provider Policy
-								// that assigns only the SAML IdP to this application.
-								...(process.env.OCI_IAM_IDP_NAME && {
-									authorizationUrlParams: {
-										idp: process.env.OCI_IAM_IDP_NAME
-									}
-								}),
-								mapProfileToUser: (profile: Record<string, unknown>) => {
-									const p = profile as IdcsProfile;
-									const displayName = p.user_displayname || p.name || p.email || p.sub;
-
-									// Stash IDCS groups for post-login provisioning
-									if (p.groups?.length) {
-										stashIdcsProfile(p.sub, p.groups, p.user_tenantname);
-										log.info(
-											{ sub: p.sub, groups: p.groups, tenant: p.user_tenantname },
-											'IDCS user signed in with groups'
-										);
-									}
-
-									return {
-										name: displayName,
-										email: p.email || `${p.sub}@idcs.local`,
-										image: undefined
-									};
-								}
-							}
-						]
-					})
-				]
-			: []),
+		// Always register genericOAuth — config array is mutated at runtime
+		// by reloadAuthProviders() after DB becomes available.
+		genericOAuth({ config: oauthConfigs }),
 		organization({
 			allowUserToCreateOrganization: false
 		})
@@ -203,7 +214,9 @@ export const auth = betterAuth({
 						if (!accountSub) return;
 
 						const cached = consumeIdcsProfile(accountSub);
-						if (!cached || !cached.groups.length) return;
+						if (!cached) return;
+						// groups may be empty (no IDCS groups claim) — provisionFromIdcsGroups
+						// will still assign at least viewer role via mapIdcsGroupsToRole([]).
 
 						const orgId = await resolveIdcsOrg(userId, cached.tenantName);
 						if (!orgId) {
@@ -228,6 +241,58 @@ if (!isProduction) {
 			sameSite: AUTH_COOKIE_SAME_SITE
 		},
 		'Better Auth cookie settings resolved'
+	);
+}
+
+/**
+ * Reload OAuth provider configs from the database.
+ *
+ * Called on app ready and after admin IDP mutations.
+ * Atomically replaces array contents so Better Auth picks up changes on next request.
+ * Skips providers without a decrypted client secret (can't authenticate without one).
+ */
+export async function reloadAuthProviders(): Promise<void> {
+	const { idpRepository } = await import('../admin/idp-repository.js');
+	const providers = await idpRepository.list();
+	const active = providers.filter((p) => p.status === 'active' && p.clientSecret);
+
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const newConfigs: any[] = active.map((idp) => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const config: Record<string, any> = {
+			providerId: idp.providerId,
+			clientId: idp.clientId,
+			clientSecret: idp.clientSecret,
+			scopes: idp.scopes.split(',').map((s) => s.trim()),
+			pkce: idp.pkceEnabled
+		};
+
+		// OIDC discovery endpoint (preferred) or explicit URLs
+		if (idp.discoveryUrl) config.discoveryUrl = idp.discoveryUrl;
+		if (idp.authorizationUrl) config.authorizationUrl = idp.authorizationUrl;
+		if (idp.tokenUrl) config.tokenUrl = idp.tokenUrl;
+		if (idp.userinfoUrl) config.userinfoUrl = idp.userinfoUrl;
+
+		// IDP hint from extraConfig (for IDCS federated IdPs)
+		const idpName = idp.extraConfig?.idpName as string | undefined;
+		if (idpName) {
+			config.authorizationUrlParams = { idp: idpName };
+		}
+
+		// Attach IDCS profile mapper for OCI IAM / IDCS providers
+		if (idp.providerType === 'idcs' || idp.providerId === 'oci-iam') {
+			config.mapProfileToUser = buildIdcsProfileMapper(idp);
+		}
+
+		return config;
+	});
+
+	// Atomic replacement: splice preserves the array reference that
+	// genericOAuth's route handlers close over.
+	oauthConfigs.splice(0, oauthConfigs.length, ...newConfigs);
+	log.info(
+		{ count: newConfigs.length, providerIds: newConfigs.map((c) => c.providerId) },
+		'Reloaded auth providers from database'
 	);
 }
 

@@ -32,10 +32,25 @@ const IDCS_OPERATOR_GROUPS = (
 	.map((s) => s.trim().toLowerCase())
 	.filter(Boolean);
 
-export function mapIdcsGroupsToRole(groups: string[]): 'admin' | 'operator' | 'viewer' {
+/**
+ * Options for overriding default group-to-role mapping.
+ * When provided, these take precedence over env-var defaults.
+ */
+export interface GroupMappingOptions {
+	adminGroups?: string[];
+	operatorGroups?: string[];
+}
+
+export function mapIdcsGroupsToRole(
+	groups: string[],
+	options?: GroupMappingOptions
+): 'admin' | 'operator' | 'viewer' {
+	const adminGroups = options?.adminGroups?.map((g) => g.toLowerCase()) ?? IDCS_ADMIN_GROUPS;
+	const operatorGroups =
+		options?.operatorGroups?.map((g) => g.toLowerCase()) ?? IDCS_OPERATOR_GROUPS;
 	const groupSet = new Set(groups.map((g) => g.toLowerCase()));
-	if (IDCS_ADMIN_GROUPS.some((g) => groupSet.has(g))) return 'admin';
-	if (IDCS_OPERATOR_GROUPS.some((g) => groupSet.has(g))) return 'operator';
+	if (adminGroups.some((g) => groupSet.has(g))) return 'admin';
+	if (operatorGroups.some((g) => groupSet.has(g))) return 'operator';
 	return 'viewer';
 }
 
@@ -101,7 +116,52 @@ export async function provisionFromIdcsGroups(
 	orgId: string,
 	groups: string[]
 ): Promise<string> {
-	const role = mapIdcsGroupsToRole(groups);
+	// Fetch IDP record for DB-configured group overrides (Admin UI)
+	let groupOptions: GroupMappingOptions | undefined;
+	try {
+		const { idpRepository } = await import('../admin/idp-repository.js');
+		const idp = await idpRepository.getByProviderId('oci-iam');
+		if (idp?.adminGroups || idp?.operatorGroups) {
+			groupOptions = {};
+			if (idp.adminGroups) {
+				groupOptions.adminGroups = idp.adminGroups
+					.split(',')
+					.map((s) => s.trim())
+					.filter(Boolean);
+			}
+			if (idp.operatorGroups) {
+				groupOptions.operatorGroups = idp.operatorGroups
+					.split(',')
+					.map((s) => s.trim())
+					.filter(Boolean);
+			}
+		}
+	} catch {
+		// Non-fatal — fall back to env var defaults
+	}
+
+	// Bootstrap: if no admins exist yet in this org, promote first provisioned user to admin.
+	// This breaks the chicken-and-egg cycle on fresh installs where IDCS groups aren't
+	// configured yet (admin groups must be set, but you need admin access to set them).
+	let role = mapIdcsGroupsToRole(groups, groupOptions);
+	if (role !== 'admin') {
+		try {
+			const hasAdmin = await withConnection(async (conn) => {
+				const result = await conn.execute(
+					`SELECT COUNT(*) AS cnt FROM org_members WHERE org_id = :orgId AND role = 'admin'`,
+					{ orgId }
+				);
+				const cnt = ((result.rows?.[0] as Record<string, unknown>)?.CNT as number) ?? 0;
+				return cnt > 0;
+			});
+			if (!hasAdmin) {
+				log.info({ userId, orgId }, 'No admins in org — promoting first user to admin (bootstrap)');
+				role = 'admin';
+			}
+		} catch {
+			// Non-fatal — proceed with IDCS-mapped role
+		}
+	}
 
 	try {
 		await withConnection(async (conn) => {
@@ -166,6 +226,33 @@ export async function resolveIdcsOrg(userId: string, tenantName?: string): Promi
 		}
 	}
 
-	// 3. Default org
-	return process.env.OCI_IAM_DEFAULT_ORG_ID ?? null;
+	// 3. IDP record default org (set via admin UI → OCI IAM provider settings)
+	try {
+		const { idpRepository } = await import('../admin/idp-repository.js');
+		const idp = await idpRepository.getByProviderId('oci-iam');
+		if (idp?.defaultOrgId) return idp.defaultOrgId;
+	} catch {
+		// Continue to env var fallback
+	}
+
+	// 4. Default org from environment variable
+	if (process.env.OCI_IAM_DEFAULT_ORG_ID) return process.env.OCI_IAM_DEFAULT_ORG_ID;
+
+	// 5. Last resort: use first/only org in the database (handles single-org deployments
+	//    where admin hasn't explicitly configured a default org yet).
+	try {
+		const firstOrg = await withConnection(async (conn) => {
+			const result = await conn.execute(
+				`SELECT id FROM organizations ORDER BY created_at ASC FETCH FIRST 1 ROWS ONLY`,
+				{}
+			);
+			if (!result.rows?.length) return null;
+			return (result.rows[0] as Record<string, unknown>).ID as string;
+		});
+		if (firstOrg) return firstOrg;
+	} catch {
+		// No org in database
+	}
+
+	return null;
 }

@@ -16,6 +16,9 @@ export { idpRepository } from './idp-repository.js';
 export { aiProviderRepository } from './ai-provider-repository.js';
 export { settingsRepository } from './settings-repository.js';
 
+// Bootstrap
+export { bootstrapEnvToDatabase } from './env-bootstrap.js';
+
 // Security utilities
 export {
 	validateSetupToken,
