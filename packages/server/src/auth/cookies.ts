@@ -1,6 +1,6 @@
 export type CookieSameSite = 'lax' | 'strict' | 'none';
 
-const DEFAULT_COOKIE_SAME_SITE: CookieSameSite = 'lax';
+const DEFAULT_COOKIE_SAME_SITE: CookieSameSite = 'strict';
 const VALID_SAME_SITE_VALUES = new Set<CookieSameSite>(['lax', 'strict', 'none']);
 
 function normalizeSameSite(value: string | undefined): CookieSameSite {
