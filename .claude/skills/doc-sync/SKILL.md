@@ -68,3 +68,5 @@ If `$ARGUMENTS` is empty or "audit", only report — don't edit.
 - After completing a development phase (`/doc-sync fix`)
 - After security hardening sprints (`/doc-sync fix`)
 - After any structural changes (new plugins, routes, migrations)
+
+Tip: Start with `claude -w` (worktree mode) when running `/doc-sync fix` to edit docs in isolation without affecting your working tree.

@@ -138,16 +138,14 @@ After the review table, write your fixes if the task requires code changes (not 
 
 ## Git Protocol
 
+- You are running in an isolated worktree — commit freely without coordination locks
 - Stage ONLY the files you modified (never `git add -A` or `git add .`)
-- Use flock for atomic git operations:
+- Commit with conventional message format:
 
-```bash
-flock {{GIT_LOCK_PATH}} bash -c 'git add {files} && git commit -m "$(cat <<'"'"'EOF'"'"'
+```
 fix(security): description of security fix
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
-EOF
-)"'
 ```
 
 ## Scope Constraint

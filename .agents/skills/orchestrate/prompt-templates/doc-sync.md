@@ -108,16 +108,14 @@ Before committing documentation changes:
 
 ## Git Protocol
 
+- You are running in an isolated worktree — commit freely without coordination locks
 - Stage ONLY the files you modified (never `git add -A` or `git add .`)
-- Use flock for atomic git operations:
+- Commit with conventional message format:
 
-```bash
-flock {{GIT_LOCK_PATH}} bash -c 'git add {files} && git commit -m "$(cat <<'"'"'EOF'"'"'
+```
 docs(scope): description
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
-EOF
-)"'
 ```
 
 - Commit type is always `docs`

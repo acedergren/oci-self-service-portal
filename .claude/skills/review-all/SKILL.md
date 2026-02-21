@@ -25,7 +25,9 @@ If on `main`, use `git diff --name-only HEAD~5` (last 5 commits) or ask the user
 
 ### Step 2: Launch Parallel Review Agents
 
-Spawn **four agents simultaneously** using the Task tool:
+Spawn four agents with `run_in_background: true` for true parallelism. Collect results via `TaskOutput` when each completes.
+
+No worktree isolation needed — this is a read-only skill.
 
 | Agent                     | Type                                   | Scope                                      | What it checks                                             |
 | ------------------------- | -------------------------------------- | ------------------------------------------ | ---------------------------------------------------------- |
