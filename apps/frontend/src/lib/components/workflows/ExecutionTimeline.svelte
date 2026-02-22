@@ -371,22 +371,22 @@
 	}
 
 	.step-icon.completed {
-		background: rgba(0, 200, 0, 0.15);
+		background: color-mix(in srgb, var(--semantic-success) 15%, transparent);
 		color: var(--semantic-success);
 	}
 
 	.step-icon.failed {
-		background: rgba(255, 0, 0, 0.15);
+		background: color-mix(in srgb, var(--semantic-error) 15%, transparent);
 		color: var(--semantic-error);
 	}
 
 	.step-icon.running {
-		background: rgba(0, 100, 255, 0.15);
+		background: color-mix(in srgb, var(--semantic-info) 15%, transparent);
 		color: var(--semantic-info);
 	}
 
 	.step-icon.suspended {
-		background: rgba(255, 180, 0, 0.15);
+		background: color-mix(in srgb, var(--semantic-warning) 15%, transparent);
 		color: var(--semantic-warning);
 	}
 
@@ -444,7 +444,7 @@
 
 	.detail-error {
 		padding: 0.5rem;
-		background: rgba(255, 0, 0, 0.1);
+		background: color-mix(in srgb, var(--semantic-error) 10%, transparent);
 		border-radius: 4px;
 		font-size: 0.75rem;
 		color: var(--semantic-error);

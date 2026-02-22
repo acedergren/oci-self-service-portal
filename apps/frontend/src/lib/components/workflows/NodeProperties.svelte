@@ -343,7 +343,7 @@
 
 	.delete-btn:hover {
 		color: var(--semantic-error);
-		background: rgba(255, 0, 0, 0.1);
+		background: color-mix(in srgb, var(--semantic-error) 10%, transparent);
 	}
 
 	.properties-body {

@@ -160,7 +160,7 @@
 
 	.bucket-card:hover {
 		border-color: var(--portal-teal, #0d9488);
-		box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+		box-shadow: 0 1px 4px color-mix(in srgb, black 6%, transparent);
 	}
 
 	.card-top {

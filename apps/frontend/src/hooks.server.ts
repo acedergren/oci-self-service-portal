@@ -107,6 +107,10 @@ function addSecurityHeaders(response: Response, nonce?: string): Response {
 	headers.set('Cross-Origin-Opener-Policy', 'same-origin');
 	headers.set('Cross-Origin-Resource-Policy', 'same-origin');
 
+	// Prevent caching of authenticated pages (back-button leak, proxy caching)
+	headers.set('Cache-Control', 'no-store, max-age=0');
+	headers.set('Pragma', 'no-cache');
+
 	if (!dev) {
 		headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
 	}

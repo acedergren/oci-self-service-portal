@@ -5,9 +5,12 @@
 	import { superForm, defaults } from 'sveltekit-superforms';
 	import { zod4, zod4Client } from 'sveltekit-superforms/adapters';
 	import { idpFormSchema, type IdpFormData } from '$lib/schemas/admin.js';
+	import { ConfirmDialog } from '$lib/components/ui/index.js';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
+
+	let confirmDeleteId = $state<string | null>(null);
 
 	const queryClient = useQueryClient();
 
@@ -204,8 +207,13 @@
 	}
 
 	function handleDelete(id: string) {
-		if (confirm('Are you sure you want to delete this identity provider?')) {
-			deleteIdpMutation.mutate(id);
+		confirmDeleteId = id;
+	}
+
+	function confirmDelete() {
+		if (confirmDeleteId) {
+			deleteIdpMutation.mutate(confirmDeleteId);
+			confirmDeleteId = null;
 		}
 	}
 
@@ -251,7 +259,18 @@
 		</div>
 	{:else if idps.length === 0}
 		<div class="empty-state">
-			<div class="empty-icon">🔐</div>
+			<div class="empty-icon">
+				<svg
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="1.5"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					width="48"
+					height="48"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg
+				>
+			</div>
 			<h2>No identity providers configured</h2>
 			<p>Add your first identity provider to enable authentication</p>
 			<button type="button" class="btn-primary" onclick={openCreateModal}>Add Provider</button>
@@ -492,6 +511,16 @@
 	</div>
 {/if}
 
+<ConfirmDialog
+	open={confirmDeleteId !== null}
+	title="Delete Identity Provider"
+	message="Are you sure you want to delete this identity provider? This action cannot be undone."
+	confirmLabel="Delete"
+	variant="danger"
+	onConfirm={confirmDelete}
+	onCancel={() => (confirmDeleteId = null)}
+/>
+
 <style>
 	/* Page layout */
 	.admin-page {
@@ -579,7 +608,7 @@
 
 	.idp-card:hover {
 		border-color: var(--border-focused);
-		box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.1);
+		box-shadow: 0 4px 12px -2px color-mix(in srgb, black 10%, transparent);
 	}
 
 	.card-header {
@@ -727,7 +756,7 @@
 	.modal-backdrop {
 		position: fixed;
 		inset: 0;
-		background: rgba(0, 0, 0, 0.5);
+		background: color-mix(in srgb, black 50%, transparent);
 		backdrop-filter: blur(4px);
 		z-index: 999;
 		animation: fade-in 0.2s ease-out;
@@ -744,7 +773,7 @@
 		background: var(--bg-secondary);
 		border: 1px solid var(--border-default);
 		border-radius: var(--radius-lg);
-		box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.3);
+		box-shadow: 0 20px 40px -10px color-mix(in srgb, black 30%, transparent);
 		z-index: 1000;
 		animation: slide-in-up 0.3s ease-out;
 		display: flex;

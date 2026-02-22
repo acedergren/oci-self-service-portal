@@ -36,6 +36,7 @@
 		{ href: '/', label: 'Home', exact: true },
 		{ href: '/chat', label: 'Charlie', exact: false },
 		{ href: '/workflows', label: 'Workflows', exact: false },
+		{ href: '/cloud-advisor', label: 'CloudAdvisor', exact: false },
 		{ href: '/admin', label: 'Admin', exact: false }
 	] as const;
 
@@ -166,6 +167,26 @@
 						aria-hidden="true"
 					>
 						<polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+					</svg>
+				{:else if item.href === '/cloud-advisor'}
+					<!-- Radar/scan icon -->
+					<svg
+						class="nav-icon"
+						xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						aria-hidden="true"
+					>
+						<path d="M19.07 4.93A10 10 0 0 0 6.99 3.34" />
+						<path d="M2.29 9.62A10 10 0 1 0 21.31 8.35" />
+						<path d="M16.24 7.76A6 6 0 1 0 8.23 16.67" />
+						<path d="M17.99 11.66A6 6 0 0 1 15.77 16.67" />
+						<circle cx="12" cy="12" r="2" />
+						<path d="m13.41 10.59 5.66-5.66" />
 					</svg>
 				{:else if item.href === '/admin'}
 					<!-- Settings gear icon -->

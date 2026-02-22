@@ -2,3 +2,5 @@ export { Badge, Spinner, LoadingSpinner, CodeBlock, Collapsible } from '@portal/
 export { default as ModelPicker } from './ModelPicker.svelte';
 export { default as ApprovalDialog } from './ApprovalDialog.svelte';
 export { default as SearchBox } from './SearchBox.svelte';
+export { default as CharlieAvatar } from './CharlieAvatar.svelte';
+export { default as ConfirmDialog } from './ConfirmDialog.svelte';

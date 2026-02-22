@@ -959,7 +959,7 @@
 			left: var(--space-sm);
 			width: min(360px, calc(100vw - (var(--space-sm) + var(--space-sm))));
 			height: calc(100dvh - var(--space-xxl) - var(--space-lg) - var(--space-md));
-			box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
+			box-shadow: 0 20px 45px color-mix(in srgb, black 35%, transparent);
 			border-radius: var(--radius-lg);
 			overflow-y: auto;
 			transform: translateX(-110%);

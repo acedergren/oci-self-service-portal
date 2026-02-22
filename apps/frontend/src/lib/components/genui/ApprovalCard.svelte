@@ -298,7 +298,7 @@
 
 	.deny-input:focus {
 		border-color: var(--portal-error, #ef4444);
-		box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.1);
+		box-shadow: 0 0 0 2px color-mix(in srgb, var(--semantic-error) 10%, transparent);
 	}
 
 	.action-buttons {

@@ -274,7 +274,7 @@
 
 	.workflow-card:hover {
 		border-color: var(--accent-primary);
-		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+		box-shadow: 0 4px 12px color-mix(in srgb, black 15%, transparent);
 		transform: translateY(-2px);
 	}
 

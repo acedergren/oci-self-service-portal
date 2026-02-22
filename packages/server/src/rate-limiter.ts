@@ -21,6 +21,7 @@ export const RATE_LIMIT_CONFIG: RateLimitConfig = {
 	windowMs: 60_000,
 	maxRequests: {
 		chat: 20,
+		auth: 10,
 		api: 60
 	}
 };

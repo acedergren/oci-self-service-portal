@@ -89,9 +89,10 @@ export const load: LayoutServerLoad = async ({ request, locals, fetch, url }) =>
 		(p) => url.pathname === p || url.pathname.startsWith(p + '/')
 	);
 
-	// Unauthenticated user on a protected route → redirect to login
+	// Unauthenticated user on a protected route → redirect to login with redirectTo
 	if (!user && !isPublicPath) {
-		throw redirect(302, '/login');
+		const redirectTo = url.pathname + url.search;
+		throw redirect(302, `/login?redirectTo=${encodeURIComponent(redirectTo)}`);
 	}
 
 	// Authenticated user visiting /login → bounce home

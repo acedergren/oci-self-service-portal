@@ -202,12 +202,68 @@
 	--fg-tertiary: #8aa58e; /* very muted / timestamps */
 	--fg-disabled: #5f7a63; /* disabled, green-muted */
 
+	/* Accent — teal brightened for sage backgrounds */
+	--accent-primary: #2dd4bf; /* teal-400, high contrast on sage */
+	--accent-secondary: #14b8a6; /* teal-500 */
+	--accent-muted: #134e4a; /* teal-900 with green lean */
+
 	/* Borders — green-tinted to match bg */
 	--border-default: #2d3a30; /* matches bg-elevated */
+	--border-focused: #2dd4bf; /* sage-tinted teal */
 	--border-muted: #1e2a21; /* between secondary/tertiary */
+
+	/* Semantic — adjusted for sage bg readability */
+	--semantic-success: #4ade80; /* green-400, harmonises with sage */
+	--semantic-warning: #fbbf24; /* amber-400 */
+	--semantic-error: #fb7185; /* rose-400, softer on sage */
+	--semantic-info: #7dd3fc; /* sky-300 */
+
+	/* Tool approval */
+	--tool-safe: #4ade80;
+	--tool-caution: #fbbf24;
+	--tool-danger: #fb7185;
+
+	/* Agent state */
+	--agent-thinking: #5eead4; /* teal-300 */
+	--agent-executing: #2dd4bf; /* teal-400 */
+	--agent-waiting: #c4b5fd; /* violet-300, legible on sage */
+	--agent-streaming: #4ade80; /* green-400 */
 
 	/* Message — adapted for green bg */
 	--message-user: color-mix(in srgb, #14b8a6 10%, #181f1b);
+
+	/* Shadow system — sage-tinted darks */
+	--shadow-sm:
+		0 2px 8px color-mix(in srgb, #0a0f0c 25%, transparent),
+		0 1px 2px color-mix(in srgb, #0a0f0c 18%, transparent);
+	--shadow-md:
+		0 8px 32px color-mix(in srgb, #0a0f0c 35%, transparent),
+		0 2px 8px color-mix(in srgb, #0a0f0c 22%, transparent);
+	--shadow-lg:
+		0 24px 64px color-mix(in srgb, #0a0f0c 45%, transparent),
+		0 8px 24px color-mix(in srgb, #0a0f0c 30%, transparent);
+
+	/* Glass tokens — sage-smoke variant */
+	--glass-fill: color-mix(in srgb, #181f1b 60%, transparent);
+	--glass-border: color-mix(in srgb, #4a6b4e 15%, transparent);
+	--glass-highlight: color-mix(in srgb, #c8d5ca 10%, transparent);
+	--glass-edge: color-mix(in srgb, #0a0f0c 30%, transparent);
+	--glass-rim: color-mix(in srgb, #4a6b4e 8%, transparent);
+	--glass-edge-shadow: color-mix(in srgb, #0a0f0c 25%, transparent);
+	--glass-blur: blur(20px) saturate(180%);
+	--glass-shadow:
+		0 20px 60px color-mix(in srgb, #0a0f0c 35%, transparent),
+		0 4px 12px color-mix(in srgb, #0a0f0c 22%, transparent);
+
+	/* Actor tokens */
+	--charlie-accent: #2dd4bf;
+	--charlie-bg: color-mix(in srgb, #2dd4bf 8%, #111714);
+	--advisor-accent: #fbbf24;
+	--advisor-bg: color-mix(in srgb, #fbbf24 6%, #181f1b);
+	--advisor-border: #fbbf24;
+
+	/* Message background alias */
+	--message-user-bg: color-mix(in srgb, #2dd4bf 8%, #111714);
 }
 
 /* Base styles */

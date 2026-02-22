@@ -322,7 +322,7 @@
 	.modal-backdrop {
 		position: fixed;
 		inset: 0;
-		background: rgba(0, 0, 0, 0.5);
+		background: color-mix(in srgb, black 50%, transparent);
 		backdrop-filter: blur(4px);
 		z-index: 999;
 		animation: fade-in 0.2s ease-out;
@@ -339,7 +339,7 @@
 		background: var(--bg-secondary);
 		border: 1px solid var(--border-default);
 		border-radius: var(--radius-lg);
-		box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.3);
+		box-shadow: 0 20px 40px -10px color-mix(in srgb, black 30%, transparent);
 		z-index: 1000;
 		animation: slide-in-up 0.3s ease-out;
 		display: flex;

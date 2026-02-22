@@ -106,7 +106,22 @@
 		</div>
 		{#if !isEditing}
 			<button class="btn-primary" onclick={startEditing}>
-				<span class="btn-icon">✏️</span>
+				<span class="btn-icon"
+					><svg
+						width="14"
+						height="14"
+						viewBox="0 0 24 24"
+						fill="none"
+						stroke="currentColor"
+						stroke-width="2"
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						aria-hidden="true"
+						><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /><path
+							d="m15 5 4 4"
+						/></svg
+					></span
+				>
 				Edit Settings
 			</button>
 		{/if}
@@ -119,7 +134,27 @@
 		</div>
 	{:else if settingsQuery.error}
 		<div class="error-state">
-			<p class="error-message">❌ {settingsQuery.error.message}</p>
+			<p class="error-message">
+				<svg
+					class="inline-icon"
+					width="16"
+					height="16"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="var(--semantic-error)"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					aria-hidden="true"
+					><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line
+						x1="12"
+						y1="16"
+						x2="12.01"
+						y2="16"
+					/></svg
+				>
+				{settingsQuery.error.message}
+			</p>
 			<button class="btn-secondary" onclick={() => settingsQuery.refetch()}>Try Again</button>
 		</div>
 	{:else if settingsQuery.data}

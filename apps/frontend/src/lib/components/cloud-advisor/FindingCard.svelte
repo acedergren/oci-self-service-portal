@@ -14,9 +14,11 @@
 	interface Props {
 		finding: Finding;
 		onDismiss?: (id: string) => void;
+		/** When provided, renders an in-context button instead of navigating to /chat */
+		onCharlieAction?: (prompt: string) => void;
 	}
 
-	let { finding, onDismiss }: Props = $props();
+	let { finding, onDismiss, onCharlieAction }: Props = $props();
 
 	const severityConfig = {
 		critical: { color: 'var(--semantic-error)', label: 'Critical' },
@@ -27,11 +29,11 @@
 
 	let config = $derived(severityConfig[finding.severity]);
 
-	let charlieHref = $derived(
-		finding.charlieAction
-			? `${resolve('/chat')}?prompt=${encodeURIComponent(finding.charlieAction.prompt)}`
-			: `${resolve('/chat')}?prompt=${encodeURIComponent(`Help me fix this issue: ${finding.title}`)}`
+	let charliePrompt = $derived(
+		finding.charlieAction?.prompt ?? `Help me fix this issue: ${finding.title}`
 	);
+
+	let charlieHref = $derived(`${resolve('/chat')}?prompt=${encodeURIComponent(charliePrompt)}`);
 </script>
 
 <article
@@ -84,23 +86,46 @@
 	{/if}
 
 	<div class="card-actions">
-		<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- resolve() used in charlieHref derivation -->
-		<a href={charlieHref} class="charlie-btn" aria-label="Ask Charlie to fix this finding">
-			<svg
-				width="14"
-				height="14"
-				viewBox="0 0 24 24"
-				fill="none"
-				stroke="currentColor"
-				stroke-width="2"
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				aria-hidden="true"
+		{#if onCharlieAction}
+			<button
+				class="charlie-btn"
+				onclick={() => onCharlieAction?.(charliePrompt)}
+				aria-label="Ask Charlie to fix this finding"
 			>
-				<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-			</svg>
-			{finding.charlieAction?.label ?? 'Ask Charlie to fix this'}
-		</a>
+				<svg
+					width="14"
+					height="14"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					aria-hidden="true"
+				>
+					<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+				</svg>
+				{finding.charlieAction?.label ?? 'Ask Charlie to fix this'}
+			</button>
+		{:else}
+			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- resolve() used in charlieHref derivation -->
+			<a href={charlieHref} class="charlie-btn" aria-label="Ask Charlie to fix this finding">
+				<svg
+					width="14"
+					height="14"
+					viewBox="0 0 24 24"
+					fill="none"
+					stroke="currentColor"
+					stroke-width="2"
+					stroke-linecap="round"
+					stroke-linejoin="round"
+					aria-hidden="true"
+				>
+					<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+				</svg>
+				{finding.charlieAction?.label ?? 'Ask Charlie to fix this'}
+			</a>
+		{/if}
 
 		{#if onDismiss}
 			<button
@@ -239,10 +264,12 @@
 		padding: var(--space-xs) var(--space-sm);
 		background: var(--accent-primary);
 		color: #ffffff;
+		border: none;
 		border-radius: var(--radius-md);
 		font-size: var(--text-xs);
 		font-weight: 600;
 		text-decoration: none;
+		cursor: pointer;
 		transition: all var(--transition-fast);
 	}
 

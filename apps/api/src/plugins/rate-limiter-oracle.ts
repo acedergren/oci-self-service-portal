@@ -23,12 +23,19 @@ const RATE_LIMITER_CONFIG = {
 	 *
 	 * Categories:
 	 * - 'chat': 20 req/min (AI-powered endpoints that are compute-intensive)
+	 * - 'auth': 10 req/min (brute-force protection for sign-in endpoints)
 	 * - 'api': 60 req/min (general API endpoints)
 	 */
 	endpointCategories: {
 		'/api/chat': 'chat',
 		'/api/tools': 'chat'
-	} as const
+	} as const,
+
+	/**
+	 * Prefix-based endpoint category overrides.
+	 * Checked when exact match fails — first matching prefix wins.
+	 */
+	endpointPrefixes: [{ prefix: '/api/auth', category: 'auth' }] as const
 } as const;
 
 /**
@@ -47,14 +54,22 @@ function resolveClientId(request: FastifyRequest): string {
 
 /**
  * Resolve the rate limit category for a given endpoint path.
- * Returns the category key (e.g., 'chat', 'api') used to look up the limit.
+ * Checks exact matches first, then prefix matches, then defaults to 'api'.
  */
 function resolveEndpointCategory(path: string): string {
-	return (
+	// Exact match
+	const exact =
 		RATE_LIMITER_CONFIG.endpointCategories[
 			path as keyof typeof RATE_LIMITER_CONFIG.endpointCategories
-		] ?? 'api'
-	);
+		];
+	if (exact) return exact;
+
+	// Prefix match (e.g., /api/auth/* → 'auth')
+	for (const { prefix, category } of RATE_LIMITER_CONFIG.endpointPrefixes) {
+		if (path.startsWith(prefix)) return category;
+	}
+
+	return 'api';
 }
 
 /**

@@ -64,7 +64,7 @@
 	}
 
 	.input-node.selected {
-		box-shadow: 0 0 0 2px rgba(0, 200, 0, 0.2);
+		box-shadow: 0 0 0 2px color-mix(in srgb, var(--semantic-success) 20%, transparent);
 	}
 
 	.node-header {
@@ -72,7 +72,7 @@
 		align-items: center;
 		gap: 0.375rem;
 		padding: 0.375rem 0.5rem;
-		background: rgba(0, 200, 0, 0.08);
+		background: color-mix(in srgb, var(--semantic-success) 8%, transparent);
 		border-bottom: 1px solid var(--border-default);
 		border-radius: 6px 6px 0 0;
 	}
